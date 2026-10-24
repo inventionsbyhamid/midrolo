@@ -9,6 +9,13 @@
         Every brand you're working, from saved to won.<%= " Change a brand's stage, notes or follow-up date on its card in the report." if @matches.any? %>
       </p>
     </div>
+    <% if @matches.any? %>
+      <% if @csv_export %>
+        <%= ui_button "Download CSV", pipeline_path(format: :csv), variant: :secondary %>
+      <% else %>
+        <%= link_to pricing_path, class: "btn btn-secondary btn-md" do %>Export CSV <%= ui_badge "Pro", tone: :accent %><% end %>
+      <% end %>
+    <% end %>
   </header>
 
   <% if @matches.empty? %>

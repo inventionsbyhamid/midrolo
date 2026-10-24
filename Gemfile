@@ -42,6 +42,8 @@ gem "ruby_llm", "~> 2.1"
 gem "faraday"
 gem "faraday-retry"
 gem "feedjira"
+# Pipeline CSV export. A bundled gem since Ruby 3.4, so it must be listed.
+gem "csv"
 gem "aws-sdk-s3", require: false
 gem "dodopayments"
 gem "standardwebhooks"

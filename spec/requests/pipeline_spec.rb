@@ -1,4 +1,5 @@
 require "rails_helper"
+require "csv"
 
 RSpec.describe "Pipeline" do
   include ActionView::RecordIdentifier
@@ -158,13 +159,67 @@ RSpec.describe "Pipeline" do
     end
 
     context "without the pipeline on their plan (R45)" do
-      before { stub_plan(pipeline?: false) }
+      before { stub_plan(pipeline?: false, csv_export?: true) }
 
-      it "redirects to pricing with a notice" do
+      it "redirects the page and the CSV to pricing with a notice" do
         get pipeline_path
         expect(response).to redirect_to(pricing_path)
         2.times { follow_redirect! } # the temporary /pricing goes on to /account (R47)
         expect(Nokogiri::HTML(response.body).at_css(".flash-notice").text.squish).to eq(PipelineGate::UPSELL)
+
+        get pipeline_path(format: :csv)
+        expect(response).to redirect_to(pricing_path)
+      end
+    end
+
+    describe "CSV export" do
+      it "redirects to pricing without CSV export on the plan" do
+        stub_plan(csv_export?: false)
+        create(:sponsor_match, report: report, status: "saved")
+
+        get pipeline_path(format: :csv)
+
+        expect(response).to redirect_to(pricing_path)
+        expect(flash[:notice]).to include("Pro plan")
+        get pipeline_path
+        expect(page.at_css("a[href='#{pipeline_path(format: :csv)}']")).to be_nil
+        expect(page.at_css("a[href='#{pricing_path}']").text.squish).to include("Export CSV")
+      end
+
+      context "with CSV export on the plan" do
+        before { stub_plan(csv_export?: true) }
+
+        it "downloads the pipeline as CSV" do
+          create(:sponsor_match, report: report, name: "Fieldnote Coffee", status: "pitched", fit_score: 91, tier: "easy_yes",
+                                 category: "Coffee", website: "https://fieldnote.example.com", notes: "Emailed Sam",
+                                 follow_up_on: Date.new(2026, 11, 2))
+          get pipeline_path
+          expect(page.at_css("a[href='#{pipeline_path(format: :csv)}']")).to be_present
+
+          get pipeline_path(format: :csv)
+
+          expect(response.media_type).to eq("text/csv")
+          expect(response.headers["Content-Disposition"]).to include("attachment", "midrolo-pipeline-2026-10-25.csv")
+          rows = CSV.parse(response.body, headers: true)
+          expect(rows.headers).to eq([ "Show", "Brand", "Status", "Fit score", "Tier", "Category", "Website",
+                                       "Follow-up date", "Notes", "Why it fits" ])
+          expect(rows.first.to_h).to include("Show" => "The Founder's Ledger", "Brand" => "Fieldnote Coffee",
+                                             "Status" => "Pitched", "Fit score" => "91", "Tier" => "Easy yes",
+                                             "Follow-up date" => "2026-11-02", "Notes" => "Emailed Sam")
+        end
+
+        it "neutralizes values that a spreadsheet would run as formulas" do
+          create(:sponsor_match, report: report, name: "=HYPERLINK(\"http://evil.example\")", status: "saved",
+                                 category: "+cmd", notes: "-2+3", website: "@SUM(A1)", reason: "Fine reason")
+          get pipeline_path(format: :csv)
+
+          row = CSV.parse(response.body, headers: true).first
+          expect(row["Brand"]).to eq("'=HYPERLINK(\"http://evil.example\")")
+          expect(row["Category"]).to eq("'+cmd")
+          expect(row["Notes"]).to eq("'-2+3")
+          expect(row["Website"]).to eq("'@SUM(A1)")
+          expect(row["Why it fits"]).to eq("Fine reason")
+        end
       end
     end
   end

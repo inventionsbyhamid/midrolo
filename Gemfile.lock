@@ -567,6 +567,7 @@ DEPENDENCIES
   bundler-audit
   capybara
   cloudflare-rails
+  csv
   cuprite (~> 0.18.0)
   debug
   devise
