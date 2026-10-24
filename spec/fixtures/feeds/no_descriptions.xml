@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Quiet Show</title>
+    <managingEditor>quiet@quiet.example.com (Quinn)</managingEditor>
+    <item><title>Only a title</title><pubDate>Mon, 28 Sep 2026 09:00:00 +0000</pubDate><guid>q1</guid></item>
+    <item><title>Another title</title><pubDate>Mon, 21 Sep 2026 09:00:00 +0000</pubDate><guid>q2</guid></item>
+  </channel>
+</rss>

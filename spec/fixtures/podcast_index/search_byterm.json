@@ -1,0 +1,34 @@
+{
+  "status": "true",
+  "count": 2,
+  "query": "widgets",
+  "description": "Found matching feeds.",
+  "feeds": [
+    {
+      "id": 900001,
+      "title": "The Widget Hour",
+      "url": "https://widgethour.example.com/feed.xml",
+      "author": "Wanda Widget",
+      "description": "A made-up show about widgets.",
+      "image": "https://widgethour.example.com/img.png",
+      "artwork": "https://widgethour.example.com/art.png",
+      "itunesId": 123456789,
+      "episodeCount": 42,
+      "language": "en",
+      "categories": { "102": "Business", "107": "Technology" }
+    },
+    {
+      "id": 900002,
+      "title": "Gadget Gossip",
+      "url": "https://gadgetgossip.example.com/rss",
+      "author": "Gus Gadget",
+      "description": "Invented chatter.",
+      "image": "https://gadgetgossip.example.com/img.png",
+      "artwork": "",
+      "itunesId": null,
+      "episodeCount": 7,
+      "language": "en",
+      "categories": null
+    }
+  ]
+}

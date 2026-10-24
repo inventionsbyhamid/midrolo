@@ -1,0 +1,132 @@
+require "rails_helper"
+
+RSpec.describe Podcasts::FeedReader do
+  let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+  let(:reader) { described_class.new(cache: cache) }
+  let(:url) { "https://widgethour.example.com/feed.xml" }
+
+  def feed_fixture(name) = Rails.root.join("spec/fixtures/feeds/#{name}.xml").binread
+
+  describe "a normal feed" do
+    before { stub_request(:get, url).to_return(status: 200, body: feed_fixture("normal")) }
+
+    it "parses episodes, owner and cadence" do
+      feed = reader.read(url)
+      expect(feed.title).to eq("The Widget Hour")
+      expect(feed.episodes.size).to eq(20)
+      expect(feed.owner_email).to eq("host@widgethour.example.com")
+      expect(feed.owner_name).to eq("Wanda Widget")
+      expect(feed.cadence_days).to eq(7)
+      expect(feed.warnings).to eq([])
+      expect(feed.episodes.first).to be_a(Podcasts::EpisodeInfo)
+      expect(feed.episodes.first.guid).to eq("widget-ep-20")
+    end
+
+    it "respects max_episodes" do
+      expect(reader.read(url, max_episodes: 5).episodes.size).to eq(5)
+    end
+
+    it "strips HTML and truncates descriptions to 600 chars" do
+      eps = reader.read(url).episodes
+      expect(eps.first.description.length).to be <= 600
+      expect(eps.last.description).to eq("We talk about widgets & gadgets in installment 1.")
+      expect(eps.map(&:description).join).not_to include("<")
+    end
+
+    it "caches successful reads" do
+      2.times { reader.read(url) }
+      expect(a_request(:get, url)).to have_been_made.once
+    end
+  end
+
+  describe "thin feeds" do
+    it "handles episodes without descriptions and falls back to managingEditor" do
+      stub_request(:get, url).to_return(status: 200, body: feed_fixture("no_descriptions"))
+      feed = reader.read(url)
+      expect(feed.episodes.size).to eq(2)
+      expect(feed.episodes.map(&:description)).to all(eq(""))
+      expect(feed.owner_email).to eq("quiet@quiet.example.com")
+      expect(feed.warnings).to eq([])
+    end
+  end
+
+  describe "failures never raise" do
+    it "flags invalid XML" do
+      stub_request(:get, url).to_return(status: 200, body: feed_fixture("invalid"))
+      feed = reader.read(url)
+      expect(feed.episodes).to eq([])
+      expect(feed.warnings).to eq([ "feed_unreadable" ])
+    end
+
+    it "flags a timeout" do
+      stub_request(:get, url).to_timeout
+      feed = reader.read(url)
+      expect(feed.episodes).to eq([])
+      expect(feed.warnings).to eq([ "feed_timeout" ])
+    end
+
+    it "flags a non-200 status" do
+      stub_request(:get, url).to_return(status: 404, body: "nope")
+      expect(reader.read(url).warnings).to eq([ "feed_unreadable" ])
+    end
+
+    it "flags a connection failure" do
+      stub_request(:get, url).to_raise(Faraday::ConnectionFailed.new("boom"))
+      expect(reader.read(url).warnings).to eq([ "feed_unreadable" ])
+    end
+
+    it "flags a body over 5 MB while streaming" do
+      stub_request(:get, url).to_return(status: 200, body: "x" * (5 * 1024 * 1024 + 1))
+      feed = reader.read(url)
+      expect(feed.episodes).to eq([])
+      expect(feed.warnings).to eq([ "feed_too_large" ])
+    end
+
+    it "flags a blank or non-http url" do
+      expect(reader.read("").warnings).to eq([ "feed_unreadable" ])
+      expect(reader.read("file:///etc/passwd").warnings).to eq([ "feed_unreadable" ])
+    end
+
+    it "does not cache failures" do
+      stub_request(:get, url).to_return({ status: 500 }, { status: 200, body: feed_fixture("normal") })
+      expect(reader.read(url).warnings).to eq([ "feed_unreadable" ])
+      expect(reader.read(url).episodes.size).to eq(20)
+    end
+  end
+
+  describe "encoding" do
+    it "transcodes ISO-8859-1 input to UTF-8" do
+      xml = <<~X.encode("ISO-8859-1")
+        <?xml version="1.0" encoding="ISO-8859-1"?>
+        <rss version="2.0"><channel><title>Café Show</title>
+        <item><title>Crème brûlée</title><description>délicieux</description><pubDate>Mon, 28 Sep 2026 09:00:00 +0000</pubDate><guid>c1</guid></item>
+        </channel></rss>
+      X
+      stub_request(:get, url).to_return(status: 200, body: xml.b)
+      feed = reader.read(url)
+      expect(feed.title).to eq("Café Show")
+      expect(feed.episodes.first.title).to eq("Crème brûlée")
+      expect(feed.episodes.first.description).to eq("délicieux")
+      expect(feed.episodes.first.title.encoding).to eq(Encoding::UTF_8)
+    end
+
+    it "survives invalid bytes with no declared encoding" do
+      xml = "<rss version=\"2.0\"><channel><title>Bad \xFF Byte</title><item><title>t</title><guid>g</guid></item></channel></rss>".b
+      stub_request(:get, url).to_return(status: 200, body: xml)
+      expect { reader.read(url) }.not_to raise_error
+    end
+  end
+
+  describe "fake:// feeds" do
+    it "returns canned episodes without HTTP" do
+      feed = reader.read("fake://fake-1")
+      expect(feed.episodes.size).to be_between(15, 20)
+      expect(feed.owner_email).to end_with(".example")
+      expect(feed.cadence_days).to eq(7)
+    end
+
+    it "returns an unreadable feed for an unknown fake id" do
+      expect(reader.read("fake://fake-999").warnings).to eq([ "feed_unreadable" ])
+    end
+  end
+end

@@ -1,0 +1,19 @@
+{
+  "status": "true",
+  "id": "900001",
+  "query": { "id": "900001" },
+  "description": "Found matching feed.",
+  "feed": {
+    "id": 900001,
+    "title": "The Widget Hour",
+    "url": "https://widgethour.example.com/feed.xml",
+    "author": "Wanda Widget",
+    "description": "A made-up show about widgets.",
+    "image": "https://widgethour.example.com/img.png",
+    "artwork": "https://widgethour.example.com/art.png",
+    "itunesId": 123456789,
+    "episodeCount": 42,
+    "language": "en",
+    "categories": { "102": "Business" }
+  }
+}
