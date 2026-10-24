@@ -223,13 +223,21 @@ RSpec.describe Pitches::Writer do
       expect(prompt_of(RubyLLM::Test.requests.last)).to include("50,000", "2x", "$5000")
     end
 
-    it "gives up with Rejected when the rewrite is still ungrounded" do
+    it "gives up with Ungrounded when the rewrite still cites unsupported numbers" do
       bad = good_pitch(body: "Our 10k listeners love you.")
       RubyLLM::Test.stub_responses(bad, bad)
 
-      expect { described_class.call(brand_match, pitch: pitch) }.to raise_error(Pitches::Writer::Rejected)
+      expect { described_class.call(brand_match, pitch: pitch) }.to raise_error(Pitches::Writer::Ungrounded)
       expect(RubyLLM::Test.requests.size).to eq(2)
       expect(SpendEntry.where(pitch_id: pitch.id).count).to eq(2)
+    end
+
+    it "gives up with Malformed when the rewrite is grounded but still malformed" do
+      bad = good_pitch(angles: %w[One])
+      RubyLLM::Test.stub_responses(bad, bad)
+
+      expect { described_class.call(brand_match, pitch: pitch) }.to raise_error(Pitches::Writer::Malformed)
+      expect(RubyLLM::Test.requests.size).to eq(2)
     end
 
     it "keeps the first three angles and asks again when there are fewer than three or a field is blank" do

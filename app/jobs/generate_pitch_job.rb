@@ -21,8 +21,10 @@ class GeneratePitchJob < ApplicationJob
       pitch.complete!(write(pitch), model: Llm.fake? ? "fake" : Llm.pitch_model)
     rescue Llm::BudgetExceeded
       pitch.mark_failed!(Pitch::PAUSED_MESSAGE)
-    rescue Pitches::Writer::Rejected
+    rescue Pitches::Writer::Ungrounded
       pitch.mark_failed!(Pitch::UNGROUNDED_MESSAGE)
+    rescue Pitches::Writer::Malformed
+      pitch.mark_failed!
     rescue StandardError => e
       Rails.error.report(e, handled: true, context: { pitch_id: pitch_id, job: self.class.name })
       fail_pitch(pitch_id)

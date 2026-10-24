@@ -67,10 +67,17 @@ RSpec.describe GeneratePitchJob do
   end
 
   it "fails with the grounding message when the rewrite is still ungrounded" do
-    allow(Pitches::Writer).to receive(:call).and_raise(Pitches::Writer::Rejected, "cites 10k")
+    allow(Pitches::Writer).to receive(:call).and_raise(Pitches::Writer::Ungrounded, "cites 10k")
     described_class.perform_now(pitch.id)
 
     expect(pitch.reload).to have_attributes(status: "failed", error_message: "We couldn't ground this pitch in your data — try again")
+  end
+
+  it "fails with the friendly message, not the grounding one, when the rewrite is still malformed" do
+    allow(Pitches::Writer).to receive(:call).and_raise(Pitches::Writer::Malformed, "it needs exactly 3 angles")
+    described_class.perform_now(pitch.id)
+
+    expect(pitch.reload).to have_attributes(status: "failed", error_message: Pitch::FAILURE_MESSAGE)
   end
 
   it "retries a transient error and then succeeds" do

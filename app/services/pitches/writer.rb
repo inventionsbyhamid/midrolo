@@ -5,9 +5,15 @@ module Pitches
   # Grounding (R49): third-party text (Qloo brand data, other shows' RSS, the show's own listing) reaches the model
   # only inside Research::Untrusted markers, and the subject, body, offer and follow-up may cite only numbers from
   # this pitch's Inputs. A draft that cites others, or comes back malformed, gets one corrective retry that names the
-  # problems; a second miss raises Rejected. Every call records its spend on the pitch; a retry is not a second pitch.
+  # problems; a second miss raises Ungrounded (numbers) or Malformed (shape). Every call records its spend on the
+  # pitch; a retry is not a second pitch.
   class Writer
+    # The pitch can't be written; the subclass says why.
     class Rejected < StandardError; end
+    # The rewrite still cited numbers that aren't in the inputs.
+    class Ungrounded < Rejected; end
+    # The rewrite was grounded but still missing a field, short of angles or over the subject limit.
+    class Malformed < Rejected; end
 
     SUBJECT_LIMIT = 80
     ANGLES = 3
@@ -61,9 +67,10 @@ module Pitches
       problems = problems_with(draft)
       return draft if problems.empty?
 
-      draft = ask(corrective_prompt(problems))
+      draft = ask(corrective_prompt(problems.values.flatten))
       problems = problems_with(draft)
-      raise Rejected, problems.join("; ") if problems.any?
+      raise Ungrounded, problems[:numbers].join("; ") if problems.key?(:numbers)
+      raise Malformed, problems[:shape].join("; ") if problems.key?(:shape)
 
       draft
     end
@@ -86,15 +93,16 @@ module Pitches
       end
     end
 
+    # { shape: [...], numbers: [...] }, each key present only when it has problems.
     def problems_with(draft)
-      problems = []
+      shape = []
       blank = (Pitch::FIELDS - [ "angles" ]).select { |field| draft[field].blank? }
-      problems << "these fields were empty: #{blank.join(', ')}" if blank.any?
-      problems << "it needs exactly #{ANGLES} angles" if draft["angles"].size < ANGLES
-      problems << "the subject was over #{SUBJECT_LIMIT} characters" if draft["subject"].length > SUBJECT_LIMIT
+      shape << "these fields were empty: #{blank.join(', ')}" if blank.any?
+      shape << "it needs exactly #{ANGLES} angles" if draft["angles"].size < ANGLES
+      shape << "the subject was over #{SUBJECT_LIMIT} characters" if draft["subject"].length > SUBJECT_LIMIT
       unsupported = CHECKED_FIELDS.flat_map { |field| Research::NumericClaims.unsupported(draft[field], inputs.allowed) }.uniq
-      problems << "it cited numbers that aren't in the facts: #{unsupported.join(', ')}" if unsupported.any?
-      problems
+      numbers = unsupported.any? ? [ "it cited numbers that aren't in the facts: #{unsupported.join(', ')}" ] : []
+      { shape: shape, numbers: numbers }.reject { |_, list| list.empty? }
     end
 
     def corrective_prompt(problems)
