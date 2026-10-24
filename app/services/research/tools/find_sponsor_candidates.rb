@@ -23,20 +23,24 @@ module Research
         end
 
         toolkit.add_candidates(scored)
-        "#{ignored_note(ignored)}#{digest(scored)}"
+        reply(ignored_note(ignored).to_s, scored)
       end
 
       private
 
       def scan_limit = Entitlements.for(toolkit.user).scan_limit
 
-      # The best brands that fit in the reply, one line per brand category (categories ordered by their best
-      # brand), e.g. "Finance: b2 Ramp 79E [5 sponsor reads, latest Shipping Soon], b10 Wealthfront 65E". Only
-      # the brands listed are marked shown, so only they can be explained or saved; the rest are just counted.
-      def digest(scored)
-        count = scored.size.downto(1).find { |n| grouped(scored.first(n), hidden: scored.size - n).length < LIMIT - 1 } || 1
-        toolkit.show_candidates(scored.first(count).map { |s| s.candidate.entity.id })
-        grouped(scored.first(count), hidden: scored.size - count)
+      # The note plus as many of the best brands as fit in the whole reply, one line per brand category
+      # (categories ordered by their best brand), e.g. "Finance: b2 Ramp 79E [5 sponsor reads, latest Shipping
+      # Soon], b10 Wealthfront 65E". Only brands that appear in the returned text are marked shown, so only
+      # they can be explained or saved; the rest are just counted.
+      def reply(note, scored)
+        room = LIMIT - 1 - note.length
+        count = scored.size.downto(1).find { |n| grouped(scored.first(n), hidden: scored.size - n).length <= room } || 1
+        text = compact("#{note}#{grouped(scored.first(count), hidden: scored.size - count)}")
+        listed = scored.first(count).select { |s| text.include?("#{ref(s)} #{s.candidate.entity.name} ") }
+        toolkit.show_candidates(listed.map { |s| s.candidate.entity.id })
+        text
       end
 
       def grouped(shown, hidden:)

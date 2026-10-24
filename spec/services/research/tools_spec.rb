@@ -150,6 +150,20 @@ RSpec.describe Research::Tools do
       expect(toolkit.resolve_brand("b1")).to be_present
     end
 
+    it "marks as shown only brands that appear in the reply, even with an ignored-id note in front" do
+      seed!
+      bogus = Array.new(40) { |i| "made-up-entity-id-number-#{i}" }
+      out = run("find_sponsor_candidates", categories: %w[Finance Productivity], entity_ids: toolkit.seed_entity_ids + bogus,
+                                           tag_ids: toolkit.seed_tag_ids)
+      shown = (1..toolkit.scored.size).select { |i| toolkit.resolve_brand("b#{i}") }
+
+      expect(out).to start_with("Ignored ids no tool returned:")
+      expect(out.length).to be < 1500
+      expect(out).not_to end_with("…")
+      expect(shown).not_to be_empty
+      shown.each { |i| expect(out).to match(/\bb#{i} /) }
+    end
+
     it "lists at least 40 of the ranked brands, grouped by category, with proven evidence" do
       out = candidates!
       refs = out.scan(/\bb(\d+) /).flatten.map(&:to_i)

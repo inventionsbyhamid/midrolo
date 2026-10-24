@@ -6,6 +6,7 @@ module Research
     # auth errors propagate, since the runner pauses runs on them.
     class Base < RubyLLM::Tool
       LIMIT = 1500
+      IGNORED_NOTE_LIMIT = 300
       NO_SEEDS = "Save taste seeds first (save_taste_seeds), then call this again.".freeze
       NO_CANDIDATES = "Find sponsor candidates first (find_sponsor_candidates), then call this again.".freeze
       ARRAY_OF_STRINGS = { type: "array", items: { type: "string" } }.freeze
@@ -59,7 +60,7 @@ module Research
       end
 
       def ignored_note(ignored)
-        "Ignored ids no tool returned: #{ignored.join(', ')}.\n" if ignored.any?
+        "Ignored ids no tool returned: #{ignored.join(', ').truncate(IGNORED_NOTE_LIMIT)}.\n" if ignored.any?
       end
 
       # A value from a Hash the model sent, by symbol or string key.
