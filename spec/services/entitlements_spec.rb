@@ -14,6 +14,7 @@ RSpec.describe Entitlements do
     expect(plan.visible_matches_limit).to eq(50)
     expect(plan.kit_badge?).to be true
     expect(plan.csv_export?).to be false
+    expect(plan.pipeline?).to be true
     expect(plan.scan_limit).to eq(8)
   end
 

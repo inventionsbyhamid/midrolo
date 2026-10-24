@@ -22,6 +22,7 @@ module Entitlements
     def visible_matches_limit = 50
     def kit_badge? = true
     def csv_export? = false
+    def pipeline? = true
     def scan_limit = 8
   end
 

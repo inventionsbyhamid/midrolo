@@ -15,6 +15,8 @@ Rails.application.routes.draw do
 
   # Temporary: Task 19 replaces this with pages#home.
   root to: redirect("/shows")
+  # Temporary: Task 19 replaces this with pages#pricing.
+  get "pricing", to: redirect("/account"), as: :pricing
 
   resource :account, only: %i[show destroy] do
     post :judge_code
