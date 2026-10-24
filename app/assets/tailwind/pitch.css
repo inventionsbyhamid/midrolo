@@ -49,6 +49,18 @@
     color: var(--color-ink-soft);
   }
 
+  .pitch-subject-text {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+
+  .pitch-subject-copy {
+    margin-left: auto;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
   .pitch-text {
     padding: 1rem;
     font-size: 0.9375rem;

@@ -100,6 +100,12 @@ RSpec.describe "Pitches" do
         get sponsor_match_pitch_path(brand_match), headers: turbo
         pack = stream("update", "pitch_dialog")
 
+        subject = pack.at_css("[data-controller='clipboard']:has([data-pitch-subject])")
+        expect(subject.at_css("[data-clipboard-target='source'][data-pitch-subject]").text.squish).to eq(pitch.subject)
+        subject_label = subject.at_css("button[data-action='clipboard#copy'] [data-clipboard-target='label']")
+        expect(subject_label.text.squish).to eq("Copy subject")
+        expect(subject_label["aria-live"]).to eq("polite")
+
         copy = pack.at_css("[data-controller='clipboard']:has([data-pitch-body])")
         expect(copy.at_css("[data-clipboard-target='source'][data-pitch-body]")).to be_present
         label = copy.at_css("button[data-action='clipboard#copy'] [data-clipboard-target='label']")

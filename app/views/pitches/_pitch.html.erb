@@ -14,9 +14,12 @@
     <section class="pitch-section" aria-labelledby="<%= email_id %>">
       <h3 id="<%= email_id %>" class="pitch-label">Email</h3>
       <div class="pitch-email">
-        <div class="pitch-subject">
+        <div class="pitch-subject" data-controller="clipboard">
           <span class="pitch-subject-label">Subject</span>
-          <span data-pitch-subject><%= pitch.subject %></span>
+          <span class="pitch-subject-text" data-pitch-subject data-clipboard-target="source"><%= pitch.subject %></span>
+          <button type="button" class="link pitch-subject-copy" data-action="clipboard#copy">
+            <span data-clipboard-target="label" aria-live="polite">Copy subject</span>
+          </button>
         </div>
         <div data-controller="clipboard">
           <div class="pitch-text" data-pitch-body data-clipboard-target="source"><%= pitch.body %></div>
