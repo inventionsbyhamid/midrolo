@@ -32,7 +32,16 @@ module Podcasts
         { directory_id: "fake-11", title: "Dollar Dispatch", author: "Iris Koh", categories: [ "Business", "Finance" ],
           description: "A weekly briefing on prices, payments and personal budgets." },
         { directory_id: "fake-12", title: "Shipping Soon", author: "Noel Archer", categories: [ "Technology", "Business" ],
-          description: "Product makers on launches, delays and lessons learned." }
+          description: "Product makers on launches, delays and lessons learned." },
+        # The other podcasts Taste::Providers::Fake knows, so the proven-sponsor scan can read every one.
+        { directory_id: "fake-13", title: "Main Street Stories", author: "Gloria Vance", categories: [ "Education" ],
+          description: "Small-town shop owners and the neighbors who keep them going." },
+        { directory_id: "fake-14", title: "Deep Work Daily", author: "Arjun Mehta", categories: [ "Business" ],
+          description: "Focus, calendars and the craft of doing hard things well." },
+        { directory_id: "fake-15", title: "The Prompt Engineers", author: "Wen Li", categories: [ "Technology" ],
+          description: "Builders compare notes on shipping with language models." },
+        { directory_id: "fake-16", title: "Midnight Mysteries", author: "Odette Crane", categories: [ "True Crime" ],
+          description: "Late-night retellings of strange disappearances." }
       ].map { |s| s.merge(language: "en").freeze }.freeze
 
       STEMS = {

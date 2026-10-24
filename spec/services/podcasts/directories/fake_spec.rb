@@ -3,8 +3,10 @@ require "rails_helper"
 RSpec.describe Podcasts::Directories::Fake do
   subject(:fake) { described_class.new }
 
-  it "has about a dozen shows with fake-N ids covering the categories" do
-    expect(described_class::CATALOG.size).to be_between(11, 14)
+  it "has about a dozen shows with fake-N ids covering the categories, including every podcast the fake taste graph knows" do
+    expect(described_class::CATALOG.size).to be_between(11, 16)
+    taste_podcasts = YAML.load_file(Rails.root.join("config/fake_taste_catalog.yml"))["podcasts"].keys
+    expect(described_class::CATALOG.map { |s| s[:title] }).to match_array(taste_podcasts)
     ids = described_class::CATALOG.map { |s| s[:directory_id] }
     expect(ids).to include("fake-1", "fake-2", "fake-3")
     cats = described_class::CATALOG.flat_map { |s| s[:categories] }.uniq
