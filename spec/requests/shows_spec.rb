@@ -82,16 +82,21 @@ RSpec.describe "Shows" do
         expect(flash[:notice]).to eq("You've already added this show.")
       end
 
-      it "redirects to the existing show when a concurrent submit hits the unique index" do
-        existing = create(:show, user: user, directory_id: "fake-1", feed_url: "fake://fake-1")
-        # Simulate the race: the duplicate check passes, then the insert collides.
-        allow_any_instance_of(ShowsController).to receive(:at_limit?).and_return(false)
-        allow_any_instance_of(ShowsController).to receive(:existing_duplicate).and_return(nil, nil, existing)
-        allow_any_instance_of(Show).to receive(:save).and_raise(ActiveRecord::RecordNotUnique)
+      it "redirects to the existing show when a concurrent submit wins the race to the unique index" do
+        user_id = user.id
+        existing = nil
+        # The duplicate pre-check genuinely misses; another request inserts the same show just before our save.
+        allow_any_instance_of(Show).to receive(:save) do
+          Show.insert_all!([ { user_id: user_id, title: "The Founder's Ledger", directory_id: "fake-1", feed_url: "fake://fake-1" } ])
+          existing = Show.find_by!(user_id: user_id, directory_id: "fake-1")
+          raise ActiveRecord::RecordNotUnique
+        end
 
-        expect { post "/shows", params: { directory_id: "fake-1" } }.not_to change(Show, :count)
+        post "/shows", params: { directory_id: "fake-1" }
+
         expect(response).to redirect_to(show_path(existing))
         expect(flash[:notice]).to eq("You've already added this show.")
+        expect(Show.where(user_id: user_id).count).to eq(1)
       end
 
       it "lets two users add the same show" do

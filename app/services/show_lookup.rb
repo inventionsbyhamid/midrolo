@@ -1,7 +1,8 @@
 # Turns what a podcaster picked or pasted into Show attributes, using only Podcasts::Directory.current
 # and Podcasts::FeedReader. Raises Podcasts::Directory::Unavailable when the directory is down.
 class ShowLookup
-  APPLE_URL = %r{\Ahttps?://podcasts\.apple\.com/.*?\bid(\d+)}i
+  # Only the final /id<digits> path segment counts, so a slug like /my-id2-show/ can't match.
+  APPLE_URL = %r{\Ahttps?://podcasts\.apple\.com/.*/id(\d+)(?:[/?#]|\z)}i
   FEED_ERROR = "We couldn't read that feed. Check the URL, or search for your show by name.".freeze
   NOT_FOUND = "We couldn't find that show. Search for it by name, or paste your RSS feed URL.".freeze
   APPLE_NOT_FOUND = "We couldn't find that Apple Podcasts show. Search for it by name, or paste your RSS feed URL.".freeze
