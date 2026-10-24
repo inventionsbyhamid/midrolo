@@ -3,8 +3,9 @@ module Research
   #   1. per similar show (one step each): find it in the podcast directory, read its last 20 episodes
   #      (descriptions up to 4,000 characters), and pull sponsor names out with regexes (no LLM, no cost);
   #   2. one step: confirm the most frequent 15 names on Qloo (R31), keeping only exact brand matches.
-  # Platforms and self-promotion never count (R32): the config/proven_scan.yml denylist, plus the user's
-  # show and every similar show's title, feed owner (host or network) and owner email domain.
+  # Platforms and self-promotion never count (R32): the config/proven_scan.yml denylist and show titles
+  # (the user's show and every similar show) everywhere, plus each feed's owner (host or network) and owner
+  # email domain within that feed only. Webmail domains (gmail.com, protonmail.com…) are never excluded.
   #
   # Returns {brand_entity_id => {items: [3 latest {show:, episode_title:, published_at: Time}], count: N}}
   # (the Matching::Candidate proven_evidence shape); #brands holds the matched Taste::Entity objects.
@@ -31,9 +32,10 @@ module Research
     Mention = Data.define(:key, :name, :show, :episode)
 
     # Sponsor names or domains in one piece of text, line by line (a capture never crosses a line break),
-    # in order of appearance per pattern, without repeats.
+    # in order of appearance per pattern, without repeats. Unicode spaces (&nbsp;) count as spaces.
     def self.extract(text)
       text.to_s.split(/\n+/).flat_map do |line|
+        line = line.gsub(/[[:space:]]+/, " ")
         PATTERNS.flat_map { |pattern| line.scan(pattern).map { |(capture)| clean(capture) } }
       end.reject(&:blank?).uniq
     end
@@ -52,8 +54,15 @@ module Research
     end
 
     def self.denylist
-      @denylist ||= Array(Rails.application.config_for(:proven_scan)[:denylist]).map { |n| Names.normalize(n) }.to_set
+      @denylist ||= Array(config[:denylist]).map { |n| Names.normalize(n) }.to_set
     end
+
+    # Email providers: a host writing from gmail.com says nothing about Gmail sponsoring them.
+    def self.webmail_domains
+      @webmail_domains ||= Array(config[:webmail_domains]).map { |d| d.to_s.downcase }.to_set
+    end
+
+    def self.config = Rails.application.config_for(:proven_scan)
 
     def self.call(toolkit, podcast_names:, limit:) = new(toolkit, podcast_names: podcast_names, limit: limit).call
 
@@ -63,8 +72,8 @@ module Research
       @toolkit = toolkit
       names = Array(podcast_names).map { |n| n.to_s.strip }.reject(&:blank?)
       @names = names.reject { |n| Names.same?(n, toolkit.show.title) }.uniq { |n| Names.normalize(n) }.first(limit.to_i)
-      @own_keys = Set.new
-      exclude(toolkit.show.title, toolkit.show.author, *names)
+      @title_keys = Set.new
+      @title_keys.merge(keys_for(toolkit.show.title, *names))
       @mentions = []
       @evidence = {}
       @brands = {}
@@ -97,7 +106,7 @@ module Research
         if feed.episodes.empty?
           step.warn!("Couldn't read #{info.title}'s feed")
         else
-          exclude(info.title, feed.title, feed.owner_name, *email_domain_labels(feed.owner_email))
+          @title_keys.merge(keys_for(info.title, feed.title))
           step.output_summary = collect(info.title, feed)
         end
       end
@@ -114,14 +123,16 @@ module Research
       nil
     end
 
-    # Records one mention per name per episode and returns the step summary.
+    # Records one mention per name per episode and returns the step summary. The feed's own owner and
+    # email domain are excluded here, for this feed only.
     def collect(show_title, feed)
+      owner_keys = keys_for(feed.owner_name, *email_domain_labels(feed.owner_email))
       found = []
       feed.episodes.each do |episode|
         keys = Set.new
         self.class.extract(episode.description).each do |name|
           key = self.class.key_for(name)
-          next if excluded?(name, key) || !keys.add?(key)
+          next if excluded?(name, key) || owner_keys.include?(key) || !keys.add?(key)
 
           @mentions << Mention.new(key: key, name: name, show: show_title, episode: episode)
           found << name
@@ -171,25 +182,26 @@ module Research
 
     # ---- helpers ----
 
-    def excluded?(name, key) = self.class.denylisted?(name) || @own_keys.include?(key)
+    # Global exclusions: the denylist and every show title seen in this scan.
+    def excluded?(name, key) = self.class.denylisted?(name) || @title_keys.include?(key)
 
-    def exclude(*names)
-      names.compact.each do |name|
-        key = self.class.key_for(name)
-        @own_keys << key if key.length >= MIN_NAME_LENGTH
-      end
+    def keys_for(*names)
+      names.compact.map { |name| self.class.key_for(name) }.select { |key| key.length >= MIN_NAME_LENGTH }.to_set
     end
 
-    # "host@foundersledger.com" => ["foundersledger"], so "go to foundersledger.com/merch" isn't a sponsor.
+    # "host@foundersledger.com" => ["foundersledger"], so "go to foundersledger.com/merch" isn't a sponsor
+    # of its own show. Webmail providers and the TLD are skipped: "host@gmail.com" => [].
     def email_domain_labels(email)
-      labels = email.to_s.split("@", 2).last.to_s.downcase.split(".")
-      email.to_s.include?("@") ? labels[0...-1].select { |label| label.length >= 3 } : []
+      return [] unless email.to_s.include?("@")
+
+      labels = email.to_s.split("@", 2).last.downcase.split(".")[0...-1]
+      labels.select { |label| label.length >= 3 && !self.class.webmail_domains.include?(label) }
     end
 
     # Undated evidence goes last; ties keep scan order.
     def newest_first(items)
-      dated, undated = items.partition { |e| e[:published_at] }
-      dated.sort_by.with_index { |e, i| [ -e[:published_at].to_f, i ] } + undated
+      dated, undated = items.partition { |e| Matching::Evidence.published_at(e) }
+      dated.sort_by.with_index { |e, i| [ -Matching::Evidence.published_at(e).to_f, i ] } + undated
     end
 
     def confirm_summary(matched, checked, total)

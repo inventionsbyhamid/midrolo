@@ -1,7 +1,7 @@
 # Proven-sponsor scan denylist (R32): names that appear like sponsors in show notes but are platforms or
 # self-promotion. Compared on normalized names (Research::Names.normalize) before any Qloo lookup.
-# The scan also excludes, per run, the user's show and every similar show it reads: their titles, the
-# feed owner (often the host or network) and the owner email's domain. Real sponsors never go here.
+# The scan also excludes show titles (the user's show and every similar show) everywhere, and each feed's
+# owner (often the host or network) and owner email domain within that feed only. Real sponsors never go here.
 shared:
   denylist:
     - patreon
@@ -25,3 +25,28 @@ shared:
     - gumroad
     - memberful
     - supercast
+  # Email-provider domain labels never excluded as "the host's own domain" (host@gmail.com says nothing
+  # about Gmail; Proton Mail, Fastmail, HEY and Zoho are real podcast sponsors).
+  webmail_domains:
+    - gmail
+    - googlemail
+    - yahoo
+    - ymail
+    - outlook
+    - hotmail
+    - live
+    - msn
+    - icloud
+    - me
+    - mac
+    - aol
+    - proton
+    - protonmail
+    - pm
+    - fastmail
+    - hey
+    - zoho
+    - gmx
+    - yandex
+    - mail
+    - inbox

@@ -46,6 +46,25 @@ RSpec.describe Research::ProvenSponsorScan do
     stub_request(:get, feed_url).to_return(status: 200, body: feed_xml(descriptions, **opts))
   end
 
+  # A second similar show, "Other Show", with its own feed.
+  def serve_other(descriptions, **opts)
+    other_url = "https://other.example.com/feed.xml"
+    stub_request(:get, other_url).to_return(status: 200, body: feed_xml(descriptions, title: "Other Show", **opts))
+    allow(directory).to receive(:search).with("Other Show", limit: 5).and_return([ info.with(title: "Other Show", feed_url: other_url) ])
+  end
+
+  # Fake search, plus extra brands the Fake catalog doesn't have.
+  def with_extra_brands(*names)
+    extra = names.to_h do |name|
+      [ Research::Names.normalize(name), Taste::Entity.new(id: "fake:brand:#{name.parameterize}", name: name, type: :brand, popularity: 0.3,
+                                                         affinity: nil, image_url: nil, description: nil, website: nil, tags: [], properties: {}) ]
+    end
+    allow(taste).to receive(:search).and_wrap_original do |original, **kw|
+      hit = extra[Research::Names.normalize(kw[:query])]
+      hit ? [ hit ] : original.call(**kw)
+    end
+  end
+
   it "extracts sponsor candidates from the sponsored feed" do
     feed = Podcasts::FeedReader.new.read(feed_url)
     candidates = feed.episodes.flat_map { |e| described_class.extract(e.description) }.uniq
@@ -169,6 +188,37 @@ RSpec.describe Research::ProvenSponsorScan do
       expect(taste).not_to have_received(:search).with(hash_including(query: "Other Pod"))
     end
 
+    it "never drops a webmail provider because the host uses it for email" do
+      with_extra_brands("Gmail")
+      serve([ "This episode is sponsored by Gmail." ], email: "host@gmail.com")
+
+      expect(scan.keys).to eq([ "fake:brand:gmail" ])
+    end
+
+    it "keeps Proton Mail sponsor reads when another show's host emails from protonmail.com" do
+      with_extra_brands("Proton Mail")
+      serve([ "This episode is sponsored by Notion." ], email: "hey@protonmail.com")
+      serve_other([ "This episode is sponsored by Proton Mail." ], owner: "Olive Other", email: "olive@other.example.com")
+
+      result = scan([ "The Sponsored Show", "Other Show" ])
+      expect(result["fake:brand:proton-mail"][:items].map { |e| e[:show] }).to eq([ "Other Show" ])
+    end
+
+    it "applies a feed owner's exclusion only to that owner's own feed" do
+      with_extra_brands("Morning Brew")
+      serve([ "This episode is brought to you by Morning Brew." ], owner: "Morning Brew", email: "pods@morningbrew.com")
+      serve_other([ "This episode is sponsored by Morning Brew.", "Go to morningbrew.com/daily to subscribe." ],
+                  owner: "Olive Other", email: "olive@other.example.com")
+
+      evidence = scan([ "The Sponsored Show", "Other Show" ])["fake:brand:morning-brew"]
+      expect(evidence[:items].map { |e| e[:show] }).to eq([ "Other Show", "Other Show" ])
+      expect(evidence[:count]).to eq(2)
+    end
+
+    it "loads the webmail providers from config/proven_scan.yml" do
+      expect(Rails.application.config_for(:proven_scan)[:webmail_domains]).to include("gmail", "protonmail", "hey", "zoho", "me")
+    end
+
     it "loads the denylist from config/proven_scan.yml" do
       expect(Rails.application.config_for(:proven_scan)[:denylist]).to include("patreon", "buy me a coffee", "ko-fi")
       expect(described_class.denylisted?("Patreon")).to be(true)
@@ -192,6 +242,17 @@ RSpec.describe Research::ProvenSponsorScan do
     it "does not run paragraphs together" do
       serve([ "<p>Sponsored by Notion</p><p>Visit Today</p>" ])
       expect(scan.keys).to eq([ notion_id ])
+    end
+
+    it "reads names spaced with &nbsp;" do
+      serve([ "<p>This episode is sponsored by&nbsp;Rocket&nbsp;Money.</p><p>&nbsp;</p>" ])
+      expect(scan.keys).to eq([ brand_id("Rocket Money") ])
+    end
+
+    it "finds a promo-code domain spaced with &nbsp;" do
+      serve([ "<p>Use code PODS at&nbsp;acme.com today</p>" ])
+      feed = Podcasts::FeedReader.new.read(feed_url, description_limit: 4000)
+      expect(described_class.extract(feed.episodes.first.description)).to eq([ "acme.com" ])
     end
 
     it "resolves a possessive capture to the brand" do
@@ -251,6 +312,7 @@ RSpec.describe Research::ProvenSponsorScan do
       "Support for this show comes from Booking.com. Book now." => [ "Booking.com" ],
       "Sponsored by Notion. Try it free" => [ "Notion" ],
       "Sponsored by Notion\nVisit Today" => [ "Notion" ],
+      "This episode is sponsored by\u00A0Rocket\u00A0Money." => [ "Rocket Money" ],
       "Go to betterhelp.com/money for 10% off" => [ "betterhelp" ],
       "Use promo code SAVE for hellofresh.com" => [ "hellofresh.com" ],
       "brought to you by AG1, the daily drink" => [ "AG1" ],
