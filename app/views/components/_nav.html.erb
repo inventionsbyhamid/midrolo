@@ -1,0 +1,33 @@
+<%# locals: (links: [], cta: nil) -%>
+<%# links is a list of [label, href] pairs; cta is one [label, href] pair or nil. %>
+<header class="site-header">
+  <div class="wrap flex h-16 items-center justify-between gap-4">
+    <%= link_to ui_logo, "/", class: "logo", aria: { label: "#{APP_NAME} home" } %>
+
+    <nav aria-label="Main" class="hidden items-center gap-1 md:flex">
+      <% links.each do |label, href| %>
+        <%= link_to label, href, class: "nav-link", aria: { current: ("page" if current_page?(href)) } %>
+      <% end %>
+      <% if cta %>
+        <%= ui_button cta.first, cta.last, size: :sm, class: "ml-3" %>
+      <% end %>
+    </nav>
+
+    <div class="md:hidden" data-controller="dialog">
+      <button type="button" class="btn btn-secondary btn-sm" data-action="dialog#open" aria-haspopup="dialog">
+        <svg viewBox="0 0 20 20" class="size-4" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Menu
+      </button>
+      <%= render "components/dialog", title: "Menu", id: "nav-menu", sheet: true do %>
+        <nav aria-label="Main menu">
+          <% links.each do |label, href| %>
+            <%= link_to label, href, class: "nav-sheet-link", aria: { current: ("page" if current_page?(href)) } %>
+          <% end %>
+        </nav>
+        <% if cta %>
+          <%= ui_button cta.first, cta.last, size: :lg, class: "mt-6 w-full" %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</header>

@@ -1,31 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <title><%= content_for(:title) || "Midrolo" %></title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="Midrolo">
-    <meta name="mobile-web-app-capable" content="yes">
-    <%= csrf_meta_tags %>
-    <%= csp_meta_tag %>
-
-    <%= yield :head %>
-
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
-
-    <link rel="icon" href="/icon.png" type="image/png">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
-
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
-    <%= javascript_importmap_tags %>
+    <%= render "layouts/head" %>
   </head>
 
-  <body>
-    <main class="container mx-auto mt-28 px-5 flex">
+  <%# The fallback layout (sign-in, one-off pages): logo, flash, a centered column. %>
+  <body class="flex min-h-dvh flex-col">
+    <a href="#main" class="skip-link">Skip to content</a>
+    <%= render "components/demo_banner" if demo_mode? %>
+    <header class="wrap flex h-16 items-center">
+      <%= link_to ui_logo, "/", class: "logo", aria: { label: "#{APP_NAME} home" } %>
+    </header>
+    <%= render "components/flash" %>
+    <main id="main" tabindex="-1" class="wrap flex-1 py-10">
       <%= yield %>
     </main>
+    <%= render "components/footer" %>
   </body>
 </html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%= render "layouts/head" %>
+  </head>
+
+  <%# Print-to-PDF. White page, no chrome beyond the required credits. %>
+  <body class="flex min-h-dvh flex-col bg-white print:min-h-0">
+    <a href="#main" class="skip-link print:hidden">Skip to content</a>
+    <%= render "components/demo_banner" if demo_mode? %>
+    <main id="main" tabindex="-1" class="mx-auto w-full max-w-[52rem] flex-1 px-4 py-8 print:max-w-none print:p-0">
+      <%= yield %>
+    </main>
+    <%= render "components/footer", compact: true %>
+  </body>
+</html>

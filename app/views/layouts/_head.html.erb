@@ -1,0 +1,21 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><%= page_title %></title>
+<meta name="application-name" content="<%= APP_NAME %>">
+<meta name="theme-color" content="#f6f2f4">
+<%= csrf_meta_tags %>
+<%= csp_meta_tag %>
+<%= content_for?(:meta) ? content_for(:meta) : social_meta_tags %>
+<%= content_for(:head) %>
+
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icon.png" type="image/png" sizes="512x512">
+<link rel="apple-touch-icon" href="/icon.png">
+
+<%# Fonts load through <link> tags (no inline styles), so a CSP only needs fonts.googleapis.com and fonts.gstatic.com. %>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+
+<%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+<%= javascript_importmap_tags %>

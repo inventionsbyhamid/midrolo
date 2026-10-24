@@ -1,0 +1,19 @@
+<%# locals: (title:, id: nil, sheet: false) -%>
+<%#
+  The markup contract for dialog_controller. Put it inside an element with
+  data-controller="dialog", next to an opener with data-action="dialog#open".
+  Set data-dialog-open-value="true" on that element to open the dialog as soon
+  as it lands on the page (for example from a Turbo Stream).
+%>
+<% id ||= "dialog-#{title.parameterize}" %>
+<dialog class="<%= class_names("dialog", "dialog-sheet" => sheet) %>" data-dialog-target="dialog" aria-labelledby="<%= id %>-title">
+  <div class="dialog-header">
+    <h2 id="<%= id %>-title" class="type-h3"><%= title %></h2>
+    <button type="button" class="btn btn-ghost btn-icon btn-md" data-action="dialog#close" aria-label="Close">
+      <svg viewBox="0 0 20 20" class="size-5" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div class="dialog-body">
+    <%= yield %>
+  </div>
+</dialog>

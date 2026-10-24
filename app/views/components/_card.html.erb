@@ -1,0 +1,13 @@
+<%# locals: (title: nil, heading: :h2, aside: nil, class: nil) -%>
+<%# render "components/card", title: "Your audience at a glance" do ... end. aside sits opposite the title (a badge, a link). %>
+<section class="<%= class_names("card", local_assigns[:class]) %>">
+  <% if title %>
+    <header class="card-header">
+      <%= content_tag heading, title, class: "card-title" %>
+      <%= aside %>
+    </header>
+  <% end %>
+  <div class="card-body">
+    <%= yield %>
+  </div>
+</section>

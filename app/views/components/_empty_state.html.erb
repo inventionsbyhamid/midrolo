@@ -1,0 +1,14 @@
+<%# locals: (title:, body: nil, action_label: nil, action_href: nil) -%>
+<div class="empty-state">
+  <svg class="empty-state-line" viewBox="0 0 256 24" aria-hidden="true">
+    <path d="M0 12H116M140 12H256" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <rect x="120" y="9" width="16" height="6" rx="3" class="fill-tally"/>
+  </svg>
+  <p class="type-h3"><%= title %></p>
+  <% if body %>
+    <p class="max-w-prose text-ink-soft"><%= body %></p>
+  <% end %>
+  <% if action_label && action_href %>
+    <%= ui_button action_label, action_href, class: "mt-2" %>
+  <% end %>
+</div>

@@ -1,0 +1,280 @@
+<% content_for :title, "Design system" %>
+<% content_for :meta do %>
+  <meta name="robots" content="noindex">
+  <%= social_meta_tags(description: "Tokens, type and components for Midrolo.") %>
+<% end %>
+
+<% swatches = [
+     [ "bg-ink", "Ink", "#22132B", "Text, primary buttons" ],
+     [ "bg-ink-soft", "Ink soft", "#5A4A63", "Secondary text (7.3:1 on paper)" ],
+     [ "bg-plum", "Plum", "#4A2266", "Meter fill, links, accent badges" ],
+     [ "bg-tally", "Tally", "#F3A712", "The live lamp: logo peak, demo banner, focus halo" ],
+     [ "bg-paper", "Paper", "#F6F2F4", "Page background" ],
+     [ "bg-surface", "Surface", "#FFFFFF", "Cards, dialogs, inputs" ],
+     [ "bg-line", "Line", "#E3DAE3", "Card borders, empty meter segments" ],
+     [ "bg-line-strong", "Line strong", "#8E7F95", "Input and secondary button borders (3.7:1)" ],
+     [ "bg-success", "Success", "#1D6B45", "Easy yes, saved" ],
+     [ "bg-warning", "Warning", "#7E4A00", "Long shot, step warnings" ],
+     [ "bg-danger", "Danger", "#B0262B", "Errors, destructive actions" ]
+   ] %>
+
+<div class="<%= class_names("wrap py-10" => %w[marketing kit].include?(params[:layout])) %>">
+  <header class="max-w-3xl pb-10">
+    <h1 class="type-h1">Design system</h1>
+    <p class="type-lead mt-4">
+      Aubergine ink, a faint plum-grey page and one amber tally light. Archivo throughout: extended widths for headlines and numbers, normal width for reading.
+    </p>
+    <p class="mt-6 flex flex-wrap items-center gap-2 text-sm">
+      <span class="text-ink-soft">Preview this page in a layout:</span>
+      <% StyleguideController::LAYOUTS.each do |name| %>
+        <%= link_to name, styleguide_path(layout: name), class: "chip font-semibold text-ink no-underline hover:border-ink" %>
+      <% end %>
+    </p>
+  </header>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-brand">
+    <div>
+      <h2 id="sg-brand" class="type-h3">Brand</h2>
+      <p class="mt-1 text-sm text-ink-soft">An episode waveform with the mid-roll peak lit. The footer rule repeats it as a timeline marker.</p>
+    </div>
+    <div class="flex flex-col gap-8">
+      <div class="flex flex-wrap items-center gap-8">
+        <span class="logo"><%= ui_logo %></span>
+        <span class="logo"><%= ui_logo(wordmark: false) %></span>
+        <span class="logo rounded-card bg-ink px-4 py-3 text-white"><%= ui_logo %></span>
+      </div>
+      <div class="midroll-rule max-w-md"></div>
+    </div>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-color">
+    <div>
+      <h2 id="sg-color" class="type-h3">Color</h2>
+      <p class="mt-1 text-sm text-ink-soft">Use the token classes (<code>text-ink-soft</code>, <code>bg-plum-soft</code>) rather than Tailwind's default palette. Amber is never text.</p>
+    </div>
+    <ul class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 xl:grid-cols-4">
+      <% swatches.each do |klass, name, hex, role| %>
+        <li>
+          <span class="<%= class_names("block h-16 rounded-control border border-line", klass) %>"></span>
+          <p class="mt-2 text-sm font-semibold"><%= name %> <span class="font-normal text-ink-soft"><%= hex %></span></p>
+          <p class="text-[0.8125rem] leading-snug text-ink-soft"><%= role %></p>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-type">
+    <div>
+      <h2 id="sg-type" class="type-h3">Type</h2>
+      <p class="mt-1 text-sm text-ink-soft">One family, Archivo. Width does the work weight usually does: 125% for display, 100% for body.</p>
+    </div>
+    <div class="flex min-w-0 flex-col gap-6">
+      <p class="type-display">Find sponsors who already love your listeners.</p>
+      <p class="type-h1">Sponsor matches for Tidewater Tapes</p>
+      <p class="type-h2">Your audience at a glance</p>
+      <p class="type-h3">Brands this audience over-indexes on</p>
+      <p class="type-lead max-w-2xl">Listeners like yours spend on slow travel, specialty coffee and repairable gear. Here are the brands that already reach them.</p>
+      <p class="max-w-prose">Body copy is 16px on a 1.6 line height, set to about 65 characters a line. Ages and genders are shown as leans modeled from Qloo taste data, never as percentages, because that is all the data can honestly support.</p>
+      <p class="text-sm text-ink-soft">Small print, 14px: Stats self-reported by the verified owner.</p>
+    </div>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-buttons">
+    <div>
+      <h2 id="sg-buttons" class="type-h3">Buttons</h2>
+      <p class="mt-1 text-sm text-ink-soft"><code>ui_button(label, href = nil, variant:, size:)</code>. A link with an href, a button without one. Labels say exactly what happens.</p>
+    </div>
+    <div class="flex flex-col gap-5">
+      <div class="flex flex-wrap items-center gap-3">
+        <%= ui_button "Run report", type: "button" %>
+        <%= ui_button "Open media kit", "#", variant: :secondary %>
+        <%= ui_button "Skip for now", "#", variant: :ghost %>
+        <%= ui_button "Delete account", type: "button", variant: :danger %>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <%= ui_button "Small", "#", size: :sm %>
+        <%= ui_button "Medium", "#" %>
+        <%= ui_button "Large", "#", size: :lg %>
+        <%= ui_button "Re-run (running)", type: "button", variant: :secondary, disabled: true %>
+      </div>
+      <p class="text-sm">Inline links use <a href="#" class="link">the link class</a>.</p>
+    </div>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-badges">
+    <div>
+      <h2 id="sg-badges" class="type-h3">Badges and chips</h2>
+      <p class="mt-1 text-sm text-ink-soft"><code>ui_badge(text, tone:)</code> for status and tiers. Chips carry evidence.</p>
+    </div>
+    <div class="flex flex-col gap-5">
+      <div class="flex flex-wrap items-center gap-2">
+        <%= ui_badge "Draft" %>
+        <%= ui_badge "Easy yes", tone: :success %>
+        <%= ui_badge "Long shot", tone: :warning %>
+        <%= ui_badge "Failed", tone: :danger %>
+        <%= ui_badge "Realistic", tone: :accent %>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="chip">Shares 6 taste tags</span>
+        <span class="chip">Affinity 0.82</span>
+        <span class="chip">Sponsored&nbsp;<em>Harbor Lights</em>&nbsp;in Sept</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-meters">
+    <div>
+      <h2 id="sg-meters" class="type-h3">Meters</h2>
+      <p class="mt-1 text-sm text-ink-soft"><code>ui_meter(0.82, label: "Affinity")</code>. A 20-segment level meter with the exact number beside it.</p>
+    </div>
+    <div class="flex max-w-md flex-col gap-4">
+      <%= ui_meter 0.82, label: "Affinity" %>
+      <%= ui_meter 0.91, label: "Fit score", value_text: "91" %>
+      <%= ui_meter 0.18, label: "Affinity" %>
+      <ul class="mt-2 flex flex-col divide-y divide-line">
+        <% [ [ "Fieldnote Coffee", 0.88 ], [ "Northbound Packs", 0.74 ], [ "Lumen Sleep", 0.61 ] ].each do |name, affinity| %>
+          <li class="grid grid-cols-[minmax(0,9rem)_1fr] items-center gap-4 py-2.5">
+            <span class="truncate text-[0.9375rem] font-medium"><%= name %></span>
+            <%= ui_meter affinity, label: "#{name} affinity", show_label: false %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-stats">
+    <div>
+      <h2 id="sg-stats" class="type-h3">Stats</h2>
+      <p class="mt-1 text-sm text-ink-soft"><code>render "components/stat", value:, label:, note:</code>. Media-kit numbers.</p>
+    </div>
+    <div class="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3">
+      <%= render "components/stat", value: "4,200", label: "Downloads per episode", note: "Self-reported by the verified owner" %>
+      <%= render "components/stat", value: "212", label: "Episodes" %>
+      <%= render "components/stat", value: "Weekly", label: "New episodes", note: "From the RSS feed" %>
+    </div>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-cards">
+    <div>
+      <h2 id="sg-cards" class="type-h3">Cards</h2>
+      <p class="mt-1 text-sm text-ink-soft"><code>render "components/card", title: do ... end</code>. Only for discrete things: one sponsor, one group of stats.</p>
+    </div>
+    <div class="grid gap-6 xl:grid-cols-2">
+      <%= render "components/card" do %>
+        <div class="flex items-start gap-4">
+          <span class="grid size-12 flex-none place-items-center rounded-control bg-plum-soft font-wide text-lg font-bold text-plum" aria-hidden="true">FC</span>
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h3 class="text-lg font-bold font-semiwide">Fieldnote Coffee</h3>
+              <%= ui_badge "Easy yes", tone: :success %>
+            </div>
+            <p class="text-sm text-ink-soft">Coffee subscription</p>
+          </div>
+        </div>
+        <div class="mt-5">
+          <%= ui_meter 0.91, label: "Fit score", value_text: "91" %>
+        </div>
+        <p class="mt-4 text-[0.9375rem]">Your listeners over-index on slow-living and specialty-coffee tastes, and two shows like yours ran Fieldnote reads this fall.</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="chip">Shares 6 taste tags</span>
+          <span class="chip">Affinity 0.82</span>
+          <span class="chip">Sponsored&nbsp;<em>Harbor Lights</em>&nbsp;in Sept</span>
+        </div>
+        <div class="mt-5 flex flex-wrap gap-2">
+          <%= ui_button "Write my pitch", type: "button" %>
+          <%= ui_button "Mark as pitched", type: "button", variant: :secondary %>
+        </div>
+      <% end %>
+
+      <%= render "components/card", title: "Where your kind of listener lives", aside: ui_badge("Modeled", tone: :accent) do %>
+        <ol class="flex flex-col divide-y divide-line text-[0.9375rem]">
+          <% [ "Portland, OR", "Austin, TX", "Denver, CO", "Seattle, WA" ].each do |metro| %>
+            <li class="py-2"><%= metro %></li>
+          <% end %>
+        </ol>
+        <p class="mt-3 text-sm text-ink-soft">Modeled from Qloo taste data.</p>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-empty">
+    <div>
+      <h2 id="sg-empty" class="type-h3">Empty state</h2>
+      <p class="mt-1 text-sm text-ink-soft">Dead air, with one clear next step.</p>
+    </div>
+    <%= render "components/empty_state",
+          title: "No shows yet",
+          body: "Add your podcast and Midrolo will find the brands your listeners already buy from.",
+          action_label: "Add your show", action_href: "#" %>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-loading">
+    <div>
+      <h2 id="sg-loading" class="type-h3">Loading</h2>
+      <p class="mt-1 text-sm text-ink-soft">Report sections start as skeletons and fill in live. They breathe; reduced motion holds them still.</p>
+    </div>
+    <div class="card card-body max-w-xl">
+      <%= render "components/skeleton", lines: 4, label: "Loading sponsor matches" %>
+    </div>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-messages">
+    <div>
+      <h2 id="sg-messages" class="type-h3">Messages</h2>
+      <p class="mt-1 text-sm text-ink-soft">Flash messages sit under the header (this page sets both). The demo banner tops every page while a Fake adapter is active.</p>
+    </div>
+    <div class="flex min-w-0 flex-col gap-4">
+      <%= render "components/demo_banner" %>
+    </div>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-dialog">
+    <div>
+      <h2 id="sg-dialog" class="type-h3">Dialog and copy</h2>
+      <p class="mt-1 text-sm text-ink-soft">Native <code>&lt;dialog&gt;</code> via <code>dialog_controller</code>: Escape closes, focus stays inside and returns to the opener. <code>clipboard_controller</code> copies and says so for 2 seconds.</p>
+    </div>
+    <div data-controller="dialog">
+      <%= ui_button "Write my pitch", type: "button", data: { action: "dialog#open" } %>
+      <%= render "components/dialog", title: "Pitch for Fieldnote Coffee" do %>
+        <div data-controller="clipboard" class="flex flex-col gap-4">
+          <div>
+            <p class="text-sm text-ink-soft">Subject</p>
+            <p class="font-semibold">Tidewater Tapes listeners already drink your coffee</p>
+          </div>
+          <div data-clipboard-target="source" class="whitespace-pre-line rounded-control border border-line bg-paper p-4 text-[0.9375rem]">Hi Dana,
+
+I host Tidewater Tapes, a weekly show about slow travel on the Atlantic coast. Qloo's taste data says our listeners over-index on specialty coffee and on two shows Fieldnote already sponsors.
+
+Would a 4-episode mid-roll bundle at $180 be worth a quick call?
+
+Maya</div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" class="btn btn-primary btn-md" data-action="clipboard#copy">
+              <span data-clipboard-target="label" aria-live="polite">Copy email</span>
+            </button>
+            <%= ui_button "Close", type: "button", variant: :ghost, data: { action: "dialog#close" } %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-forms">
+    <div>
+      <h2 id="sg-forms" class="type-h3">Form fields</h2>
+      <p class="mt-1 text-sm text-ink-soft"><code>.label</code>, <code>.input</code>, <code>.hint</code>. Errors say what to type.</p>
+    </div>
+    <div class="flex max-w-md flex-col gap-6">
+      <div>
+        <label class="label" for="sg-show">Show name</label>
+        <input id="sg-show" class="input" type="search" placeholder="Search Podcast Index" aria-describedby="sg-show-hint">
+        <p id="sg-show-hint" class="hint">Can't find it? Paste the RSS or Apple Podcasts link.</p>
+      </div>
+      <div>
+        <label class="label" for="sg-downloads">Downloads per episode, last 30 days</label>
+        <input id="sg-downloads" class="input" type="text" value="about 4k" aria-invalid="true" aria-describedby="sg-downloads-error">
+        <p id="sg-downloads-error" class="hint text-danger">Enter a whole number, like 4200.</p>
+      </div>
+    </div>
+  </section>
+</div>

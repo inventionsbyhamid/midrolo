@@ -1,0 +1,10 @@
+<%# locals: (lines: 3, label: "Loading", title: true) -%>
+<div class="skeleton" role="status">
+  <span class="sr-only"><%= label %></span>
+  <% if title %>
+    <span class="skeleton-bar skeleton-bar-title" aria-hidden="true"></span>
+  <% end %>
+  <% lines.times do |i| %>
+    <span class="<%= class_names("skeleton-bar", i == lines - 1 ? "w-3/5" : %w[w-full w-11/12 w-5/6][i % 3]) %>" aria-hidden="true"></span>
+  <% end %>
+</div>
