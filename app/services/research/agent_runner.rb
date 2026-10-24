@@ -4,8 +4,9 @@ module Research
   # steps; the services and tools do). Spend is recorded once, whatever the outcome.
   #
   # The time cap is hard (R39): every request runs in a RubyLLM context whose request_timeout is the time left
-  # (split across the one allowed retry, never under MIN_REQUEST_SECONDS), rebound after each tool result, so
-  # the final turn after save_summary is bounded too.
+  # (split across the one allowed retry), clamped to MIN_REQUEST_SECONDS..MAX_REQUEST_SECONDS whatever
+  # max_seconds says, with retry waits capped at MAX_RETRY_INTERVAL. The context is rebound after each tool
+  # result, so the final turn after save_summary is bounded too.
   #
   # Seeds: a clean save_taste_seeds call (no rejected ids) that leaves fewer than 2 seeds ends the run as
   # needs_input. A call with rejected ids or invalid arguments may be retried MAX_SEED_RETRIES times.
@@ -17,6 +18,8 @@ module Research
     ESTIMATE_USD = 0.5
     MAX_RETRIES = 1
     MIN_REQUEST_SECONDS = 20
+    MAX_REQUEST_SECONDS = 360
+    MAX_RETRY_INTERVAL = 5
     MAX_SEED_RETRIES = 2
     TIMEOUTS = [ Faraday::TimeoutError, Timeout::Error ].freeze
 
@@ -97,10 +100,11 @@ module Research
 
     # The next request (and its one retry) must fit in the time left.
     def bind_time_budget(chat)
-      timeout = [ (seconds_left / (MAX_RETRIES + 1)).floor, MIN_REQUEST_SECONDS ].max
+      timeout = (seconds_left / (MAX_RETRIES + 1)).floor.clamp(MIN_REQUEST_SECONDS, MAX_REQUEST_SECONDS)
       chat.with_context(RubyLLM.context do |config|
         config.request_timeout = timeout
         config.max_retries = MAX_RETRIES
+        config.retry_max_interval = [ config.retry_max_interval.to_f, MAX_RETRY_INTERVAL ].min
       end)
     end
 

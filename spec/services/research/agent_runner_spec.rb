@@ -149,9 +149,24 @@ RSpec.describe Research::AgentRunner do
     expect(chat.context.config.request_timeout).to be <= 360
     expect(chat.context.config.request_timeout).to be >= 20
     expect(chat.context.config.max_retries).to eq(1)
+    expect(chat.context.config.retry_max_interval).to be <= 5
     expect(chat.concurrency).to be_nil
     expect(timeouts.size).to eq(9) # at the start, then after each of the 8 tool results
     expect(timeouts).to all(be_between(20, 360))
+  end
+
+  it "never lets a request wait more than 360 seconds, whatever the configured run length" do
+    allow(Llm).to receive(:agent_max_seconds).and_return(10_000)
+    timeouts = []
+    allow_any_instance_of(RubyLLM::Chat).to receive(:with_context).and_wrap_original do |original, context|
+      timeouts << context.config.request_timeout
+      original.call(context)
+    end
+    RubyLLM::Test.stub_responses(*playbook)
+    GenerateReportJob.perform_now(report.id)
+
+    expect(report.reload.status).to eq("done")
+    expect(timeouts).to all(eq(360))
   end
 
   it "fails with the time message when a request times out" do
