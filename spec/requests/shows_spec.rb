@@ -82,6 +82,18 @@ RSpec.describe "Shows" do
         expect(flash[:notice]).to eq("You've already added this show.")
       end
 
+      it "redirects to the existing show when a concurrent submit hits the unique index" do
+        existing = create(:show, user: user, directory_id: "fake-1", feed_url: "fake://fake-1")
+        # Simulate the race: the duplicate check passes, then the insert collides.
+        allow_any_instance_of(ShowsController).to receive(:at_limit?).and_return(false)
+        allow_any_instance_of(ShowsController).to receive(:existing_duplicate).and_return(nil, nil, existing)
+        allow_any_instance_of(Show).to receive(:save).and_raise(ActiveRecord::RecordNotUnique)
+
+        expect { post "/shows", params: { directory_id: "fake-1" } }.not_to change(Show, :count)
+        expect(response).to redirect_to(show_path(existing))
+        expect(flash[:notice]).to eq("You've already added this show.")
+      end
+
       it "lets two users add the same show" do
         create(:show, user: create(:user), directory_id: "fake-1", feed_url: "fake://fake-1")
         expect { post "/shows", params: { directory_id: "fake-1" } }.to change(user.shows, :count).by(1)

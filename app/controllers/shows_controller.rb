@@ -30,6 +30,10 @@ class ShowsController < ApplicationController
     else
       render_new(status: :unprocessable_content, error: show.errors.full_messages.to_sentence)
     end
+  rescue ActiveRecord::RecordNotUnique
+    # A concurrent double-submit won the race: send them to the show that now exists.
+    duplicate = existing_duplicate(result&.attributes || {})
+    duplicate ? redirect_to(show_path(duplicate), notice: "You've already added this show.") : raise
   rescue Podcasts::Directory::Unavailable
     render_new(status: :unprocessable_content, error: ShowSearchesController::UNAVAILABLE)
   end
