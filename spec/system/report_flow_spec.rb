@@ -5,8 +5,8 @@ require "rails_helper"
 # when the redirect lands; live Turbo updates are covered by the request and model specs.
 #
 # The map needs MapLibre from cdn.jsdelivr.net and a WebGL context, so this spec needs network access (the
-# map style itself is inlined).
-RSpec.describe "Report flow" do
+# map style itself is inlined). It is tagged :network; SKIP_NETWORK=1 leaves it out.
+RSpec.describe "Report flow", :network do
   # A one-layer style: no tile downloads, and nothing heavy for software WebGL to draw under load.
   blank_style = "data:application/json,#{ERB::Util.url_encode({ version: 8, sources: {},
                                                                 layers: [ { id: "bg", type: "background" } ] }.to_json)}"

@@ -73,6 +73,10 @@ RSpec.configure do |config|
   # Filter lines from Rails gems in backtraces.
   config.filter_rails_from_backtrace!
 
+  # Specs tagged :network reach the internet from the browser (the MapLibre CDN). They run by default, CI included;
+  # SKIP_NETWORK=1 leaves them out when working offline.
+  config.filter_run_excluding :network if ENV["SKIP_NETWORK"].present?
+
   config.include FactoryBot::Syntax::Methods
   config.include Devise::Test::IntegrationHelpers, type: :request
   config.include AuthHelpers
