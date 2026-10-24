@@ -19,7 +19,7 @@ module Podcasts
     def read(feed_url, max_episodes: 20)
       url = feed_url.to_s.strip
       return fake_feed(url, max_episodes) if url.start_with?(Directories::Fake::FEED_PREFIX)
-      return Feed.unreadable unless url.match?(%r{\Ahttps?://}i)
+      return Feed.unreadable("feed_blocked") if SafeUrl.blocked?(url)
 
       key = "podcasts:feed:v1:#{max_episodes}:#{url}"
       cached = @cache.read(key)
@@ -61,13 +61,14 @@ module Podcasts
     # Returns the body string, or a Feed when the response was not usable.
     def download(url)
       (MAX_REDIRECTS + 1).times do
+        return Feed.unreadable("feed_blocked") if SafeUrl.blocked?(url)
+
         response, body = fetch(url)
         case response.status
         when 200 then return body
         when 301, 302, 303, 307, 308
           location = response.headers["location"].to_s
           url = URI.join(url, location).to_s rescue (return Feed.unreadable)
-          return Feed.unreadable unless url.match?(%r{\Ahttps?://}i)
         else return Feed.unreadable
         end
       end

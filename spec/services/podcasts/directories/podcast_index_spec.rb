@@ -46,9 +46,29 @@ RSpec.describe Podcasts::Directories::PodcastIndex do
       expect(adapter.search("  ")).to eq([])
     end
 
-    it "returns [] when the API errors" do
-      stub_request(:get, "#{base}/search/byterm").with(query: hash_including({})).to_return(status: 500)
-      expect(adapter.search("widgets")).to eq([])
+    it "returns [] for a genuine empty result" do
+      stub_request(:get, "#{base}/search/byterm").with(query: hash_including({}))
+        .to_return(status: 200, body: '{"status":"true","feeds":[],"count":0}')
+      expect(adapter.search("zzz")).to eq([])
+    end
+
+    [ 401, 403, 500 ].each do |status|
+      it "raises Unavailable naming the status on HTTP #{status}" do
+        stub_request(:get, "#{base}/search/byterm").with(query: hash_including({})).to_return(status: status)
+        expect { adapter.search("widgets") }.to raise_error(Podcasts::Directory::Unavailable, /HTTP #{status}/)
+      end
+    end
+
+    it "raises Unavailable on timeouts" do
+      stub_request(:get, "#{base}/search/byterm").with(query: hash_including({})).to_timeout
+      expect { adapter.search("widgets") }.to raise_error(Podcasts::Directory::Unavailable)
+    end
+
+    it "does not cache failures" do
+      stub_request(:get, "#{base}/search/byterm").with(query: hash_including({}))
+        .to_return({ status: 500 }, { status: 200, body: fixture("search_byterm") })
+      expect { adapter.search("widgets") }.to raise_error(Podcasts::Directory::Unavailable)
+      expect(adapter.search("widgets").size).to eq(2)
     end
   end
 

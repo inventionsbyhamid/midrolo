@@ -5,6 +5,8 @@ RSpec.describe Podcasts::FeedReader do
   let(:reader) { described_class.new(cache: cache) }
   let(:url) { "https://widgethour.example.com/feed.xml" }
 
+  before { allow(Resolv).to receive(:getaddresses).and_return([ "93.184.216.34" ]) }
+
   def feed_fixture(name) = Rails.root.join("spec/fixtures/feeds/#{name}.xml").binread
 
   describe "a normal feed" do
@@ -83,13 +85,47 @@ RSpec.describe Podcasts::FeedReader do
     end
 
     it "flags a blank or non-http url" do
-      expect(reader.read("").warnings).to eq([ "feed_unreadable" ])
-      expect(reader.read("file:///etc/passwd").warnings).to eq([ "feed_unreadable" ])
+      expect(reader.read("").warnings).to eq([ "feed_blocked" ])
+      expect(reader.read("file:///etc/passwd").warnings).to eq([ "feed_blocked" ])
     end
 
     it "does not cache failures" do
       stub_request(:get, url).to_return({ status: 500 }, { status: 200, body: feed_fixture("normal") })
       expect(reader.read(url).warnings).to eq([ "feed_unreadable" ])
+      expect(reader.read(url).episodes.size).to eq(20)
+    end
+  end
+
+  describe "SSRF guard" do
+    %w[http://127.0.0.1/feed http://localhost/feed http://10.0.0.5/x http://169.254.169.254/latest
+       http://[::1]/feed http://[::ffff:127.0.0.1]/feed http://0.0.0.0/x http://[fe80::1]/x http://[fc00::1]/x
+       http://192.168.1.1/x http://172.16.0.1/x ftp://widgethour.example.com/feed
+       https://widgethour.example.com:8080/feed].each do |blocked|
+      it "blocks #{blocked} without any HTTP request" do
+        allow(Resolv).to receive(:getaddresses).with("localhost").and_return([ "127.0.0.1" ])
+        feed = reader.read(blocked)
+        expect(feed.episodes).to eq([])
+        expect(feed.warnings).to eq([ "feed_blocked" ])
+        expect(a_request(:any, /.*/)).not_to have_been_made
+      end
+    end
+
+    it "blocks a host that resolves to any private address" do
+      allow(Resolv).to receive(:getaddresses).with("sneaky.example.com").and_return([ "93.184.216.34", "10.1.2.3" ])
+      expect(reader.read("https://sneaky.example.com/feed").warnings).to eq([ "feed_blocked" ])
+      expect(a_request(:any, /.*/)).not_to have_been_made
+    end
+
+    it "blocks a public host that redirects to a private IP" do
+      stub_request(:get, url).to_return(status: 302, headers: { "Location" => "http://169.254.169.254/latest" })
+      feed = reader.read(url)
+      expect(feed.warnings).to eq([ "feed_blocked" ])
+      expect(a_request(:get, "http://169.254.169.254/latest")).not_to have_been_made
+    end
+
+    it "follows a redirect to another public host" do
+      stub_request(:get, url).to_return(status: 301, headers: { "Location" => "https://cdn.example.com/f.xml" })
+      stub_request(:get, "https://cdn.example.com/f.xml").to_return(status: 200, body: feed_fixture("normal"))
       expect(reader.read(url).episodes.size).to eq(20)
     end
   end

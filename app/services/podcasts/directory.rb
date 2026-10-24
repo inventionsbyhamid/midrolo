@@ -3,6 +3,8 @@ module Podcasts
   # Adapter interface: #search(term, limit: 10), #find(directory_id), #find_by_feed_url(url).
   module Directory
     class MissingCredentials < StandardError; end
+    # The directory service failed (auth, outage, timeout). Distinct from a genuine empty result.
+    class Unavailable < StandardError; end
 
     ENV_VARS = %w[PODCAST_INDEX_KEY PODCAST_INDEX_SECRET].freeze
 

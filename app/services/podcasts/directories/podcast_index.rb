@@ -38,23 +38,30 @@ module Podcasts
         feed.is_a?(Hash) && feed.any? ? to_show(feed) : nil
       end
 
-      # Returns the parsed JSON body, or nil on any failure (failures are logged and never cached).
+      # Returns the parsed JSON body, or nil for a 404. Raises Directory::Unavailable on auth errors,
+      # 5xx, timeouts and unparseable bodies. Failures are logged and never cached.
       def get(path, params)
         key = "podcasts:podcast_index:v1:#{path}:#{params.sort.to_h.to_query}"
         cached = @cache.read(key)
         return cached if cached
 
         response = connection.get("#{BASE_URL}#{path}", params, auth_headers)
-        unless response.status == 200
-          Rails.logger.warn("[PodcastIndex] #{path} returned #{response.status}")
-          return nil
-        end
+        return nil if response.status == 404
+        unavailable!(path, "returned HTTP #{response.status}") unless response.status == 200
+
         json = JSON.parse(response.body)
         @cache.write(key, json, expires_in: CACHE_TTL)
         json
-      rescue Faraday::Error, JSON::ParserError => e
-        Rails.logger.warn("[PodcastIndex] #{path} failed: #{e.class}: #{e.message}")
-        nil
+      rescue Faraday::Error => e
+        unavailable!(path, "failed: #{e.class}: #{e.message}")
+      rescue JSON::ParserError
+        unavailable!(path, "returned an unparseable body")
+      end
+
+      def unavailable!(path, detail)
+        message = "Podcast Index #{path} #{detail}"
+        Rails.logger.warn("[PodcastIndex] #{message}")
+        raise Directory::Unavailable, message
       end
 
       def connection
