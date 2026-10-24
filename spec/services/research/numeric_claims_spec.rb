@@ -37,6 +37,22 @@ RSpec.describe Research::NumericClaims do
     expect(described_class.tokens("AG1 and 1Password and Web3")).to eq([])
   end
 
+  {
+    "Reach 10k listeners." => [ "10k" ], "Reach 3.5k listeners." => [ "3.5k" ], "Reach 50K fans." => [ "50K" ],
+    "Shows with 2M downloads trust it." => [ "2M" ], "Spends $5M on podcasts." => [ "$5M" ],
+    "Fans in their 40s." => [ "40s" ], "Reaches 2 million fans." => [ "2 million" ],
+    "25 percent of your listeners buy Ramp." => [ "25 percent" ], "40 % of fans buy Ramp." => [ "40 %" ],
+    "Fans are 3x more likely to buy." => [ "3x" ], "Fans are x3 more likely to buy." => [ "x3" ]
+  }.each do |text, claims|
+    it "rejects the invented claim in #{text.inspect}" do
+      expect(unsupported_in(text)).to eq(claims)
+    end
+  end
+
+  it "accepts a magnitude-style token when it is the brand's own name (3M)" do
+    expect(unsupported_in("3M fans share your audience's tastes.", scored(name: "3M"))).to eq([])
+  end
+
   it "rejects an invented percentage" do
     expect(unsupported_in("40% of your listeners buy Ramp.")).to eq([ "40%" ])
   end

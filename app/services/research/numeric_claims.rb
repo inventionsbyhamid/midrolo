@@ -1,21 +1,38 @@
 module Research
   # The §6 numeric-claim guardrail (R38): a match reason or the summary may cite only numbers found in this
-  # run's stored data. It's an allowlist, not a heuristic.
-  #
-  # Claims are integers, decimals, percentages, multipliers ("2x"), ordinals ("3rd") and both ends of a range
-  # ("25–34"). Digits glued to letters ("AG1", "1Password", "Web3") are names, not claims. A percentage must
-  # match a percentage in the data (affinity); any other number must match an allowed value.
+  # run's stored data. It's an allowlist, not a heuristic. Claims come in three kinds:
+  #   percent — "40%", "40 %", "25 percent", "25 per cent", "25 pct": only an affinity percentage passes.
+  #   name    — magnitudes ("10k", "3.5k", "2M", "$5M", "2 million"), decades ("40s") and multipliers
+  #             ("3x", "x3"): only when that exact token is part of an allowed name (a brand called "3M").
+  #   number  — integers, decimals, ordinals ("3rd") and both ends of a range ("25–34"): any allowed value.
+  # Digits glued to letters ("AG1", "1Password", "Web3") are names, not claims.
   class NumericClaims
     AGE_BOUNDS = %w[24 25 29 30 34 35 44 45 54 55].freeze
-    TOKEN = /(?<![[:alnum:]])\d+(?:[.,]\d+)*(?:%|×|x(?![[:alpha:]])|(?:st|nd|rd|th)(?![[:alpha:]]))?(?![[:alnum:]])/i
+    PERCENT = /\d+(?:[.,]\d+)?\s*(?:%|(?:percent|per\s?cent|pct)(?![[:alpha:]]))/i
+    MAGNITUDE = /\$?\d+(?:[.,]\d+)*(?:\s?(?:thousand|million|billion)|bn|mn|[kmb])(?![[:alnum:]])/i
+    DECADE = /\d*0s(?![[:alnum:]])/i
+    MULTIPLIER = /\d+(?:\.\d+)?\s?[x×](?![[:alnum:]])|[x×]\s?\d+(?:\.\d+)?(?![[:alnum:]])/i
+    NUMBER = /\$?\d+(?:[.,]\d+)*(?:st|nd|rd|th)?(?![[:alnum:]])/i
+    TOKEN = /(?<![[:alnum:]])(?:(?<percent>#{PERCENT})|(?<name>#{MAGNITUDE}|#{DECADE}|#{MULTIPLIER})|(?<number>#{NUMBER}))/i
     DIGITS = /\d+(?:[.,]\d+)*/
 
-    Allowed = Data.define(:numbers, :percents) do
-      def merge(other) = with(numbers: numbers | other.numbers, percents: percents | other.percents)
+    Allowed = Data.define(:numbers, :percents, :names) do
+      def merge(other)
+        with(numbers: numbers | other.numbers, percents: percents | other.percents, names: names | other.names)
+      end
     end
 
     # The numeric claims in text, as written.
-    def self.tokens(text) = text.to_s.scan(TOKEN)
+    def self.tokens(text) = claims(text).map(&:first)
+
+    # [[token, :percent | :name | :number]] in order.
+    def self.claims(text)
+      text.to_s.to_enum(:scan, TOKEN).map do
+        match = Regexp.last_match
+        kind = %i[percent name number].find { |k| match[k] }
+        [ match[0], kind ]
+      end
+    end
 
     # One spelling per number: "1,500" => "1500", "0.80" => "0.8", "07" => "7".
     def self.normalize(digits)
@@ -25,50 +42,52 @@ module Research
       frac.empty? ? int : "#{int}.#{frac}"
     end
 
+    # A name-kind token as compared: "3.5 K" => "3.5k".
+    def self.name_key(token) = token.downcase.gsub(/\s+/, "")
+
     def initialize(toolkit)
       @toolkit = toolkit
     end
 
     # The claims in text the allowlist doesn't cover, as written.
     def unsupported(text, allowed)
-      self.class.tokens(text).reject { |token| allowed?(token, allowed) }.uniq
+      self.class.claims(text).reject { |token, kind| allowed?(token, kind, allowed) }.map(&:first).uniq
     end
 
     # What one match's reason may cite: its fit score, affinity (0.82 and 82%), shared-tag and proven counts,
-    # its evidence dates, digits in its name, tags and evidence titles, plus the run-wide values.
+    # its evidence dates, its name, tags and evidence titles, plus the run-wide values.
     def for_match(scored)
       brand = scored.candidate.entity
-      evidence = scored.candidate.proven_evidence
-      numbers = base_numbers.dup
-      percents = Set.new
-      numbers << scored.fit_score.to_s
+      allowed = base.with(numbers: base.numbers.dup, names: base.names.dup, percents: Set.new)
+      allowed.numbers << scored.fit_score.to_s
       if (affinity = scored.candidate.affinity)
-        numbers << self.class.normalize(format("%.2f", affinity))
         percent = (affinity.to_f * 100).round.to_s
-        numbers << percent
-        percents << percent
+        allowed.numbers << self.class.normalize(format("%.2f", affinity)) << percent
+        allowed.percents << percent
       end
       tag_names = tag_lists(brand)
-      numbers.merge(tag_names.map { |names| names.size.to_s })
-      add_evidence(numbers, evidence)
-      add_digits(numbers, brand.name, *tag_names.flatten)
-      Allowed.new(numbers: numbers, percents: percents)
+      allowed.numbers.merge(tag_names.map { |names| names.size.to_s })
+      add_evidence(allowed, scored.candidate.proven_evidence)
+      add_texts(allowed, brand.name, *tag_names.flatten)
     end
 
     # What the summary may cite: everything any saved match may cite, plus the profile's own counts.
     def for_summary
       matches = report.sponsor_matches.to_a
-      allowed = Allowed.new(numbers: profile_numbers(matches), percents: Set.new)
-      matches.filter_map { |m| @toolkit.scored[m.brand_entity_id] }.reduce(allowed) { |all, s| all.merge(for_match(s)) }
+      profile = profile_allowed(matches)
+      matches.filter_map { |m| @toolkit.scored[m.brand_entity_id] }.reduce(profile) { |all, s| all.merge(for_match(s)) }
     end
 
     private
 
     delegate :report, :show, to: :@toolkit
 
-    def allowed?(token, allowed)
-      value = self.class.normalize(token[DIGITS])
-      token.end_with?("%") ? allowed.percents.include?(value) : allowed.numbers.include?(value)
+    def allowed?(token, kind, allowed)
+      case kind
+      when :percent then allowed.percents.include?(self.class.normalize(token[DIGITS]))
+      when :name then allowed.names.include?(self.class.name_key(token))
+      else allowed.numbers.include?(self.class.normalize(token[DIGITS]))
+      end
     end
 
     # The shared-tag lists a reason may count: the ones reasons use, the R27 overlap and Qloo compare's.
@@ -77,28 +96,29 @@ module Research
         Array(@toolkit.explanations[brand.id]).map(&:name).uniq ]
     end
 
-    def add_evidence(numbers, evidence)
+    def add_evidence(allowed, evidence)
       items = Matching::Evidence.items(evidence)
-      numbers << Matching::Evidence.count(evidence).to_s << items.size.to_s
-      numbers << items.map { |i| Matching::Evidence.value(i, :show) }.uniq.size.to_s
+      allowed.numbers << Matching::Evidence.count(evidence).to_s << items.size.to_s
+      allowed.numbers << items.map { |i| Matching::Evidence.value(i, :show) }.uniq.size.to_s
       items.each do |item|
         time = Matching::Evidence.published_at(item)
-        numbers.merge([ time.year, time.month, time.day ].map(&:to_s)) if time
-        add_digits(numbers, Matching::Evidence.value(item, :show), Matching::Evidence.value(item, :episode_title))
+        allowed.numbers.merge([ time.year, time.month, time.day ].map(&:to_s)) if time
+        add_texts(allowed, Matching::Evidence.value(item, :show), Matching::Evidence.value(item, :episode_title))
       end
     end
 
-    # Age buckets, the show's downloads, and digits in its title and feed titles (episode numbers).
-    def base_numbers
-      @base_numbers ||= begin
-        numbers = Set.new(AGE_BOUNDS)
-        numbers << show.downloads_per_episode.to_s if show.downloads_per_episode
-        add_digits(numbers, show.title, *@toolkit.feed.episodes.map(&:title))
+    # Run-wide: age buckets, the show's downloads, and its title and feed titles (episode numbers).
+    def base
+      @base ||= begin
+        allowed = Allowed.new(numbers: Set.new(AGE_BOUNDS), percents: Set.new, names: Set.new)
+        allowed.numbers << show.downloads_per_episode.to_s if show.downloads_per_episode
+        add_texts(allowed, show.title, *@toolkit.feed.episodes.map(&:title))
       end
     end
 
-    def profile_numbers(matches)
-      numbers = base_numbers.dup
+    def profile_allowed(matches)
+      allowed = base.with(numbers: base.numbers.dup, names: base.names.dup, percents: Set.new)
+      numbers = allowed.numbers
       numbers << matches.size.to_s << @toolkit.scored.size.to_s
       numbers << matches.count { |m| m.evidence.dig("proven", "count").to_i.positive? }.to_s
       numbers.merge(matches.map(&:tier).tally.values.map(&:to_s))
@@ -107,14 +127,19 @@ module Research
       audience = report.audience.is_a?(Hash) ? report.audience : {}
       audience.each_value do |list|
         numbers << Array(list).size.to_s
-        add_digits(numbers, *Array(list).filter_map { |item| item["name"] if item.is_a?(Hash) })
+        add_texts(allowed, *Array(list).filter_map { |item| item["name"] if item.is_a?(Hash) })
       end
-      add_digits(numbers, *report.seed_items.pluck("name"))
+      add_texts(allowed, *report.seed_items.pluck("name"))
     end
 
-    def add_digits(numbers, *texts)
-      texts.each { |text| text.to_s.scan(DIGITS).each { |digits| numbers << self.class.normalize(digits) } }
-      numbers
+    # Names and titles: their digits are allowed numbers, and their own magnitude-style tokens ("3M") are
+    # allowed names.
+    def add_texts(allowed, *texts)
+      texts.each do |text|
+        text.to_s.scan(DIGITS).each { |digits| allowed.numbers << self.class.normalize(digits) }
+        self.class.claims(text).each { |token, kind| allowed.names << self.class.name_key(token) if kind == :name }
+      end
+      allowed
     end
   end
 end
