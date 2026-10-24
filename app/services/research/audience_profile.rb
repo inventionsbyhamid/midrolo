@@ -5,6 +5,9 @@ module Research
   #   map          {location: country code or "metros", country:, points: [{lat, lng, affinity, label}]} (heatmap)
   # Returns {digest: String (< 1,500 chars, for the agent), thin: Boolean (fewer than 8 brands)}.
   #
+  # A snapshot (R36) passes entities: false and include_demographics: false: the audience section then holds
+  # only the taste tags, no leans are read or saved, and nothing but tags and the heatmap is asked of Qloo.
+  #
   # The brand recommendation is essential and its errors propagate. Every other call is optional: on a Qloo
   # outage or rate limit it is skipped with a step warning and its part of the section is left empty.
   class AudienceProfile
@@ -18,22 +21,24 @@ module Research
     FALLBACK_METROS = 6
     DIGEST_LIMIT = 1500
 
-    def self.build(toolkit, seed_entity_ids:, seed_tag_ids:, country:)
-      new(toolkit, seed_entity_ids, seed_tag_ids, country).build
+    def self.build(toolkit, seed_entity_ids:, seed_tag_ids:, country:, include_demographics: true, entities: true)
+      new(toolkit, seed_entity_ids, seed_tag_ids, country, include_demographics: include_demographics, entities: entities).build
     end
 
-    def initialize(toolkit, seed_entity_ids, seed_tag_ids, country)
+    def initialize(toolkit, seed_entity_ids, seed_tag_ids, country, include_demographics: true, entities: true)
       @toolkit = toolkit
       @entity_ids = Array(seed_entity_ids).map(&:to_s).uniq
       @tag_ids = Array(seed_tag_ids).map(&:to_s).uniq
       @country = country.to_s.upcase
+      @include_demographics = include_demographics
+      @entities = entities
     end
 
     def build
       return { digest: "No seeds given. Find seeds on Qloo first.", thin: true } if @entity_ids.empty? && @tag_ids.empty?
 
       build_audience
-      build_leans
+      build_leans if @include_demographics
       build_map
       { digest: digest, thin: thin? }
     end
@@ -48,17 +53,28 @@ module Research
 
     def build_audience
       log.step("taste_profile", "Building your audience's taste profile…", input: seeds_input) do |step|
-        @lists = { brand: recommend(:brand) }
-        LABELS.each { |type, label| @lists[type] = step.optional(label) { recommend(type) } || [] }
+        @lists = @entities ? recommend_entities(step) : TAKE.transform_values { [] }
         @tags = step.optional("Taste tags") { taste.taste_tags(**signals, take: TAG_TAKE) } || []
 
         toolkit.remember(@lists.values.flatten)
         toolkit.audience_tags = @tags
         report.save_section!(:audience, audience_section)
-        step.warn!("Thin profile: only #{@lists[:brand].size} brands came back") if thin?
-        step.output_summary = "#{@lists[:brand].size} brands, #{@lists[:artist].size} artists, #{@lists[:tv_show].size} TV shows, " \
-                              "#{@lists[:podcast].size} podcasts and #{@tags.size} taste tags"
+        step.warn!(@entities ? "Thin profile: only #{@lists[:brand].size} brands came back" : "No taste tags came back") if thin?
+        step.output_summary = audience_summary
       end
+    end
+
+    def recommend_entities(step)
+      lists = { brand: recommend(:brand) }
+      LABELS.each { |type, label| lists[type] = step.optional(label) { recommend(type) } || [] }
+      lists
+    end
+
+    def audience_summary
+      return "#{@tags.size} taste tags" unless @entities
+
+      "#{@lists[:brand].size} brands, #{@lists[:artist].size} artists, #{@lists[:tv_show].size} TV shows, " \
+        "#{@lists[:podcast].size} podcasts and #{@tags.size} taste tags"
     end
 
     # Seeds are inputs, not results: never list the show (or another seed) as something its audience loves.
@@ -93,7 +109,7 @@ module Research
       step.optional(location) { taste.heatmap(location: location, **signals, take: HEATMAP_TAKE) } || []
     end
 
-    def thin? = @lists[:brand].size < THIN_BELOW
+    def thin? = @entities ? @lists[:brand].size < THIN_BELOW : @tags.empty?
 
     def country_name = Show::COUNTRIES.fetch(@country, @country)
 
@@ -102,8 +118,10 @@ module Research
     # ---- section JSON ----
 
     def audience_section
-      section = SECTION_KEYS.to_h { |type, key| [ key, @lists[type].map { |e| entity_json(e) } ] }
-      section.merge("tags" => @tags.map { |t| { "id" => t.id, "name" => t.name, "score" => t.score } })
+      tags = { "tags" => @tags.map { |t| { "id" => t.id, "name" => t.name, "score" => t.score } } }
+      return tags unless @entities
+
+      SECTION_KEYS.to_h { |type, key| [ key, @lists[type].map { |e| entity_json(e) } ] }.merge(tags)
     end
 
     def entity_json(entity)

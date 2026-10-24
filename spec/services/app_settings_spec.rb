@@ -25,4 +25,26 @@ RSpec.describe AppSettings do
     described_class.set(:runs_paused, true)
     expect(described_class.runs_paused?).to be(true)
   end
+
+  describe "Qloo auth failures" do
+    let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+
+    before { allow(Rails).to receive(:cache).and_return(cache) }
+
+    it "pauses runs with a reason after three failures in a row" do
+      2.times { described_class.record_taste_auth_failure! }
+      expect(described_class.runs_paused?).to be(false)
+
+      described_class.record_taste_auth_failure!
+      expect(described_class.runs_paused?).to be(true)
+      expect(described_class.get(:runs_paused_reason)).to eq("Qloo authentication failing")
+    end
+
+    it "starts counting again after a reset" do
+      2.times { described_class.record_taste_auth_failure! }
+      described_class.reset_taste_auth_failures!
+      2.times { described_class.record_taste_auth_failure! }
+      expect(described_class.runs_paused?).to be(false)
+    end
+  end
 end

@@ -20,6 +20,13 @@ module Llm
 
     def agent_model = config.dig(:agent, :model).to_s
 
+    def agent_effort = (config.dig(:agent, :effort) || "medium").to_sym
+
+    # The research agent's hard caps: tool calls per run, and wall-clock seconds.
+    def agent_max_tool_calls = (config.dig(:agent, :max_tool_calls) || 40).to_i
+
+    def agent_max_seconds = (config.dig(:agent, :max_seconds) || 360).to_i
+
     def pitch_model = config.dig(:pitch, :model).to_s
 
     def pitch_effort = (config.dig(:pitch, :effort) || "low").to_sym

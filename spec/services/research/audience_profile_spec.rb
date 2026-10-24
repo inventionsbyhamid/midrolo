@@ -147,4 +147,26 @@ RSpec.describe Research::AudienceProfile do
     build
     expect(report.reload.taste_calls).to eq(7)
   end
+
+  describe "for a snapshot (R36)" do
+    def snapshot
+      described_class.build(toolkit, seed_entity_ids: seed_ids, seed_tag_ids: tag_ids, country: "US",
+                                     include_demographics: false, entities: false)
+    end
+
+    it "saves only the taste tags and the heatmap, with no entity lists or demographics" do
+      allow(taste).to receive(:recommend).and_call_original
+      expect(taste).not_to receive(:demographics)
+
+      snapshot
+      report.reload
+      expect(taste).not_to have_received(:recommend)
+      expect(report.audience).to eq("tags" => report.audience["tags"])
+      expect(report.audience["tags"].size).to eq(15)
+      expect(report.demographics).to be_nil
+      expect(report.heatmap["points"]).to be_present
+      expect(report.agent_steps.pluck(:tool)).to eq(%w[taste_profile heatmap])
+      expect(toolkit.audience_tags).to be_present
+    end
+  end
 end

@@ -29,4 +29,10 @@ RSpec.describe Llm do
     expect(described_class.agent_model).to eq("claude-opus-5-5")
     expect(described_class.pitch_model).to eq("claude-opus-5-5")
   end
+
+  it "reads the agent's effort and limits from config" do
+    expect(described_class.agent_effort).to eq(:medium)
+    expect(described_class.agent_max_tool_calls).to eq(40)
+    expect(described_class.agent_max_seconds).to eq(360)
+  end
 end
