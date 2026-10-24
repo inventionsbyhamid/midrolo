@@ -1,7 +1,7 @@
 shared:
   provider: <%= ENV.fetch("LLM_PROVIDER", "anthropic") %>
   daily_budget_usd: <%= ENV.fetch("LLM_DAILY_BUDGET_USD", 5) %>
-  # Never send temperature. Thinking is on with medium effort.
+  # Never send temperature. Agent thinks at medium effort; pitches at low.
   agent:
     model: <%= ENV.fetch("LLM_AGENT_MODEL", "claude-opus-5-5") %>
     effort: medium
