@@ -1,4 +1,5 @@
 <% content_for :title, "#{@show.title} report" %>
+<% content_for :head, turbo_refreshes_with(method: :morph, scroll: :preserve) %>
 <%= turbo_stream_from @report %>
 <% tone = { "done" => :success, "failed" => :danger, "needs_input" => :warning }.fetch(@report.status, :accent) %>
 <div class="flex flex-col gap-6">
@@ -32,9 +33,9 @@
 
   <div class="grid gap-6 lg:grid-cols-[18rem_1fr]">
     <aside>
-      <%# One rail: a disclosure on mobile, always open from lg up (see .rail in application.css). %>
-      <details class="rail">
-        <summary class="cursor-pointer font-semibold lg:pointer-events-none">Show agent steps</summary>
+      <%# One rail: open on desktop, collapsed on mobile (responsive-details controller). %>
+      <details id="agent_rail" class="rail" open data-turbo-permanent data-controller="responsive-details">
+        <summary class="cursor-pointer font-semibold">Show agent steps</summary>
         <div class="mt-2"><%= render "reports/progress_rail", report: @report %></div>
       </details>
     </aside>

@@ -44,6 +44,29 @@ RSpec.describe Report do
       expect(described_class.count).to eq(0)
     end
 
+    it "returns the active report without an entitlement check or raise" do
+      active = create(:report, show: show, status: "running", started_at: 1.minute.ago)
+      plan = instance_double(Entitlements::Plan, can_run?: false)
+      allow(Entitlements).to receive(:for).with(user).and_return(plan)
+      expect(described_class.start!(show: show, kind: "agent", user: user)).to eq(active)
+    end
+
+    it "fails a stale running report and creates the new one" do
+      stale = create(:report, show: show, status: "running", started_at: 20.minutes.ago)
+      report = nil
+      expect { report = described_class.start!(show: show, kind: "snapshot", user: user) }.to change(described_class, :count).by(1)
+      expect(report).not_to eq(stale)
+      expect(report).to be_queued
+      expect(stale.reload).to have_attributes(status: "failed", error_message: Report::FAILURE_MESSAGE)
+    end
+
+    it "fails a stale queued report too" do
+      stale = create(:report, show: show, status: "queued")
+      stale.update_columns(created_at: 20.minutes.ago)
+      described_class.start!(show: show, kind: "snapshot", user: user)
+      expect(stale.reload.status).to eq("failed")
+    end
+
     it "returns the existing active report when a concurrent insert hits the unique index" do
       winner = create(:report, show: show, status: "running")
       # Simulate the race: the pre-check saw nothing, then the insert collided.
@@ -55,6 +78,22 @@ RSpec.describe Report do
     it "enforces one active report per show in the database" do
       create(:report, show: show, status: "queued")
       expect { create(:report, show: show, status: "running") }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
+  end
+
+  describe "status broadcasts" do
+    it "broadcasts a page refresh on every status transition" do
+      report = create(:report, show: show)
+      %w[running done failed needs_input].each do |status|
+        expect { report.update!(status: status) }
+          .to have_broadcasted_to(stream_for(report)).with { |html| expect(html).to include('action="refresh"') }
+        report.update_columns(status: "queued")
+      end
+    end
+
+    it "does not refresh when the status is unchanged" do
+      report = create(:report, show: show)
+      expect { report.update!(summary: "x") }.not_to have_broadcasted_to(stream_for(report))
     end
   end
 

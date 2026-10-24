@@ -31,7 +31,7 @@ class Show < ApplicationRecord
 
   # A queued or running report (only one may be active per show).
   def active_report
-    reports.active.order(created_at: :desc, id: :desc).first
+    reports.live.order(created_at: :desc, id: :desc).first
   end
 
   def initials

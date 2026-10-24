@@ -33,6 +33,21 @@ RSpec.describe "Report jobs" do
         expect(report.reload.status).to eq("needs_input")
       end
 
+      [ SignalException.new("TERM"), Interrupt.new ].each do |signal|
+        it "marks the report failed when interrupted by #{signal.class}" do
+          allow(Research::Run).to receive(:call).and_raise(signal)
+          expect { job.perform_now(report.id) }.to raise_error(signal.class)
+          expect(report.reload).to have_attributes(status: "failed", error_message: Report::FAILURE_MESSAGE)
+        end
+      end
+
+      it "reports the original error even if marking failed also raises" do
+        allow(Research::Run).to receive(:call).and_raise("boom")
+        allow_any_instance_of(Report).to receive(:mark_failed!).and_raise("db down")
+        expect(Rails.error).to receive(:report).at_least(:twice)
+        expect { job.perform_now(report.id) }.not_to raise_error
+      end
+
       it "ignores a report that is not queued" do
         report.update!(status: "done")
         expect(Research::Run).not_to receive(:call)

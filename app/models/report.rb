@@ -2,6 +2,8 @@ class Report < ApplicationRecord
   KINDS = %w[snapshot agent].freeze
   STATUSES = %w[queued running done failed needs_input].freeze
   ACTIVE = %w[queued running].freeze
+  # A run that has not finished in this long is presumed dead (killed worker, lost job).
+  STALE_AFTER = 15.minutes
   SECTIONS = %w[summary seeds audience leans map matches].freeze
   # Report column behind each section (leans come from demographics, map from heatmap).
   SECTION_COLUMNS = { "summary" => :summary, "seeds" => :seeds, "audience" => :audience,
@@ -19,16 +21,28 @@ class Report < ApplicationRecord
   enum :profile_kind, { direct: "direct", proxy: "proxy" }, validate: { allow_nil: true }
 
   scope :active, -> { where(status: ACTIVE) }
+  scope :stale, lambda {
+    cutoff = STALE_AFTER.ago
+    where(status: "running").where(started_at: ...cutoff).or(where(status: "queued").where(created_at: ...cutoff))
+  }
+  # Active and still plausibly alive.
+  scope :live, -> { active.where.not(id: stale.select(:id)) }
 
-  # Idempotent per show: a second call (double-click, re-run while running) returns the running report.
+  after_update_commit :broadcast_status_refresh, if: :saved_change_to_status?
+
+  # Idempotent per show: a second call (double-click, re-run while running) returns the running report,
+  # before any entitlement check. Stale active reports are failed first so they can't block the show.
   def self.start!(show:, kind:, user:)
-    raise Entitlements::NotAllowed, :plan unless Entitlements.for(user).can_run?(kind)
-
     existing = show.active_report
     return existing if existing
 
-    report = create!(show: show, kind: kind, status: "queued",
-                     spend_bucket: (Llm::Budget.bucket_for(user)&.to_s if kind.to_s == "agent"))
+    raise Entitlements::NotAllowed, :plan unless Entitlements.for(user).can_run?(kind)
+
+    report = transaction do
+      show.reports.stale.find_each { |stale| stale.mark_failed! }
+      create!(show: show, kind: kind, status: "queued",
+              spend_bucket: (Llm::Budget.bucket_for(user)&.to_s if kind.to_s == "agent"))
+    end
     (kind.to_s == "agent" ? GenerateReportJob : BuildSnapshotJob).perform_later(report.id)
     report
   rescue ActiveRecord::RecordNotUnique
@@ -63,5 +77,12 @@ class Report < ApplicationRecord
     update!(SECTION_COLUMNS.fetch(name) => data) if SECTION_COLUMNS.key?(name)
     broadcast_replace_to self, target: "report_#{name}", partial: "reports/sections/#{name}",
                                 locals: { report: self }
+  end
+
+  private
+
+  # Open report pages re-render (morphed) so the badge, Re-run button and failed/needs_input cards follow.
+  def broadcast_status_refresh
+    broadcast_refresh_to(self)
   end
 end
