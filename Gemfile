@@ -76,6 +76,11 @@ group :development, :test do
   gem "rubocop-rails-omakase", require: false
 end
 
+group :test do
+  # Headless Chrome for system specs over CDP (no chromedriver) [https://github.com/rubycdp/cuprite]
+  gem "cuprite", "~> 0.18.0"
+end
+
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
