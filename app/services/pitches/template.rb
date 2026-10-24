@@ -2,7 +2,6 @@ module Pitches
   # The pitch pack in fake-LLM mode, written from the same Inputs as the live prompt. It names the brand and its
   # shared taste tags, keeps the body at 100–150 words, and cites only numbers on the allowlist (R49).
   class Template
-    SUBJECT_LIMIT = 80
     CONTACT_ROLES = {
       "easy_yes" => "Founder or Head of Marketing",
       "realistic" => "Partnerships or Influencer Marketing Manager",
@@ -24,8 +23,8 @@ module Pitches
     private
 
     def subject
-      [ "A mid-roll for #{brand} on #{title}", "A mid-roll for #{brand}" ].find { |text| text.length <= SUBJECT_LIMIT } ||
-        "A mid-roll for #{brand}".truncate(SUBJECT_LIMIT, separator: " ")
+      [ "A mid-roll for #{brand} on #{title}", "A mid-roll for #{brand}" ].find { |text| text.length <= Writer::SUBJECT_LIMIT } ||
+        "A mid-roll for #{brand}".truncate(Writer::SUBJECT_LIMIT, separator: " ")
     end
 
     def body
