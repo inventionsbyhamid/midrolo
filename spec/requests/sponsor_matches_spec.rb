@@ -29,7 +29,8 @@ RSpec.describe "Sponsor matches" do
       form = stream.at_css("template").children.at_css("form")
       expect(form.at_css("select option[selected]")["value"]).to eq("pitched")
       saved = page.at_css("turbo-stream[action='update'][target='#{ActionView::RecordIdentifier.dom_id(brand_match, :status_saved)}']")
-      expect(saved.text.squish).to eq("Saved")
+      # A fresh element each save, so its fade animation starts over every time.
+      expect(saved.at_css("template").children.at_css(".status-saved-msg").text.squish).to eq("Saved")
     end
 
     it "saves notes and the follow-up date" do

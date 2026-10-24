@@ -469,16 +469,16 @@
   }
 
   .status-saved {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
     font-size: 0.8125rem;
     font-weight: 600;
     color: var(--color-success);
   }
 
-  /* The confirmation fades once read; it stays in the DOM (it is the live region), just emptied on the next save. */
-  .status-saved:not(:empty) {
+  /* Each save puts a new message in the live region, so the fade starts over every time. */
+  .status-saved-msg {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
     animation: status-saved-fade 400ms ease 4s forwards;
   }
 

@@ -43,6 +43,23 @@ RSpec.describe "Sponsor pipeline" do
     end
   end
 
+  it "confirms every save with a fresh, animated Saved in the same live region" do
+    visit show_report_path(podcast, report)
+    status = find_field("Pipeline status for Fieldnote Coffee")
+    region_id = find("[role='status']", visible: :all)[:id]
+
+    status.select("Saved")
+    expect(page).to have_css(".status-saved-msg", text: "Saved")
+    execute_script("document.querySelector('.status-saved-msg').dataset.earlier = 'yes'")
+    execute_script("document.getElementById(#{region_id.to_json}).sameRegion = true") # a property: a morph would drop an attribute
+
+    find_field("Pipeline status for Fieldnote Coffee").select("Pitched")
+    expect(page).to have_css(".status-saved-msg:not([data-earlier])", text: "Saved")
+    expect(evaluate_script("document.getElementById(#{region_id.to_json}).sameRegion")).to be(true) # the region itself stayed
+    expect(evaluate_script("document.querySelector('.status-saved-msg').getAnimations().length")).to eq(1)
+    expect(brand_match.reload.status).to eq("pitched")
+  end
+
   it "shows a validation error inline without losing the panel" do
     visit show_report_path(podcast, report)
 

@@ -1,8 +1,11 @@
 <%= turbo_stream.replace dom_id(@sponsor_match, :status_form), method: :morph,
       partial: "sponsor_matches/status_form", locals: { sponsor_match: @sponsor_match, conflict: @newer.present? } %>
 <% if @saved %>
+  <%# A fresh element each save, so its fade animation starts over; the region around it stays put. %>
   <%= turbo_stream.update dom_id(@sponsor_match, :status_saved) do %>
-    <svg viewBox="0 0 16 16" class="size-3.5" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    Saved
+    <span class="status-saved-msg">
+      <svg viewBox="0 0 16 16" class="size-3.5" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Saved
+    </span>
   <% end %>
 <% end %>
