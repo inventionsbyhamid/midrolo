@@ -5,7 +5,8 @@ module Research
   #   agent, fake LLM mode → ScriptedRunner with templated reasons
   #   agent                → AgentRunner
   # Fewer than 2 seeds ends needs_input (Review Focus #1). A Qloo auth error fails the report and counts
-  # toward pausing runs (Review Focus #4). Returns the run's toolkit, or nil when the run didn't finish.
+  # toward pausing runs (Review Focus #4). A finished run picks up the podcaster's pipeline work from the show's
+  # earlier reports (R46). Returns the run's toolkit, or nil when the run didn't finish.
   class Run
     PAUSED_MESSAGE = "Full reports are paused right now — nothing was charged. Try again later.".freeze
     LIMIT_MESSAGES = {
@@ -22,6 +23,7 @@ module Research
     def call
       toolkit = runner
       AppSettings.reset_taste_auth_failures!
+      carry_pipeline_forward
       toolkit
     rescue NeedsInput
       AppSettings.reset_taste_auth_failures! # Qloo answered; there just wasn't enough to go on
@@ -45,6 +47,18 @@ module Research
       return ScriptedRunner.call(@report, with_reasons: true) if Llm.mode == :fake
 
       AgentRunner.call(@report)
+    end
+
+    # Statuses, notes and follow-up dates move onto the new matches from each earlier report of the show. Newest
+    # first: carry_forward! never overwrites a field already set, so the first report to set a field decides it,
+    # and newest first makes that each brand's latest known state. A failure here must not fail a good report.
+    def carry_pipeline_forward
+      @report.show.reports.where(id: ...@report.id).order(created_at: :desc, id: :desc).each do |earlier|
+        SponsorMatch.carry_forward!(earlier, @report)
+      end
+    rescue StandardError => e
+      Rails.logger.error("[Research::Run] carrying the pipeline forward failed for report #{@report.id}: #{e.class}: #{e.message}")
+      Rails.error.report(e, handled: true, context: { report_id: @report.id, while: "carrying the pipeline forward" })
     end
 
     def fail_with(error, message = Report::FAILURE_MESSAGE)

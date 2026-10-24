@@ -29,3 +29,7 @@
 
 en:
   hello: "Hello world"
+  activerecord:
+    attributes:
+      sponsor_match:
+        follow_up_on: "Follow-up date"

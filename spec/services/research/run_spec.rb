@@ -56,6 +56,62 @@ RSpec.describe Research::Run do
     expect(toolkit.seen_entity_ids).to include(*report.sponsor_matches.pluck(:brand_entity_id))
   end
 
+  describe "carrying the pipeline forward (R46)" do
+    def finished_snapshot
+      run(create(:report, show: show, kind: "snapshot")).tap(&:mark_done!)
+    end
+
+    it "brings each brand's latest status, notes and follow-up onto the new report" do
+      first = finished_snapshot
+      pitched, saved = first.sponsor_matches.first(2)
+      pitched.update!(status: "pitched", notes: "Emailed Sam", follow_up_on: Date.new(2026, 11, 2))
+      saved.update!(status: "saved")
+
+      second = finished_snapshot
+      expect(second.sponsor_matches.find_by!(brand_entity_id: pitched.brand_entity_id))
+        .to have_attributes(status: "pitched", notes: "Emailed Sam", follow_up_on: Date.new(2026, 11, 2))
+      second.sponsor_matches.find_by!(brand_entity_id: pitched.brand_entity_id).update!(status: "won", notes: "Signed for Q1")
+
+      third = finished_snapshot
+      expect(third.sponsor_matches.find_by!(brand_entity_id: pitched.brand_entity_id))
+        .to have_attributes(status: "won", notes: "Signed for Q1", follow_up_on: Date.new(2026, 11, 2))
+      expect(third.sponsor_matches.find_by!(brand_entity_id: saved.brand_entity_id).status).to eq("saved")
+      expect(third.sponsor_matches.where(status: "suggested").count).to eq(third.sponsor_matches.count - 2)
+    end
+
+    it "carries nothing from another show's reports" do
+      first = finished_snapshot
+      brand = first.sponsor_matches.first.brand_entity_id
+      other = create(:report, show: create(:show, user: show.user), kind: "agent", status: "done")
+      create(:sponsor_match, report: other, brand_entity_id: brand, status: "won")
+
+      second = finished_snapshot
+      expect(second.sponsor_matches.find_by!(brand_entity_id: brand).status).to eq("suggested")
+    end
+
+    it "runs fine with no earlier reports" do
+      report = create(:report, show: show, kind: "snapshot")
+      report.mark_running!
+      expect(described_class.call(report)).to be_a(Research::Toolkit)
+      expect(report.reload.status).to eq("running")
+    end
+
+    it "keeps an otherwise good report when carrying forward fails, and reports the error" do
+      finished_snapshot
+      error = ActiveRecord::StatementInvalid.new("boom")
+      allow(SponsorMatch).to receive(:carry_forward!).and_raise(error)
+      allow(Rails.error).to receive(:report)
+
+      report = create(:report, show: show, kind: "snapshot")
+      report.mark_running!
+      expect(described_class.call(report)).to be_a(Research::Toolkit)
+
+      expect(report.reload.status).to eq("running") # the job marks it done
+      expect(report.sponsor_matches).to be_present
+      expect(Rails.error).to have_received(:report).with(error, hash_including(handled: true))
+    end
+  end
+
   context "when the show has zero seeds (Review Focus #1)" do
     let(:show) do
       create(:show, title: "Totally Unknown Indie Show", feed_url: "fake://fake-1", categories: [ "Kids & Family" ],
@@ -69,6 +125,12 @@ RSpec.describe Research::Run do
       expect(report.finished_at).to be_present
       expect(report.seeds["unresolved"]).to eq([ "Nonexistent Pod Zzz", "Another Missing Show" ])
       expect(report.sponsor_matches).to be_empty
+    end
+
+    it "carries nothing forward when the run ends needs_input" do
+      create(:report, show: show, kind: "snapshot", status: "done")
+      expect(SponsorMatch).not_to receive(:carry_forward!)
+      run(create(:report, show: show, kind: "snapshot"))
     end
 
     it "stays needs_input through the job" do

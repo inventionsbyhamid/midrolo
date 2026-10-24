@@ -80,6 +80,7 @@ RSpec.configure do |config|
   config.include FactoryBot::Syntax::Methods
   config.include Devise::Test::IntegrationHelpers, type: :request
   config.include AuthHelpers
+  config.include ActiveSupport::Testing::TimeHelpers
   config.after { RubyLLM::Test.reset }
 
   # cloudflare-rails fetches Cloudflare's IP ranges on first request; keep specs offline.
