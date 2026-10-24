@@ -1,13 +1,26 @@
-<%# locals: (sponsor_match:) -%>
+<%# locals: (sponsor_match:, conflict: false) -%>
 <%#
   The pipeline control on a visible match card: a status that saves as it changes, and notes plus a follow-up date
   behind a disclosure. SponsorMatchesController#update morphs this form in place (its id is the Turbo Stream
-  target) and then writes "Saved" into the status region, which stays in the DOM so screen readers announce it.
-  The pipeline is a Creator+ feature (R45); without it the card points to pricing instead.
+  target) and then puts a fresh "Saved" into the status region, which stays in the DOM so screen readers announce it.
+  The pipeline is a Creator+ feature (R45); without it the card points to pricing instead. When the brand's copy
+  that counts is on a newer report (R48), the card shows that copy's status read-only and links to it; conflict is
+  set when a save was just refused for that reason.
 %>
 <% match = sponsor_match %>
 <% form_id = dom_id(match, :status_form) %>
-<% if pipeline_enabled_for?(match.report.show.user) %>
+<% enabled = pipeline_enabled_for?(match.report.show.user) %>
+<% newer = newer_copy_for(match) if enabled %>
+<% if newer %>
+  <div id="<%= form_id %>" class="status-row" data-superseded>
+    <span class="status-label">Pipeline</span>
+    <%= status_badge(newer.status) %>
+    <%= link_to show_report_path(newer.show_id, newer.report_id, anchor: dom_id(newer)), class: "link text-sm" do %>Tracked on your latest report<span aria-hidden="true"> →</span><% end %>
+    <% if conflict %>
+      <p class="field-error w-full" role="alert">Not saved: this brand is now tracked on your latest report.</p>
+    <% end %>
+  </div>
+<% elsif enabled %>
   <% notes_error_id = dom_id(match, :notes_error) %>
   <% notes_hint_id = dom_id(match, :notes_hint) %>
   <% date_error_id = dom_id(match, :follow_up_error) %>

@@ -145,7 +145,7 @@ RSpec.describe "Reports" do
           .to match(%r{\Ahttps://cdn\.jsdelivr\.net/npm/maplibre-gl@\d+\.\d+\.\d+/dist/maplibre-gl\.css\z})
       end
 
-      it "renders a finished report's matches with one query" do
+      it "renders a finished report's matches with one query, plus one to find brands tracked on a newer report (R48)" do
         report = create(:report, show: show, kind: "agent", status: "done")
         create_list(:sponsor_match, 6, report: report)
         queries = []
@@ -153,10 +153,10 @@ RSpec.describe "Reports" do
         get show_report_path(show, report)
         ActiveSupport::Notifications.unsubscribe(sub)
         expect(Nokogiri::HTML(response.body).css("[data-filter-target='item']").size).to eq(6)
-        expect(queries.size).to eq(1)
+        expect(queries.size).to eq(2)
       end
 
-      it "renders each card's pipeline form without a query per match" do
+      it "renders each card's pipeline form, editable or superseded (R48), without a query per match" do
         report = create(:report, show: show, kind: "agent", status: "done")
         count_queries = lambda do
           queries = 0
@@ -169,9 +169,15 @@ RSpec.describe "Reports" do
         count_queries.call # the first request also records the sign-in (Devise trackable)
         with_one = count_queries.call
         create_list(:sponsor_match, 5, report: report)
+        newer = create(:report, show: show, kind: "agent", status: "done")
+        report.sponsor_matches.first(3).each do |match|
+          create(:sponsor_match, report: newer, brand_entity_id: match.brand_entity_id, status: "pitched")
+        end
 
         expect(count_queries.call).to eq(with_one)
-        expect(Nokogiri::HTML(response.body).css("form[data-controller='status-form']").size).to eq(6)
+        page = Nokogiri::HTML(response.body)
+        expect(page.css("form[data-controller='status-form']").size).to eq(3)
+        expect(page.css("[data-superseded]").size).to eq(3)
       end
 
       it "404s for another user's report" do

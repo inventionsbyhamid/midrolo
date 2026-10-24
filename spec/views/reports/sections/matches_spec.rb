@@ -153,6 +153,34 @@ RSpec.describe "reports/sections/_matches" do
     expect(html.css("form[data-controller='status-form']").size).to eq(3)
   end
 
+  describe "brands tracked on a newer report (R48)" do
+    it "shows the newer copy's status read-only with a link to it, and keeps the other brands editable" do
+      create(:sponsor_match, report: report, brand_entity_id: "b1", name: "Fieldnote Coffee", position: 1)
+      create(:sponsor_match, report: report, brand_entity_id: "b2", name: "Only Here", position: 2)
+      newer_report = create(:report, show: report.show, kind: "agent", status: "done")
+      newer = create(:sponsor_match, report: newer_report, brand_entity_id: "b1", status: "pitched")
+      render_section
+
+      superseded, current = html.css("[data-filter-target='item']")
+      expect(superseded.css("form, select, textarea")).to be_empty
+      state = superseded.at_css("[data-superseded]")
+      expect(state.text.squish).to eq("Pipeline Pitched Tracked on your latest report →")
+      href = show_report_path(newer_report.show, newer_report, anchor: ActionView::RecordIdentifier.dom_id(newer))
+      expect(state.at_css("a")["href"]).to eq(href)
+      expect(current.at_css("form select[name='sponsor_match[status]']")).to be_present
+    end
+
+    it "keeps a running re-run's cards editable before carry-forward reaches them" do
+      create(:sponsor_match, report: report, brand_entity_id: "b1", status: "pitched")
+      running = create(:report, show: report.show, kind: "agent", status: "running")
+      create(:sponsor_match, report: running, brand_entity_id: "b1")
+      render(partial: "reports/sections/matches", locals: { report: running })
+
+      expect(html.at_css("[data-filter-target='item'] form select")).to be_present
+      expect(html.at_css("[data-superseded]")).to be_nil
+    end
+  end
+
   it "points to the Creator plan instead of the form when the plan has no pipeline (R45)" do
     create(:sponsor_match, report: report)
     limit_visible_to(50, pipeline: false)

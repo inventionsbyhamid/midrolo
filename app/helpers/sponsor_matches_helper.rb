@@ -2,6 +2,7 @@
 module SponsorMatchesHelper
   FOLLOW_UP_TONES = { overdue: :danger, today: :warning, upcoming: :neutral }.freeze
   FOLLOW_UP_BADGES = { overdue: "Overdue", today: "Due today" }.freeze
+  STATUS_TONES = { "saved" => :accent, "pitched" => :accent, "replied" => :accent, "won" => :success }.freeze
 
   # Asks Entitlements once per user per render: a report page draws a pipeline form on every card, also inside
   # Turbo broadcasts from jobs, where there is no current_user.
@@ -10,7 +11,17 @@ module SponsorMatchesHelper
     @pipeline_enabled.fetch(user.id) { @pipeline_enabled[user.id] = Entitlements.for(user).pipeline? }
   end
 
+  # The copy of this match's brand that counts, when it is on a newer report (R48): the card then shows its status
+  # read-only and links there. One query per report per render, however many cards.
+  def newer_copy_for(match)
+    @newer_copies ||= {}
+    copies = @newer_copies.fetch(match.report_id) { @newer_copies[match.report_id] = Pipeline::Matches.newer_copies(match.report) }
+    copies[match.brand_entity_id]
+  end
+
   def status_options = SponsorMatch::STATUSES.map { |status| [ status.humanize, status ] }
+
+  def status_badge(status) = ui_badge(status.humanize, tone: STATUS_TONES.fetch(status, :neutral))
 
   def follow_up_tone(match) = FOLLOW_UP_TONES[match.follow_up_state]
 

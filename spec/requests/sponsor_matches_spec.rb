@@ -69,6 +69,43 @@ RSpec.describe "Sponsor matches" do
       expect(brand_match.reload.status).to eq("saved")
     end
 
+    describe "a copy superseded by a newer report's (R48)" do
+      let(:newer_report) { create(:report, show: show, kind: "agent", status: "done") }
+      let!(:newer) do
+        brand_match # the older copy first
+        create(:sponsor_match, report: newer_report, brand_entity_id: brand_match.brand_entity_id,
+                               name: "Fieldnote Coffee", status: "replied")
+      end
+
+      it "refuses a Turbo save with 409 and turns the form into the read-only status with a link to the newer copy" do
+        patch sponsor_match_path(brand_match), params: { sponsor_match: { status: "won" } }, headers: turbo
+
+        expect(response).to have_http_status(:conflict)
+        expect(brand_match.reload.status).to eq("suggested")
+        state = page.at_css("turbo-stream[action='replace'] template").children
+                    .at_css("##{ActionView::RecordIdentifier.dom_id(brand_match, :status_form)}")
+        expect(state.css("form, select")).to be_empty
+        expect(state.text.squish).to include("Replied")
+        link = state.at_css("a[href='#{show_report_path(show, newer_report, anchor: ActionView::RecordIdentifier.dom_id(newer))}']")
+        expect(link.text.squish).to eq("Tracked on your latest report →")
+        expect(state.at_css("[role='alert']").text).to include("Not saved")
+      end
+
+      it "sends a plain submit to the newer copy's card with a notice" do
+        patch sponsor_match_path(brand_match), params: { sponsor_match: { status: "won" } }
+
+        expect(response).to redirect_to(show_report_path(show, newer_report, anchor: ActionView::RecordIdentifier.dom_id(newer)))
+        expect(flash[:notice]).to eq("Fieldnote Coffee is tracked on your latest report, so update it there.")
+        expect(brand_match.reload.status).to eq("suggested")
+      end
+
+      it "still saves the newer copy" do
+        patch sponsor_match_path(newer), params: { sponsor_match: { status: "won" } }, headers: turbo
+        expect(response).to have_http_status(:ok)
+        expect(newer.reload.status).to eq("won")
+      end
+    end
+
     it "404s for another user's match" do
       other = create(:sponsor_match, status: "suggested")
       patch sponsor_match_path(other), params: { sponsor_match: { status: "won" } }, headers: turbo
