@@ -254,6 +254,64 @@ RSpec.describe Podcasts::FeedReader do
     end
   end
 
+  describe "channel fields for ownership checks" do
+    def channel_feed(inner)
+      <<~XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0" xmlns:podcast="https://podcastindex.org/namespace/1.0"><channel><title>Token Show</title>#{inner}
+          <item><title>Ep 1</title><pubDate>Mon, 12 Oct 2026 09:00:00 -0000</pubDate><guid>t-1</guid></item>
+        </channel></rss>
+      XML
+    end
+
+    it "reads podcast:txt values and the channel link" do
+      stub_request(:get, url).to_return(status: 200, body: channel_feed(<<~XML))
+        <link>https://tokenshow.example.com/</link>
+        <podcast:txt purpose="verify">midrolo-verify=abc123</podcast:txt>
+        <podcast:txt>another note</podcast:txt>
+      XML
+      feed = reader.read(url)
+
+      expect(feed.txt).to eq([ "midrolo-verify=abc123", "another note" ])
+      expect(feed.website).to eq("https://tokenshow.example.com/")
+    end
+
+    it "caps the channel description at description_limit" do
+      stub_request(:get, url).to_return(status: 200, body: channel_feed("<description>#{'filler ' * 150} midrolo-verify=late</description>"))
+
+      expect(reader.read(url).description).not_to include("midrolo-verify=late")
+      expect(reader.read(url, description_limit: 4000).description).to end_with("midrolo-verify=late")
+    end
+
+    it "leaves txt empty and website nil when the feed has neither" do
+      stub_request(:get, url).to_return(status: 200, body: channel_feed(""))
+      feed = reader.read(url)
+      expect([ feed.txt, feed.website ]).to eq([ [], nil ])
+    end
+  end
+
+  describe "fresh reads" do
+    before do
+      stub_request(:get, url).to_return({ status: 200, body: feed_fixture("normal") },
+                                        { status: 200, body: feed_fixture("normal").sub("The Widget Hour", "The Widget Hour Live") })
+    end
+
+    it "skips the cached copy, asks upstream caches for a fresh one and refreshes the cache" do
+      expect(reader.read(url).title).to eq("The Widget Hour")
+      expect(reader.read(url, fresh: true).title).to eq("The Widget Hour Live")
+      expect(a_request(:get, url).with(headers: { "Cache-Control" => "no-cache" })).to have_been_made.once
+
+      expect(reader.read(url).title).to eq("The Widget Hour Live") # the same key now holds the fresh copy
+      expect(a_request(:get, url)).to have_been_made.twice
+    end
+
+    it "keeps the SSRF guard" do
+      feed = reader.read("http://169.254.169.254/latest", fresh: true)
+      expect(feed.warnings).to eq([ "feed_blocked" ])
+      expect(a_request(:get, %r{169\.254})).not_to have_been_made
+    end
+  end
+
   describe "fake:// feeds" do
     it "returns canned episodes without HTTP" do
       feed = reader.read("fake://fake-1")

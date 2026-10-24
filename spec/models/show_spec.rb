@@ -70,6 +70,16 @@ RSpec.describe Show do
     end
   end
 
+  describe ".http_url" do
+    it "keeps http(s) URLs with a host and drops everything else" do
+      expect(described_class.http_url(" https://show.example.com/ ")).to eq("https://show.example.com/")
+      expect(described_class.http_url("javascript:alert(1)")).to be_nil
+      expect(described_class.http_url("mailto:a@example.com")).to be_nil
+      expect(described_class.http_url("not a url")).to be_nil
+      expect(described_class.http_url(nil)).to be_nil
+    end
+  end
+
   describe "#initials" do
     it "uses the first letters of the first two words" do
       expect(build(:show, title: "The Founder's Ledger").initials).to eq("TF")

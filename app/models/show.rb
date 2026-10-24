@@ -20,6 +20,14 @@ class Show < ApplicationRecord
   validates :feed_url, uniqueness: { scope: :user_id }, allow_nil: true
   validate :feed_or_directory_present
 
+  # An http(s) URL with a host, or nil, so feed text never reaches an href unchecked.
+  def self.http_url(value)
+    uri = URI.parse(value.to_s.strip)
+    uri.to_s if uri.is_a?(URI::HTTP) && uri.host.present?
+  rescue URI::InvalidURIError
+    nil
+  end
+
   # Hints read back with symbol or string keys: show.hints[:comparable_shows].
   def hints
     (super || {}).with_indifferent_access

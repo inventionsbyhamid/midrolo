@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_010101) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_020200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -129,6 +129,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_010101) do
     t.string "qloo_entity_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "website"
     t.index ["slug"], name: "index_shows_on_slug", unique: true
     t.index ["user_id", "directory_id"], name: "index_shows_on_user_id_and_directory_id", unique: true, where: "(directory_id IS NOT NULL)"
     t.index ["user_id", "feed_url"], name: "index_shows_on_user_id_and_feed_url", unique: true, where: "(feed_url IS NOT NULL)"

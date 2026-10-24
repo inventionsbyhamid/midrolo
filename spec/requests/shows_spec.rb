@@ -130,13 +130,15 @@ RSpec.describe "Shows" do
 
       it "builds a show from feed metadata when the directory does not know the feed" do
         feed = Podcasts::Feed.new(title: "Indie Feed", description: "About it", owner_email: "o@example.com",
-                                  owner_name: "Olive", episodes: [], cadence_days: 7, warnings: [])
+                                  owner_name: "Olive", episodes: [], cadence_days: 7, warnings: [],
+                                  website: "https://indie.example.com/")
         allow_any_instance_of(Podcasts::FeedReader).to receive(:read).and_return(feed)
         post "/shows", params: { feed_url: "https://indie.example.com/feed.xml" }
 
         expect(user.shows.last).to have_attributes(title: "Indie Feed", author: "Olive", description: "About it",
                                                    feed_url: "https://indie.example.com/feed.xml", directory_id: nil,
-                                                   artwork_url: nil)
+                                                   artwork_url: nil, owner_email: "o@example.com",
+                                                   website: "https://indie.example.com/")
       end
 
       it "adds a scheme to a pasted url without one" do

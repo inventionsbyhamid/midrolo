@@ -1,4 +1,4 @@
-# Reads a show's feed and stores what it learns (owner email, cadence, episode count).
+# Reads a show's feed and stores what it learns (owner email, website, cadence, episode count).
 # Feed problems come back as warnings from FeedReader and are ignored: the show keeps what it has.
 class RefreshShowFeedJob < ApplicationJob
   queue_as :default
@@ -10,6 +10,8 @@ class RefreshShowFeedJob < ApplicationJob
     feed = Podcasts::FeedReader.new.read(show.feed_url, max_episodes: 50)
     updates = {}
     updates[:owner_email] = feed.owner_email if feed.owner_email.present?
+    website = Show.http_url(feed.website)
+    updates[:website] = website if website
     updates[:cadence_days] = feed.cadence_days if feed.cadence_days.present?
     # The reader caps episodes, so only trust its count when it beats what we already know.
     updates[:episode_count] = feed.episodes.size if feed.episodes.size > show.episode_count.to_i

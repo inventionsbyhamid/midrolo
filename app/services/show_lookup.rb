@@ -56,7 +56,7 @@ class ShowLookup
 
     Result.new(attributes: {
                  feed_url: @feed_url, title: feed.title, author: feed.owner_name, description: feed.description,
-                 owner_email: feed.owner_email, cadence_days: feed.cadence_days,
+                 owner_email: feed.owner_email, cadence_days: feed.cadence_days, website: Show.http_url(feed.website),
                  episode_count: feed.episodes.size.nonzero?
                }, error: nil)
   end
