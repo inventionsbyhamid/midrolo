@@ -22,10 +22,10 @@ RSpec.describe Pitches::Writer do
 
   def words(text) = text.to_s.split.size
 
-  # Every number a pitch for this match may cite, spelled as NumericClaims normalizes it.
-  def allowed_numbers(downloads: 1500, shared: 3)
+  # Every number a pitch for this match may cite, spelled as NumericClaims normalizes it (plus the title's own digits).
+  def allowed_numbers(downloads: 1500, shared: 3, title: show.title)
     card = Pricing::RateCard.call(downloads: downloads, categories: [ "Business" ])
-    [ card.midroll, card.preroll, card.postroll, card.bundle4, 4, 10, 82, 0.82, shared, 3, 2026, 9, 14, downloads ]
+    [ card.midroll, card.preroll, card.postroll, card.bundle4, 4, 10, 82, 0.82, shared, 3, 2026, 9, 14, downloads, *title.scan(/\d+/) ]
       .compact.map { |n| Research::NumericClaims.normalize(n.to_s) }
   end
 
@@ -63,7 +63,8 @@ RSpec.describe Pitches::Writer do
       "a proven sponsor with downloads" => {},
       "no proven evidence" => { proven: { "items" => [], "count" => 0 } },
       "a single shared tag and unknown downloads" => { tags: [ "Remote Work" ], downloads: nil },
-      "long names" => { name: "The Extraordinarily Long-Named Artisanal Coffee Roasting Collective", title: "A" * 120 }
+      "long names" => { name: "The Extraordinarily Long-Named Artisanal Coffee Roasting Collective", title: "A" * 120 },
+      "a show title with a percentage in it" => { title: "99% Invisible" }
     }.each do |label, variant|
       it "keeps the body at 100–150 words and cites only allowed numbers for #{label}" do
         show.update!(downloads_per_episode: variant.fetch(:downloads, 1500), title: variant.fetch(:title, show.title))
@@ -78,13 +79,15 @@ RSpec.describe Pitches::Writer do
         expect(result["body"]).to include(brand_match.name)
         expect(tags.any? { |tag| result["body"].include?(tag) }).to be true
         allowed = allowed_numbers(downloads: show.downloads_per_episode, shared: tags.size)
+        allowlist = Pitches::Inputs.new(brand_match.reload).allowed
         %w[subject body follow_up offer].each do |key|
           expect(cited_numbers(result[key]) - allowed).to be_empty, "#{key} cites #{cited_numbers(result[key]) - allowed}"
+          expect(Research::NumericClaims.unsupported(result[key], allowlist)).to be_empty
         end
       end
     end
 
-    it "falls back to the category when the brand_match has no shared tags" do
+    it "falls back to the category when the match has no shared tags" do
       brand_match.update!(evidence: { "shared_tags" => [], "proven" => proven })
       result = described_class.call(brand_match)
       expect(result["body"]).to include("Coffee")
@@ -126,6 +129,13 @@ RSpec.describe Pitches::Writer do
       expect(prompt).to include("3 sponsored episodes found")
       expect(prompt).to include("82%")
       expect(prompt).to include("1,500")
+    end
+
+    it "accepts a percentage that is part of the show's title (99% Invisible)" do
+      show.update!(title: "99% Invisible")
+      RubyLLM::Test.stub_response(good_pitch(subject: "Fieldnote Coffee on 99% Invisible"))
+      described_class.call(brand_match, pitch: pitch)
+      expect(RubyLLM::Test.requests.size).to eq(1)
     end
 
     it "says when there is no proven evidence or download count" do

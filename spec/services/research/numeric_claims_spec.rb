@@ -49,6 +49,17 @@ RSpec.describe Research::NumericClaims do
     end
   end
 
+  it "accepts a percentage that is part of a given name (99% Invisible, 1% for the Planet)" do
+    allowed = described_class.add_texts(described_class::Allowed.empty, "99% Invisible", "1% for the Planet")
+    expect(described_class.unsupported("Heard on 99% Invisible; a 1% for the Planet member.", allowed)).to eq([])
+    expect(described_class.unsupported("40% of fans", allowed)).to eq([ "40%" ])
+  end
+
+  it "accepts a percentage in the show's own title in a reason" do
+    show.update!(title: "99% Invisible")
+    expect(unsupported_in("Heard on 99% Invisible.")).to eq([])
+  end
+
   it "accepts a magnitude-style token when it is the brand's own name (3M)" do
     expect(unsupported_in("3M fans share your audience's tastes.", scored(name: "3M"))).to eq([])
   end

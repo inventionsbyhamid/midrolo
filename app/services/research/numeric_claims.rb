@@ -85,12 +85,15 @@ module Research
       allowed
     end
 
-    # Names and titles: their digits are allowed numbers, and their own magnitude-style tokens ("3M") are
-    # allowed names.
+    # Names and titles: their digits are allowed numbers, their own magnitude-style tokens ("3M") allowed names, and
+    # their own percentages ("99% Invisible", "1% for the Planet") allowed percentages.
     def self.add_texts(allowed, *texts)
       texts.each do |text|
         text.to_s.scan(DIGITS).each { |digits| allowed.numbers << normalize(digits) }
-        claims(text).each { |token, kind| allowed.names << name_key(token) if kind == :name }
+        claims(text).each do |token, kind|
+          allowed.names << name_key(token) if kind == :name
+          allowed.percents << normalize(token[DIGITS]) if kind == :percent
+        end
       end
       allowed
     end
@@ -106,7 +109,7 @@ module Research
     # its evidence dates, its name, tags and evidence titles, plus the run-wide values.
     def for_match(scored)
       brand = scored.candidate.entity
-      allowed = base.with(numbers: base.numbers.dup, names: base.names.dup, percents: Set.new)
+      allowed = base.with(numbers: base.numbers.dup, names: base.names.dup, percents: base.percents.dup)
       allowed.numbers << scored.fit_score.to_s
       self.class.add_affinity(allowed, scored.candidate.affinity)
       tag_names = tag_lists(brand)
@@ -142,7 +145,7 @@ module Research
     end
 
     def profile_allowed(matches)
-      allowed = base.with(numbers: base.numbers.dup, names: base.names.dup, percents: Set.new)
+      allowed = base.with(numbers: base.numbers.dup, names: base.names.dup, percents: base.percents.dup)
       numbers = allowed.numbers
       numbers << matches.size.to_s << @toolkit.scored.size.to_s
       numbers << matches.count { |m| m.evidence.dig("proven", "count").to_i.positive? }.to_s
