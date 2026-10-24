@@ -22,7 +22,7 @@ RSpec.describe "Sponsor pipeline" do
     status = find_field("Pipeline status for Fieldnote Coffee")
     execute_script("arguments[0].focus()", status) # as a keyboard user tabbing to it
     status.select("Pitched")
-    expect(page).to have_css("[role='status']", text: "Saved")
+    expect(page).to have_css("[role='status']", text: "Saved", wait: 10)
     expect(brand_match.reload.status).to eq("pitched")
     expect(active_element_id).to eq(status[:id]) # focus stays on the select through the save
 
@@ -31,7 +31,7 @@ RSpec.describe "Sponsor pipeline" do
     fill_in "Follow-up date", with: Date.current
     click_button "Save notes"
 
-    expect(page).to have_css("details[open] summary", text: "Follow up today")
+    expect(page).to have_css("details[open] summary", text: "Follow up today", wait: 10)
     expect(page).to have_css("summary", text: "Note")
     expect(brand_match.reload).to have_attributes(notes: "Emailed Sam at partnerships", follow_up_on: Date.current)
 
@@ -49,12 +49,12 @@ RSpec.describe "Sponsor pipeline" do
     region_id = find("[role='status']", visible: :all)[:id]
 
     status.select("Saved")
-    expect(page).to have_css(".status-saved-msg", text: "Saved")
+    expect(page).to have_css(".status-saved-msg", text: "Saved", wait: 10)
     execute_script("document.querySelector('.status-saved-msg').dataset.earlier = 'yes'")
     execute_script("document.getElementById(#{region_id.to_json}).sameRegion = true") # a property: a morph would drop an attribute
 
     find_field("Pipeline status for Fieldnote Coffee").select("Pitched")
-    expect(page).to have_css(".status-saved-msg:not([data-earlier])", text: "Saved")
+    expect(page).to have_css(".status-saved-msg:not([data-earlier])", text: "Saved", wait: 10)
     expect(evaluate_script("document.getElementById(#{region_id.to_json}).sameRegion")).to be(true) # the region itself stayed
     expect(evaluate_script("document.querySelector('.status-saved-msg').getAnimations().length")).to eq(1)
     expect(brand_match.reload.status).to eq("pitched")
@@ -70,7 +70,8 @@ RSpec.describe "Sponsor pipeline" do
     find_field("Notes").send_keys("y")
     click_button "Save notes"
 
-    expect(page).to have_css("[role='alert']", text: "Notes can be at most #{SponsorMatch::NOTES_LIMIT} characters")
+    # The round trip can outlast Capybara's 2-second default while the whole suite runs.
+    expect(page).to have_css("[role='alert']", text: "Notes can be at most #{SponsorMatch::NOTES_LIMIT} characters", wait: 10)
     expect(page).to have_css("details[open] textarea[aria-invalid='true']")
     expect(brand_match.reload.notes).to be_nil
   end
