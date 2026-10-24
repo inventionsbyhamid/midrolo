@@ -15,6 +15,8 @@ class SponsorMatch < ApplicationRecord
 
   belongs_to :report
   belongs_to :show
+  # The database cascades too: a re-saved match list removes its matches with delete_all.
+  has_many :pitches, dependent: :delete_all
 
   enum :status, STATUSES.index_with(&:itself), default: "suggested", validate: true
 
@@ -49,6 +51,9 @@ class SponsorMatch < ApplicationRecord
   def self.unlocked_sql(limit)
     sanitize_sql_array([ "NOT (sponsor_matches.report_kind = 'snapshot' AND sponsor_matches.report_rank > ?)", limit ])
   end
+
+  # The pitch the dialog shows: the newest, whatever its status.
+  def latest_pitch = pitches.newest_first.first
 
   # Untouched by the podcaster (or by an earlier carry-forward).
   def at_defaults? = suggested? && notes.nil? && follow_up_on.nil?

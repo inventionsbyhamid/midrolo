@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -26,6 +26,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_170000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["report_id"], name: "index_agent_steps_on_report_id"
+  end
+
+  create_table "pitches", force: :cascade do |t|
+    t.bigint "sponsor_match_id", null: false
+    t.string "status", default: "queued", null: false
+    t.string "subject"
+    t.text "body"
+    t.jsonb "angles", default: [], null: false
+    t.text "offer"
+    t.text "follow_up"
+    t.string "contact_role"
+    t.string "model"
+    t.decimal "cost_usd", precision: 10, scale: 5, default: "0.0", null: false
+    t.string "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sponsor_match_id"], name: "index_pitches_on_sponsor_match_id"
   end
 
   create_table "reports", force: :cascade do |t|
@@ -49,7 +66,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_170000) do
     t.datetime "updated_at", null: false
     t.index ["sample_slug"], name: "index_reports_on_sample_slug", unique: true, where: "(sample_slug IS NOT NULL)"
     t.index ["show_id"], name: "index_reports_on_show_id"
-    t.index ["show_id"], name: "index_reports_one_active_per_show", unique: true, where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'running'::character varying])::text[]))"
+    t.index ["show_id"], name: "index_reports_one_active_per_show", unique: true, where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('running'::character varying)::text]))"
   end
 
   create_table "settings", force: :cascade do |t|
@@ -156,6 +173,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_170000) do
   end
 
   add_foreign_key "agent_steps", "reports"
+  add_foreign_key "pitches", "sponsor_matches", on_delete: :cascade
   add_foreign_key "reports", "shows"
   add_foreign_key "shows", "users"
   add_foreign_key "spend_entries", "reports", on_delete: :nullify

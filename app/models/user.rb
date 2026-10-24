@@ -4,6 +4,7 @@ class User < ApplicationRecord
 
   has_many :shows, dependent: :destroy
   has_many :sponsor_matches, through: :shows
+  has_many :pitches, through: :sponsor_matches
 
   validates :provider, :uid, presence: true
   validates :email, uniqueness: { case_sensitive: false }, allow_nil: true
