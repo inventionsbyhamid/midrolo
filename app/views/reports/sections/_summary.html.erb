@@ -1,5 +1,7 @@
 <%# locals: (report:) -%>
-<% if report.snapshot? %>
+<%# A finished Snapshot gets the upgrade card. Any other Snapshot (running, needs_input, failed) falls through, so a
+    needs-input ask or a failure leads the page instead of an upsell (Review Focus #1). %>
+<% if report.snapshot? && report.done? %>
   <%= render "reports/section", name: "summary", title: "Your audience at a glance" do %>
     <% if report.summary.present? %>
       <p class="report-summary"><%= report.summary %></p>
@@ -7,8 +9,7 @@
     <div class="upgrade-card">
       <p class="max-w-prose">This is your free Snapshot. Upgrade for the full agent report: reasons, proven sponsors, pitch emails.</p>
       <div class="mt-4 flex flex-wrap gap-3">
-        <%= button_to "Run full report", show_reports_path(report.show, kind: "agent"), method: :post,
-              class: "btn btn-primary btn-md", disabled: report.active? %>
+        <%= button_to "Run full report", show_reports_path(report.show, kind: "agent"), method: :post, class: "btn btn-primary btn-md" %>
         <%= ui_button "See plans", "/pricing", variant: :secondary %>
       </div>
     </div>
