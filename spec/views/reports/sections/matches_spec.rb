@@ -23,7 +23,8 @@ RSpec.describe "reports/sections/_matches" do
         create(:sponsor_match, report: report, position: i, name: "Brand #{format('%02d', i)}", reason: "Reason for brand #{i}.",
                                website: "https://brand#{i}.example.com", image_url: "https://img.example.com/#{i}.png",
                                tier: %w[easy_yes realistic long_shot][i % 3], fit_score: 100 - i, evidence: proven("Show #{i}"),
-                               category: i == 7 ? "Zz Locked Only Category" : %w[Finance Coffee][i % 2])
+                               category: i == 7 ? "Zz Locked Only Category" : %w[Finance Coffee][i % 2],
+                               brand_description: "Qloo blurb for brand #{i}.")
       end
       limit_visible_to(5)
       render_section
@@ -45,6 +46,7 @@ RSpec.describe "reports/sections/_matches" do
         expect(rendered).not_to include("Show #{i}<", "Show #{i} ")
       end
       expect(rendered).not_to include("Zz Locked Only Category")
+      expect(rendered).not_to include("Qloo blurb") # R52: the description feeds the pitch writer only, never a card
       expect(html.css("button[data-group='category']").map { |chip| chip["data-value"] }).to contain_exactly("Finance", "Coffee")
     end
 

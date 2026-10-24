@@ -28,6 +28,7 @@ RSpec.describe Research::ScriptedRunner do
       expect(report.sponsor_matches.map(&:reason).map(&:length)).to all(be <= 200)
       expect(report.sponsor_matches.first.reason).to match(/\AYour audience shares \d+ taste signals? with .+ fans \(.+\)\./)
       expect(report.sponsor_matches.map(&:reason)).to include(a_string_including("Seen sponsoring"))
+      expect(report.sponsor_matches.map(&:brand_description)).to all(start_with("Sample ")) # R52, from the Fake catalog
       expect(report.summary).to be_present
       expect(report.summary.length).to be <= 600
       expect(report.agent_steps.pluck(:status)).to all(eq("ok"))
@@ -63,6 +64,7 @@ RSpec.describe Research::ScriptedRunner do
       expect(report.heatmap["points"]).to be_present
       expect(report.sponsor_matches.size).to be_between(20, 50)
       expect(report.sponsor_matches.map(&:reason)).to all(be_nil)
+      expect(report.sponsor_matches.map(&:brand_description)).to all(be_present)
       expect(report.sponsor_matches.map(&:fit_score)).to all(be_present)
       expect(report.summary).to be_nil
       expect(report.agent_steps.pluck(:tool)).not_to include("demographics", "proven_sponsor_scan", "explain_matches")

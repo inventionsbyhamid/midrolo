@@ -88,10 +88,14 @@ module Research
       def attributes(scored, reason, position)
         brand = scored.candidate.entity
         { show_id: report.show_id, brand_entity_id: brand.id, name: brand.name, image_url: brand.image_url,
-          website: brand.website, category: brand_category(brand), reason: reason, affinity: scored.candidate.affinity,
+          website: brand.website, brand_description: brand_description(brand), category: brand_category(brand),
+          reason: reason, affinity: scored.candidate.affinity,
           popularity: brand.popularity, fit_score: scored.fit_score, tier: scored.tier.to_s, position: position,
           evidence: { "shared_tags" => shared_tags(brand), "proven" => proven(scored.candidate.proven_evidence) } }
       end
+
+      # Qloo's description of the brand, for the pitch writer (R52). Third-party text: never shown on a card.
+      def brand_description(brand) = brand.description.to_s.squish.first(SponsorMatch::BRAND_DESCRIPTION_LIMIT).presence
 
       # Compare tags from explain_matches, else the tags the brand shares with the audience (R27).
       def shared_tags(brand) = Templates.shared_tags(toolkit, brand)

@@ -20,6 +20,9 @@ module Pitches
 
     def website = match.website.to_s.strip.presence
 
+    # Qloo's description of the brand (R52), as saved with the match.
+    def brand_description = match.brand_description.to_s.squish.presence
+
     def tier = match.tier.to_s.presence
 
     def shared_tags = Array(Matching::Evidence.value(match.evidence, :shared_tags)).map { |tag| tag.to_s.squish }.compact_blank.uniq
@@ -57,7 +60,8 @@ module Pitches
     def money(amount) = ActiveSupport::NumberHelper.number_to_currency(amount, precision: 0)
 
     # Every number a pitch may cite (R49): the rate card's figures, the affinity as a percentage, the shared-tag
-    # count, proven-sponsor counts and dates, the show's downloads, and digits inside the names given.
+    # count, proven-sponsor counts and dates, the show's downloads, and numbers inside the names and the brand
+    # description given.
     def allowed
       @allowed ||= begin
         card = rate_card
@@ -68,7 +72,8 @@ module Pitches
         allowed.numbers << downloads.to_s if downloads
         Research::NumericClaims.add_affinity(allowed, match.affinity)
         Research::NumericClaims.add_evidence(allowed, proven)
-        Research::NumericClaims.add_texts(allowed, brand, category, show_title, host, *shared_tags, *audience_tags)
+        Research::NumericClaims.add_texts(allowed, brand, category, brand_description, show_title, host, *shared_tags,
+                                          *audience_tags)
       end
     end
 

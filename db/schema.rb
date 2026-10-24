@@ -146,6 +146,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_010100) do
     t.integer "position"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "brand_description"
     t.index ["report_id", "brand_entity_id"], name: "index_sponsor_matches_on_report_id_and_brand_entity_id", unique: true
     t.index ["report_id"], name: "index_sponsor_matches_on_report_id"
     t.index ["show_id"], name: "index_sponsor_matches_on_show_id"

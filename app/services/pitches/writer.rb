@@ -119,6 +119,7 @@ module Pitches
       [
         "- Name: #{wrap(inputs.brand)}",
         ("- Category: #{wrap(inputs.category)}" if inputs.category),
+        ("- Description: #{wrap(inputs.brand_description)}" if inputs.brand_description),
         ("- Official site: #{wrap(inputs.website)}" if inputs.website),
         ("- Reachability: #{TIER_NOTES[inputs.tier]}" if TIER_NOTES.key?(inputs.tier))
       ].compact

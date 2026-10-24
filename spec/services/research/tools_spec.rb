@@ -224,6 +224,21 @@ RSpec.describe Research::Tools do
       expect(top.evidence["proven"]).to include("items", "count")
     end
 
+    it "stores each brand's Qloo description, cut to 600 characters, for the pitch writer (R52)" do
+      candidates!
+      short_id, long_id = toolkit.scored.keys.first(2)
+      [ [ short_id, "Roasts single-origin beans in small batches." ], [ long_id, "Long. " * 200 ] ].each do |id, text|
+        scored = toolkit.scored[id]
+        toolkit.scored[id] = scored.with(candidate: scored.candidate.with(entity: scored.candidate.entity.with(description: text)))
+      end
+      run("save_sponsor_matches", matches: [ { brand_id: toolkit.brand_ref(short_id), reason: "Shares your tastes." },
+                                             { brand_id: toolkit.brand_ref(long_id), reason: "Shares your tastes too." } ])
+
+      saved = report.sponsor_matches.reload.index_by(&:brand_entity_id)
+      expect(saved[short_id].brand_description).to eq("Roasts single-origin beans in small batches.")
+      expect(saved[long_id].brand_description.length).to eq(600)
+    end
+
     it "serializes proven evidence with ISO8601 times" do
       candidates!
       proven_id, scored = toolkit.scored.find { |_, s| Matching::Evidence.count(s.candidate.proven_evidence).positive? }

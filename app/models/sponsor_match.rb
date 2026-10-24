@@ -5,6 +5,8 @@ class SponsorMatch < ApplicationRecord
   # A won or lost deal has no follow-up to chase.
   CLOSED_STATUSES = %w[won lost].freeze
   NOTES_LIMIT = 2_000
+  # The brand's Qloo description is kept for the pitch writer (R52), cut to this many characters.
+  BRAND_DESCRIPTION_LIMIT = 600
   # A date input left half-typed can submit a year like 0002; nobody follows up outside these years.
   FOLLOW_UP_YEARS = 2000..2100
   # The order a report lists its matches in (Report#sponsor_matches), and so the order the plan's visible limit
