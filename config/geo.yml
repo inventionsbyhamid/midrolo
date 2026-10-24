@@ -1,0 +1,7 @@
+# Heatmap fallback metros per country (used when Qloo returns no geo data).
+shared:
+  US: [New York, Los Angeles, Chicago, Houston, Phoenix, Philadelphia, San Antonio, San Diego, Dallas, Austin, Seattle, Denver]
+  GB: [London, Manchester, Birmingham, Glasgow, Leeds, Bristol]
+  CA: [Toronto, Montreal, Vancouver, Calgary, Ottawa, Edmonton]
+  AU: [Sydney, Melbourne, Brisbane, Perth, Adelaide, Canberra]
+  IN: [Mumbai, Delhi, Bengaluru, Hyderabad, Chennai, Pune]

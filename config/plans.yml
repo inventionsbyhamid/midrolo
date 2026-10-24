@@ -1,0 +1,56 @@
+# Plan limits and pricing. price_keys map to provider product ids (set via ENV).
+shared:
+  free:
+    name: Free
+    price_monthly_usd: 0
+    shows: 1
+    snapshots_per_month: 1
+    agent_reports: 0
+    pitches: 0
+    visible_matches: 5
+    kit_badge: true
+    deep_scan_similar: 8
+    csv_export: false
+  creator:
+    name: Creator
+    price_monthly_usd: 19
+    price_yearly_usd: 190
+    shows: 1
+    agent_reports: 4
+    pitches: 40
+    visible_matches: all
+    kit_badge: false
+    deep_scan_similar: 8
+    csv_export: false
+    price_keys:
+      monthly: creator_monthly
+      yearly: creator_yearly
+  pro:
+    name: Pro
+    price_monthly_usd: 49
+    price_yearly_usd: 490
+    shows: 3
+    agent_reports: 12
+    pitches: 150
+    visible_matches: all
+    kit_badge: false
+    deep_scan_similar: 12
+    csv_export: true
+    price_keys:
+      monthly: pro_monthly
+      yearly: pro_yearly
+  sprint:
+    name: Sprint
+    price_once_usd: 49
+    grants_plan: pro
+    duration_days: 30
+    price_keys:
+      once: sprint
+
+# price_key => provider product id
+price_keys:
+  creator_monthly: <%= ENV["DODO_PRODUCT_CREATOR_MONTHLY"] %>
+  creator_yearly: <%= ENV["DODO_PRODUCT_CREATOR_YEARLY"] %>
+  pro_monthly: <%= ENV["DODO_PRODUCT_PRO_MONTHLY"] %>
+  pro_yearly: <%= ENV["DODO_PRODUCT_PRO_YEARLY"] %>
+  sprint: <%= ENV["DODO_PRODUCT_SPRINT"] %>

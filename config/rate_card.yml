@@ -1,0 +1,17 @@
+shared:
+  flat_threshold_downloads: 5000   # below this: flat mode; at or above: CPM mode
+  flat_floor_usd: 25
+  flat_rate_per_download_usd: 0.025
+  round_to_usd: 5
+  cpm_usd: 25
+  pre_roll_multiplier: 0.8
+  post_roll_multiplier: 0.5
+  bundle_episodes: 4
+  bundle_discount: 0.10
+  niche_multipliers:
+    business: 1.5
+    finance: 1.5
+    technology: 1.5
+    health: 1.2
+    education: 1.2
+    default: 1.0

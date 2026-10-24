@@ -1,0 +1,9 @@
+# Sample shows for public demo pages. The real Podcast Index ids are filled in later.
+shared:
+  samples:
+    - slug: sample-one
+      directory_id: fake-1
+    - slug: sample-two
+      directory_id: fake-2
+    - slug: sample-three
+      directory_id: fake-3

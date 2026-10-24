@@ -1,0 +1,15 @@
+shared:
+  weights:
+    affinity: 0.55
+    proven: 0.20
+    shared_tags: 0.15
+    category: 0.10
+  tiers:
+    # popularity >= long_shot_min -> long_shot; >= realistic_min -> realistic; below -> easy_yes
+    long_shot_min: 0.90
+    realistic_min: 0.60
+  small_show:
+    downloads_below: 5000
+    # subtract penalty_points * max(0, popularity - popularity_floor) / (1 - popularity_floor) points
+    penalty_points: 15
+    popularity_floor: 0.6
