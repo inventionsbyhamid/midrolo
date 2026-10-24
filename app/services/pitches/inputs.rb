@@ -60,8 +60,8 @@ module Pitches
     def money(amount) = ActiveSupport::NumberHelper.number_to_currency(amount, precision: 0)
 
     # Every number a pitch may cite (R49): the rate card's figures, the affinity as a percentage, the shared-tag
-    # count, proven-sponsor counts and dates, the show's downloads, and numbers inside the names and the brand
-    # description given.
+    # count, the proven-sponsor count and the dates of the sponsorships the prompt shows, the show's downloads, and
+    # numbers inside the names and the brand description given.
     def allowed
       @allowed ||= begin
         card = rate_card
@@ -71,7 +71,7 @@ module Pitches
         allowed.percents << bundle_discount_percent.to_s
         allowed.numbers << downloads.to_s if downloads
         Research::NumericClaims.add_affinity(allowed, match.affinity)
-        Research::NumericClaims.add_evidence(allowed, proven)
+        Research::NumericClaims.add_evidence(allowed, { "items" => proven_items, "count" => proven_count })
         Research::NumericClaims.add_texts(allowed, brand, category, brand_description, show_title, host, *shared_tags,
                                           *audience_tags)
       end

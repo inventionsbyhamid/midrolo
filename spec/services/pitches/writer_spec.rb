@@ -156,6 +156,20 @@ RSpec.describe Pitches::Writer do
       expect(RubyLLM::Test.requests.size).to eq(1)
     end
 
+    it "allows only the proven sponsorships the prompt shows, the newest three, plus the count" do
+      items = [ [ "Index Fund Mornings", "2026-09-14" ], [ "Code & Coffee Weekly", "2026-08-21" ], [ "Shipping Soon", "2026-07-17" ],
+                [ "Study Hall Stories", "2026-06-29" ] ]
+      brand_match.update!(evidence: { "shared_tags" => [ "Specialty Coffee" ], "proven" => {
+        "items" => items.map { |show, date| { "show" => show, "episode_title" => "Ep", "published_at" => "#{date}T09:00:00Z" } }, "count" => 7
+      } })
+      RubyLLM::Test.stub_responses(good_pitch(body: "You sponsored a show like ours on June 29."), good_pitch(body: "You sponsor 7 shows like ours."))
+      described_class.call(brand_match, pitch: pitch)
+
+      expect(prompt_of(RubyLLM::Test.requests.first)).not_to include("Study Hall Stories")
+      expect(RubyLLM::Test.requests.size).to eq(2)
+      expect(prompt_of(RubyLLM::Test.requests.last)).to include("aren't in the facts: 29")
+    end
+
     it "says when there is no proven evidence or download count" do
       show.update!(downloads_per_episode: nil)
       brand_match.update!(evidence: { "shared_tags" => [ "Remote Work" ], "proven" => { "items" => [], "count" => 0 } })
