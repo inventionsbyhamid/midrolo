@@ -27,6 +27,7 @@ module Research
           @sources = sources.is_a?(Hash) ? sources.transform_keys(&:to_s) : {}
           @kind = profile_kind.to_s == "direct" && own_show_seed? ? "direct" : "proxy"
           save
+          toolkit.last_seed_save = { saved: seed_count, rejected: @rejected.size }
           step.warn!("Rejected #{@rejected.size} unknown #{'id'.pluralize(@rejected.size)}") if @rejected.any?
           step.warn!("Fewer than 2 seeds") if seed_count < 2
           step.output_summary = "#{@entities.size} entity and #{@tags.size} tag seeds (#{@kind} profile)"

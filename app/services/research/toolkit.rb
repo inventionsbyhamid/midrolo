@@ -18,6 +18,8 @@ module Research
     attr_reader :scored, :explanations
     # What the seed lookups learned along the way: {seed_id => source} and the names Qloo couldn't match.
     attr_reader :lookup_sources, :unresolved
+    # The outcome of the latest SaveTasteSeeds call: {saved: Integer, rejected: Integer}, or nil.
+    attr_accessor :last_seed_save
 
     def initialize(report, taste: nil, directory: nil, feed_reader: Podcasts::FeedReader.new,
                    max_taste_calls: StepLogger.configured_max_taste_calls)
@@ -32,6 +34,7 @@ module Research
       @audience_tags = []
       @scored = {}
       @brand_refs = {}
+      @shown_brands = Set.new
       @explanations = {}
       @lookup_sources = {}
       @unresolved = []
@@ -104,11 +107,21 @@ module Research
 
     def brand_ref(brand_id) = @brand_refs[brand_id.to_s]
 
-    # The brand id for a ref ("b3") or an id, when that brand is a scored candidate of this run; else nil.
+    # Marks candidates as shown to the model (listed in a tool reply). Only shown brands can be explained or
+    # saved, so the model never acts on a brand it hasn't seen.
+    def show_candidates(brand_ids)
+      @shown_brands.merge(brand_ids.map(&:to_s))
+      self
+    end
+
+    def shown_candidate_count = @shown_brands.size
+
+    # The brand id for a ref ("b3") or an id, when that brand is a scored candidate of this run that was
+    # shown to the model; else nil.
     def resolve_brand(key)
       key = key.to_s.strip
       id = key.match?(BRAND_REF) ? @brand_refs.key(key) : key
-      id if id && @scored.key?(id)
+      id if id && @scored.key?(id) && @shown_brands.include?(id)
     end
 
     def add_explanations(explained)

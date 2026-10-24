@@ -4,7 +4,8 @@ module Research
   #   with_reasons: true  — a full report in fake-LLM mode: every section, templated reasons and summary.
   #   with_reasons: false — a free Snapshot (R36): seeds, taste tags, the map and unreasoned matches only; no
   #                         demographics, no proven-sponsor scan (scan_limit 0), no summary, and no Llm at all.
-  # Raises NeedsInput when fewer than 2 seeds are found. Returns the toolkit.
+  # Raises NeedsInput when fewer than 2 seeds are found, or when the seeds find no sponsor candidates (Review
+  # Focus #1: never an empty report). Returns the toolkit.
   class ScriptedRunner
     def self.call(report, with_reasons:) = new(report, with_reasons: with_reasons).call
 
@@ -22,10 +23,13 @@ module Research
                                      country: show.country, include_demographics: @with_reasons, entities: @with_reasons)
       scored = SponsorCandidates.find(toolkit, seed_entity_ids: toolkit.seed_entity_ids, seed_tag_ids: toolkit.seed_tag_ids,
                                                categories: CategoryMap.for(show.categories), scan_limit: scan_limit)
-      toolkit.add_candidates(scored)
+      raise NeedsInput, "no sponsor candidates for these seeds" if scored.empty?
+
+      # No model reads a candidate list here, so every candidate counts as shown.
+      toolkit.add_candidates(scored).show_candidates(scored.map { |s| s.candidate.entity.id })
       explain(scored) if @with_reasons
       save_matches(scored)
-      Tools::SaveSummary.new(toolkit).call(summary: Templates.summary(toolkit, scored)) if @with_reasons && scored.any?
+      Tools::SaveSummary.new(toolkit).call(summary: Templates.summary(toolkit, scored)) if @with_reasons
       toolkit
     end
 

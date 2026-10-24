@@ -69,6 +69,17 @@ RSpec.describe Research::ScriptedRunner do
     end
   end
 
+  context "when no sponsor candidates come back (Review Focus #1)" do
+    let(:report) { create(:report, show: show, kind: "snapshot", status: "running") }
+
+    it "raises NeedsInput instead of finishing with an empty list" do
+      allow(Research::SponsorCandidates).to receive(:find).and_return([])
+      expect { described_class.call(report, with_reasons: false) }.to raise_error(Research::NeedsInput)
+      expect(report.reload.seeds).to be_present
+      expect(report.sponsor_matches).to be_empty
+    end
+  end
+
   context "when fewer than 2 seeds are found (Review Focus #1)" do
     let(:show) { create(:show, title: "Totally Unknown Indie Show", feed_url: "fake://fake-1", categories: [ "Kids & Family" ], hints: { comparable_shows: [ "Nonexistent Pod Zzz" ] }) }
     let(:report) { create(:report, show: show, kind: "snapshot", status: "running") }

@@ -24,7 +24,7 @@ module Research
 
       def digest(result)
         if result[:entities].empty? && result[:tags].empty?
-          return "Nothing matched on Qloo for #{(result[:unresolved].presence || [ 'those' ]).join(', ')}. " \
+          return "Nothing matched on Qloo for #{Untrusted.wrap((result[:unresolved].presence || [ 'those' ]).join(', '))}. " \
                  "Try other names (comparable shows, guests) or broader topics."
         end
 
@@ -34,7 +34,7 @@ module Research
         result[:entities].each { |e| lines << "- #{e.name} (#{e.id}) #{e.type.to_s.tr('_', ' ')} — #{sources[e.id]}" }
         lines << "Tags:" if result[:tags].any?
         result[:tags].each { |t| lines << "- #{t.name} (#{t.id}) — #{sources[t.id]}" }
-        lines << "Not found: #{result[:unresolved].join(', ')}" if result[:unresolved].any?
+        lines << "Not found: #{Untrusted.wrap(result[:unresolved].join(', '))}" if result[:unresolved].any?
         lines.join("\n")
       end
     end

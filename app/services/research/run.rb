@@ -8,7 +8,10 @@ module Research
   # toward pausing runs (Review Focus #4). Returns the run's toolkit, or nil when the run didn't finish.
   class Run
     PAUSED_MESSAGE = "Full reports are paused right now — nothing was charged. Try again later.".freeze
-    LIMIT_MESSAGE = "The research took too long, so we stopped it. Nothing was charged — try again.".freeze
+    LIMIT_MESSAGES = {
+      tool_calls: "The research needed more steps than one report allows, so we stopped it. Nothing was charged — try again.",
+      time: "The research took too long, so we stopped it. Nothing was charged — try again."
+    }.freeze
 
     def self.call(report) = new(report).call
 
@@ -30,7 +33,7 @@ module Research
     rescue Llm::BudgetExceeded
       fail_with(nil, PAUSED_MESSAGE)
     rescue LimitReached => e
-      fail_with(e, LIMIT_MESSAGE)
+      fail_with(e, LIMIT_MESSAGES.fetch(e.kind, LIMIT_MESSAGES[:time]))
     rescue IncompleteRun => e
       fail_with(e)
     end

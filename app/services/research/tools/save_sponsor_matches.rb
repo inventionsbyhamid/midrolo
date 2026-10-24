@@ -1,15 +1,17 @@
 module Research
   module Tools
-    # The provenance check (spec §6): only brands from this run's candidate set are saved, each with the
-    # scored data and evidence the tools produced. The model supplies just the pick and its reason.
+    # The provenance check (spec §6): only brands from this run's candidate set that were shown to the model
+    # are saved, each with the scored data and evidence the tools produced. The model supplies just the pick
+    # and its reason, and a reason may cite only numbers found in that data (R38, NumericClaims).
     class SaveSponsorMatches < Base
       MAX_MATCHES = SponsorCandidates::MAX_RESULTS
       REASON_LIMIT = 200
+      TARGET_MATCHES = 20
 
       description "Saves the sponsor matches: 20–40 candidate refs from find_sponsor_candidates, each with a " \
                   "one-sentence reason (under #{REASON_LIMIT} characters) citing shared taste tags or proven-sponsor " \
-                  "evidence from the tools. Brands not in the candidate list are rejected. Each call replaces the saved " \
-                  "list, so resend the full list when fixing rejections."
+                  "evidence from the tools, with no numbers the tools didn't give. Brands not in the candidate list are " \
+                  "rejected. Each call replaces the saved list, so resend the full list when fixing rejections."
       arguments({ matches: { type: "array", maxItems: MAX_MATCHES,
                              items: { type: "object", additionalProperties: false, required: %w[brand_id reason],
                                       properties: { brand_id: { type: "string", description: "Candidate ref (b1…) or brand id" },
@@ -28,7 +30,11 @@ module Research
         picks = Array(matches)
         log.step("save_sponsor_matches", "Saving your sponsor matches…", input: "#{picks.size} picks") do |step|
           accepted, rejected = sort(picks)
-          persist(accepted)
+          if accepted.any?
+            persist(accepted)
+          else
+            step.warn!("Nothing accepted, so the earlier list was kept")
+          end
           step.warn!("Rejected #{rejected.size}") if rejected.any?
           step.output_summary = "Saved #{accepted.size} #{'match'.pluralize(accepted.size)}"
           message(accepted.size, rejected)
@@ -45,16 +51,27 @@ module Research
           key = value(pick, :brand_id).to_s.strip
           reason = value(pick, :reason).to_s.squish.presence
           id = toolkit.resolve_brand(key)
-          problem = if id.nil? then "not in the candidate list"
-          elsif reason && reason.length > REASON_LIMIT then "reason over #{REASON_LIMIT} characters"
-          elsif reason.nil? && @require_reasons then "no reason"
-          end
-          next rejected << "#{key.presence || '(no brand_id)'} (#{problem})" if problem
+          problem = problem_with(id, key, reason)
+          next rejected << problem if problem
 
           accepted[id] ||= reason
         end
         [ accepted.first(MAX_MATCHES).to_h, rejected ]
       end
+
+      def problem_with(id, key, reason)
+        label = key.presence || "(no brand_id)"
+        return "#{label} (not in the candidate list)" if id.nil?
+        return "#{label} (reason over #{REASON_LIMIT} characters)" if reason && reason.length > REASON_LIMIT
+        return "#{label} (no reason)" if reason.nil? && @require_reasons
+
+        unsupported = reason ? claims.unsupported(reason, claims.for_match(toolkit.scored.fetch(id))) : []
+        if unsupported.any?
+          "reason for #{toolkit.brand_ref(id) || label} cites numbers not in the data (#{unsupported.join(', ')}) — rephrase without them"
+        end
+      end
+
+      def claims = @claims ||= NumericClaims.new(toolkit)
 
       # Replaces the run's matches, positioned by fit.
       def persist(accepted)
@@ -89,9 +106,17 @@ module Research
 
       def message(saved, rejected)
         text = "Saved #{saved} #{'match'.pluralize(saved)}"
-        return "#{text}." if rejected.empty?
-
-        "#{text}; rejected #{rejected.size}: #{rejected.join(', ')}. Each call replaces the saved list: resend the full list to fix these."
+        text += rejected.empty? ? "." : "; rejected #{rejected.size}: #{rejected.join('; ')}."
+        if saved.zero?
+          kept = report.sponsor_matches.count
+          text += kept.positive? ? " Nothing changed: your earlier #{kept} #{'match'.pluralize(kept)} are still saved." : " Nothing was saved."
+        elsif rejected.any?
+          text += " Each call replaces the saved list: resend the full list to fix these."
+        end
+        if saved.positive? && saved < TARGET_MATCHES && toolkit.shown_candidate_count >= TARGET_MATCHES
+          text += " You saved #{saved}; consider saving at least #{TARGET_MATCHES}."
+        end
+        text
       end
     end
   end

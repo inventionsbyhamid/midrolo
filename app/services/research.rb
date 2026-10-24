@@ -3,8 +3,15 @@
 module Research
   # Fewer than 2 taste seeds: the report asks the podcaster for comparable shows (Review Focus #1).
   class NeedsInput < StandardError; end
-  # The agent hit its tool-call or time cap.
-  class LimitReached < StandardError; end
+  # The agent hit a cap: kind is :tool_calls or :time.
+  class LimitReached < StandardError
+    attr_reader :kind
+
+    def initialize(kind = :time, message = nil)
+      @kind = kind
+      super(message || "#{kind} limit reached")
+    end
+  end
   # The agent stopped without saving any sponsor matches.
   class IncompleteRun < StandardError; end
 end

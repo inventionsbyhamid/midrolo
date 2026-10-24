@@ -3,11 +3,22 @@ module Research
   # while it runs, the RubyLLM tool callbacks count tool calls and time against the caps (R35: they log no
   # steps; the services and tools do). Spend is recorded once, whatever the outcome.
   #
-  # Raises Llm::BudgetExceeded (not allowed to spend), NeedsInput (fewer than 2 seeds saved), LimitReached
-  # (a cap was hit before any matches were saved) or IncompleteRun (the model stopped without saving
+  # The time cap is hard (R39): every request runs in a RubyLLM context whose request_timeout is the time left
+  # (split across the one allowed retry, never under MIN_REQUEST_SECONDS), rebound after each tool result, so
+  # the final turn after save_summary is bounded too.
+  #
+  # Seeds: a clean save_taste_seeds call (no rejected ids) that leaves fewer than 2 seeds ends the run as
+  # needs_input. A call with rejected ids or invalid arguments may be retried MAX_SEED_RETRIES times.
+  #
+  # Raises Llm::BudgetExceeded (not allowed to spend), NeedsInput, LimitReached (a cap was hit before any
+  # matches were saved; kind :tool_calls or :time) or IncompleteRun (the model stopped without saving
   # matches). Returns the toolkit.
   class AgentRunner
     ESTIMATE_USD = 0.5
+    MAX_RETRIES = 1
+    MIN_REQUEST_SECONDS = 20
+    MAX_SEED_RETRIES = 2
+    TIMEOUTS = [ Faraday::TimeoutError, Timeout::Error ].freeze
 
     def self.call(report) = new(report).call
 
@@ -15,6 +26,7 @@ module Research
       @report = report
       @toolkit = Toolkit.new(report)
       @tool_calls = 0
+      @failed_seed_saves = 0
     end
 
     def call
@@ -36,39 +48,63 @@ module Research
     attr_reader :report, :toolkit
 
     def run_agent(model)
+      @started = monotonic
       chat = SponsorResearchAgent.chat(toolkit: toolkit, provider: Llm.provider)
+      bind_time_budget(chat)
       enforce_limits(chat)
       chat.ask(kickoff)
-    rescue LimitReached
-      raise unless matches_saved? # matches are the report; a late cap only costs the summary
+    rescue LimitReached, *TIMEOUTS => e
+      # Matches are the report: a late cap only costs the summary.
+      raise(e.is_a?(LimitReached) ? e : LimitReached.new(:time, "request timed out")) unless matches_saved?
     ensure
       record_spend(chat, model) if chat
     end
 
     def kickoff
-      "Research sponsors for the podcast \"#{toolkit.show.title}\". Start with read_show_feed."
+      "Research sponsors for the podcast #{Untrusted.wrap(toolkit.show.title)}. Start with read_show_feed."
     end
 
     def enforce_limits(chat)
-      started = monotonic
       chat.before_tool_call do |tool_call|
         @tool_calls += 1
         @last_tool = tool_call.name
-        check_limits!(started)
+        toolkit.last_seed_save = nil if @last_tool == "save_taste_seeds"
+        check_limits!
       end
       chat.after_tool_result do |_result|
-        check_limits!(started)
-        raise NeedsInput, "fewer than 2 taste seeds" if @last_tool == "save_taste_seeds" && toolkit.seed_count < 2
+        check_limits!
+        check_seeds! if @last_tool == "save_taste_seeds"
+        bind_time_budget(chat)
       end
     end
 
-    def check_limits!(started)
+    def check_limits!
       max_calls = Llm.agent_max_tool_calls
-      raise LimitReached, "more than #{max_calls} tool calls" if @tool_calls > max_calls
+      raise LimitReached.new(:tool_calls, "more than #{max_calls} tool calls") if @tool_calls > max_calls
 
-      max_seconds = Llm.agent_max_seconds
-      raise LimitReached, "over #{max_seconds} seconds" if monotonic - started > max_seconds
+      raise LimitReached.new(:time, "over #{Llm.agent_max_seconds} seconds") if seconds_left.negative?
     end
+
+    # No last_seed_save means the call never ran: RubyLLM rejected its arguments.
+    def check_seeds!
+      outcome = toolkit.last_seed_save
+      clean = outcome.present? && outcome[:rejected].zero?
+      @failed_seed_saves += 1 unless clean
+      return if toolkit.seed_count >= 2
+
+      raise NeedsInput, "fewer than 2 taste seeds" if clean || @failed_seed_saves > MAX_SEED_RETRIES
+    end
+
+    # The next request (and its one retry) must fit in the time left.
+    def bind_time_budget(chat)
+      timeout = [ (seconds_left / (MAX_RETRIES + 1)).floor, MIN_REQUEST_SECONDS ].max
+      chat.with_context(RubyLLM.context do |config|
+        config.request_timeout = timeout
+        config.max_retries = MAX_RETRIES
+      end)
+    end
+
+    def seconds_left = Llm.agent_max_seconds - (monotonic - @started)
 
     def matches_saved? = report.sponsor_matches.exists?
 
