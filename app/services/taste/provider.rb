@@ -2,7 +2,9 @@ module Taste
   # Adapter interface (all return value objects, never raw JSON):
   #   #search(query:, types:, take: 5), #find_tags(query:, take: 10),
   #   #recommend(type:, entity_ids: [], tag_ids: [], filter_tags: [], popularity_max: nil, take: 20),
-  #   #affinity_for(candidate_ids:, entity_ids: [], tag_ids: []), #taste_tags(entity_ids: [], tag_ids: [], take: 20),
+  #   #affinity_for(candidate_ids:, entity_ids: [], tag_ids: [], type: :brand) -> Hash{String=>Float, nil}:
+  #     every candidate id is a key; nil means no score (Qloo omitted it, or Fake knows it as another entity type),
+  #   #taste_tags(entity_ids: [], tag_ids: [], take: 20),
   #   #demographics(entity_ids: [], tag_ids: []), #heatmap(location:, entity_ids: [], tag_ids: [], take: 50),
   #   #compare(a_entity_ids:, b_entity_ids:, take: 10)
   module Provider

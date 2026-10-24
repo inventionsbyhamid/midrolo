@@ -84,6 +84,24 @@ RSpec.describe Taste::Providers::Fake do
     end
   end
 
+  describe "interface parity" do
+    it "gives Qloo and Fake the same public method signatures" do
+      qloo = Taste::Providers::Qloo.new(api_key: "k")
+      %i[search find_tags recommend affinity_for taste_tags demographics heatmap compare].each do |m|
+        expect(fake.method(m).parameters).to eq(qloo.method(m).parameters), "#{m} differs"
+      end
+    end
+
+    it "scores only catalog entities of the requested type, and every candidate is a key" do
+      brand = fake.search(query: "Notion", types: [ :brand ]).first
+      r = fake.affinity_for(candidate_ids: [ brand.id, "fake:other" ], type: :podcast)
+      expect(r.keys).to eq([ brand.id, "fake:other" ])
+      expect(r[brand.id]).to be_nil
+      expect(r["fake:other"]).to be_a(Float)
+      expect(fake.affinity_for(candidate_ids: [ brand.id ])[brand.id]).to be_a(Float)
+    end
+  end
+
   describe "#demographics" do
     it "returns leans in -1..1 for the documented buckets" do
       d = fake.demographics(entity_ids: [ "x" ])

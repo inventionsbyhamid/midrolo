@@ -4,6 +4,7 @@ module Taste
     class Qloo
       DEFAULT_BASE_URL = "https://hackathon.api.qloo.com".freeze
       CACHE_TTL = 7.days
+      AFFINITY_CHUNK = 50
       TIMEOUT = 20
       OPEN_TIMEOUT = 5
       ATTEMPTS = 3
@@ -32,14 +33,17 @@ module Taste
         entities(get("/v2/insights", params))
       end
 
-      # Qloo has no batch-affinity endpoint: scope insights to the candidates with filter.results.entities.
+      # Qloo has no batch-affinity endpoint: scope insights to the candidates with filter.results.entities,
+      # in chunks of 50. Every candidate id is a key; nil means Qloo returned no score for it.
       def affinity_for(candidate_ids:, entity_ids: [], tag_ids: [], type: :brand)
-        return {} if Array(candidate_ids).empty?
-
-        params = { "filter.type" => Provider.urn_for(type), "filter.results.entities" => candidate_ids,
-                   "take" => [ Array(candidate_ids).size, 50 ].min }.merge(signals(entity_ids, tag_ids))
-        wanted = Array(candidate_ids).map(&:to_s)
-        entities(get("/v2/insights", params)).select { |e| wanted.include?(e.id) && e.affinity }.to_h { |e| [ e.id, e.affinity ] }
+        ids = Array(candidate_ids).map(&:to_s)
+        result = ids.to_h { |id| [ id, nil ] }
+        ids.each_slice(AFFINITY_CHUNK) do |chunk|
+          params = { "filter.type" => Provider.urn_for(type), "filter.results.entities" => chunk,
+                     "take" => chunk.size }.merge(signals(entity_ids, tag_ids))
+          entities(get("/v2/insights", params)).each { |e| result[e.id] = e.affinity if chunk.include?(e.id) }
+        end
+        result
       end
 
       def taste_tags(entity_ids: [], tag_ids: [], take: 20)
@@ -66,7 +70,9 @@ module Taste
       private
 
       def signals(entity_ids, tag_ids)
-        { "signal.interests.entities" => entity_ids, "signal.interests.tags" => tag_ids }
+        out = { "signal.interests.entities" => entity_ids, "signal.interests.tags" => tag_ids }
+        out["operator.signal.interests.tags"] = "union" if Array(tag_ids).size > 1
+        out
       end
 
       # ---- HTTP ----

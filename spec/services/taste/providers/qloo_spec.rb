@@ -100,6 +100,45 @@ RSpec.describe Taste::Providers::Qloo do
       expect(stub).to have_been_requested
       expect(result).to eq("SYN-BRAND-001" => 0.87, "SYN-BRAND-002" => 0.64)
     end
+
+    it "maps candidates Qloo did not return to nil" do
+      stub_request(:get, "#{base}/v2/insights").with(query: hash_including({})).to_return(json("insights_brand"))
+      result = adapter.affinity_for(candidate_ids: %w[SYN-BRAND-001 MISSING])
+      expect(result).to eq("SYN-BRAND-001" => 0.87, "MISSING" => nil)
+    end
+
+    it "chunks 120 candidates into 3 requests and returns a key for each" do
+      stub = stub_request(:get, "#{base}/v2/insights").with(query: hash_including("filter.type" => "urn:entity:artist"))
+        .to_return(json("empty"))
+      ids = (1..120).map { |i| "C#{i}" }
+      result = adapter.affinity_for(candidate_ids: ids, entity_ids: [ "E1" ], type: :artist)
+      expect(stub).to have_been_requested.times(3)
+      expect(result.keys).to eq(ids)
+      expect(result.values.uniq).to eq([ nil ])
+    end
+  end
+
+  describe "tag signals" do
+    def tag_query(tag_ids)
+      stub_request(:get, "#{base}/v2/insights").with(query: hash_including("signal.interests.tags" => tag_ids.join(","))).to_return(json("empty"))
+      adapter.recommend(type: :brand, tag_ids: tag_ids)
+      WebMock::RequestRegistry.instance.requested_signatures.hash.keys.last.uri.query_values
+    end
+
+    it "sends operator union only when more than one tag is given" do
+      expect(tag_query(%w[T1 T2])["operator.signal.interests.tags"]).to eq("union")
+      expect(tag_query(%w[T9])).not_to have_key("operator.signal.interests.tags")
+    end
+
+    it "applies to the other signal-based calls too" do
+      stub = stub_request(:get, "#{base}/v2/insights")
+        .with(query: hash_including("signal.interests.tags" => "T1,T2", "operator.signal.interests.tags" => "union")).to_return(json("empty"))
+      adapter.taste_tags(tag_ids: %w[T1 T2])
+      adapter.demographics(tag_ids: %w[T1 T2])
+      adapter.heatmap(location: "US", tag_ids: %w[T1 T2])
+      adapter.affinity_for(candidate_ids: [ "x" ], tag_ids: %w[T1 T2])
+      expect(stub).to have_been_requested.times(4)
+    end
   end
 
   describe "#demographics" do

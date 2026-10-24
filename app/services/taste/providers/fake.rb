@@ -53,10 +53,13 @@ module Taste
         end
       end
 
-      def affinity_for(candidate_ids:, entity_ids: [], tag_ids: [])
+      def affinity_for(candidate_ids:, entity_ids: [], tag_ids: [], type: :brand)
         instrument("affinity_for") do
+          Provider.urn_for(type)
           Array(candidate_ids).to_h do |id|
-            [ id, (0.2 + rng_for("affinity", id, entity_ids, tag_ids).rand * 0.75).round(3) ]
+            known = @entities[id]
+            score = known && known.type != type.to_sym ? nil : 0.2 + rng_for("affinity", id, entity_ids, tag_ids).rand * 0.75
+            [ id, score&.round(3) ]
           end
         end
       end
