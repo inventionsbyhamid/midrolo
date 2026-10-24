@@ -3,10 +3,13 @@
   The markup contract for dialog_controller. Put it inside an element with
   data-controller="dialog", next to an opener with data-action="dialog#open".
   Set data-dialog-open-value="true" on that element to open the dialog as soon
-  as it lands on the page (for example from a Turbo Stream).
+  as it lands on the page (for example from a Turbo Stream), and
+  data-dialog-return-to-value to the id of the element focus goes back to.
+  sheet: true drops a sheet from the top at every width; sheet: :mobile makes it
+  a full-height sheet on a phone and a centered dialog from 40rem.
 %>
 <% id ||= "dialog-#{title.parameterize}" %>
-<dialog class="<%= class_names("dialog", "dialog-sheet" => sheet) %>" data-dialog-target="dialog" aria-labelledby="<%= id %>-title">
+<dialog class="<%= class_names("dialog", "dialog-sheet" => sheet == true, "dialog-sheet-mobile" => sheet == :mobile) %>" data-dialog-target="dialog" aria-labelledby="<%= id %>-title">
   <div class="dialog-header">
     <h2 id="<%= id %>-title" class="type-h3"><%= title %></h2>
     <button type="button" class="btn btn-ghost btn-icon btn-md" data-action="dialog#close" aria-label="Close">

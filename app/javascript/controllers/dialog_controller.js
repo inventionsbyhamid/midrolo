@@ -1,12 +1,19 @@
 import { Controller } from "@hotwired/stimulus"
 
+const FOCUSABLE = "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])"
+
 // Drives a native <dialog> (see app/views/components/_dialog.html.erb).
 // showModal() gives us Escape-to-close and a focus trap: the page behind
 // becomes inert. On top of that we return focus to the opener, close on a
 // backdrop click, and close before Turbo caches the page.
+//
+// A dialog opened by a Turbo Stream has no reliable opener (Turbo disables the
+// submit button while the form is in flight, which drops its focus, and the
+// same response may replace it), so returnTo names the element, by id, whose
+// first focusable control gets focus back instead.
 export default class extends Controller {
   static targets = ["dialog"]
-  static values = { open: Boolean }
+  static values = { open: Boolean, returnTo: String }
 
   connect() {
     this.dialogTarget.addEventListener("close", this.restoreFocus)
@@ -33,8 +40,14 @@ export default class extends Controller {
   }
 
   restoreFocus = () => {
-    if (this.opener?.isConnected) this.opener.focus()
+    const target = this.hasReturnToValue ? this.returnTarget() : this.opener
+    if (target?.isConnected) target.focus()
     this.opener = null
+  }
+
+  returnTarget() {
+    const home = document.getElementById(this.returnToValue)
+    return home?.matches(FOCUSABLE) ? home : home?.querySelector(FOCUSABLE)
   }
 
   // A click whose target is the <dialog> itself, outside its box, landed on the backdrop.
