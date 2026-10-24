@@ -59,6 +59,16 @@ RSpec.describe Podcasts::FeedReader do
       expect(reader.read(url).episodes.first.description).to eq("Sponsored by Notion\nVisit Today\nOne\nTwo\nLine\nbreak\nHead\nTail")
     end
 
+    it "turns non-breaking and other Unicode spaces into plain spaces and drops spacer lines" do
+      html = "<p>This episode is sponsored by&nbsp;Rocket&nbsp;Money.</p><p>&nbsp;</p><p>Use code PODS at&nbsp;acme.com&#8195;today</p>"
+      stub_request(:get, url).to_return(status: 200, body: one_item_feed(html).sub("<title>Ep 1</title>", "<title>Ep&#160;1&#160;</title>"))
+      episode = reader.read(url).episodes.first
+
+      expect(episode.description).to eq("This episode is sponsored by Rocket Money.\nUse code PODS at acme.com today")
+      expect(episode.title).to eq("Ep 1")
+      expect(episode.description + episode.title).not_to include(" ")
+    end
+
     it "truncates descriptions to 600 characters by default" do
       stub_request(:get, url).to_return(status: 200, body: one_item_feed("<p>#{'filler ' * 150}</p><p>This episode is sponsored by Notion.</p>"))
       description = reader.read(url).episodes.first.description

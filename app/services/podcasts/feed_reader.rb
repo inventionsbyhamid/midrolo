@@ -144,7 +144,8 @@ module Podcasts
       median.round
     end
 
-    # HTML to plain text. <br> and block elements become line breaks; other whitespace collapses to one space.
+    # HTML to plain text. <br> and block elements become line breaks. Every other whitespace character,
+    # including Unicode ones like &nbsp; (U+00A0), becomes one plain space, and blank spacer lines are dropped.
     def clean(html, limit = DESCRIPTION_LIMIT)
       return nil if html.nil?
 
@@ -154,7 +155,7 @@ module Podcasts
         node.before("\n")
         node.after("\n")
       end
-      text = fragment.text.gsub(/[^\S\n]+/, " ").gsub(/\s*\n\s*/, "\n").strip
+      text = fragment.text.gsub(/[[:space:]&&[^\n]]+/, " ").gsub(/\s*\n\s*/, "\n").strip
       text.truncate(limit)
     end
 
