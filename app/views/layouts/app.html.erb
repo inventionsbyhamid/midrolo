@@ -4,12 +4,12 @@
     <%= render "layouts/head" %>
   </head>
 
-  <%# Signed-in pages. The links are placeholders until Tasks 3, 8 and 13 add their routes. %>
+  <%# Signed-in pages. %>
   <body class="flex min-h-dvh flex-col">
     <a href="#main" class="skip-link">Skip to content</a>
     <%= render "components/demo_banner" if demo_mode? %>
     <%= render "components/nav",
-          links: [ [ "Shows", "/shows" ], [ "Pipeline", "/pipeline" ], [ "Account", "/account" ] ],
+          links: [ [ "Shows", shows_path ], [ "Pipeline", pipeline_path ], [ "Account", account_path ] ],
           sign_out: true %>
     <%= render "components/flash" %>
     <main id="main" tabindex="-1" class="wrap flex-1 py-8 sm:py-10">

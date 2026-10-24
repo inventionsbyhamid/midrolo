@@ -1,0 +1,60 @@
+<% content_for :title, "Pipeline" %>
+<% groups = @matches.group_by(&:status) %>
+<% due = @matches.filter_map(&:follow_up_state).tally %>
+<div class="flex flex-col gap-8">
+  <header class="flex flex-wrap items-end justify-between gap-4">
+    <div class="min-w-0 basis-96 grow">
+      <h1 class="type-h1">Pipeline</h1>
+      <p class="type-lead mt-2">
+        Every brand you're working, from saved to won.<%= " Change a brand's stage, notes or follow-up date on its card in the report." if @matches.any? %>
+      </p>
+    </div>
+  </header>
+
+  <% if @matches.empty? %>
+    <%= render "components/empty_state", title: "Your pipeline is empty",
+          body: "Open one of your reports and set a brand's pipeline status to Saved — or Pitched once you've reached out. It shows up here by stage, with your notes and follow-up dates.",
+          action_label: "Go to your shows", action_href: shows_path %>
+  <% else %>
+    <nav aria-label="Pipeline stages" class="stage-strip">
+      <ol class="stage-list">
+        <% SponsorMatch::PIPELINE_STATUSES.each do |status| %>
+          <% count = groups.fetch(status, []).size %>
+          <li>
+            <% if count.positive? %>
+              <a href="#stage_<%= status %>" class="stage-step">
+                <span><%= status.humanize %></span> <span class="stage-step-count"><%= count %></span>
+              </a>
+            <% else %>
+              <span class="stage-step stage-step-empty">
+                <span><%= status.humanize %></span> <span class="stage-step-count">0</span>
+              </span>
+            <% end %>
+          </li>
+        <% end %>
+      </ol>
+    </nav>
+
+    <% if due[:overdue] || due[:today] %>
+      <p class="-mt-4 flex flex-wrap gap-2" data-follow-up-summary>
+        <%= ui_badge("#{pluralize(due[:overdue], 'follow-up')} overdue", tone: :danger) if due[:overdue] %>
+        <%= ui_badge("#{due[:today]} due today", tone: :warning) if due[:today] %>
+      </p>
+    <% end %>
+
+    <% SponsorMatch::PIPELINE_STATUSES.each do |status| %>
+      <% entries = groups[status] %>
+      <% next unless entries %>
+      <section id="stage_<%= status %>" class="pipeline-stage" data-pipeline-stage aria-labelledby="stage_<%= status %>_title">
+        <h2 id="stage_<%= status %>_title" class="pipeline-stage-title">
+          <%= status.humanize %> <span class="pipeline-stage-count"><%= entries.size %></span>
+        </h2>
+        <ul class="pipeline-grid">
+          <% entries.each do |match| %>
+            <li><%= render "pipeline/entry", sponsor_match: match %></li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+  <% end %>
+</div>

@@ -1,0 +1,8 @@
+<%= turbo_stream.replace dom_id(@sponsor_match, :status_form), method: :morph,
+      partial: "sponsor_matches/status_form", locals: { sponsor_match: @sponsor_match } %>
+<% if @saved %>
+  <%= turbo_stream.update dom_id(@sponsor_match, :status_saved) do %>
+    <svg viewBox="0 0 16 16" class="size-3.5" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Saved
+  <% end %>
+<% end %>

@@ -1,0 +1,153 @@
+/*
+ * The pipeline page (app/views/pipeline), imported from application.css.
+ * Colours come from the @theme tokens there; nothing here is hard-coded.
+ */
+@layer components {
+  /* The stages as a row of steps with counts, the funnel at a glance. It scrolls sideways on a phone. */
+  .stage-list {
+    display: flex;
+    gap: 0.5rem;
+    margin-inline: -1rem;
+    padding: 2px 1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    @media (width >= 40rem) {
+      flex-wrap: wrap;
+      margin-inline: 0;
+      padding-inline: 0;
+      overflow: visible;
+    }
+  }
+
+  .stage-list > li {
+    flex: none;
+  }
+
+  .stage-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.5rem;
+    padding-inline: 0.875rem 0.5rem;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 999px;
+    background: var(--color-surface);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  a.stage-step:hover {
+    border-color: var(--color-ink);
+  }
+
+  .stage-step-empty {
+    border-style: dashed;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+  }
+
+  .stage-step-count,
+  .pipeline-stage-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding-inline: 0.375rem;
+    border-radius: 999px;
+    background: var(--color-plum-soft);
+    color: var(--color-plum);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    font-stretch: 100%;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stage-step-empty .stage-step-count {
+    background: var(--color-paper);
+    color: var(--color-ink-soft);
+  }
+
+  .pipeline-stage {
+    scroll-margin-top: 1rem;
+  }
+
+  .pipeline-stage-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    font-stretch: 112.5%;
+    font-weight: 720;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .pipeline-grid {
+    display: grid;
+    gap: 1rem;
+
+    @media (width >= 48rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .pipeline-grid > li {
+    display: flex;
+    min-width: 0;
+  }
+
+  .pipeline-entry {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    padding: 1.25rem;
+  }
+
+  /* A follow-up that needs doing: the tally lamp on the card's edge, red once it's overdue. */
+  .pipeline-entry[data-follow-up="today"] {
+    box-shadow: inset 4px 0 0 var(--color-tally), var(--shadow-edge);
+  }
+
+  .pipeline-entry[data-follow-up="overdue"] {
+    box-shadow: inset 4px 0 0 var(--color-danger), var(--shadow-edge);
+  }
+
+  .pipeline-note {
+    margin-top: 0.875rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--color-line);
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+    overflow-wrap: anywhere;
+  }
+
+  .pipeline-entry-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    margin-top: auto;
+    padding-top: 1rem;
+  }
+
+  .pipeline-follow-up {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .pipeline-open {
+    margin-left: auto;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+}

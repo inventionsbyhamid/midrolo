@@ -1,10 +1,10 @@
 <%# locals: (sponsor_match:) -%>
-<%# Placeholder (R42): Task 14 wires "Write my pitch" to the pitch pack and Task 13 the pipeline status. %>
-<% hint_id = dom_id(sponsor_match, :actions_hint) %>
-<div class="flex flex-wrap items-center gap-2">
-  <%= ui_button "Write my pitch", type: "button", size: :sm, disabled: true, aria: { describedby: hint_id } %>
-  <label for="<%= dom_id(sponsor_match, :status) %>" class="sr-only">Pipeline status for <%= sponsor_match.name %></label>
-  <%= select_tag :status, options_for_select(SponsorMatch::STATUSES.map { |s| [ s.humanize, s ] }, sponsor_match.status),
-        id: dom_id(sponsor_match, :status), class: "input select-sm", disabled: true, aria: { describedby: hint_id } %>
+<%# "Write my pitch" is a placeholder until Task 14 wires it to the pitch pack (R42). %>
+<% hint_id = dom_id(sponsor_match, :pitch_hint) %>
+<div class="flex flex-col gap-4">
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <%= ui_button "Write my pitch", type: "button", size: :sm, disabled: true, aria: { describedby: hint_id } %>
+    <p id="<%= hint_id %>" class="text-[0.8125rem] text-ink-soft">Pitch writing is coming soon</p>
+  </div>
+  <%= render "sponsor_matches/status_form", sponsor_match: sponsor_match %>
 </div>
-<p id="<%= hint_id %>" class="mt-1.5 text-[0.8125rem] text-ink-soft">Coming in the next step</p>

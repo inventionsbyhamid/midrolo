@@ -1,0 +1,71 @@
+<%# locals: (sponsor_match:) -%>
+<%#
+  The pipeline control on a visible match card: a status that saves as it changes, and notes plus a follow-up date
+  behind a disclosure. SponsorMatchesController#update morphs this form in place (its id is the Turbo Stream
+  target) and then writes "Saved" into the status region, which stays in the DOM so screen readers announce it.
+  The pipeline is a Creator+ feature (R45); without it the card points to pricing instead.
+%>
+<% match = sponsor_match %>
+<% form_id = dom_id(match, :status_form) %>
+<% if pipeline_enabled_for?(match.report.show.user) %>
+  <% notes_error_id = dom_id(match, :notes_error) %>
+  <% notes_hint_id = dom_id(match, :notes_hint) %>
+  <% date_error_id = dom_id(match, :follow_up_error) %>
+  <% notes_invalid = match.errors.key?(:notes) %>
+  <% date_invalid = match.errors.key?(:follow_up_on) %>
+  <%= form_with model: match, id: form_id, namespace: dom_id(match), class: "status-form",
+        data: { controller: "status-form", action: "turbo:before-morph-attribute->status-form#keepOpen" } do |f| %>
+    <div class="status-row">
+      <%= f.label :status, class: "status-label" do %>Pipeline<span class="sr-only"> status for <%= match.name %></span><% end %>
+      <%= f.select :status, status_options, {}, class: "input select-sm status-select",
+            data: { action: "status-form#submit", status: match.status },
+            aria: { invalid: (match.errors.key?(:status) || nil) } %>
+      <noscript><%= f.submit "Save", class: "btn btn-secondary btn-sm" %></noscript>
+      <span id="<%= dom_id(match, :status_saved) %>" class="status-saved" role="status" aria-live="polite"></span>
+    </div>
+    <% if match.errors.key?(:status) %>
+      <p class="field-error" role="alert"><%= match.errors.full_messages_for(:status).to_sentence %></p>
+    <% end %>
+
+    <details class="status-notes" <%= "open" if notes_invalid || date_invalid %>>
+      <summary class="status-notes-summary">
+        <svg viewBox="0 0 16 16" class="status-notes-chevron" aria-hidden="true"><path d="m6 4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Notes &amp; follow-up</span>
+        <%# One inner span per flag: in the inline-flex flag, loose text runs would lose their edge spaces. %>
+        <% if match.notes.present? %>
+          <span class="status-flag"><span>Note</span></span>
+        <% end %>
+        <% if match.follow_up_on %>
+          <span class="status-flag" data-tone="<%= follow_up_tone(match) %>"><span><%= follow_up_flag(match) %></span></span>
+        <% end %>
+      </summary>
+      <div class="status-notes-body">
+        <div>
+          <%= f.label :notes, "Notes", class: "label" %>
+          <%= f.text_area :notes, rows: 3, maxlength: SponsorMatch::NOTES_LIMIT, class: "input status-notes-input",
+                placeholder: "Who you contacted, what they said…",
+                aria: { invalid: (notes_invalid || nil), describedby: [ notes_hint_id, (notes_error_id if notes_invalid) ].compact.join(" ") } %>
+          <p id="<%= notes_hint_id %>" class="hint">Only you can see your notes.</p>
+          <% if notes_invalid %>
+            <p id="<%= notes_error_id %>" class="field-error" role="alert"><%= match.errors.full_messages_for(:notes).to_sentence %></p>
+          <% end %>
+        </div>
+        <div>
+          <%= f.label :follow_up_on, "Follow-up date", class: "label" %>
+          <%= f.date_field :follow_up_on, class: "input status-date-input",
+                aria: { invalid: (date_invalid || nil), describedby: (date_error_id if date_invalid) } %>
+          <% if date_invalid %>
+            <p id="<%= date_error_id %>" class="field-error" role="alert"><%= match.errors.full_messages_for(:follow_up_on).to_sentence %></p>
+          <% end %>
+        </div>
+        <div>
+          <%= f.submit "Save notes", class: "btn btn-secondary btn-sm" %>
+        </div>
+      </div>
+    </details>
+  <% end %>
+<% else %>
+  <p id="<%= form_id %>" class="status-locked">
+    <%= link_to pricing_path, class: "link" do %>Track this brand in your pipeline — Creator plan<% end %>
+  </p>
+<% end %>

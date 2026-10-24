@@ -156,6 +156,24 @@ RSpec.describe "Reports" do
         expect(queries.size).to eq(1)
       end
 
+      it "renders each card's pipeline form without a query per match" do
+        report = create(:report, show: show, kind: "agent", status: "done")
+        count_queries = lambda do
+          queries = 0
+          sub = ActiveSupport::Notifications.subscribe("sql.active_record") { |*, p| queries += 1 unless p[:name] == "SCHEMA" }
+          get show_report_path(show, report)
+          ActiveSupport::Notifications.unsubscribe(sub)
+          queries
+        end
+        create(:sponsor_match, report: report)
+        count_queries.call # the first request also records the sign-in (Devise trackable)
+        with_one = count_queries.call
+        create_list(:sponsor_match, 5, report: report)
+
+        expect(count_queries.call).to eq(with_one)
+        expect(Nokogiri::HTML(response.body).css("form[data-controller='status-form']").size).to eq(6)
+      end
+
       it "404s for another user's report" do
         other = create(:report)
         get show_report_path(other.show, other)

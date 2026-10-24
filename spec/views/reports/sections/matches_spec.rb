@@ -7,8 +7,9 @@ RSpec.describe "reports/sections/_matches" do
 
   def render_section = render(partial: "reports/sections/matches", locals: { report: report })
 
-  def limit_visible_to(count)
-    allow(Entitlements).to receive(:for).and_return(instance_double(Entitlements::Plan, visible_matches_limit: count))
+  def limit_visible_to(count, pipeline: true)
+    allow(Entitlements).to receive(:for)
+      .and_return(instance_double(Entitlements::Plan, visible_matches_limit: count, pipeline?: pipeline))
   end
 
   def proven(*shows, count: shows.size)
@@ -50,7 +51,7 @@ RSpec.describe "reports/sections/_matches" do
     it "shows only a silhouette, the tier and a fit bucket on a blurred card" do
       card = html.css("[data-locked-match]").first # match 6: fit 94, easy yes
       expect(card.text.squish).to eq("•• Easy yes High fit")
-      expect(card.css("img, a")).to be_empty
+      expect(card.css("img, a, form, select")).to be_empty
       expect(html.css("[data-locked-match]").last.text.squish).to eq("•• Long shot Good fit") # match 50: fit 50
     end
   end
@@ -89,7 +90,7 @@ RSpec.describe "reports/sections/_matches" do
       expect(link["target"]).to eq("_blank")
     end
 
-    it "carries the filter data and the placeholder actions" do
+    it "carries the filter data and the pitch placeholder" do
       expect(card["data-category"]).to eq("Coffee")
       expect(card["data-tier"]).to eq("easy_yes")
       expect(card["data-proven"]).to eq("true")
@@ -97,9 +98,69 @@ RSpec.describe "reports/sections/_matches" do
 
       pitch = card.at_xpath(".//button[contains(., 'Write my pitch')]")
       expect(pitch["disabled"]).not_to be_nil
-      expect(card.text).to include("Coming in the next step")
-      expect(card.at_css("select")["disabled"]).not_to be_nil
+      expect(html.at_css("##{pitch['aria-describedby']}").text).to eq("Pitch writing is coming soon")
+      expect(card.text).not_to include("Coming in the next step")
     end
+
+    it "offers a live pipeline form: a labelled status select that saves on change, notes and a follow-up date" do
+      match = report.sponsor_matches.first
+      form = card.at_css("form##{ActionView::RecordIdentifier.dom_id(match, :status_form)}")
+      expect(form["action"]).to eq("/sponsor_matches/#{match.id}")
+      expect(form.at_css("input[name='_method']")["value"]).to eq("patch")
+      expect(form["data-controller"]).to eq("status-form")
+
+      select = form.at_css("select[name='sponsor_match[status]']")
+      expect(select["disabled"]).to be_nil
+      expect(select["data-action"]).to eq("status-form#submit")
+      expect(select.css("option").map(&:text)).to eq(%w[Suggested Saved Pitched Replied Won Lost])
+      expect(form.at_css("label[for='#{select['id']}']").text.squish).to eq("Pipeline status for Fieldnote Coffee")
+      expect(form.at_css("noscript").inner_html).to include("Save")
+      expect(form.at_css("[role='status']")).to be_present
+
+      details = form.at_css("details")
+      expect(details["open"]).to be_nil
+      expect(details.at_css("summary").text.squish).to eq("Notes & follow-up")
+      %w[notes follow_up_on].each do |field|
+        input = details.at_css("[name='sponsor_match[#{field}]']")
+        expect(details.at_css("label[for='#{input['id']}']")).to be_present
+      end
+      expect(details.at_css("textarea")["maxlength"]).to eq(SponsorMatch::NOTES_LIMIT.to_s)
+      expect(details.at_css("input[type='date']")).to be_present
+    end
+  end
+
+  context "with notes and a follow-up date set" do
+    before do
+      travel_to(Date.new(2026, 10, 25))
+      create(:sponsor_match, report: report, status: "pitched", notes: "Emailed Sam", follow_up_on: Date.new(2026, 10, 25))
+      render_section
+    end
+
+    after { travel_back }
+
+    it "flags both on the closed notes panel" do
+      summary = html.at_css("details summary")
+      expect(summary.text.squish).to eq("Notes & follow-up Note Follow up today")
+      expect(html.at_css("select option[selected]")["value"]).to eq("pitched")
+    end
+  end
+
+  it "gives every form control on the page a unique id" do
+    create_list(:sponsor_match, 3, report: report)
+    render_section
+    ids = html.css("[id]").map { |node| node["id"] }
+    expect(ids).to eq(ids.uniq)
+    expect(html.css("form[data-controller='status-form']").size).to eq(3)
+  end
+
+  it "points to the Creator plan instead of the form when the plan has no pipeline (R45)" do
+    create(:sponsor_match, report: report)
+    limit_visible_to(50, pipeline: false)
+    render_section
+    card = html.at_css("[data-filter-target='item']")
+    expect(card.css("form, select, textarea")).to be_empty
+    link = card.at_css("a[href='/pricing']")
+    expect(link.text.squish).to eq("Track this brand in your pipeline — Creator plan")
   end
 
   it "leaves the tier line out of the unlock prompt when no locked tier is known" do

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./report.css";
+@import "./pipeline.css";
 
 /*
  * Midrolo design tokens.
@@ -592,6 +593,13 @@
     margin-top: 0.375rem;
     font-size: 0.8125rem;
     color: var(--color-ink-soft);
+  }
+
+  .field-error {
+    margin-top: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-danger);
   }
 
   .input {

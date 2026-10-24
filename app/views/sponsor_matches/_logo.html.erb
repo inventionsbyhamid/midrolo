@@ -1,0 +1,9 @@
+<%# locals: (sponsor_match:, size: "size-12 text-base") -%>
+<%# A brand's logo over its initials; logo_controller removes an image that fails to load. %>
+<span class="avatar <%= size %>" aria-hidden="true" data-controller="logo">
+  <%= initials_for(sponsor_match.name) %>
+  <% if (src = safe_external_url(sponsor_match.image_url)) %>
+    <img src="<%= src %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+         data-logo-target="image" data-action="error->logo#fallback">
+  <% end %>
+</span>

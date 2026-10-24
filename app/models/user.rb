@@ -3,6 +3,7 @@ class User < ApplicationRecord
   devise :omniauthable, :rememberable, :trackable, omniauth_providers: Devise.omniauth_configs.keys
 
   has_many :shows, dependent: :destroy
+  has_many :sponsor_matches, through: :shows
 
   validates :provider, :uid, presence: true
   validates :email, uniqueness: { case_sensitive: false }, allow_nil: true
