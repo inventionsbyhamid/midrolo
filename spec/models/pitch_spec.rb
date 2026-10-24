@@ -16,7 +16,7 @@ RSpec.describe Pitch do
   end
 
   it "gives each match its newest pitch, and each user their pitches" do
-    older = described_class.create!(sponsor_match: match, created_at: 2.minutes.ago)
+    older = described_class.create!(sponsor_match: match, status: "failed", created_at: 2.minutes.ago)
     newer = described_class.create!(sponsor_match: match)
     described_class.create!(sponsor_match: create(:sponsor_match))
 
@@ -26,11 +26,19 @@ RSpec.describe Pitch do
 
   it "treats a pitch queued for too long as dead: not in flight, shown as failed" do
     fresh = described_class.create!(sponsor_match: match)
-    stale = described_class.create!(sponsor_match: match, created_at: (Pitch::STALE_AFTER + 1.minute).ago)
+    stale = described_class.create!(sponsor_match: create(:sponsor_match), created_at: (Pitch::STALE_AFTER + 1.minute).ago)
+    described_class.create!(sponsor_match: create(:sponsor_match), status: "done")
 
     expect(fresh).to be_in_flight
     expect(stale).not_to be_in_flight
     expect(stale).to be_stale
+    expect(described_class.in_flight).to eq([ fresh ])
+  end
+
+  it "allows only one queued pitch per match in the database (R53)" do
+    described_class.create!(sponsor_match: match)
+    described_class.create!(sponsor_match: match, status: "done")
+    expect { described_class.create!(sponsor_match: match) }.to raise_error(ActiveRecord::RecordNotUnique)
   end
 
   it "counts the body's words" do

@@ -34,8 +34,12 @@ class PitchesController < ApplicationController
 
   def plan = @plan ||= Entitlements.for(current_user)
 
-  # pitches_left may be Float::INFINITY (unlimited); nil counts as none.
-  def pitch_allowed? = plan.can_pitch? && plan.pitches_left.to_f.positive?
+  # pitches_left counts done pitches only (Task 16); the user's pitches still being written are reserved against it,
+  # so several cards can't start pitches the plan has no room for (R53). pitches_left may be Float::INFINITY
+  # (unlimited); nil counts as none.
+  def pitch_allowed?
+    plan.can_pitch? && plan.pitches_left.to_f - current_user.pitches.in_flight.count > 0
+  end
 
   # A pitch still being written is never started twice (a second tab, Regenerate mid-write); without regenerate, a
   # written pitch opens again rather than spending another.
@@ -46,10 +50,15 @@ class PitchesController < ApplicationController
     latest if latest&.done? && !@regenerate
   end
 
+  # The database allows one queued pitch per match (R53). One stuck in the queue already shows as failed, so it's
+  # failed first; a concurrent request that inserted first wins, and its pitch is shown.
   def start_pitch
+    @sponsor_match.pitches.queued.each { |stuck| stuck.mark_failed! if stuck.stale? }
     pitch = @sponsor_match.pitches.create!
     GeneratePitchJob.perform_later(pitch.id)
     pitch
+  rescue ActiveRecord::RecordNotUnique
+    @sponsor_match.pitches.queued.newest_first.first || raise
   end
 
   # 402 with the reason and the way to more pitches; a pitch already on screen stays there.

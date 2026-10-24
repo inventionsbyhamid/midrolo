@@ -16,6 +16,8 @@ class Pitch < ApplicationRecord
 
   # Usage: what the plan's pitch limit counts (Task 16).
   scope :counted, -> { done }
+  # Being written, not yet stale: reserved against the plan's limit until it's done or failed (R53).
+  scope :in_flight, -> { queued.where(created_at: STALE_AFTER.ago..) }
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
 
   # The dialog showing this pitch follows it from queued to done or failed.

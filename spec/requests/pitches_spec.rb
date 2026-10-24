@@ -121,6 +121,24 @@ RSpec.describe "Pitches" do
         expect(stream("update", "pitch_dialog").at_css("##{dom_id(Pitch.last)}")).to be_present
       end
 
+      it "creates a single pitch when two POSTs on the same match race past the check (R53)" do
+        post sponsor_match_pitch_path(brand_match), headers: turbo
+        first = Pitch.last
+        # The second request didn't see the first's row, so it tries to insert one: the unique index stops it.
+        allow_any_instance_of(SponsorMatch).to receive(:latest_pitch).and_return(nil)
+
+        expect { post sponsor_match_pitch_path(brand_match), headers: turbo }.not_to change(Pitch, :count)
+        expect(response).to have_http_status(:ok)
+        expect(stream("update", "pitch_dialog").at_css("##{dom_id(first)}")).to be_present
+      end
+
+      it "fails a pitch stuck in the queue and writes a fresh one" do
+        stuck = Pitch.create!(sponsor_match: brand_match, created_at: (Pitch::STALE_AFTER + 1.minute).ago)
+        expect { post sponsor_match_pitch_path(brand_match), headers: turbo }.to change(Pitch, :count).by(1)
+        expect(stuck.reload).to be_failed
+        expect(Pitch.last).to be_queued
+      end
+
       it "never starts a second pitch while one is being written, even on Regenerate" do
         post sponsor_match_pitch_path(brand_match), headers: turbo
         expect { post sponsor_match_pitch_path(brand_match), params: { regenerate: 1 }, headers: turbo }
@@ -255,6 +273,25 @@ RSpec.describe "Pitches" do
 
         expect(response).to have_http_status(:payment_required)
         expect(stream("replace", dom_id(brand_match, :pitch_pack)).at_css("a[href='#{pricing_path}']")).to be_present
+      end
+
+      it "reserves pitches still being written: with 1 left, a second card gets 402 (R53)" do
+        other = create(:sponsor_match, report: report, name: "Ramp")
+        stub_plan(pitches_left: 1)
+
+        post sponsor_match_pitch_path(brand_match), headers: turbo
+        expect(response).to have_http_status(:ok)
+        expect { post sponsor_match_pitch_path(other), headers: turbo }.not_to change(Pitch, :count)
+        expect(response).to have_http_status(:payment_required)
+      end
+
+      it "doesn't reserve a pitch stuck in the queue" do
+        other = create(:sponsor_match, report: report, name: "Ramp")
+        Pitch.create!(sponsor_match: other, created_at: (Pitch::STALE_AFTER + 1.minute).ago)
+        stub_plan(pitches_left: 1)
+
+        expect { post sponsor_match_pitch_path(brand_match), headers: turbo }.to change(Pitch, :count).by(1)
+        expect(response).to have_http_status(:ok)
       end
 
       it "writes pitches on an unlimited plan" do
