@@ -1,0 +1,41 @@
+<%# locals: (demographics:, heading: :h3) -%>
+<%# Age and gender leans as pan meters, shared by the report's Leans section and the media kit. Never percentages. %>
+<% groups = { "Age" => demographics["age"], "Gender" => demographics["gender"] }.select { |_, leans| leans.is_a?(Hash) && leans.any? } %>
+<% if groups.empty? %>
+  <p class="mt-4 text-ink-soft">No clear age or gender leans came back for this audience.</p>
+<% else %>
+  <% scale = lean_scale(demographics) %>
+  <div class="mt-5 flex max-w-xl flex-col gap-6">
+    <% groups.each do |title, leans| %>
+      <div>
+        <div class="lean lean-legend">
+          <%= content_tag heading, title, class: "text-[0.9375rem] font-bold font-semiwide" %>
+          <span class="lean-axis" aria-hidden="true"><span>Under</span><span>Over</span></span>
+        </div>
+        <ul class="flex flex-col">
+          <% (title == "Age" ? age_buckets_in_order(leans) : leans).each do |bucket, value| %>
+            <% lit = lean_segments(value, scale) %>
+            <% direction = lean_direction(value) %>
+            <li class="lean" data-lean="<%= direction %>">
+              <span class="lean-label" data-lean-label><%= title == "Age" ? age_bucket_label(bucket) : gender_label(bucket) %></span>
+              <span class="lean-bar" aria-hidden="true">
+                <span class="lean-side lean-side-under">
+                  <% ReportsHelper::LEAN_SEGMENTS.times do |i| %>
+                    <span class="<%= class_names("lean-seg", "lean-seg-under" => direction == "under" && i >= ReportsHelper::LEAN_SEGMENTS - lit) %>"></span>
+                  <% end %>
+                </span>
+                <span class="lean-center"></span>
+                <span class="lean-side">
+                  <% ReportsHelper::LEAN_SEGMENTS.times do |i| %>
+                    <span class="<%= class_names("lean-seg", "lean-seg-over" => direction == "over" && i < lit) %>"></span>
+                  <% end %>
+                </span>
+              </span>
+              <span class="lean-word"><%= lean_word(value) %></span>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+  </div>
+<% end %>

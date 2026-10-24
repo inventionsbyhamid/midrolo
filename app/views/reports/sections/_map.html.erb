@@ -16,33 +16,7 @@
     <% if points.empty? %>
       <p class="mt-4 rounded-control border border-dashed border-line-strong px-4 py-6 text-ink-soft">Not enough location data for this audience</p>
     <% else %>
-      <% metros = top_metros(points) %>
-      <div class="mt-5 grid gap-6 md:grid-cols-[minmax(0,1fr)_14rem]">
-        <%# Kept through page-refresh morphs so the live map isn't torn down; a section broadcast still replaces it. %>
-        <figure id="<%= dom_id(report, :heatmap) %>" class="map-frame" data-turbo-permanent
-                aria-label="<%= heatmap_label(heatmap) %>"
-                data-controller="map" data-map-points-value="<%= points.map { |p| p.slice("lat", "lng", "affinity") }.to_json %>"
-                data-map-style-value="<%= map_style_url %>" data-map-stylesheet-value="<%= maplibre_stylesheet_url %>">
-          <div class="map-canvas" data-map-target="canvas"></div>
-          <p class="map-loading" data-map-target="status">Loading map…</p>
-        </figure>
-        <% if metros.any? %>
-          <div data-top-metros>
-            <h3 class="text-[0.9375rem] font-bold font-semiwide">Top metros</h3>
-            <ol class="mt-2 flex flex-col">
-              <% metros.each_with_index do |(name, share), i| %>
-                <li class="metro">
-                  <span class="metro-rank"><%= i + 1 %></span>
-                  <span class="min-w-0 flex-1">
-                    <span class="block truncate text-[0.9375rem]" data-metro-name><%= name %></span>
-                    <span class="metro-bar" aria-hidden="true"><span style="width: <%= (share * 100).round %>%"></span></span>
-                  </span>
-                </li>
-              <% end %>
-            </ol>
-          </div>
-        <% end %>
-      </div>
+      <%= render "reports/heatmap", id: dom_id(report, :heatmap), heatmap: heatmap, points: points, metros: top_metros(points) %>
     <% end %>
   <% end %>
 <% end %>
