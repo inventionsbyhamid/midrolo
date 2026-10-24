@@ -88,6 +88,18 @@ RSpec.describe "Reports" do
         expect(response.body).to include("Money-minded listeners.", "Report ready")
       end
 
+      it "renders the saved seeds with their sources and the names Qloo couldn't match" do
+        seeds = { "entities" => [ { "id" => "q1", "name" => "Index Fund Mornings", "type" => "podcast", "source" => "You listed it" } ],
+                  "tags" => [ { "id" => "t1", "name" => "Personal Finance", "source" => "Topic: personal finance" } ],
+                  "unresolved" => [ "Nonexistent Pod Zzz" ] }
+        report = create(:report, show: show, status: "needs_input", profile_kind: "proxy", seeds: seeds)
+        get show_report_path(show, report)
+        seeds_html = Nokogiri::HTML(response.body).at_css("#report_seeds")
+        expect(seeds_html.css("li").map { |li| li.text.squish }).to eq([ "Index Fund Mornings (You listed it)", "Personal Finance (Topic: personal finance)" ])
+        expect(seeds_html.text).to include("Nonexistent Pod Zzz")
+        expect(seeds_html.text).not_to include("entities")
+      end
+
       it "shows the friendly failure message with Try again" do
         report = create(:report, show: show, status: "failed", error_message: Report::FAILURE_MESSAGE)
         get show_report_path(show, report)

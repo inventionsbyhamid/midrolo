@@ -113,22 +113,7 @@ module Research
     end
 
     # R27: tags the brand shares with the audience's taste tags, by id or else by name.
-    def shared_tag_count(brand)
-      ids, names = audience_tag_index
-      brand.tags.count { |t| ids.include?(t.id) || names.include?(Names.normalize(t.name)) }
-    end
-
-    def audience_tag_index
-      @audience_tag_index ||= begin
-        pairs = toolkit.audience_tags.map { |t| [ t.id, t.name ] }.presence || saved_audience_tags
-        [ pairs.map(&:first).compact.to_set, pairs.map { |(_, name)| Names.normalize(name) }.reject(&:empty?).to_set ]
-      end
-    end
-
-    def saved_audience_tags
-      tags = report.audience.is_a?(Hash) ? report.audience["tags"] : nil
-      Array(tags).filter_map { |t| [ t["id"], t["name"] ] if t.is_a?(Hash) }
-    end
+    def shared_tag_count(brand) = toolkit.shared_audience_tags(brand).size
 
     # Every source asked Qloo for brands only, so no type filter here (Qloo's subtype naming may vary).
     def add(brands)

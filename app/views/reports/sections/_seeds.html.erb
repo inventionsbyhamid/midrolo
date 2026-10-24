@@ -8,11 +8,13 @@
         <p class="mb-2 text-sm text-ink-soft"><%= report.direct? ? "Found your show on Qloo." : "Built from comparable shows and topics." %></p>
       <% end %>
       <ul class="list-disc pl-5">
-        <% Array(report.seeds).each do |seed| %>
-          <% seed = seed.is_a?(Hash) ? seed : { "name" => seed.to_s } %>
-          <li><%= seed["name"] || seed["label"] %><% if seed["source"].present? %> <span class="text-ink-soft">(<%= seed["source"] %>)</span><% end %></li>
+        <% report.seed_items.each do |seed| %>
+          <li><%= seed["name"] %><% if seed["source"].present? %> <span class="text-ink-soft">(<%= seed["source"] %>)</span><% end %></li>
         <% end %>
       </ul>
+      <% if report.unresolved_seeds.any? %>
+        <p class="mt-2 text-sm text-ink-soft">Not found on Qloo: <%= report.unresolved_seeds.to_sentence %></p>
+      <% end %>
     <% end %>
   <% end %>
 </div>

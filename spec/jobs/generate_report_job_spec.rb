@@ -61,9 +61,14 @@ RSpec.describe "Report jobs" do
     end
   end
 
-  it "fails cleanly while the real engine is not wired yet" do
-    report = create(:report)
+  it "runs the real engine end to end for a snapshot on Fake providers" do
+    Taste::Provider.reset!
+    Podcasts::Directory.reset!
+    show = create(:show, title: "The Founder's Ledger", feed_url: "fake://fake-1", categories: [ "Business" ])
+    report = create(:report, show: show)
     BuildSnapshotJob.perform_now(report.id)
-    expect(report.reload.status).to eq("failed")
+
+    expect(report.reload.status).to eq("done")
+    expect(report.sponsor_matches).to be_present
   end
 end

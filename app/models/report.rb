@@ -50,6 +50,11 @@ class Report < ApplicationRecord
   end
 
   def active? = status.in?(ACTIVE)
+
+  # The seeds section as Research::Tools::SaveTasteSeeds saves it:
+  #   {"entities" => [{id, name, type, source}], "tags" => [{id, name, source}], "unresolved" => [names]}
+  def seed_items = seeds.is_a?(Hash) ? Array(seeds["entities"]) + Array(seeds["tags"]) : []
+  def unresolved_seeds = seeds.is_a?(Hash) ? Array(seeds["unresolved"]) : []
   def status_copy = STATUS_COPY.fetch(status)
 
   def mark_running!
