@@ -10,9 +10,8 @@
   <% end %>
 <% else %>
   <% points = heatmap_points(heatmap) %>
-  <% country = heatmap_country(heatmap) %>
-  <% place = heatmap["location"] == "metros" ? "#{country} metros" : country %>
-  <%= render "reports/section", name: "map", title: "Where your kind of listener lives", aside: (ui_badge(place, tone: :accent) if place.present?) do %>
+  <% place = heatmap_place(heatmap) %>
+  <%= render "reports/section", name: "map", title: "Where your kind of listener lives", aside: (ui_badge(place, tone: :accent) if place) do %>
     <p class="report-section-note">Modeled from Qloo taste data. Handy for regional brands and local sponsors.</p>
     <% if points.empty? %>
       <p class="mt-4 rounded-control border border-dashed border-line-strong px-4 py-6 text-ink-soft">Not enough location data for this audience</p>
@@ -21,7 +20,7 @@
       <div class="mt-5 grid gap-6 md:grid-cols-[minmax(0,1fr)_14rem]">
         <%# Kept through page-refresh morphs so the live map isn't torn down; a section broadcast still replaces it. %>
         <figure id="<%= dom_id(report, :heatmap) %>" class="map-frame" data-turbo-permanent
-                aria-label="Heatmap of where people with your listeners' tastes live in <%= country %>"
+                aria-label="<%= heatmap_label(heatmap) %>"
                 data-controller="map" data-map-points-value="<%= points.map { |p| p.slice("lat", "lng", "affinity") }.to_json %>"
                 data-map-style-value="<%= map_style_url %>">
           <div class="map-canvas" data-map-target="canvas"></div>

@@ -47,6 +47,14 @@ RSpec.describe "reports/sections/_map" do
     expect(html.text).not_to include("metros across metros")
   end
 
+  it "shows no place badge and a plain map label when a metros map has no country" do
+    report.update!(heatmap: { "location" => "metros", "country" => nil, "points" => points })
+    render_section
+    expect(html.at_css("#report_map .badge")).to be_nil
+    expect(html.text.squish).not_to match(/(?<!Top) metros/) # no orphaned " metros" badge
+    expect(html.at_css("[data-controller~='map']")["aria-label"]).to eq("Heatmap of where people with your listeners' tastes live")
+  end
+
   it "shows an empty state with no points" do
     report.update!(heatmap: { "location" => "US", "country" => "US", "points" => [] })
     render_section

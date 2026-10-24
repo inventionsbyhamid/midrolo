@@ -122,9 +122,21 @@ module ReportsHelper
     totals.map { |label, total| [ label, top.positive? ? total / top : 0.0 ] }
   end
 
+  # The country's name, or nil when the section doesn't say ("metros" with no country).
   def heatmap_country(heatmap)
-    code = heatmap["location"] == "metros" ? heatmap["country"] : heatmap["location"]
-    Show::COUNTRIES.fetch(code.to_s.upcase, code.to_s)
+    code = (heatmap["location"] == "metros" ? heatmap["country"] : heatmap["location"]).to_s.strip
+    Show::COUNTRIES.fetch(code.upcase, code).presence
+  end
+
+  # "United States", "United States metros", or nil.
+  def heatmap_place(heatmap)
+    country = heatmap_country(heatmap)
+    country && heatmap["location"] == "metros" ? "#{country} metros" : country
+  end
+
+  def heatmap_label(heatmap)
+    country = heatmap_country(heatmap)
+    "Heatmap of where people with your listeners' tastes live#{" in #{country}" if country}"
   end
 
   def map_style_url = ENV["MAP_STYLE_URL"].presence || DEFAULT_MAP_STYLE_URL
