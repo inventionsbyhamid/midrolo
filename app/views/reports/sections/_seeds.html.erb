@@ -1,20 +1,49 @@
 <%# locals: (report:) -%>
-<div id="report_seeds">
-  <%= render "components/card", title: "Taste profile" do %>
-    <% if report.seeds.nil? %>
-      <%= render "components/skeleton", lines: 2, label: "Building your taste profile" %>
-    <% else %>
-      <% if report.profile_kind %>
-        <p class="mb-2 text-sm text-ink-soft"><%= report.direct? ? "Found your show on Qloo." : "Built from comparable shows and topics." %></p>
-      <% end %>
-      <ul class="list-disc pl-5">
-        <% report.seed_items.each do |seed| %>
-          <li><%= seed["name"] %><% if seed["source"].present? %> <span class="text-ink-soft">(<%= seed["source"] %>)</span><% end %></li>
+<% seeds = report.seed_items %>
+<% if report.seeds.nil? && !report.needs_input? %>
+  <% if section_pending?(report) %>
+    <%= render "reports/section", name: "seeds", title: "Taste profile" do %>
+      <%= render "components/skeleton", lines: 2, label: "Building your taste profile", title: false %>
+    <% end %>
+  <% else %>
+    <%= render "reports/section", name: "seeds", hidden: true %>
+  <% end %>
+<% else %>
+  <%= render "reports/section", name: "seeds", title: "Taste profile" do %>
+    <% if report.profile_kind && !report.needs_input? %>
+      <div class="profile-banner">
+        <% if report.direct? %>
+          <p class="font-semibold">Built from your show on Qloo</p>
+          <p class="text-[0.9375rem] text-ink-soft">Qloo knows your show, so this profile starts from its own audience.</p>
+        <% else %>
+          <p class="font-semibold">Built from shows and topics like yours</p>
+          <p class="text-[0.9375rem] text-ink-soft">These shows and topics stand in for your show itself. Each one says where it came from.</p>
         <% end %>
-      </ul>
-      <% if report.unresolved_seeds.any? %>
-        <p class="mt-2 text-sm text-ink-soft">Not found on Qloo: <%= report.unresolved_seeds.to_sentence %></p>
+      </div>
+    <% end %>
+
+    <% if seeds.any? %>
+      <% found_id = dom_id(report, :seeds_found) %>
+      <% if report.needs_input? %>
+        <p id="<%= found_id %>" class="text-sm text-ink-soft">Found so far</p>
+      <% end %>
+      <%= tag.ul class: [ "flex flex-wrap gap-2", report.needs_input? ? "mt-2" : "mt-4" ],
+                 aria: report.needs_input? ? { labelledby: found_id } : { label: "Taste seeds" } do %>
+        <% seeds.each do |seed| %>
+          <li class="seed" data-seed>
+            <span class="block font-semibold leading-snug" data-seed-name><%= seed["name"] %></span>
+            <% if seed["source"].present? %>
+              <span class="block text-[0.8125rem] leading-snug text-ink-soft" data-seed-source><%= seed["source"] %></span>
+            <% end %>
+          </li>
+        <% end %>
       <% end %>
     <% end %>
+
+    <% if report.needs_input? %>
+      <%= render "reports/needs_input_form", report: report %>
+    <% elsif report.unresolved_seeds.any? %>
+      <p class="mt-3 text-sm text-ink-soft">Not found on Qloo: <%= report.unresolved_seeds.to_sentence %></p>
+    <% end %>
   <% end %>
-</div>
+<% end %>

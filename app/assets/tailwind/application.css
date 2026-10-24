@@ -673,4 +673,468 @@
   @keyframes sheet-in {
     from { transform: translateY(-1rem); opacity: 0; }
   }
+
+  /* ---------- Report page ---------- */
+
+  /* Sections sit on the page, ruled apart. Finished reports hide sections that never came ([hidden]),
+     so only visible sections take a rule, and the first visible one sits flush. */
+  .report-sections {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .report-section {
+    min-width: 0;
+    padding-block: 2rem;
+  }
+
+  .report-sections > .report-section:not([hidden]) ~ .report-section:not([hidden]) {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .report-sections > .report-section:not([hidden]):not(.report-section:not([hidden]) ~ *) {
+    padding-top: 0;
+  }
+
+  .report-section-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .report-section-title {
+    font-size: 1.5rem;
+    font-stretch: 112.5%;
+    font-weight: 720;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  .report-section-note {
+    max-width: 65ch;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+
+  .report-summary {
+    max-width: 60ch;
+    font-size: var(--text-xl);
+    line-height: 1.55;
+    text-wrap: pretty;
+  }
+
+  .upgrade-card {
+    margin-top: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: var(--radius-card);
+    background: var(--color-plum-soft);
+  }
+
+  /* Taste profile: where the profile came from, then each seed with its source. */
+  .profile-banner {
+    padding-left: 0.875rem;
+    border-left: 3px solid var(--color-plum);
+  }
+
+  .seed {
+    max-width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    font-size: 0.9375rem;
+  }
+
+  /* The needs-input ask: the tally lamp on its edge says it's the podcaster's turn. */
+  .needs-input {
+    padding: 1.25rem 1.25rem 1.5rem 1.5rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: inset 4px 0 0 var(--color-tally), var(--shadow-edge);
+  }
+
+  /* Tabs (tabs_controller). */
+  .tab-row {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--color-line);
+    scrollbar-width: none;
+  }
+
+  .tab {
+    flex: none;
+    height: 2.75rem;
+    padding-inline: 0.875rem;
+    border-radius: var(--radius-control) var(--radius-control) 0 0;
+    font-size: 0.9375rem;
+    font-weight: 550;
+    color: var(--color-ink-soft);
+    cursor: pointer;
+  }
+
+  .tab:hover {
+    color: var(--color-ink);
+    background: var(--color-plum-soft);
+  }
+
+  .tab[aria-selected="true"] {
+    color: var(--color-ink);
+    font-weight: 700;
+    box-shadow: inset 0 -3px 0 var(--color-ink);
+  }
+
+  .taste-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    padding-block: 0.625rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .taste-item .meter-track {
+    min-width: 4rem;
+    height: 0.5rem;
+  }
+
+  /* A logo or artwork tile with initials underneath; a failed image removes itself. */
+  .avatar {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: none;
+    overflow: hidden;
+    border-radius: var(--radius-control);
+    background: var(--color-plum-soft);
+    color: var(--color-plum);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    font-stretch: 112.5%;
+    line-height: 1;
+  }
+
+  .avatar img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: var(--color-surface);
+  }
+
+  /* Leans: a pan meter. Ten segments either side of a center detent; over-indexing lights plum to the
+     right, under-indexing lights grey to the left. */
+  .lean {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr) 6.75rem;
+    align-items: center;
+    gap: 0.625rem;
+    padding-block: 0.3125rem;
+
+    @media (width >= 40rem) {
+      grid-template-columns: 7rem minmax(0, 1fr) 7.5rem;
+      gap: 1rem;
+    }
+  }
+
+  .lean-legend {
+    padding-bottom: 0.25rem;
+  }
+
+  .lean-axis {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--color-ink-soft);
+  }
+
+  .lean-label {
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lean-bar {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .lean-side {
+    display: flex;
+    flex: 1;
+    gap: 2px;
+    height: 0.625rem;
+  }
+
+  .lean-seg {
+    flex: 1;
+    border-radius: 1px;
+    background: var(--color-line);
+  }
+
+  .lean-seg-over {
+    background: var(--color-plum);
+  }
+
+  .lean-seg-under {
+    background: var(--color-line-strong);
+  }
+
+  .lean-center {
+    flex: none;
+    width: 2px;
+    height: 1.25rem;
+    border-radius: 1px;
+    background: var(--color-ink);
+  }
+
+  .lean-word {
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+
+  .lean[data-lean="over"] .lean-word {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  /* Map (map_controller) and the ranked metros beside it. */
+  .map-frame {
+    position: relative;
+    min-width: 0;
+    height: 280px;
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: #eceeed;
+
+    @media (width >= 48rem) {
+      height: 22rem;
+    }
+  }
+
+  /* MapLibre's unlayered stylesheet sets .maplibregl-map { position: relative }, which beats this layer,
+     so the size is stated outright rather than left to inset. */
+  .map-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .map-loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+    pointer-events: none;
+  }
+
+  .metro {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-block: 0.4375rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .metro-rank {
+    flex: none;
+    width: 1.25rem;
+    text-align: right;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    font-stretch: 112.5%;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink-soft);
+  }
+
+  .metro-bar {
+    display: block;
+    height: 3px;
+    margin-top: 0.3125rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--color-line);
+  }
+
+  .metro-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--color-plum);
+  }
+
+  /* Match filters (filter_controller): rows of toggle chips that scroll sideways on a phone. */
+  .match-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-inline: -1rem;
+    padding: 2px 1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    @media (width >= 40rem) {
+      flex-wrap: wrap;
+      margin-inline: 0;
+      padding-inline: 0;
+      overflow: visible;
+    }
+  }
+
+  .filter-row-label {
+    flex: none;
+    width: 4.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-ink-soft);
+  }
+
+  .filter-chip {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.4375rem;
+    height: 2.25rem;
+    padding-inline: 0.875rem;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 999px;
+    background: var(--color-surface);
+    font-size: 0.875rem;
+    font-weight: 550;
+    color: var(--color-ink);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+
+  .filter-chip:hover {
+    border-color: var(--color-ink);
+  }
+
+  .filter-chip[aria-pressed="true"] {
+    border-color: var(--color-ink);
+    background: var(--color-ink);
+    color: #fff;
+  }
+
+  .filter-chip-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    box-shadow: 0 0 0 1.5px var(--color-surface);
+  }
+
+  .filter-chip-dot-success { background: var(--color-success); }
+  .filter-chip-dot-accent { background: var(--color-plum); }
+  .filter-chip-dot-warning { background: #c27a00; }
+
+  .select-sm {
+    width: auto;
+    min-height: 0;
+    height: 2.25rem;
+    padding-block: 0;
+    font-size: 0.875rem;
+  }
+
+  /* Match cards: two up from tablet width, actions pinned to the bottom edge. */
+  .match-grid {
+    display: grid;
+    gap: 1rem;
+
+    @media (width >= 48rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .match-grid > li {
+    display: flex;
+    min-width: 0;
+  }
+
+  .match-card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    padding: 1.25rem;
+  }
+
+  .match-name {
+    font-size: 1.125rem;
+    font-weight: 700;
+    font-stretch: 106%;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .match-actions {
+    margin-top: auto;
+    padding-top: 1.25rem;
+  }
+
+  .match-actions > :first-child {
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-line);
+  }
+
+  /* Matches past the plan's limit: shapes only, faded under the unlock prompt. */
+  .locked-matches {
+    position: relative;
+    max-height: 24rem;
+    margin-top: 1rem;
+    overflow: hidden;
+  }
+
+  .locked-grid {
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .match-locked .avatar {
+    background: var(--color-paper);
+    color: var(--color-line-strong);
+    letter-spacing: 0.1em;
+  }
+
+  .locked-line {
+    display: block;
+    height: 0.625rem;
+    border-radius: 999px;
+    background: var(--color-line);
+    filter: blur(2px);
+  }
+
+  .locked-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 1.5rem 1rem;
+    background: linear-gradient(to bottom, rgb(246 242 244 / 0) 0%, rgb(246 242 244 / 0.9) 45%, var(--color-paper) 70%);
+  }
+
+  .locked-cta {
+    max-width: 28rem;
+    text-align: center;
+  }
 }

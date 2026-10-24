@@ -1,10 +1,26 @@
 <%# locals: (report:) -%>
-<div id="report_summary">
-  <%= render "components/card", title: "Your audience at a glance" do %>
-    <% if report.summary.nil? %>
-      <%= render "components/skeleton", lines: 3, label: "Writing your summary" %>
-    <% else %>
-      <p class="whitespace-pre-line"><%= report.summary %></p>
+<% if report.snapshot? %>
+  <%= render "reports/section", name: "summary", title: "Your audience at a glance" do %>
+    <% if report.summary.present? %>
+      <p class="report-summary"><%= report.summary %></p>
     <% end %>
+    <div class="upgrade-card">
+      <p class="max-w-prose">This is your free Snapshot. Upgrade for the full agent report: reasons, proven sponsors, pitch emails.</p>
+      <div class="mt-4 flex flex-wrap gap-3">
+        <%= button_to "Run full report", show_reports_path(report.show, kind: "agent"), method: :post,
+              class: "btn btn-primary btn-md", disabled: report.active? %>
+        <%= ui_button "See plans", "/pricing", variant: :secondary %>
+      </div>
+    </div>
   <% end %>
-</div>
+<% elsif report.summary.present? %>
+  <%= render "reports/section", name: "summary", title: "Your audience at a glance" do %>
+    <p class="report-summary"><%= report.summary %></p>
+  <% end %>
+<% elsif section_pending?(report) %>
+  <%= render "reports/section", name: "summary", title: "Your audience at a glance" do %>
+    <%= render "components/skeleton", lines: 3, label: "Writing your summary", title: false %>
+  <% end %>
+<% else %>
+  <%= render "reports/section", name: "summary", hidden: true %>
+<% end %>

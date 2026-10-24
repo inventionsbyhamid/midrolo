@@ -1,0 +1,16 @@
+<%# locals: (name:, title: nil, hidden: false, aside: nil) -%>
+<%#
+  One report section. The id is the Turbo Stream target of Report#save_section!, so a hidden section (one a
+  finished report never got) still renders, empty, and can be filled in later.
+%>
+<% if hidden %>
+  <section id="report_<%= name %>" class="report-section" hidden></section>
+<% else %>
+  <section id="report_<%= name %>" class="report-section" aria-labelledby="report_<%= name %>_title">
+    <header class="report-section-header">
+      <h2 id="report_<%= name %>_title" class="report-section-title"><%= title %></h2>
+      <%= aside %>
+    </header>
+    <%= yield %>
+  </section>
+<% end %>

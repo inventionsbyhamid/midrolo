@@ -1,11 +1,49 @@
 <%# locals: (report:) -%>
-<div id="report_map">
-  <%= render "components/card", title: "Where your kind of listener lives" do %>
-    <% if report.heatmap.nil? %>
-      <%= render "components/skeleton", lines: 3, label: "Mapping your listeners" %>
+<% heatmap = report.heatmap.is_a?(Hash) ? report.heatmap : nil %>
+<% if heatmap.nil? %>
+  <% if section_pending?(report) %>
+    <%= render "reports/section", name: "map", title: "Where your kind of listener lives" do %>
+      <%= render "components/skeleton", lines: 3, label: "Mapping your listeners", title: false %>
+    <% end %>
+  <% else %>
+    <%= render "reports/section", name: "map", hidden: true %>
+  <% end %>
+<% else %>
+  <% points = heatmap_points(heatmap) %>
+  <% country = heatmap_country(heatmap) %>
+  <% place = heatmap["location"] == "metros" ? "#{country} metros" : country %>
+  <%= render "reports/section", name: "map", title: "Where your kind of listener lives", aside: (ui_badge(place, tone: :accent) if place.present?) do %>
+    <p class="report-section-note">Modeled from Qloo taste data. Handy for regional brands and local sponsors.</p>
+    <% if points.empty? %>
+      <p class="mt-4 rounded-control border border-dashed border-line-strong px-4 py-6 text-ink-soft">Not enough location data for this audience</p>
     <% else %>
-      <p><%= report.heatmap["location"] %></p>
-      <p class="text-sm text-ink-soft"><%= pluralize(Array(report.heatmap["points"]).size, "area") %> found</p>
+      <% metros = top_metros(points) %>
+      <div class="mt-5 grid gap-6 md:grid-cols-[minmax(0,1fr)_14rem]">
+        <%# Kept through page-refresh morphs so the live map isn't torn down; a section broadcast still replaces it. %>
+        <figure id="<%= dom_id(report, :heatmap) %>" class="map-frame" data-turbo-permanent
+                aria-label="Heatmap of where people with your listeners' tastes live in <%= country %>"
+                data-controller="map" data-map-points-value="<%= points.map { |p| p.slice("lat", "lng", "affinity") }.to_json %>"
+                data-map-style-value="<%= map_style_url %>">
+          <div class="map-canvas" data-map-target="canvas"></div>
+          <p class="map-loading" data-map-target="status">Loading map…</p>
+        </figure>
+        <% if metros.any? %>
+          <div data-top-metros>
+            <h3 class="text-[0.9375rem] font-bold font-semiwide">Top metros</h3>
+            <ol class="mt-2 flex flex-col">
+              <% metros.each_with_index do |(name, share), i| %>
+                <li class="metro">
+                  <span class="metro-rank"><%= i + 1 %></span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate text-[0.9375rem]" data-metro-name><%= name %></span>
+                    <span class="metro-bar" aria-hidden="true"><span style="width: <%= (share * 100).round %>%"></span></span>
+                  </span>
+                </li>
+              <% end %>
+            </ol>
+          </div>
+        <% end %>
+      </div>
     <% end %>
   <% end %>
-</div>
+<% end %>

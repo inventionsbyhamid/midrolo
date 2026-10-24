@@ -1,0 +1,51 @@
+<%# locals: (sponsor_match:) -%>
+<% match = sponsor_match %>
+<article id="<%= dom_id(match) %>" class="card match-card" aria-labelledby="<%= dom_id(match, :name) %>">
+  <div class="flex items-start gap-3">
+    <span class="avatar size-12 text-base" aria-hidden="true">
+      <%= initials_for(match.name) %>
+      <% if (src = safe_external_url(match.image_url)) %>
+        <img src="<%= src %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">
+      <% end %>
+    </span>
+    <div class="min-w-0 flex-1">
+      <h3 id="<%= dom_id(match, :name) %>" class="match-name"><%= match.name %></h3>
+      <% if match.category.present? %>
+        <p class="text-sm text-ink-soft"><%= match.category %></p>
+      <% end %>
+    </div>
+    <%= tier_badge(match.tier) %>
+  </div>
+
+  <% if match.fit_score %>
+    <div class="mt-4"><%= ui_meter match.fit_score / 100.0, label: "Fit", value_text: match.fit_score.to_s %></div>
+  <% end %>
+
+  <% if match.reason.present? %>
+    <p class="mt-3 text-[0.9375rem] leading-relaxed" data-match-reason><%= match.reason %></p>
+  <% end %>
+
+  <% chips = evidence_chips(match) %>
+  <% if chips.any? %>
+    <ul class="mt-3 flex flex-wrap gap-1.5" aria-label="Evidence">
+      <% chips.each do |chip| %>
+        <%# One inner span: in the inline-flex chip, loose text runs would lose their edge spaces. %>
+        <li class="chip"><span><%= chip %></span></li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <% if (url = safe_external_url(match.website)) %>
+    <p class="mt-3 text-sm">
+      <%= link_to url, class: "link inline-flex items-center gap-1", target: "_blank", rel: "noopener noreferrer" do %>
+        <%= display_host(url) %>
+        <svg viewBox="0 0 16 16" class="size-3.5" aria-hidden="true"><path d="M6 3h7v7M13 3 4 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="sr-only">(opens in a new tab)</span>
+      <% end %>
+    </p>
+  <% end %>
+
+  <div class="match-actions">
+    <%= render "sponsor_matches/actions", sponsor_match: match %>
+  </div>
+</article>

@@ -1,0 +1,16 @@
+<%# locals: (sponsor_match:) -%>
+<%# A match beyond the plan's visible limit (R43): nothing about the brand reaches the HTML — no name, image,
+    website, reason or evidence — only its tier and a coarse fit bucket. %>
+<li class="card match-card match-locked" data-locked-match>
+  <div class="flex items-start gap-3">
+    <span class="avatar size-12 text-base">••</span>
+    <div class="min-w-0 flex-1 pt-1">
+      <span class="locked-line w-3/4"></span>
+      <span class="locked-line mt-2 w-2/5"></span>
+    </div>
+    <%= tier_badge(sponsor_match.tier) %>
+  </div>
+  <p class="mt-4 text-sm font-semibold"><%= fit_bucket(sponsor_match.fit_score) %></p>
+  <span class="locked-line mt-3 w-full"></span>
+  <span class="locked-line mt-2 w-4/5"></span>
+</li>

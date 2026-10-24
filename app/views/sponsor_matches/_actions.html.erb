@@ -1,0 +1,10 @@
+<%# locals: (sponsor_match:) -%>
+<%# Placeholder (R42): Task 14 wires "Write my pitch" to the pitch pack and Task 13 the pipeline status. %>
+<% hint_id = dom_id(sponsor_match, :actions_hint) %>
+<div class="flex flex-wrap items-center gap-2">
+  <%= ui_button "Write my pitch", type: "button", size: :sm, disabled: true, aria: { describedby: hint_id } %>
+  <label for="<%= dom_id(sponsor_match, :status) %>" class="sr-only">Pipeline status for <%= sponsor_match.name %></label>
+  <%= select_tag :status, options_for_select(SponsorMatch::STATUSES.map { |s| [ s.humanize, s ] }, sponsor_match.status),
+        id: dom_id(sponsor_match, :status), class: "input select-sm", disabled: true, aria: { describedby: hint_id } %>
+</div>
+<p id="<%= hint_id %>" class="mt-1.5 text-[0.8125rem] text-ink-soft">Coming in the next step</p>

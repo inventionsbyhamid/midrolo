@@ -1,16 +1,55 @@
 <%# locals: (report:) -%>
-<div id="report_leans">
-  <%= render "components/card", title: "Leans" do %>
-    <% if report.demographics.nil? %>
-      <%= render "components/skeleton", lines: 3, label: "Reading age and gender leans" %>
+<%# Age and gender as relative leans, never percentages (global constraint). A snapshot never reads them. %>
+<% demographics = report.demographics.is_a?(Hash) ? report.demographics : nil %>
+<% groups = { "Age" => demographics&.dig("age"), "Gender" => demographics&.dig("gender") }.select { |_, leans| leans.is_a?(Hash) && leans.any? } %>
+<% if demographics.nil? %>
+  <% if section_pending?(report) && report.agent? %>
+    <%= render "reports/section", name: "leans", title: "Leans" do %>
+      <%= render "components/skeleton", lines: 3, label: "Reading age and gender leans", title: false %>
+    <% end %>
+  <% else %>
+    <%= render "reports/section", name: "leans", hidden: true %>
+  <% end %>
+<% else %>
+  <%= render "reports/section", name: "leans", title: "Leans" do %>
+    <p class="report-section-note">Modeled from Qloo taste data — how people with your listeners' tastes lean, not a headcount.</p>
+    <% if groups.empty? %>
+      <p class="mt-4 text-ink-soft">No clear age or gender leans came back for this audience.</p>
     <% else %>
-      <p class="mb-2 text-sm text-ink-soft">Modeled from Qloo taste data</p>
-      <dl class="space-y-1">
-        <% report.demographics.each do |group, leans| %>
-          <div><dt class="font-semibold"><%= group.to_s.humanize %></dt>
-          <dd><%= leans.respond_to?(:map) ? (leans.is_a?(Hash) ? leans.map { |k, v| "#{k}: #{v}" } : leans.map { |l| l.is_a?(Hash) ? l.values.join(": ") : l }).to_sentence : leans %></dd></div>
+      <% scale = lean_scale(demographics) %>
+      <div class="mt-5 flex max-w-xl flex-col gap-6">
+        <% groups.each do |title, leans| %>
+          <div>
+            <div class="lean lean-legend">
+              <h3 class="text-[0.9375rem] font-bold font-semiwide"><%= title %></h3>
+              <span class="lean-axis" aria-hidden="true"><span>Under</span><span>Over</span></span>
+            </div>
+            <ul class="flex flex-col">
+              <% (title == "Age" ? age_buckets_in_order(leans) : leans).each do |bucket, value| %>
+                <% lit = lean_segments(value, scale) %>
+                <% direction = lean_direction(value) %>
+                <li class="lean" data-lean="<%= direction %>">
+                  <span class="lean-label" data-lean-label><%= title == "Age" ? age_bucket_label(bucket) : gender_label(bucket) %></span>
+                  <span class="lean-bar" aria-hidden="true">
+                    <span class="lean-side lean-side-under">
+                      <% ReportsHelper::LEAN_SEGMENTS.times do |i| %>
+                        <span class="<%= class_names("lean-seg", "lean-seg-under" => direction == "under" && i >= ReportsHelper::LEAN_SEGMENTS - lit) %>"></span>
+                      <% end %>
+                    </span>
+                    <span class="lean-center"></span>
+                    <span class="lean-side">
+                      <% ReportsHelper::LEAN_SEGMENTS.times do |i| %>
+                        <span class="<%= class_names("lean-seg", "lean-seg-over" => direction == "over" && i < lit) %>"></span>
+                      <% end %>
+                    </span>
+                  </span>
+                  <span class="lean-word"><%= lean_word(value) %></span>
+                </li>
+              <% end %>
+            </ul>
+          </div>
         <% end %>
-      </dl>
+      </div>
     <% end %>
   <% end %>
-</div>
+<% end %>

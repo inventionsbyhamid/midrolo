@@ -51,7 +51,7 @@ RSpec.describe "Reports" do
 
     describe "GET /shows/:id/reports/:id" do
       it "subscribes to the report stream and shows skeleton sections and the rail" do
-        report = create(:report, show: show, status: "running")
+        report = create(:report, show: show, kind: "agent", status: "running")
         create(:agent_step, report: report, label: "Reading your last 15 episodes…")
         get show_report_path(show, report)
 
@@ -95,7 +95,8 @@ RSpec.describe "Reports" do
         report = create(:report, show: show, status: "needs_input", profile_kind: "proxy", seeds: seeds)
         get show_report_path(show, report)
         seeds_html = Nokogiri::HTML(response.body).at_css("#report_seeds")
-        expect(seeds_html.css("li").map { |li| li.text.squish }).to eq([ "Index Fund Mornings (You listed it)", "Personal Finance (Topic: personal finance)" ])
+        expect(seeds_html.css("[data-seed]").map { |li| li.text.squish })
+          .to eq([ "Index Fund Mornings You listed it", "Personal Finance Topic: personal finance" ])
         expect(seeds_html.text).to include("Nonexistent Pod Zzz")
         expect(seeds_html.text).not_to include("entities")
       end
@@ -106,10 +107,27 @@ RSpec.describe "Reports" do
         expect(response.body).to include(Report::FAILURE_MESSAGE, "Try again", "Something went wrong")
       end
 
-      it "shows the needs-input card linking to the show's edit page" do
-        report = create(:report, show: show, status: "needs_input")
+      it "asks for comparable shows inline when the report needs input" do
+        report = create(:report, show: show, kind: "agent", status: "needs_input")
         get show_report_path(show, report)
-        expect(response.body).to include("We need a little more to go on", edit_show_path(show))
+        page = Nokogiri::HTML(response.body)
+        expect(page.text.squish).to include("We need a little more to go on — tell us 2–3 shows your listeners also love.")
+        form = page.at_css("#report_seeds form[action='#{show_path(show)}']")
+        expect(form.at_css("input[name='rerun']")["value"]).to eq("agent")
+        expect(response.body).to include(edit_show_path(show))
+        Report::SECTIONS.each { |name| expect(response.body).to include(%(id="report_#{name}")) }
+        expect(page.css(".skeleton")).to be_empty
+      end
+
+      it "renders a finished report's matches with one query" do
+        report = create(:report, show: show, kind: "agent", status: "done")
+        create_list(:sponsor_match, 6, report: report)
+        queries = []
+        sub = ActiveSupport::Notifications.subscribe("sql.active_record") { |*, p| queries << p[:sql] if p[:sql] =~ /FROM "sponsor_matches"/ }
+        get show_report_path(show, report)
+        ActiveSupport::Notifications.unsubscribe(sub)
+        expect(Nokogiri::HTML(response.body).css("[data-filter-target='item']").size).to eq(6)
+        expect(queries.size).to eq(1)
       end
 
       it "404s for another user's report" do

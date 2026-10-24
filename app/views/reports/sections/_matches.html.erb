@@ -1,21 +1,96 @@
 <%# locals: (report:) -%>
-<div id="report_matches">
-  <%= render "components/card", title: "Sponsor matches" do %>
-    <% matches = report.sponsor_matches.reload %>
-    <% if matches.empty? %>
-      <% if report.done? %>
-        <p class="text-ink-soft">No matches yet.</p>
-      <% else %>
-        <%= render "components/skeleton", lines: 4, label: "Ranking sponsors" %>
-      <% end %>
-    <% else %>
-      <ol class="space-y-2">
-        <% matches.each do |match| %>
-          <li><span class="font-semibold"><%= match.name %></span> <span class="text-ink-soft"><%= match.category %></span>
-            <% if match.fit_score %> · fit <%= match.fit_score %><% end %>
-            <% if match.reason.present? %><br><span class="text-sm"><%= match.reason %></span><% end %></li>
+<%# Preloaded by ReportsController#show; Report#save_section! resets the association before a broadcast. %>
+<% matches = report.sponsor_matches.to_a %>
+<% if matches.empty? %>
+  <% if section_pending?(report) %>
+    <%= render "reports/section", name: "matches", title: "Sponsor matches" do %>
+      <%= render "components/skeleton", lines: 4, label: "Ranking sponsors", title: false %>
+    <% end %>
+  <% elsif report.done? %>
+    <%= render "reports/section", name: "matches", title: "Sponsor matches" do %>
+      <%= render "components/empty_state", title: "No matches yet.",
+            body: "None of the brands we checked fit this audience well enough to suggest. Add a few comparable shows and run the report again.",
+            action_label: "Add comparable shows", action_href: edit_show_path(report.show) %>
+    <% end %>
+  <% else %>
+    <%= render "reports/section", name: "matches", hidden: true %>
+  <% end %>
+<% else %>
+  <% limit = Entitlements.for(report.show.user).visible_matches_limit %>
+  <% visible = matches.first(limit) %>
+  <% locked = matches.drop(limit) %>
+  <% categories = visible.filter_map { |m| m.category.presence }.tally.sort_by { |name, count| [ -count, name ] }.map(&:first) %>
+  <% any_proven = visible.any? { |m| proven_sponsor?(m) } %>
+  <% list_id = dom_id(report, :match_list) %>
+  <%= render "reports/section", name: "matches", title: "Sponsor matches",
+        aside: tag.p("#{pluralize(matches.size, 'brand')}, best fit first", class: "text-sm text-ink-soft") do %>
+    <div data-controller="filter" class="mt-1">
+      <div class="match-toolbar">
+        <div class="filter-row" role="group" aria-labelledby="<%= dom_id(report, :tier_filters) %>">
+          <span id="<%= dom_id(report, :tier_filters) %>" class="filter-row-label">Tier</span>
+          <% ReportsHelper::TIERS.each do |tier, (label, tone)| %>
+            <button type="button" class="filter-chip" aria-pressed="false" aria-controls="<%= list_id %>"
+                    data-filter-target="chip" data-group="tier" data-value="<%= tier %>" data-action="filter#toggle">
+              <span class="filter-chip-dot filter-chip-dot-<%= tone %>" aria-hidden="true"></span><%= label %>
+            </button>
+          <% end %>
+          <% if any_proven %>
+            <button type="button" class="filter-chip" aria-pressed="false" aria-controls="<%= list_id %>"
+                    data-filter-target="chip" data-group="proven" data-value="true" data-action="filter#toggle">Proven sponsors only</button>
+          <% end %>
+        </div>
+        <% if categories.size > 1 %>
+          <div class="filter-row" role="group" aria-labelledby="<%= dom_id(report, :category_filters) %>">
+            <span id="<%= dom_id(report, :category_filters) %>" class="filter-row-label">Category</span>
+            <% categories.each do |category| %>
+              <button type="button" class="filter-chip" aria-pressed="false" aria-controls="<%= list_id %>"
+                      data-filter-target="chip" data-group="category" data-value="<%= category %>" data-action="filter#toggle"><%= category %></button>
+            <% end %>
+          </div>
+        <% end %>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <label class="flex items-center gap-2 text-sm">
+            <span class="font-semibold">Sort</span>
+            <select class="input select-sm" data-filter-target="sort" data-action="filter#sort" aria-controls="<%= list_id %>">
+              <option value="fit">Best fit</option>
+              <option value="tier">Easiest to land</option>
+            </select>
+          </label>
+          <p class="text-sm text-ink-soft" data-filter-target="status" aria-live="polite">Showing <%= visible.size %> of <%= visible.size %></p>
+          <button type="button" class="link text-sm" data-filter-target="clear" data-action="filter#clear" hidden>Clear filters</button>
+        </div>
+      </div>
+
+      <ol id="<%= list_id %>" class="match-grid" data-filter-target="list" aria-label="Sponsor matches">
+        <% visible.each do |match| %>
+          <li data-filter-target="item" data-category="<%= match.category %>" data-tier="<%= match.tier %>"
+              data-tier-rank="<%= tier_rank(match.tier) %>" data-proven="<%= proven_sponsor?(match) %>"
+              data-fit="<%= match.fit_score.to_i %>" data-position="<%= match.position.to_i %>">
+            <%= render "sponsor_matches/sponsor_match", sponsor_match: match %>
+          </li>
         <% end %>
       </ol>
+      <div class="mt-4" data-filter-target="empty" hidden>
+        <%= render "components/empty_state", title: "No matches fit these filters.", body: "Turn a filter off to see more brands." %>
+      </div>
+    </div>
+
+    <% if locked.any? %>
+      <div class="locked-matches">
+        <ol class="match-grid locked-grid" aria-hidden="true" inert>
+          <%= render partial: "sponsor_matches/locked", collection: locked, as: :sponsor_match %>
+        </ol>
+        <div class="locked-overlay">
+          <div class="locked-cta">
+            <%= link_to "/pricing", class: "btn btn-primary btn-lg" do %>Unlock <%= pluralize(locked.size, "more match") %><% end %>
+            <% tiers = locked.map(&:tier).tally %>
+            <p class="mt-3 text-[0.9375rem]">
+              Includes <%= ReportsHelper::TIERS.filter_map { |tier, (label, _)| "#{tiers[tier]} #{label.downcase}" if tiers[tier] }.to_sentence %>
+              <%= "brand".pluralize(locked.size) %>, each with its reason and evidence.
+            </p>
+          </div>
+        </div>
+      </div>
     <% end %>
   <% end %>
-</div>
+<% end %>
