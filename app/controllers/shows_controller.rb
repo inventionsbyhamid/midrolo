@@ -44,10 +44,16 @@ class ShowsController < ApplicationController
     @onboarding = params[:onboarding].present?
   end
 
-  # With rerun=<kind> (the needs-input form on a report, R41) it also starts that report and opens it.
+  # With rerun=<kind> (the needs-input form on a report, R41) it also starts that report and opens it. A re-run
+  # needs at least one comparable show, or it would end needs_input again.
   def update
+    rerun = params[:rerun].to_s
+    if Report::KINDS.include?(rerun) && submitted_comparable_shows.empty?
+      return redirect_to(rerun_return_path, alert: "Add at least one show your listeners also like.")
+    end
+
     if @show.update(show_params)
-      return rerun_report(params[:rerun].to_s) if Report::KINDS.include?(params[:rerun].to_s)
+      return rerun_report(rerun) if Report::KINDS.include?(rerun)
 
       redirect_to show_path(@show), notice: "Details saved."
     else
@@ -63,6 +69,16 @@ class ShowsController < ApplicationController
     redirect_to show_report_path(@show, report)
   rescue Entitlements::NotAllowed
     redirect_to show_path(@show), alert: "Details saved, but you can't start that report on your current plan. See your account for options."
+  end
+
+  def submitted_comparable_shows
+    Array(params.dig(:show, :hints, :comparable_shows)).map { |name| name.to_s.strip }.reject(&:empty?)
+  end
+
+  # Back to the needs-input report the form came from, when it is this show's.
+  def rerun_return_path
+    report = @show.reports.find_by(id: params[:report_id])
+    report ? show_report_path(@show, report) : show_path(@show)
   end
 
   def set_show

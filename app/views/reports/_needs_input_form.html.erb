@@ -9,13 +9,14 @@
 
   <%= form_with model: show, url: show_path(show), method: :patch, class: "mt-5 flex flex-col gap-5" do |f| %>
     <%= hidden_field_tag :rerun, report.kind %>
+    <%= hidden_field_tag :report_id, report.id %>
     <fieldset>
       <legend class="label">Shows your listeners also love</legend>
       <div class="grid gap-2 sm:grid-cols-2">
         <% Show::HINT_LIMIT.times do |i| %>
           <%= text_field_tag "show[hints][comparable_shows][]", show.hints[:comparable_shows][i],
                 id: "rerun_comparable_show_#{i}", class: "input", maxlength: Show::HINT_LENGTH, autocomplete: "off",
-                placeholder: (i.zero? ? "e.g. Acquired" : nil), aria: { label: "Comparable show #{i + 1}" } %>
+                placeholder: (i.zero? ? "e.g. Acquired" : nil), required: i.zero?, aria: { label: "Comparable show #{i + 1}" } %>
         <% end %>
       </div>
     </fieldset>

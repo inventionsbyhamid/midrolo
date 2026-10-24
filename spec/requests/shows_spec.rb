@@ -241,6 +241,25 @@ RSpec.describe "Shows" do
           expect(show.reload.hints[:topics]).to eq([ "saas" ])
         end
 
+        it "starts nothing when no comparable show was given and says what to add" do
+          report = create(:report, show: show, kind: "agent", status: "needs_input")
+          show.update!(hints: { comparable_shows: [ "Acquired" ], topics: [] })
+          expect do
+            patch "/shows/#{show.id}", params: { show: { hints: { comparable_shows: [ " ", "" ], topics: [ "saas" ] } },
+                                                 rerun: "agent", report_id: report.id }
+          end.not_to change(Report, :count)
+          expect(response).to redirect_to(show_report_path(show, report))
+          expect(flash[:alert]).to include("Add at least one show your listeners also like")
+          expect(show.reload.hints[:comparable_shows]).to eq([ "Acquired" ])
+        end
+
+        it "falls back to the show page when the report to return to isn't this show's" do
+          other = create(:report)
+          patch "/shows/#{show.id}", params: { show: { hints: { comparable_shows: [ "" ] } }, rerun: "agent", report_id: other.id }
+          expect(response).to redirect_to(show_path(show))
+          expect(flash[:alert]).to include("Add at least one show")
+        end
+
         it "ignores an unknown kind and just saves" do
           expect { patch "/shows/#{show.id}", params: { show: { hints: hints }, rerun: "bogus" } }.not_to change(Report, :count)
           expect(response).to redirect_to(show_path(show))
