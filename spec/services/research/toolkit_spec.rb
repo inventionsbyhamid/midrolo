@@ -36,6 +36,14 @@ RSpec.describe Research::Toolkit do
     expect(toolkit.seen_entity_ids).to eq(Set[entity.id, "fake:brand:ramp"])
   end
 
+  it "tracks the run's uncached taste calls against its budget" do
+    kit = described_class.new(report, taste: Taste::Providers::Fake.new, max_taste_calls: 1)
+    expect(kit.taste_calls).to eq(0)
+    kit.log.step("x", "Looking…") { kit.taste.search(query: "Notion", types: [ :brand ]) }
+    expect(kit.taste_calls).to eq(1)
+    expect(kit.over_taste_budget?).to be(true)
+  end
+
   it "starts with no audience tags" do
     expect(toolkit.audience_tags).to eq([])
   end

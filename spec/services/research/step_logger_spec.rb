@@ -88,6 +88,86 @@ RSpec.describe Research::StepLogger do
     expect(report.reload.taste_calls).to eq(1)
   end
 
+  it "does not count cached taste requests" do
+    logger.step("lookup", "Looking things up…") do
+      ActiveSupport::Notifications.instrument("request.taste", path: "/search", cached: true, status: 200)
+      ActiveSupport::Notifications.instrument("request.taste", path: "/search", cached: false, status: 200)
+    end
+
+    expect(report.reload.taste_calls).to eq(1)
+    expect(logger.uncached_calls).to eq(1)
+  end
+
+  it "counts concurrent steps on different threads separately" do
+    inside = Queue.new
+    release = Queue.new
+    other = Thread.new do
+      logger.step("a", "On another thread…") do
+        taste.search(query: "Notion", types: [ :brand ])
+        inside << true
+        release.pop
+      end
+    end
+    inside.pop
+    logger.step("b", "On this thread…") { 2.times { taste.search(query: "Ramp", types: [ :brand ]) } }
+    release << true
+    other.join
+
+    expect(report.reload.taste_calls).to eq(3)
+    expect(logger.uncached_calls).to eq(3)
+  end
+
+  it "finishes the step when the block exits with return" do
+    helper = Class.new do
+      def run(logger) = logger.step("x", "Leaving early…") { return :early }
+    end
+
+    expect(helper.new.run(logger)).to eq(:early)
+    expect(report.agent_steps.last).to have_attributes(status: "ok")
+    expect(report.agent_steps.last.duration_ms).to be >= 0
+  end
+
+  it "finishes the step when the block exits with throw" do
+    catch(:done) { logger.step("x", "Throwing…") { throw :done } }
+    expect(report.agent_steps.last.status).to eq("ok")
+  end
+
+  it "never lets a failed taste_calls update mask the block's own error" do
+    allow(report).to receive(:increment!).and_raise(ActiveRecord::ConnectionNotEstablished, "db gone")
+    allow(Rails.error).to receive(:report)
+
+    expect do
+      logger.step("x", "Failing…") do
+        taste.search(query: "Notion", types: [ :brand ])
+        raise Taste::Unavailable, "503"
+      end
+    end.to raise_error(Taste::Unavailable)
+    expect(Rails.error).to have_received(:report).with(instance_of(ActiveRecord::ConnectionNotEstablished), hash_including(handled: true))
+  end
+
+  describe "research budget" do
+    let(:logger) { described_class.new(report, max_taste_calls: 2) }
+
+    it "reads the default budget from config/llm.yml" do
+      expect(described_class.new(report).max_taste_calls).to eq(Rails.application.config_for(:llm).dig(:research, :max_taste_calls))
+      expect(described_class.new(report).max_taste_calls).to eq(60)
+    end
+
+    it "skips optional sub-calls once the run has spent its uncached calls, but never core calls" do
+      results = []
+      logger.step("audience", "Building…") do |step|
+        2.times { taste.search(query: "Notion", types: [ :brand ]) } # core calls reach the budget
+        results << step.optional("Artists") { taste.search(query: "Nova", types: [ :artist ]) }
+        results << taste.search(query: "Ramp", types: [ :brand ]).first.name # core still runs
+      end
+
+      expect(results).to eq([ nil, "Ramp" ])
+      expect(logger.uncached_calls).to eq(3)
+      expect(logger.budget_spent?).to be(true)
+      expect(report.agent_steps.last).to have_attributes(status: "warning", output_summary: "Skipped to stay within research budget")
+    end
+  end
+
   describe "Step#optional" do
     it "returns the block value, or nil with a warning on a Qloo outage" do
       values = []
