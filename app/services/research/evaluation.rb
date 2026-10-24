@@ -39,15 +39,16 @@ module Research
 
     private
 
-    # Sets LLM_PROVIDER for the run when a mode is forced, and restores it afterwards.
+    # Sets LLM_PROVIDER for the run when a mode is forced, and restores it afterwards. The original value is
+    # read before anything can raise, so the ensure never clears a value that was there.
     def with_mode
+      original = ENV["LLM_PROVIDER"]
       return yield unless @mode
 
       if @mode == "agent" && ENV["ANTHROPIC_API_KEY"].blank?
         raise ModeUnavailable, "EVAL_MODE=agent needs ANTHROPIC_API_KEY"
       end
 
-      original = ENV["LLM_PROVIDER"]
       ENV["LLM_PROVIDER"] = @mode == "agent" ? (original == "fake" ? nil : original) : "fake"
       yield
     ensure

@@ -35,14 +35,14 @@ RSpec.describe "rake eval:run" do
     expect { Rake::Task["eval:run"].invoke }.to output(/LLM path: scripted runner \(fake LLM mode\)/).to_stdout
   end
 
-  it "refuses EVAL_MODE=agent without an API key" do
-    old = ENV.to_h.slice("EVAL_MODE", "ANTHROPIC_API_KEY")
-    ENV["EVAL_MODE"] = "agent"
-    ENV["ANTHROPIC_API_KEY"] = ""
+  it "refuses EVAL_MODE=agent without an API key, leaving LLM_PROVIDER as it was" do
+    old = ENV.to_h.slice("EVAL_MODE", "ANTHROPIC_API_KEY", "LLM_PROVIDER")
+    ENV.update("EVAL_MODE" => "agent", "ANTHROPIC_API_KEY" => "", "LLM_PROVIDER" => "anthropic")
     expect { Rake::Task["eval:run"].invoke }.to raise_error(SystemExit).and output(/needs ANTHROPIC_API_KEY/).to_stderr
     expect(Report.count).to eq(0)
+    expect(ENV["LLM_PROVIDER"]).to eq("anthropic")
   ensure
-    %w[EVAL_MODE ANTHROPIC_API_KEY].each { |k| ENV[k] = old[k] }
+    %w[EVAL_MODE ANTHROPIC_API_KEY LLM_PROVIDER].each { |k| ENV[k] = old[k] }
   end
 
   it "forces the agent path with EVAL_MODE=agent when a key is present, even if LLM_PROVIDER=fake" do
