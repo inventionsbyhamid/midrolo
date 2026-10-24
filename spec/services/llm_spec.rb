@@ -21,6 +21,10 @@ RSpec.describe Llm do
     with_env("LLM_PROVIDER" => nil, "ANTHROPIC_API_KEY" => "k") { expect(described_class.mode).to eq(:live) }
   end
 
+  it "uses low effort for pitches" do
+    expect(described_class.pitch_effort).to eq(:low)
+  end
+
   it "defaults the models" do
     expect(described_class.agent_model).to eq("claude-opus-5-5")
     expect(described_class.pitch_model).to eq("claude-opus-5-5")

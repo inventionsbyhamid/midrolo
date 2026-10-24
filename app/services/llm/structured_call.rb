@@ -17,6 +17,7 @@ module Llm
     def call
       raise FakeModeUnsupported, "structured calls need a live LLM; provide a fake path in the caller" if Llm.mode == :fake
 
+      Pricing.ensure_known!(@model)
       bucket = Budget.bucket_for(@user)
       raise BudgetExceeded, "LLM budget exhausted for #{bucket.inspect}" unless Budget.allow?(bucket)
 

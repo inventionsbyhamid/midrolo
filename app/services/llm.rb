@@ -22,7 +22,7 @@ module Llm
 
     def pitch_model = config.dig(:pitch, :model).to_s
 
-    def pitch_effort = (config.dig(:pitch, :effort) || "medium").to_sym
+    def pitch_effort = (config.dig(:pitch, :effort) || "low").to_sym
 
     def provider = (config[:provider].presence || "anthropic").to_sym
 

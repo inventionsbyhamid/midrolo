@@ -9,4 +9,4 @@ shared:
     max_seconds: 360
   pitch:
     model: <%= ENV.fetch("LLM_PITCH_MODEL", "claude-opus-5-5") %>
-    effort: medium
+    effort: low

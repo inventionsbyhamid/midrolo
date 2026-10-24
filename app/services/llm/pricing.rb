@@ -4,6 +4,12 @@ module Llm
     PER = BigDecimal("1000000")
 
     class << self
+      def known?(model) = table.key?(model.to_s)
+
+      def ensure_known!(model)
+        known?(model) || raise(UnknownModel, "no pricing for model #{model.inspect}")
+      end
+
       def cost_usd(model:, input:, output:, cache_read: 0, cache_write: 0)
         prices = table[model.to_s] or raise UnknownModel, "no pricing for model #{model.inspect}"
         total = (input.to_i * price(prices, :input)) + (output.to_i * price(prices, :output)) +

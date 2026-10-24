@@ -29,6 +29,24 @@ RSpec.describe Llm::StructuredCall do
       expect(RubyLLM::Test.last_request.to_s).not_to include("temperature")
     end
 
+    it "thinks at low effort" do
+      RubyLLM::Test.stub_response({ subject: "Hi" })
+      chat = RubyLLM.chat(model: "claude-opus-5-5", provider: :anthropic)
+      allow(RubyLLM).to receive(:chat).and_return(chat)
+      allow(chat).to receive(:with_thinking).and_call_original
+      call
+      expect(chat).to have_received(:with_thinking).with(effort: :low)
+    end
+
+    it "raises UnknownModel before any request for an unpriced model" do
+      RubyLLM::Test.stub_response({ subject: "Hi" })
+      expect do
+        described_class.call(model: "claude-opus-5-5-typo", schema: schema, instructions: "x", prompt: "y", user: user)
+      end.to raise_error(Llm::UnknownModel)
+      expect(RubyLLM::Test.requests).to be_empty
+      expect(SpendEntry.count).to eq(0)
+    end
+
     it "raises BudgetExceeded without calling the model when not allowed" do
       AppSettings.set(:runs_paused, true)
       RubyLLM::Test.stub_response({ subject: "Hi" })
