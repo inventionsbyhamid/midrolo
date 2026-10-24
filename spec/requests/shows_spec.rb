@@ -178,16 +178,15 @@ RSpec.describe "Shows" do
     end
 
     describe "GET /shows/:id" do
-      it "renders the hub with header, details, report placeholders and media kit link" do
+      it "renders the hub with header, details, report forms and media kit link" do
         show = create(:show, user: user, title: "Hub Show", author: "Hosty", categories: %w[Business Finance],
                              downloads_per_episode: 1200)
         get "/shows/#{show.id}"
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Hub Show", "Hosty", "Business", "1,200", "Edit", edit_show_path(show),
-                                         "Get my free Snapshot", "Run full report", "Reports arrive in the next step",
+                                         "Get my free Snapshot", "Run full report",
                                          "Media kit", "Coming soon")
-        expect(response.body.scan("disabled").size).to be >= 2
       end
 
       it "returns 404 for another user's show" do

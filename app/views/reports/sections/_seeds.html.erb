@@ -1,0 +1,18 @@
+<%# locals: (report:) -%>
+<div id="report_seeds">
+  <%= render "components/card", title: "Taste profile" do %>
+    <% if report.seeds.nil? %>
+      <%= render "components/skeleton", lines: 2, label: "Building your taste profile" %>
+    <% else %>
+      <% if report.profile_kind %>
+        <p class="mb-2 text-sm text-ink-soft"><%= report.direct? ? "Found your show on Qloo." : "Built from comparable shows and topics." %></p>
+      <% end %>
+      <ul class="list-disc pl-5">
+        <% Array(report.seeds).each do |seed| %>
+          <% seed = seed.is_a?(Hash) ? seed : { "name" => seed.to_s } %>
+          <li><%= seed["name"] || seed["label"] %><% if seed["source"].present? %> <span class="text-ink-soft">(<%= seed["source"] %>)</span><% end %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  <% end %>
+</div>

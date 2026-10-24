@@ -1,0 +1,15 @@
+<%# locals: (report:) -%>
+<div id="report_audience">
+  <%= render "components/card", title: "What your listeners love" do %>
+    <% if report.audience.nil? %>
+      <%= render "components/skeleton", lines: 4, label: "Reading your audience" %>
+    <% else %>
+      <% %w[brands artists tv_shows podcasts tags].each do |key| %>
+        <% items = Array(report.audience[key]) %>
+        <% next if items.empty? %>
+        <h3 class="mt-3 font-semibold first:mt-0"><%= key.humanize %></h3>
+        <p><%= items.map { |item| item.is_a?(Hash) ? item["name"] : item }.compact.to_sentence %></p>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

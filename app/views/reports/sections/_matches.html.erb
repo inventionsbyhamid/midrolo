@@ -1,0 +1,21 @@
+<%# locals: (report:) -%>
+<div id="report_matches">
+  <%= render "components/card", title: "Sponsor matches" do %>
+    <% matches = report.sponsor_matches.reload %>
+    <% if matches.empty? %>
+      <% if report.done? %>
+        <p class="text-ink-soft">No matches yet.</p>
+      <% else %>
+        <%= render "components/skeleton", lines: 4, label: "Ranking sponsors" %>
+      <% end %>
+    <% else %>
+      <ol class="space-y-2">
+        <% matches.each do |match| %>
+          <li><span class="font-semibold"><%= match.name %></span> <span class="text-ink-soft"><%= match.category %></span>
+            <% if match.fit_score %> · fit <%= match.fit_score %><% end %>
+            <% if match.reason.present? %><br><span class="text-sm"><%= match.reason %></span><% end %></li>
+        <% end %>
+      </ol>
+    <% end %>
+  <% end %>
+</div>

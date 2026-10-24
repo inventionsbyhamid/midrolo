@@ -90,9 +90,9 @@ RSpec.describe Llm::Budget do
     end
 
     it "accepts report and pitch ids" do
-      report = Struct.new(:id).new(7)
+      report = create(:report)
       entry = described_class.record!(user: nil, bucket: :dev, model: "claude-opus-5-5", tokens: {}, report: report)
-      expect(entry.report_id).to eq(7)
+      expect(entry.report_id).to eq(report.id)
     end
 
     it "records a taste entry at zero cost without a priced model" do

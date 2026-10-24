@@ -1,0 +1,11 @@
+<%# locals: (report:) -%>
+<div id="report_map">
+  <%= render "components/card", title: "Where your kind of listener lives" do %>
+    <% if report.heatmap.nil? %>
+      <%= render "components/skeleton", lines: 3, label: "Mapping your listeners" %>
+    <% else %>
+      <p><%= report.heatmap["location"] %></p>
+      <p class="text-sm text-ink-soft"><%= pluralize(Array(report.heatmap["points"]).size, "area") %> found</p>
+    <% end %>
+  <% end %>
+</div>

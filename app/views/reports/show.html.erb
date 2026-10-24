@@ -1,0 +1,47 @@
+<% content_for :title, "#{@show.title} report" %>
+<%= turbo_stream_from @report %>
+<% tone = { "done" => :success, "failed" => :danger, "needs_input" => :warning }.fetch(@report.status, :accent) %>
+<div class="flex flex-col gap-6">
+  <header class="sticky top-0 z-10 flex flex-wrap items-center gap-4 border-b border-line bg-paper py-3">
+    <%= render "shows/artwork", show: @show, size: "size-12" %>
+    <div class="min-w-0 flex-1 basis-48">
+      <h1 class="type-h2 truncate"><%= link_to @show.title, show_path(@show) %></h1>
+      <p id="report_status" class="text-sm"><%= ui_badge @report.status_copy, tone: tone %></p>
+    </div>
+    <% if @report.active? %>
+      <%= ui_button "Re-run", type: "button", variant: :secondary, disabled: true %>
+    <% else %>
+      <%= button_to "Re-run", show_reports_path(@show, kind: @report.kind), method: :post, class: "btn btn-secondary btn-md" %>
+    <% end %>
+    <div class="flex flex-col items-start">
+      <%= ui_button "Media kit — Coming soon", type: "button", variant: :ghost, disabled: true %>
+    </div>
+  </header>
+
+  <% if @report.failed? %>
+    <%= render "components/card", title: "Something went wrong" do %>
+      <p><%= @report.error_message.presence || Report::FAILURE_MESSAGE %></p>
+      <%= button_to "Try again", show_reports_path(@show, kind: @report.kind), method: :post, class: "btn btn-primary btn-md mt-3" %>
+    <% end %>
+  <% elsif @report.needs_input? %>
+    <%= render "components/card", title: "We need a little more to go on" do %>
+      <p>We couldn't find enough about your audience yet. Add a few comparable shows and we'll try again.</p>
+      <%= ui_button "Add comparable shows", edit_show_path(@show), class: "mt-3" %>
+    <% end %>
+  <% end %>
+
+  <div class="grid gap-6 lg:grid-cols-[18rem_1fr]">
+    <aside>
+      <%# One rail: a disclosure on mobile, always open from lg up (see .rail in application.css). %>
+      <details class="rail">
+        <summary class="cursor-pointer font-semibold lg:pointer-events-none">Show agent steps</summary>
+        <div class="mt-2"><%= render "reports/progress_rail", report: @report %></div>
+      </details>
+    </aside>
+    <div class="flex flex-col gap-6">
+      <% Report::SECTIONS.each do |name| %>
+        <%= render "reports/sections/#{name}", report: @report %>
+      <% end %>
+    </div>
+  </div>
+</div>

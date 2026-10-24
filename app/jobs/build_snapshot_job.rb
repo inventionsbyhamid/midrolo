@@ -1,0 +1,1 @@
+class BuildSnapshotJob < ReportJob; end

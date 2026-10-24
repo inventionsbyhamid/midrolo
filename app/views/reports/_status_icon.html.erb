@@ -1,0 +1,7 @@
+<%# locals: (status:) -%>
+<% icon, tone, label = case status.to_s
+   when "ok" then [ "✓", "text-success", "Done" ]
+   when "warning" then [ "!", "text-warning", "Warning" ]
+   when "error" then [ "✕", "text-danger", "Failed" ]
+   else [ "…", "text-ink-soft", "In progress" ] end %>
+<span class="<%= tone %> w-4 flex-none text-center font-bold" title="<%= label %>"><span aria-hidden="true"><%= icon %></span><span class="sr-only"><%= label %></span></span>

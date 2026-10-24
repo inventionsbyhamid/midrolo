@@ -4,7 +4,7 @@ class ShowsController < ApplicationController
   before_action :set_show, only: %i[show edit update]
 
   def index
-    @shows = current_user.shows.order(:created_at)
+    @shows = current_user.shows.order(:created_at).includes(:latest_report)
     redirect_to new_show_path if @shows.empty?
   end
 

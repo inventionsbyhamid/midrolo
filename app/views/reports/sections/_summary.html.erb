@@ -1,0 +1,10 @@
+<%# locals: (report:) -%>
+<div id="report_summary">
+  <%= render "components/card", title: "Your audience at a glance" do %>
+    <% if report.summary.nil? %>
+      <%= render "components/skeleton", lines: 3, label: "Writing your summary" %>
+    <% else %>
+      <p class="whitespace-pre-line"><%= report.summary %></p>
+    <% end %>
+  <% end %>
+</div>

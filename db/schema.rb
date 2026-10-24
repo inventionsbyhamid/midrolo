@@ -10,9 +10,47 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "agent_steps", force: :cascade do |t|
+    t.bigint "report_id", null: false
+    t.integer "position", default: 0, null: false
+    t.string "tool"
+    t.string "label", null: false
+    t.string "status", default: "running", null: false
+    t.text "input_summary"
+    t.text "output_summary"
+    t.integer "duration_ms"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["report_id"], name: "index_agent_steps_on_report_id"
+  end
+
+  create_table "reports", force: :cascade do |t|
+    t.bigint "show_id", null: false
+    t.string "kind", null: false
+    t.string "status", default: "queued", null: false
+    t.string "profile_kind"
+    t.jsonb "seeds"
+    t.jsonb "audience"
+    t.jsonb "demographics"
+    t.jsonb "heatmap"
+    t.text "summary"
+    t.string "error_message"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.decimal "cost_usd", precision: 10, scale: 5, default: "0.0", null: false
+    t.integer "taste_calls", default: 0, null: false
+    t.string "spend_bucket"
+    t.string "sample_slug"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["sample_slug"], name: "index_reports_on_sample_slug", unique: true, where: "(sample_slug IS NOT NULL)"
+    t.index ["show_id"], name: "index_reports_on_show_id"
+    t.index ["show_id"], name: "index_reports_one_active_per_show", unique: true, where: "((status)::text = ANY ((ARRAY['queued'::character varying, 'running'::character varying])::text[]))"
+  end
 
   create_table "settings", force: :cascade do |t|
     t.string "key", null: false
@@ -70,6 +108,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_160000) do
     t.index ["user_id"], name: "index_spend_entries_on_user_id"
   end
 
+  create_table "sponsor_matches", force: :cascade do |t|
+    t.bigint "report_id", null: false
+    t.bigint "show_id", null: false
+    t.string "brand_entity_id", null: false
+    t.string "name"
+    t.string "image_url"
+    t.string "website"
+    t.string "category"
+    t.string "reason"
+    t.float "affinity"
+    t.float "popularity"
+    t.integer "fit_score"
+    t.string "tier"
+    t.jsonb "evidence", default: {}, null: false
+    t.string "status", default: "suggested", null: false
+    t.text "notes"
+    t.date "follow_up_on"
+    t.integer "position"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["report_id", "brand_entity_id"], name: "index_sponsor_matches_on_report_id_and_brand_entity_id", unique: true
+    t.index ["report_id"], name: "index_sponsor_matches_on_report_id"
+    t.index ["show_id"], name: "index_sponsor_matches_on_show_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email"
     t.string "name"
@@ -92,6 +155,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_160000) do
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
   end
 
+  add_foreign_key "agent_steps", "reports"
+  add_foreign_key "reports", "shows"
   add_foreign_key "shows", "users"
+  add_foreign_key "spend_entries", "reports", on_delete: :nullify
   add_foreign_key "spend_entries", "users"
+  add_foreign_key "sponsor_matches", "reports"
+  add_foreign_key "sponsor_matches", "shows"
 end

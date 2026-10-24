@@ -15,7 +15,7 @@
             <%= link_to show.title, show_path(show), class: "type-h3 block truncate underline-offset-4 hover:underline" %>
             <p class="truncate text-ink-soft"><%= show.author %></p>
             <p class="mt-1 text-sm text-ink-soft">
-              <%= report ? "Latest report: #{report.status.to_s.humanize.downcase}" : "No report yet" %>
+              <%= report ? "Latest report: #{report.status_copy}" : "No report yet" %>
             </p>
           </div>
         </div>

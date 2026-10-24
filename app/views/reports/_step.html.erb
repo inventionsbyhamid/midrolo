@@ -1,0 +1,13 @@
+<%# locals: (agent_step:) -%>
+<details id="<%= dom_id(agent_step) %>" class="rounded-lg border border-line px-3 py-2">
+  <summary class="flex cursor-pointer items-center gap-2 text-sm">
+    <%= render "reports/status_icon", status: agent_step.status %>
+    <span class="min-w-0 flex-1"><%= agent_step.label %></span>
+    <% if agent_step.duration_ms %><span class="text-ink-soft"><%= number_with_precision(agent_step.duration_ms / 1000.0, precision: 1) %>s</span><% end %>
+  </summary>
+  <dl class="mt-2 space-y-1 text-sm text-ink-soft">
+    <% if agent_step.input_summary.present? %><div><dt class="font-semibold">Asked</dt><dd><%= agent_step.input_summary %></dd></div><% end %>
+    <% if agent_step.output_summary.present? %><div><dt class="font-semibold">Came back</dt><dd><%= agent_step.output_summary %></dd></div><% end %>
+    <% if agent_step.input_summary.blank? && agent_step.output_summary.blank? %><div>No details yet.</div><% end %>
+  </dl>
+</details>

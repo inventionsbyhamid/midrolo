@@ -1,0 +1,16 @@
+<%# locals: (report:) -%>
+<div id="report_leans">
+  <%= render "components/card", title: "Leans" do %>
+    <% if report.demographics.nil? %>
+      <%= render "components/skeleton", lines: 3, label: "Reading age and gender leans" %>
+    <% else %>
+      <p class="mb-2 text-sm text-ink-soft">Modeled from Qloo taste data</p>
+      <dl class="space-y-1">
+        <% report.demographics.each do |group, leans| %>
+          <div><dt class="font-semibold"><%= group.to_s.humanize %></dt>
+          <dd><%= leans.respond_to?(:map) ? (leans.is_a?(Hash) ? leans.map { |k, v| "#{k}: #{v}" } : leans.map { |l| l.is_a?(Hash) ? l.values.join(": ") : l }).to_sentence : leans %></dd></div>
+        <% end %>
+      </dl>
+    <% end %>
+  <% end %>
+</div>

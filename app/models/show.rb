@@ -5,6 +5,10 @@ class Show < ApplicationRecord
   HINT_LENGTH = 100
 
   belongs_to :user
+  has_many :reports, dependent: :destroy
+  # Preloadable (includes(:latest_report)) so lists don't N+1.
+  has_one :latest_report, -> { order(created_at: :desc, id: :desc) }, class_name: "Report", inverse_of: :show
+  has_many :sponsor_matches, dependent: :destroy
 
   before_validation :normalize_hints
 
@@ -25,14 +29,9 @@ class Show < ApplicationRecord
     verified_at.present?
   end
 
-  # Report is built in Task 9; until then a show has none.
-  def latest_report
-    Report.where(show_id: id).order(created_at: :desc).first if defined?(Report)
-  end
-
   # A queued or running report (only one may be active per show).
   def active_report
-    Report.where(show_id: id, status: %w[queued running]).order(created_at: :desc).first if defined?(Report)
+    reports.active.order(created_at: :desc, id: :desc).first
   end
 
   def initials

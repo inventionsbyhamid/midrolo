@@ -674,3 +674,11 @@
     from { transform: translateY(-1rem); opacity: 0; }
   }
 }
+
+/* Report progress rail: a disclosure on mobile, always visible on desktop. */
+@media (min-width: 64rem) {
+  details.rail::details-content {
+    content-visibility: visible;
+    display: block;
+  }
+}
