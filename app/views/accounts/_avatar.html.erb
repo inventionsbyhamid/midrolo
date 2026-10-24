@@ -1,0 +1,6 @@
+<%# locals: (user:) -%>
+<% if user.avatar_url.present? %>
+  <img src="<%= user.avatar_url %>" alt="" class="size-12 rounded-full object-cover" referrerpolicy="no-referrer" width="48" height="48">
+<% else %>
+  <span class="inline-flex size-12 items-center justify-center rounded-full bg-plum font-semibold text-white" aria-hidden="true"><%= user.initials %></span>
+<% end %>

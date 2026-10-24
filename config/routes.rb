@@ -5,6 +5,19 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  devise_for :users,
+             skip: %i[sessions registrations passwords confirmations unlocks],
+             controllers: { omniauth_callbacks: "users/omniauth_callbacks" }
+  devise_scope :user do
+    get "users/sign_in", to: "devise/sessions#new", as: :new_user_session
+    delete "users/sign_out", to: "devise/sessions#destroy", as: :destroy_user_session
+  end
+
+  resource :account, only: %i[show destroy] do
+    post :judge_code
+  end
+  resources :shows, only: %i[index new]
+
   # Design system gallery. Development only: production has no such route.
   if Rails.env.development?
     get "styleguide" => "styleguide#show", as: :styleguide

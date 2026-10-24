@@ -10,7 +10,7 @@
     <%= render "components/demo_banner" if demo_mode? %>
     <%= render "components/nav",
           links: [ [ "How it works", "/#how-it-works" ], [ "Samples", "/#samples" ], [ "Pricing", "/pricing" ] ],
-          cta: signed_in? ? [ "Open #{APP_NAME}", "/shows" ] : [ "Sign in", "/users/sign_in" ] %>
+          cta: user_signed_in? ? [ "Open #{APP_NAME}", "/shows" ] : [ "Sign in", new_user_session_path ] %>
     <%= render "components/flash" %>
     <main id="main" tabindex="-1" class="flex-1">
       <%= yield %>

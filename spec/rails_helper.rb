@@ -28,7 +28,7 @@ RubyLLM::Models.singleton_class.prepend(RubyLLM::Test::ResolveWithTestProvider)
 # directory. Alternatively, in the individual `*_spec.rb` files, manually
 # require only the support files necessary.
 #
-# Rails.root.glob('spec/support/**/*.rb').sort_by(&:to_s).each { |f| require f }
+Rails.root.glob('spec/support/**/*.rb').sort_by(&:to_s).each { |f| require f }
 
 # Ensures that the test database schema matches the current schema file.
 # If there are pending migrations it will invoke `db:test:prepare` to
@@ -74,6 +74,8 @@ RSpec.configure do |config|
   config.filter_rails_from_backtrace!
 
   config.include FactoryBot::Syntax::Methods
+  config.include Devise::Test::IntegrationHelpers, type: :request
+  config.include AuthHelpers
   config.after { RubyLLM::Test.reset }
 
   # cloudflare-rails fetches Cloudflare's IP ranges on first request; keep specs offline.
