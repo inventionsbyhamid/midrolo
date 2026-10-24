@@ -1,0 +1,28 @@
+# Eval set for the research agent (spec §6). Run it before changing LLM_AGENT_MODEL or the LLM provider:
+#   bin/rails eval:run                      # this file
+#   bin/rails "eval:run[path/to/file.yml]"  # another file (or EVAL_FILE=path/to/file.yml)
+# Each entry runs one full agent report (spend bucket dev; with an API key this costs real money, about
+# $0.50 a show) and checks:
+#   min_matches   at least this many sponsor matches saved
+#   profile_kind  direct (the show itself is on Qloo) or proxy
+#   category_any  at least one saved match in one of these brand categories
+# plus that the report finished and every saved brand id came from a tool result in that run (provenance).
+#
+# spec/tasks/eval_spec.rb runs this file on the Fake providers, so it holds the two fake shows only.
+# Put real shows (Podcast Index feed ids) in a separate file and pass its path. Template:
+#
+# shows:
+#   - directory_id: "<podcast index feed id>"   # a personal-finance show that is on Qloo
+#     downloads_per_episode: 3000
+#     hints: { comparable_shows: ["<a show its listeners love>"], topics: ["personal finance"] }
+#     expect: { min_matches: 20, profile_kind: direct, category_any: [Finance, Banking] }
+#   - directory_id: "<podcast index feed id>"   # a small show that is not on Qloo
+#     hints: { comparable_shows: ["<two or three comparable shows>"] }
+#     expect: { min_matches: 20, profile_kind: proxy, category_any: [Technology, Software] }
+shows:
+  - directory_id: fake-1
+    downloads_per_episode: 1500
+    hints: { comparable_shows: [Index Fund Mornings], topics: [personal finance] }
+    expect: { min_matches: 20, profile_kind: direct, category_any: [Finance, Productivity] }
+  - directory_id: fake-3
+    expect: { min_matches: 20, profile_kind: direct, category_any: [Technology, Productivity] }
