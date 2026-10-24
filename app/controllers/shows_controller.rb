@@ -44,8 +44,11 @@ class ShowsController < ApplicationController
     @onboarding = params[:onboarding].present?
   end
 
+  # With rerun=<kind> (the needs-input form on a report, R41) it also starts that report and opens it.
   def update
     if @show.update(show_params)
+      return rerun_report(params[:rerun].to_s) if Report::KINDS.include?(params[:rerun].to_s)
+
       redirect_to show_path(@show), notice: "Details saved."
     else
       @onboarding = params[:onboarding].present?
@@ -54,6 +57,13 @@ class ShowsController < ApplicationController
   end
 
   private
+
+  def rerun_report(kind)
+    report = Report.start!(show: @show, kind: kind, user: current_user)
+    redirect_to show_report_path(@show, report)
+  rescue Entitlements::NotAllowed
+    redirect_to show_path(@show), alert: "Details saved, but you can't start that report on your current plan. See your account for options."
+  end
 
   def set_show
     @show = current_user.shows.find(params[:id])

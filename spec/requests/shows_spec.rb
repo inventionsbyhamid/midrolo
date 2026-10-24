@@ -219,6 +219,34 @@ RSpec.describe "Shows" do
         expect(show.hints[:topics]).to eq([ "saas" ])
       end
 
+      describe "re-running a report that needed input" do
+        include ActiveJob::TestHelper
+
+        let(:hints) { { comparable_shows: [ "Acquired", "", "Planet Money" ], topics: [ "saas" ] } }
+
+        it "saves the hints, starts the same kind of report and opens it" do
+          expect { patch "/shows/#{show.id}", params: { show: { hints: hints }, rerun: "agent" } }
+            .to change(show.reports, :count).by(1).and have_enqueued_job(GenerateReportJob)
+          report = show.reports.last
+          expect(report).to have_attributes(kind: "agent", status: "queued")
+          expect(response).to redirect_to(show_report_path(show, report))
+          expect(show.reload.hints[:comparable_shows]).to eq([ "Acquired", "Planet Money" ])
+        end
+
+        it "keeps the hints and explains when the plan doesn't allow the run" do
+          allow(Report).to receive(:start!).and_raise(Entitlements::NotAllowed.new(:limit))
+          patch "/shows/#{show.id}", params: { show: { hints: hints }, rerun: "agent" }
+          expect(response).to redirect_to(show_path(show))
+          expect(flash[:alert]).to include("current plan")
+          expect(show.reload.hints[:topics]).to eq([ "saas" ])
+        end
+
+        it "ignores an unknown kind and just saves" do
+          expect { patch "/shows/#{show.id}", params: { show: { hints: hints }, rerun: "bogus" } }.not_to change(Report, :count)
+          expect(response).to redirect_to(show_path(show))
+        end
+      end
+
       it "re-renders with errors on invalid input" do
         patch "/shows/#{show.id}", params: { show: { downloads_per_episode: "-5", contact_email: "bad" } }
         expect(response).to have_http_status(:unprocessable_content)
