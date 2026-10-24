@@ -30,6 +30,10 @@
     <p class="text-ink-soft">Billing and plan management arrive soon.</p>
   <% end %>
 
+  <%= render "components/card", title: "Sign out" do %>
+    <%= button_to "Sign out", destroy_user_session_path, method: :delete, class: "btn btn-secondary btn-md" %>
+  <% end %>
+
   <%= render "components/card", title: "Delete account" do %>
     <p class="mb-4 text-ink-soft">This permanently deletes your account and everything in it.</p>
     <div data-controller="dialog">

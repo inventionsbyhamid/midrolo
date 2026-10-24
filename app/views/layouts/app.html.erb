@@ -9,7 +9,8 @@
     <a href="#main" class="skip-link">Skip to content</a>
     <%= render "components/demo_banner" if demo_mode? %>
     <%= render "components/nav",
-          links: [ [ "Shows", "/shows" ], [ "Pipeline", "/pipeline" ], [ "Account", "/account" ] ] %>
+          links: [ [ "Shows", "/shows" ], [ "Pipeline", "/pipeline" ], [ "Account", "/account" ] ],
+          sign_out: true %>
     <%= render "components/flash" %>
     <main id="main" tabindex="-1" class="wrap flex-1 py-8 sm:py-10">
       <%= yield %>

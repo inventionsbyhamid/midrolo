@@ -13,6 +13,9 @@ Rails.application.routes.draw do
     delete "users/sign_out", to: "devise/sessions#destroy", as: :destroy_user_session
   end
 
+  # Temporary: Task 19 replaces this with pages#home.
+  root to: redirect("/shows")
+
   resource :account, only: %i[show destroy] do
     post :judge_code
   end

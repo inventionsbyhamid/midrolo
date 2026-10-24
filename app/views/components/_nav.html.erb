@@ -1,4 +1,4 @@
-<%# locals: (links: [], cta: nil) -%>
+<%# locals: (links: [], cta: nil, sign_out: false) -%>
 <%# links is a list of [label, href] pairs; cta is one [label, href] pair or nil. %>
 <header class="site-header">
   <div class="wrap flex h-16 items-center justify-between gap-4">
@@ -10,6 +10,9 @@
       <% end %>
       <% if cta %>
         <%= ui_button cta.first, cta.last, size: :sm, class: "ml-3" %>
+      <% end %>
+      <% if sign_out %>
+        <%= button_to "Sign out", destroy_user_session_path, method: :delete, class: "btn btn-ghost btn-sm ml-3" %>
       <% end %>
     </nav>
 
@@ -26,6 +29,9 @@
         </nav>
         <% if cta %>
           <%= ui_button cta.first, cta.last, size: :lg, class: "mt-6 w-full" %>
+        <% end %>
+        <% if sign_out %>
+          <%= button_to "Sign out", destroy_user_session_path, method: :delete, class: "btn btn-secondary btn-lg mt-6 w-full" %>
         <% end %>
       <% end %>
     </div>

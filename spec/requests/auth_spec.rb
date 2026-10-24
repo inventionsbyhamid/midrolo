@@ -34,6 +34,34 @@ RSpec.describe "Authentication" do
     expect(response).to redirect_to("/users/sign_in")
   end
 
+  it "rejects GET on the OAuth request phase (CSRF protection)" do
+    expect(OmniAuth.config.allowed_request_methods).to eq([ :post ])
+
+    OmniAuth.config.test_mode = false
+    get "/users/auth/google_oauth2"
+
+    expect(response).not_to redirect_to(%r{accounts\.google\.com})
+  ensure
+    OmniAuth.config.test_mode = true
+  end
+
+  it "does not 500 when the email belongs to a different user" do
+    create(:user, email: "ADA@example.com")
+
+    get "/users/auth/google_oauth2/callback"
+
+    expect(response).to redirect_to("/users/sign_in")
+    expect(flash[:alert]).to eq("We couldn't sign you in with that Google account. Please contact support.")
+  end
+
+  it "shows Sign out in the signed-in app layout" do
+    sign_in create(:user)
+    get "/shows"
+
+    expect(response.body).to include("Sign out", 'action="/users/sign_out"')
+    expect(response.body).to include('name="_method" value="delete"')
+  end
+
   it "redirects signed-out visitors from /shows to sign-in" do
     get "/shows"
 

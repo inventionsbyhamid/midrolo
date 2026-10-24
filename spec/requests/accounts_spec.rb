@@ -21,7 +21,7 @@ RSpec.describe "Account" do
     get "/account"
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Free", "Usage", "Judge code", "Billing", "Delete account", user.email, "AL")
+    expect(response.body).to include("Free", "Usage", "Judge code", "Billing", "Delete account", "Sign out", user.email, "AL")
   end
 
   it "renders the avatar when there is one" do
