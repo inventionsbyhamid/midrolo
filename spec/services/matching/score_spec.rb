@@ -52,6 +52,17 @@ RSpec.describe Matching::Score do
     expect(score_of([ missing ], downloads: 10_000).first.fit_score).to eq(80)
   end
 
+  it "scores evidence that came back from jsonb (string keys, ISO time strings) the same as in memory" do
+    [ 89, 91 ].each do |days|
+      in_memory = proven(now - days.days)
+      from_json = JSON.parse(in_memory.to_json)
+      expect(from_json["items"].first["published_at"]).to be_a(String)
+
+      expected = score_of([ candidate(evidence: in_memory) ], downloads: 10_000).first.fit_score
+      expect(score_of([ candidate(evidence: from_json) ], downloads: 10_000).first.fit_score).to eq(expected)
+    end
+  end
+
   it "normalizes affinity and shared tags against the max in the call" do
     a = candidate(affinity: 0.5, shared: 5, name: "A")
     b = candidate(affinity: 1.0, shared: 10, name: "B")

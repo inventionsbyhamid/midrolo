@@ -137,7 +137,7 @@ module Research
 
     def score_summary(scored)
       tiers = scored.map(&:tier).tally
-      proven = scored.count { |s| s.candidate.proven_evidence[:count].positive? }
+      proven = scored.count { |s| Matching::Evidence.count(s.candidate.proven_evidence).positive? }
       parts = { easy_yes: "easy yes", realistic: "realistic", long_shot: "long shot" }.filter_map do |tier, label|
         "#{tiers[tier]} #{label}" if tiers[tier]
       end
