@@ -23,6 +23,8 @@ module Podcasts
       raise Blocked, "missing host" if uri.host.blank?
       raise Blocked, "port not allowed" unless ALLOWED_PORTS.include?(uri.port)
 
+      raise Blocked, "non-canonical host" unless canonical_host?(uri.host)
+
       addresses = addresses_for(uri.host)
       raise Blocked, "host does not resolve" if addresses.empty?
       raise Blocked, "internal address" if addresses.any? { |a| blocked_ip?(a) }
@@ -37,6 +39,20 @@ module Podcasts
       false
     rescue Blocked
       true
+    end
+
+    OCTET = /(?:0|[1-9]\d{0,2})/
+    DOTTED_QUAD = /\A#{OCTET}(?:\.#{OCTET}){3}\z/
+
+    # Accepts only a canonical dotted-quad IPv4, an IPv6 literal, or a hostname with a letter in its final
+    # label. Rejects decimal, hex, octal and short IPv4 forms (2130706433, 0x7f.1, 127.1, 0177.0.0.1) that
+    # getaddrinfo would parse locally but Resolv would not.
+    def canonical_host?(host)
+      bare = host.delete_prefix("[").delete_suffix("]")
+      return true if bare.include?(":")
+      return bare.split(".").all? { |o| o.to_i <= 255 } if bare.match?(DOTTED_QUAD)
+
+      bare.delete_suffix(".").split(".").last.to_s.match?(/[a-z]/i)
     end
 
     def addresses_for(host)

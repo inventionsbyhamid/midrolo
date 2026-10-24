@@ -110,6 +110,58 @@ RSpec.describe Podcasts::FeedReader do
       end
     end
 
+    %w[http://2130706433/ http://0x7f.1/ http://127.1/ http://0177.0.0.1/ http://[::ffff:7f00:1]/
+       http://a@127.0.0.1/ http://user:pw@localhost/x].each do |blocked|
+      it "blocks #{blocked} without any HTTP request" do
+        allow(Resolv).to receive(:getaddresses).with("localhost").and_return([ "127.0.0.1" ])
+        feed = reader.read(blocked)
+        expect(feed.warnings).to eq([ "feed_blocked" ])
+        expect(feed.episodes).to eq([])
+        expect(a_request(:any, /.*/)).not_to have_been_made
+      end
+    end
+
+    it "blocks numeric hosts even when DNS would return a public address" do
+      allow(Resolv).to receive(:getaddresses).and_return([ "93.184.216.34" ])
+      expect(reader.read("http://2130706433/").warnings).to eq([ "feed_blocked" ])
+    end
+
+    it "blocks when the host does not resolve (empty answer)" do
+      allow(Resolv).to receive(:getaddresses).with("nope.example.com").and_return([])
+      expect(reader.read("https://nope.example.com/f").warnings).to eq([ "feed_blocked" ])
+    end
+
+    it "blocks when DNS resolution raises" do
+      allow(Resolv).to receive(:getaddresses).with("boom.example.com").and_raise(Resolv::ResolvError)
+      expect(reader.read("https://boom.example.com/f").warnings).to eq([ "feed_blocked" ])
+    end
+
+    it "resolves a relative Location against the current URL and re-checks it" do
+      stub_request(:get, url).to_return(status: 302, headers: { "Location" => "/moved.xml" })
+      stub_request(:get, "https://widgethour.example.com/moved.xml").to_return(status: 200, body: feed_fixture("normal"))
+      expect(reader.read(url).episodes.size).to eq(20)
+    end
+
+    it "blocks a relative-looking redirect that lands on an internal host" do
+      stub_request(:get, url).to_return(status: 302, headers: { "Location" => "//127.0.0.1/x" })
+      expect(reader.read(url).warnings).to eq([ "feed_blocked" ])
+      expect(a_request(:get, %r{127\.0\.0\.1})).not_to have_been_made
+    end
+
+    it "gives feed_unreadable for a redirect loop without looping forever" do
+      stub_request(:get, url).to_return(status: 302, headers: { "Location" => url })
+      feed = reader.read(url)
+      expect(feed.warnings).to eq([ "feed_unreadable" ])
+      expect(a_request(:get, url)).to have_been_made.times(4)
+    end
+
+    it "gives feed_unreadable after more than 3 hops" do
+      (0..5).each { |i| stub_request(:get, "https://h#{i}.example.com/f").to_return(status: 301, headers: { "Location" => "https://h#{i + 1}.example.com/f" }) }
+      feed = reader.read("https://h0.example.com/f")
+      expect(feed.warnings).to eq([ "feed_unreadable" ])
+      expect(a_request(:get, "https://h4.example.com/f")).not_to have_been_made
+    end
+
     it "blocks a host that resolves to any private address" do
       allow(Resolv).to receive(:getaddresses).with("sneaky.example.com").and_return([ "93.184.216.34", "10.1.2.3" ])
       expect(reader.read("https://sneaky.example.com/feed").warnings).to eq([ "feed_blocked" ])
