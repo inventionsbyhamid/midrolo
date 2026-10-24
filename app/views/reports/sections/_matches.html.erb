@@ -83,11 +83,13 @@
         <div class="locked-overlay">
           <div class="locked-cta">
             <%= link_to "/pricing", class: "btn btn-primary btn-lg" do %>Unlock <%= pluralize(locked.size, "more match") %><% end %>
-            <% tiers = locked.map(&:tier).tally %>
-            <p class="mt-3 text-[0.9375rem]">
-              Includes <%= ReportsHelper::TIERS.filter_map { |tier, (label, _)| "#{tiers[tier]} #{label.downcase}" if tiers[tier] }.to_sentence %>
-              <%= "brand".pluralize(locked.size) %>, each with its reason and evidence.
-            </p>
+            <% tier_counts = locked_tier_counts(locked) %>
+            <% if tier_counts.any? %>
+              <p class="mt-3 text-[0.9375rem]">
+                Includes <%= tier_counts.map { |label, count| "#{count} #{label.downcase}" }.to_sentence %>
+                <%= "brand".pluralize(tier_counts.sum(&:last)) %>, each with its reason and evidence.
+              </p>
+            <% end %>
           </div>
         </div>
       </div>

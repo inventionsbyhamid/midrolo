@@ -21,7 +21,8 @@ RSpec.describe "reports/sections/_matches" do
       (1..50).each do |i|
         create(:sponsor_match, report: report, position: i, name: "Brand #{format('%02d', i)}", reason: "Reason for brand #{i}.",
                                website: "https://brand#{i}.example.com", image_url: "https://img.example.com/#{i}.png",
-                               tier: %w[easy_yes realistic long_shot][i % 3], fit_score: 100 - i, evidence: proven("Show #{i}"))
+                               tier: %w[easy_yes realistic long_shot][i % 3], fit_score: 100 - i, evidence: proven("Show #{i}"),
+                               category: i == 7 ? "Zz Locked Only Category" : %w[Finance Coffee][i % 2])
       end
       limit_visible_to(5)
       render_section
@@ -42,6 +43,8 @@ RSpec.describe "reports/sections/_matches" do
         expect(rendered).not_to include("brand#{i}.example.com", "img.example.com/#{i}.png")
         expect(rendered).not_to include("Show #{i}<", "Show #{i} ")
       end
+      expect(rendered).not_to include("Zz Locked Only Category")
+      expect(html.css("button[data-group='category']").map { |chip| chip["data-value"] }).to contain_exactly("Finance", "Coffee")
     end
 
     it "shows only a silhouette, the tier and a fit bucket on a blurred card" do
@@ -97,6 +100,35 @@ RSpec.describe "reports/sections/_matches" do
       expect(card.text).to include("Coming in the next step")
       expect(card.at_css("select")["disabled"]).not_to be_nil
     end
+  end
+
+  it "leaves the tier line out of the unlock prompt when no locked tier is known" do
+    create(:sponsor_match, report: report, position: 1)
+    create(:sponsor_match, report: report, position: 2, tier: nil)
+    create(:sponsor_match, report: report, position: 3, tier: "mystery")
+    limit_visible_to(1)
+    render_section
+    expect(html.text.squish).to include("Unlock 2 more matches")
+    expect(html.text).not_to include("Includes")
+    expect(html.css("[data-locked-match] .badge")).to be_empty
+  end
+
+  it "names only the known tiers in the unlock prompt" do
+    create(:sponsor_match, report: report, position: 1)
+    create(:sponsor_match, report: report, position: 2, tier: "long_shot")
+    create(:sponsor_match, report: report, position: 3, tier: nil)
+    limit_visible_to(1)
+    render_section
+    expect(html.text.squish).to include("Includes 1 long shot brand, each with its reason and evidence.")
+  end
+
+  it "falls back to initials through a Stimulus action, with no inline handler" do
+    create(:sponsor_match, report: report, image_url: "https://img.example.com/logo.png")
+    render_section
+    img = html.at_css("[data-filter-target='item'] img")
+    expect(img["onerror"]).to be_nil
+    expect(img["data-action"]).to eq("error->logo#fallback")
+    expect(img.ancestors("[data-controller~='logo']")).to be_present
   end
 
   it "labels tiers in plain words" do

@@ -21,7 +21,17 @@ module ReportsHelper
 
   def tier_label(tier) = TIERS.fetch(tier.to_s, [ tier.to_s.humanize ]).first
 
-  def tier_badge(tier) = ui_badge(tier_label(tier), tone: TIERS.fetch(tier.to_s, [ nil, :neutral ]).last)
+  # nil for a missing or unknown tier, so no empty badge renders.
+  def tier_badge(tier)
+    label, tone = TIERS[tier.to_s]
+    ui_badge(label, tone: tone) if label
+  end
+
+  # [[label, count]] for the known tiers among locked matches, in tier order; unknown tiers are skipped.
+  def locked_tier_counts(matches)
+    counts = matches.map { |m| m.tier.to_s }.tally
+    TIERS.filter_map { |tier, (label, _)| [ label, counts[tier] ] if counts[tier] }
+  end
 
   def tier_rank(tier) = TIERS.keys.index(tier.to_s) || TIERS.size
 
