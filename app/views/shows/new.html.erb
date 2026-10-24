@@ -1,3 +1,46 @@
-<% content_for :title, "Shows" %>
-<%= render "components/empty_state", title: "Add your show",
-      body: "Onboarding comes next: you'll add your podcast here soon." %>
+<% content_for :title, "Add your show" %>
+<div class="mx-auto flex max-w-2xl flex-col gap-8">
+  <header>
+    <h1 class="type-h1">Find your show</h1>
+    <p class="type-lead mt-2 text-ink-soft">Search by name and we'll pull in your artwork and details.</p>
+  </header>
+
+  <% if @at_limit %>
+    <%= render "components/card", title: "Your plan includes #{pluralize(Entitlements.for(current_user).max_shows, 'show')}",
+          aside: ui_badge("Free", tone: :neutral) do %>
+      <p class="text-ink-soft">Upgrade to add more shows and unlock full reports.</p>
+      <div class="mt-4 flex flex-wrap gap-3">
+        <%= ui_button "Upgrade", account_path %>
+        <%= ui_button "Back to my shows", shows_path, variant: :secondary %>
+      </div>
+    <% end %>
+  <% else %>
+    <% if @error %>
+      <p class="flash flash-alert" role="alert"><%= @error %></p>
+    <% end %>
+
+    <section aria-labelledby="search-heading" class="flex flex-col gap-4">
+      <%= form_with url: search_shows_path, method: :get, role: "search",
+            data: { controller: "autosubmit", turbo_frame: "search_results", action: "submit->autosubmit#submit" } do |f| %>
+        <h2 id="search-heading" class="sr-only">Search for your show</h2>
+        <%= f.label :q, "Podcast title", class: "label" %>
+        <%= f.search_field :q, class: "input text-lg", placeholder: "Start typing your podcast's name", autofocus: true,
+              autocomplete: "off", enterkeyhint: "search", data: { action: "input->autosubmit#queue" } %>
+      <% end %>
+      <%= turbo_frame_tag "search_results", class: "block", aria: { live: "polite" } %>
+    </section>
+
+    <section aria-labelledby="paste-heading">
+      <%= render "components/card", title: "Paste your RSS or Apple Podcasts link instead", heading: :h2 do %>
+        <%= form_with url: shows_path, class: "flex flex-col gap-3 sm:flex-row sm:items-end" do |f| %>
+          <div class="flex-1">
+            <%= f.label :feed_url, "RSS feed or Apple Podcasts URL", class: "label" %>
+            <%= f.url_field :feed_url, value: @feed_url, class: "input", placeholder: "https://…", autocomplete: "off",
+                  inputmode: "url", required: true %>
+          </div>
+          <%= f.submit "Use this link", class: "btn btn-secondary btn-md" %>
+        <% end %>
+      <% end %>
+    </section>
+  <% end %>
+</div>

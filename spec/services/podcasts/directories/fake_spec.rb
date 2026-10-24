@@ -70,3 +70,25 @@ RSpec.describe Podcasts::Directories::Fake do
     end
   end
 end
+
+RSpec.describe Podcasts::Directories::Fake, "#find_by_itunes_id" do
+  subject(:fake) { described_class.new }
+
+  it "gives every fake show a deterministic, unique itunes_id" do
+    ids = described_class::CATALOG.map { |s| fake.find(s[:directory_id]).itunes_id }
+    expect(ids).to all(match(/\A\d+\z/))
+    expect(ids.uniq.size).to eq(ids.size)
+    expect(fake.find("fake-1").itunes_id).to eq(described_class.new.find("fake-1").itunes_id)
+  end
+
+  it "finds a show by its itunes id, as a string or integer" do
+    id = fake.find("fake-3").itunes_id
+    expect(fake.find_by_itunes_id(id).directory_id).to eq("fake-3")
+    expect(fake.find_by_itunes_id(id.to_i).directory_id).to eq("fake-3")
+  end
+
+  it "returns nil for an unknown id" do
+    expect(fake.find_by_itunes_id("42")).to be_nil
+    expect(fake.find_by_itunes_id(nil)).to be_nil
+  end
+end

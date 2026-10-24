@@ -60,6 +60,11 @@ module Podcasts
       SPONSOR_LINES = [ "This episode is sponsored by %s.", "Thanks to our sponsor %s.", "Today's show is brought to you by %s." ].freeze
 
       class << self
+        # Deterministic fake iTunes id: fake-7 => "1000000007".
+        def itunes_id_for(directory_id)
+          (1_000_000_000 + directory_id.delete_prefix("fake-").to_i).to_s
+        end
+
         # Deterministic feed for a catalog id, or nil when the id is unknown.
         def feed_for(directory_id)
           show = CATALOG.find { |s| s[:directory_id] == directory_id }
@@ -103,6 +108,11 @@ module Podcasts
         show && to_show(show)
       end
 
+      def find_by_itunes_id(itunes_id)
+        show = CATALOG.find { |s| self.class.itunes_id_for(s[:directory_id]) == itunes_id.to_s }
+        show && to_show(show)
+      end
+
       def find_by_feed_url(url)
         id = url.to_s.delete_prefix(FEED_PREFIX) if url.to_s.start_with?(FEED_PREFIX)
         id && find(id)
@@ -118,7 +128,7 @@ module Podcasts
         ShowInfo.new(directory_id: show[:directory_id], title: show[:title], author: show[:author],
                      description: show[:description], artwork_url: nil, feed_url: "#{FEED_PREFIX}#{show[:directory_id]}",
                      categories: show[:categories], episode_count: self.class.feed_for(show[:directory_id]).episodes.size,
-                     itunes_id: nil, language: show[:language])
+                     itunes_id: self.class.itunes_id_for(show[:directory_id]), language: show[:language])
       end
     end
   end

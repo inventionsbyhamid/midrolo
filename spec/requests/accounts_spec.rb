@@ -68,5 +68,14 @@ RSpec.describe "Account" do
       get "/account"
       expect(response).to redirect_to("/users/sign_in")
     end
+
+    it "removes the user's shows" do
+      sign_in user
+      create(:show, user: user)
+      other = create(:show)
+
+      expect { delete "/account" }.to change(Show, :count).by(-1)
+      expect(Show.exists?(other.id)).to be true
+    end
   end
 end

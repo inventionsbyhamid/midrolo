@@ -1,0 +1,30 @@
+<%# locals: (results:, query:, unavailable: false) -%>
+<%= turbo_frame_tag "search_results", class: "block" do %>
+  <% if unavailable %>
+    <p class="flash flash-alert" role="alert"><%= ShowSearchesController::UNAVAILABLE %></p>
+  <% elsif results.nil? %>
+    <%# Empty query: nothing to show. %>
+  <% elsif results.empty? %>
+    <%= render "components/empty_state", title: "No shows found — try the exact title or paste your RSS feed URL." %>
+  <% else %>
+    <ul class="flex flex-col gap-3" aria-label="Search results">
+      <% results.each do |info| %>
+        <li class="card">
+          <div class="card-body flex flex-wrap items-center gap-4">
+            <%= render "shows/artwork", show: info %>
+            <div class="min-w-0 flex-1 basis-48">
+              <p class="type-h3 truncate"><%= info.title %></p>
+              <p class="text-ink-soft"><%= info.author %></p>
+              <p class="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+                <% if info.categories.present? %><%= ui_badge info.categories.first(3).join(", "), tone: :accent %><% end %>
+                <% if info.episode_count %><span><%= pluralize(info.episode_count, "episode") %></span><% end %>
+              </p>
+            </div>
+            <%= button_to "This is my show", shows_path, params: { directory_id: info.directory_id },
+                  class: "btn btn-primary btn-md", form: { data: { turbo_frame: "_top" } } %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>

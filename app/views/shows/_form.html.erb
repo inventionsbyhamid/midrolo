@@ -1,0 +1,65 @@
+<%# locals: (show:, onboarding: false) -%>
+<%= form_with model: show, class: "flex flex-col gap-6" do |f| %>
+  <%= hidden_field_tag :onboarding, 1 if onboarding %>
+
+  <% if show.errors.any? %>
+    <div class="flash flash-alert" role="alert">
+      <ul><% show.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <%= render "components/card" do %>
+    <div class="flex flex-col gap-6">
+      <div>
+        <%= f.label :downloads_per_episode, "Downloads per episode", class: "label" %>
+        <%= f.number_field :downloads_per_episode, class: "input", min: 0, step: 1, inputmode: "numeric",
+              aria: { describedby: "downloads-help", invalid: show.errors.key?(:downloads_per_episode).presence } %>
+        <p id="downloads-help" class="hint">Your average downloads per episode in the first 30 days — used to suggest your ad rate</p>
+      </div>
+
+      <div>
+        <%= f.label :country, "Main audience country", class: "label" %>
+        <%= f.select :country, Show::COUNTRIES.map { |code, name| [ name, code ] }, {}, class: "input", aria: { describedby: "country-help" } %>
+        <p id="country-help" class="hint">Where most of your listeners are, so demographics and sponsors fit your market.</p>
+      </div>
+
+      <fieldset>
+        <legend class="label">Comparable shows</legend>
+        <% shows_list = show.hints[:comparable_shows] %>
+        <div class="flex flex-col gap-2">
+          <% 5.times do |i| %>
+            <%= text_field_tag "show[hints][comparable_shows][]", shows_list[i], id: "comparable_show_#{i}", class: "input",
+                  maxlength: 100, placeholder: (i.zero? ? "e.g. Acquired" : nil), autocomplete: "off",
+                  aria: { label: "Comparable show #{i + 1}", describedby: "comparable-help" } %>
+          <% end %>
+        </div>
+        <p id="comparable-help" class="hint">Up to 5 shows your listeners also love. We use them to find sponsors with the same audience, which matters most if your show is new or not in our data.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend class="label">Topics</legend>
+        <% topics = show.hints[:topics] %>
+        <div class="flex flex-col gap-2">
+          <% 5.times do |i| %>
+            <%= text_field_tag "show[hints][topics][]", topics[i], id: "topic_#{i}", class: "input", maxlength: 100,
+                  placeholder: (i.zero? ? "e.g. personal finance" : nil), autocomplete: "off",
+                  aria: { label: "Topic #{i + 1}", describedby: "topics-help" } %>
+          <% end %>
+        </div>
+        <p id="topics-help" class="hint">Up to 5 subjects you cover. They sharpen matches when your episodes say little.</p>
+      </fieldset>
+
+      <div>
+        <%= f.label :contact_email, "Contact email", class: "label" %>
+        <%= f.email_field :contact_email, class: "input", autocomplete: "email",
+              aria: { describedby: "email-help", invalid: show.errors.key?(:contact_email).presence } %>
+        <p id="email-help" class="hint">Where sponsors should reach you. It goes on your pitches and media kit.</p>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <%= f.submit (onboarding ? "Save and continue" : "Save details"), class: "btn btn-primary btn-lg" %>
+    <%= ui_button (onboarding ? "Skip for now" : "Cancel"), show_path(show), variant: :ghost, size: :lg %>
+  </div>
+<% end %>

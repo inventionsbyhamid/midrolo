@@ -1,0 +1,15 @@
+<% content_for :title, @onboarding ? "Details" : "Edit details" %>
+<div class="mx-auto flex max-w-2xl flex-col gap-6">
+  <header class="flex items-center gap-4">
+    <%= render "shows/artwork", show: @show %>
+    <div class="min-w-0">
+      <% if @onboarding %><p class="text-sm font-semibold text-plum">Step 2 of 2 · Optional</p><% end %>
+      <h1 class="type-h2 truncate"><%= @show.title %></h1>
+      <p class="text-ink-soft">
+        <%= @onboarding ? "Add a few details for sharper sponsor matches. Everything here is optional." : "Update the details we use for your matches." %>
+      </p>
+    </div>
+  </header>
+
+  <%= render "shows/form", show: @show, onboarding: @onboarding %>
+</div>

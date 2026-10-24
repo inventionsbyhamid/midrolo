@@ -1,0 +1,44 @@
+<% content_for :title, @show.title %>
+<div class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-center gap-5">
+    <%= render "shows/artwork", show: @show, size: "size-24" %>
+    <div class="min-w-0 flex-1 basis-60">
+      <h1 class="type-h1"><%= @show.title %></h1>
+      <% if @show.author.present? %><p class="type-lead text-ink-soft"><%= @show.author %></p><% end %>
+      <p class="mt-2 flex flex-wrap gap-2">
+        <% @show.categories.each do |category| %><%= ui_badge category %><% end %>
+      </p>
+    </div>
+    <div class="flex flex-col items-start gap-1">
+      <%= ui_button "Media kit", type: "button", variant: :secondary, disabled: true, aria: { describedby: "kit-soon" } %>
+      <span id="kit-soon" class="text-sm text-ink-soft">Coming soon</span>
+    </div>
+  </header>
+
+  <%= render "components/card", title: "Details", aside: link_to("Edit", edit_show_path(@show), class: "link") do %>
+    <dl class="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+      <div>
+        <dt class="text-sm text-ink-soft">Downloads per episode</dt>
+        <dd class="font-semibold"><%= @show.downloads_per_episode ? number_with_delimiter(@show.downloads_per_episode) : "Not set" %></dd>
+      </div>
+      <div>
+        <dt class="text-sm text-ink-soft">Country</dt>
+        <dd class="font-semibold"><%= Show::COUNTRIES.fetch(@show.country, @show.country) %></dd>
+      </div>
+      <div>
+        <dt class="text-sm text-ink-soft">Comparable shows</dt>
+        <dd class="font-semibold"><%= @show.hints[:comparable_shows].to_sentence.presence || "None yet" %></dd>
+      </div>
+      <div>
+        <dt class="text-sm text-ink-soft">Topics</dt>
+        <dd class="font-semibold"><%= @show.hints[:topics].to_sentence.presence || "None yet" %></dd>
+      </div>
+      <div>
+        <dt class="text-sm text-ink-soft">Contact email</dt>
+        <dd class="font-semibold"><%= @show.contact_email.presence || "Not set" %></dd>
+      </div>
+    </dl>
+  <% end %>
+
+  <%= render "shows/report_actions", show: @show %>
+</div>

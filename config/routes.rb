@@ -19,7 +19,8 @@ Rails.application.routes.draw do
   resource :account, only: %i[show destroy] do
     post :judge_code
   end
-  resources :shows, only: %i[index new]
+  get "shows/search", to: "show_searches#show", as: :search_shows
+  resources :shows, only: %i[index new create show edit update]
 
   # Design system gallery. Development only: production has no such route.
   if Rails.env.development?

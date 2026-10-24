@@ -1,3 +1,25 @@
-<% content_for :title, "Shows" %>
-<%= render "components/empty_state", title: "Add your show",
-      body: "Onboarding comes next: you'll add your podcast here soon." %>
+<% content_for :title, "Your shows" %>
+<div class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="type-h1">Your shows</h1>
+    <%= ui_button "Add another show", new_show_path, variant: :secondary %>
+  </header>
+
+  <ul class="grid gap-4 sm:grid-cols-2">
+    <% @shows.each do |show| %>
+      <% report = show.latest_report %>
+      <li class="card">
+        <div class="card-body flex items-center gap-4">
+          <%= render "shows/artwork", show: show %>
+          <div class="min-w-0 flex-1">
+            <%= link_to show.title, show_path(show), class: "type-h3 block truncate underline-offset-4 hover:underline" %>
+            <p class="truncate text-ink-soft"><%= show.author %></p>
+            <p class="mt-1 text-sm text-ink-soft">
+              <%= report ? "Latest report: #{report.status.to_s.humanize.downcase}" : "No report yet" %>
+            </p>
+          </div>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+</div>

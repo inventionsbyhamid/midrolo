@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_24_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -20,6 +20,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_150000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_settings_on_key", unique: true
+  end
+
+  create_table "shows", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "directory_id"
+    t.string "itunes_id"
+    t.string "feed_url"
+    t.string "title", null: false
+    t.string "author"
+    t.text "description"
+    t.string "artwork_url"
+    t.jsonb "categories", default: [], null: false
+    t.integer "episode_count"
+    t.string "language"
+    t.integer "cadence_days"
+    t.integer "downloads_per_episode"
+    t.string "country", default: "US", null: false
+    t.string "contact_email"
+    t.jsonb "hints", default: {"topics" => [], "comparable_shows" => []}, null: false
+    t.string "owner_email"
+    t.datetime "verified_at"
+    t.string "slug"
+    t.string "qloo_entity_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["slug"], name: "index_shows_on_slug", unique: true
+    t.index ["user_id", "directory_id"], name: "index_shows_on_user_id_and_directory_id", unique: true, where: "(directory_id IS NOT NULL)"
+    t.index ["user_id", "feed_url"], name: "index_shows_on_user_id_and_feed_url", unique: true, where: "(feed_url IS NOT NULL)"
+    t.index ["user_id"], name: "index_shows_on_user_id"
   end
 
   create_table "spend_entries", force: :cascade do |t|
@@ -63,5 +92,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_150000) do
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
   end
 
+  add_foreign_key "shows", "users"
   add_foreign_key "spend_entries", "users"
 end

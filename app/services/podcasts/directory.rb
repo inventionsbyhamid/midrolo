@@ -1,6 +1,6 @@
 module Podcasts
   # Vendor-neutral podcast directory. Use Podcasts::Directory.current; never call an adapter's vendor API directly.
-  # Adapter interface: #search(term, limit: 10), #find(directory_id), #find_by_feed_url(url).
+  # Adapter interface: #search(term, limit: 10), #find(directory_id), #find_by_feed_url(url), #find_by_itunes_id(id).
   module Directory
     class MissingCredentials < StandardError; end
     # The directory service failed (auth, outage, timeout). Distinct from a genuine empty result.

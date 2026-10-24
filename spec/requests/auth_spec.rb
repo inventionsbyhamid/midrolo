@@ -21,6 +21,8 @@ RSpec.describe "Authentication" do
 
     expect(response).to redirect_to("/shows")
     expect(User.find_by(email: "ada@example.com")).to be_present
+    follow_redirect! # a user with no shows is sent on to the add-a-show page
+    expect(response).to redirect_to("/shows/new")
     follow_redirect!
     expect(response).to have_http_status(:ok)
   end
@@ -56,7 +58,7 @@ RSpec.describe "Authentication" do
 
   it "shows Sign out in the signed-in app layout" do
     sign_in create(:user)
-    get "/shows"
+    get "/shows/new"
 
     expect(response.body).to include("Sign out", 'action="/users/sign_out"')
     expect(response.body).to include('name="_method" value="delete"')

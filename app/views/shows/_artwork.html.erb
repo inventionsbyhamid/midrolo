@@ -1,0 +1,8 @@
+<%# locals: (show:, size: "size-16") -%>
+<%# Artwork, or an initials tile when the directory has none. show is a Show or Podcasts::ShowInfo. %>
+<% if show.artwork_url.present? %>
+  <img src="<%= show.artwork_url %>" alt="" class="<%= size %> flex-none rounded-lg object-cover" loading="lazy" referrerpolicy="no-referrer">
+<% else %>
+  <% initials = show.respond_to?(:initials) ? show.initials : Show.new(title: show.title).initials %>
+  <span class="<%= size %> flex flex-none items-center justify-center rounded-lg bg-plum-soft font-bold text-plum" aria-hidden="true"><%= initials %></span>
+<% end %>

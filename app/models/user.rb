@@ -2,6 +2,8 @@ class User < ApplicationRecord
   # Omniauth-only Devise: no passwords. Google (or the development strategy) mints the session.
   devise :omniauthable, :rememberable, :trackable, omniauth_providers: Devise.omniauth_configs.keys
 
+  has_many :shows, dependent: :destroy
+
   validates :provider, :uid, presence: true
   validates :email, uniqueness: { case_sensitive: false }, allow_nil: true
 
