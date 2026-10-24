@@ -1,7 +1,4 @@
 module Matching
-  Candidate = Data.define(:entity, :affinity, :proven_evidence, :shared_tag_count, :category_match)
-  Scored = Data.define(:candidate, :fit_score, :tier)
-
   # Deterministic, explainable fit score (0..100) for candidate brands.
   class Score
     PROVEN_WINDOW = 90.days
