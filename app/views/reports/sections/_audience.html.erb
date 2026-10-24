@@ -27,10 +27,11 @@
               <% value = key == "tags" ? item["score"] : item["affinity"] %>
               <li class="taste-item">
                 <% unless key == "tags" %>
-                  <span class="avatar size-10" aria-hidden="true">
+                  <span class="avatar size-10" aria-hidden="true" data-controller="logo">
                     <%= initials_for(item["name"]) %>
                     <% if (src = safe_external_url(item["image_url"])) %>
-                      <img src="<%= src %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">
+                      <img src="<%= src %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                           data-logo-target="image" data-action="error->logo#fallback">
                     <% end %>
                   </span>
                 <% end %>

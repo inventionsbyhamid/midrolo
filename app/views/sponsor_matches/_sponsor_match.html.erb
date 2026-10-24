@@ -2,10 +2,11 @@
 <% match = sponsor_match %>
 <article id="<%= dom_id(match) %>" class="card match-card" aria-labelledby="<%= dom_id(match, :name) %>">
   <div class="flex items-start gap-3">
-    <span class="avatar size-12 text-base" aria-hidden="true">
+    <span class="avatar size-12 text-base" aria-hidden="true" data-controller="logo">
       <%= initials_for(match.name) %>
       <% if (src = safe_external_url(match.image_url)) %>
-        <img src="<%= src %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">
+        <img src="<%= src %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+             data-logo-target="image" data-action="error->logo#fallback">
       <% end %>
     </span>
     <div class="min-w-0 flex-1">

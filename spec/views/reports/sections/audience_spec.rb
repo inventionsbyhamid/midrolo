@@ -38,6 +38,8 @@ RSpec.describe "reports/sections/_audience" do
     render_section
     brands = html.css("[role='tabpanel']").first.css("li")
     expect(brands.first.at_css("img")["src"]).to eq("https://images.example.com/fieldnote.png")
+    expect(brands.first.at_css("img")["onerror"]).to be_nil
+    expect(brands.first.at_css("img")["data-action"]).to eq("error->logo#fallback")
     expect(brands.last.text).to include("NP", "Northbound Packs")
     expect(brands.first.at_css("[role='meter']")["aria-valuenow"]).to eq("91")
 

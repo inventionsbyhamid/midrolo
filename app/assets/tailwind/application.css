@@ -805,7 +805,7 @@
     height: 0.5rem;
   }
 
-  /* A logo or artwork tile with initials underneath; a failed image removes itself. */
+  /* A logo or artwork tile with initials underneath; logo_controller removes an image that fails to load. */
   .avatar {
     position: relative;
     display: grid;
