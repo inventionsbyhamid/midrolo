@@ -2,8 +2,14 @@ module Research
   # The agent eval (spec §6): one full report per show in an eval file (config/eval_shows.yml), each checked
   # against expected traits and for provenance (every saved brand id came from a tool result in that run).
   # Reports run in the dev spend bucket under a dedicated eval user. Run it with bin/rails eval:run.
+  #
+  # mode: nil follows Llm.mode (the agent with an API key, else the scripted runner); :agent forces the agent
+  # path (needs ANTHROPIC_API_KEY, and overrides LLM_PROVIDER=fake for the run); :scripted forces fake mode.
   class Evaluation
     DEFAULT_PATH = Rails.root.join("config/eval_shows.yml")
+    MODES = %w[agent scripted].freeze
+
+    class ModeUnavailable < StandardError; end
 
     Check = Data.define(:name, :pass, :detail) do
       def to_s = "#{pass ? 'PASS' : 'FAIL'} #{name} (#{detail})"
@@ -13,20 +19,40 @@ module Research
       def passed? = checks.all?(&:pass)
     end
 
-    def initialize(path: DEFAULT_PATH, io: $stdout)
+    def initialize(path: DEFAULT_PATH, io: $stdout, mode: nil)
       @path = path
       @io = io
+      @mode = mode.presence&.to_s
+      raise ArgumentError, "unknown eval mode #{@mode.inspect} (use #{MODES.join(' or ')})" if @mode && !MODES.include?(@mode)
     end
 
     # Runs every show, prints a block per show and a total line, and returns the Results.
     def run
-      results = shows.map { |entry| evaluate(entry) }
-      passed = results.count(&:passed?)
-      @io.puts "#{passed}/#{results.size} shows passed · total cost $#{format('%.4f', results.sum(&:cost))}"
-      results
+      with_mode do
+        @io.puts "LLM path: #{Llm.mode == :live ? "agent (#{Llm.agent_model})" : 'scripted runner (fake LLM mode)'}"
+        results = shows.map { |entry| evaluate(entry) }
+        passed = results.count(&:passed?)
+        @io.puts "#{passed}/#{results.size} shows passed · total cost $#{format('%.4f', results.sum(&:cost))}"
+        results
+      end
     end
 
     private
+
+    # Sets LLM_PROVIDER for the run when a mode is forced, and restores it afterwards.
+    def with_mode
+      return yield unless @mode
+
+      if @mode == "agent" && ENV["ANTHROPIC_API_KEY"].blank?
+        raise ModeUnavailable, "EVAL_MODE=agent needs ANTHROPIC_API_KEY"
+      end
+
+      original = ENV["LLM_PROVIDER"]
+      ENV["LLM_PROVIDER"] = @mode == "agent" ? (original == "fake" ? nil : original) : "fake"
+      yield
+    ensure
+      ENV["LLM_PROVIDER"] = original if @mode
+    end
 
     def shows = Array(YAML.load_file(@path)&.fetch("shows", nil))
 
