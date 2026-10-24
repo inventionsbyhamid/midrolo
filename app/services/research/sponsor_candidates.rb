@@ -1,7 +1,7 @@
 module Research
   # Finds and ranks sponsor candidates for a seed set:
   #   1. a broad brand recommendation (popularity capped, so household names don't crowd the list)
-  #   2. one filtered recommendation per brand category the caller picked
+  #   2. one filtered recommendation per brand category the caller picked (the first 3, R31)
   #   3. brands proven to sponsor similar podcasts (ProvenSponsorScan)
   # then scores the merged set with affinity_for and Matching::Score. Returns up to 50 Matching::Scored,
   # one per brand, best first. Every candidate is remembered on the toolkit for the provenance check.
@@ -11,6 +11,7 @@ module Research
   class SponsorCandidates
     BROAD_TAKE = 50
     CATEGORY_TAKE = 20
+    MAX_CATEGORIES = 3
     POPULARITY_MAX = 0.97
     MAX_RESULTS = 50
     BRAND_TAG_PREFIX = "urn:tag:genre:brand:".freeze
@@ -23,7 +24,9 @@ module Research
       @toolkit = toolkit
       @entity_ids = Array(seed_entity_ids).map(&:to_s).uniq
       @tag_ids = Array(seed_tag_ids).map(&:to_s).uniq
-      @categories = Array(categories).map { |c| c.to_s.strip }.reject(&:blank?).uniq
+      requested = Array(categories).map { |c| c.to_s.strip }.reject(&:blank?).uniq
+      @categories = requested.first(MAX_CATEGORIES)
+      @dropped_categories = requested.drop(MAX_CATEGORIES)
       @scan_limit = scan_limit
       @pool = {}
       @category_tag_ids = Set.new
@@ -68,7 +71,8 @@ module Research
           add(brands || [])
           "#{name}: #{brands&.size || 0}"
         end
-        step.output_summary = counts.join(", ")
+        dropped = "; searched the first #{MAX_CATEGORIES}, not #{@dropped_categories.to_sentence}" if @dropped_categories.any?
+        step.output_summary = "#{counts.join(', ')}#{dropped}"
       end
     end
 
@@ -103,7 +107,8 @@ module Research
     end
 
     def candidate(brand, affinity)
-      Matching::Candidate.new(entity: brand, affinity: affinity || brand.affinity, proven_evidence: @evidence[brand.id] || [],
+      Matching::Candidate.new(entity: brand, affinity: affinity || brand.affinity,
+                              proven_evidence: @evidence[brand.id] || Matching::Candidate::NO_EVIDENCE,
                               shared_tag_count: shared_tag_count(brand), category_match: brand.tags.any? { |t| @category_tag_ids.include?(t.id) })
     end
 
@@ -132,7 +137,7 @@ module Research
 
     def score_summary(scored)
       tiers = scored.map(&:tier).tally
-      proven = scored.count { |s| s.candidate.proven_evidence.any? }
+      proven = scored.count { |s| s.candidate.proven_evidence[:count].positive? }
       parts = { easy_yes: "easy yes", realistic: "realistic", long_shot: "long shot" }.filter_map do |tier, label|
         "#{tiers[tier]} #{label}" if tiers[tier]
       end

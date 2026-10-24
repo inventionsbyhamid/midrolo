@@ -48,6 +48,14 @@ RSpec.describe Research::SponsorCandidates do
     ])
   end
 
+  it "runs at most 3 category passes (R31)" do
+    allow(taste).to receive(:recommend).and_call_original
+    find(categories: %w[Finance Productivity Technology Travel Fitness])
+
+    expect(taste).to have_received(:recommend).with(hash_including(filter_tags: anything)).exactly(3).times
+    expect(report.agent_steps.find_by(label: "Looking for Finance, Productivity, and Technology brands…")).to be_present
+  end
+
   it "marks brands in a chosen category" do
     result = find(categories: [ "Finance" ])
     finance, other = result.partition { |s| s.candidate.entity.tags.map(&:id).include?("urn:tag:genre:brand:finance") }
@@ -64,9 +72,13 @@ RSpec.describe Research::SponsorCandidates do
 
     expect(mercury).to be_present
     evidence = mercury.candidate.proven_evidence
-    expect(evidence.first.keys).to eq(%i[show episode_title published_at])
-    expect(evidence.first[:show]).to eq("The Founder's Ledger")
-    expect(evidence.first[:published_at]).to be_a(Time)
+    expect(evidence.keys).to eq(%i[items count])
+    expect(evidence[:count]).to be >= evidence[:items].size
+    expect(evidence[:items].first.keys).to eq(%i[show episode_title published_at])
+    expect(evidence[:items].first[:show]).to eq("The Founder's Ledger")
+    expect(evidence[:items].first[:published_at]).to be_a(Time)
+    no_proof = result.find { |s| !s.candidate.entity.name.in?(%w[Mercury AG1 Squarespace Calm Linear]) }
+    expect(no_proof.candidate.proven_evidence).to eq(items: [], count: 0)
     expect(result.map { |s| s.candidate.entity.id }).to include(*taste.recommend(type: :brand, entity_ids: seed_ids, tag_ids: tag_ids, popularity_max: 0.97, take: 3).map(&:id))
   end
 

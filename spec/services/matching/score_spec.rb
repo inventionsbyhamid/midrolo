@@ -8,7 +8,10 @@ RSpec.describe Matching::Score do
                       image_url: nil, description: nil, website: nil, tags: [], properties: {})
   end
 
-  def candidate(popularity: 0.5, affinity: 1.0, evidence: [ { show: "S", episode_title: "E", published_at: now - 1.day } ],
+  # Proven evidence shape: {items: [up to 3 latest {show:, episode_title:, published_at:}], count: total}.
+  def proven(published_at) = { items: [ { show: "S", episode_title: "E", published_at: published_at } ], count: 1 }
+
+  def candidate(popularity: 0.5, affinity: 1.0, evidence: proven(now - 1.day),
                 shared: 10, category: true, name: "Brand")
     Matching::Candidate.new(entity: entity(popularity: popularity, name: name), affinity: affinity,
                             proven_evidence: evidence, shared_tag_count: shared, category_match: category)
@@ -39,12 +42,14 @@ RSpec.describe Matching::Score do
   end
 
   it "gives full proven weight within 90 days and half when older" do
-    recent = candidate(evidence: [ { show: "S", episode_title: "E", published_at: now - 89.days } ])
-    old = candidate(evidence: [ { show: "S", episode_title: "E", published_at: now - 91.days } ])
-    none = candidate(evidence: [])
+    recent = candidate(evidence: proven(now - 89.days))
+    old = candidate(evidence: proven(now - 91.days))
+    none = candidate(evidence: Matching::Candidate::NO_EVIDENCE)
+    missing = candidate(evidence: nil)
     expect(score_of([ recent ], downloads: 10_000).first.fit_score).to eq(100)
     expect(score_of([ old ], downloads: 10_000).first.fit_score).to eq(90)
     expect(score_of([ none ], downloads: 10_000).first.fit_score).to eq(80)
+    expect(score_of([ missing ], downloads: 10_000).first.fit_score).to eq(80)
   end
 
   it "normalizes affinity and shared tags against the max in the call" do
@@ -56,28 +61,28 @@ RSpec.describe Matching::Score do
   end
 
   it "handles nil and zero affinity and zero shared tags" do
-    c = candidate(affinity: nil, shared: 0, evidence: [], category: false)
+    c = candidate(affinity: nil, shared: 0, evidence: Matching::Candidate::NO_EVIDENCE, category: false)
     expect(score_of([ c ], downloads: 10_000).first.fit_score).to eq(0)
   end
 
   it "clamps to 0 after the penalty" do
-    c = candidate(popularity: 1.0, affinity: 0, shared: 0, evidence: [], category: false)
+    c = candidate(popularity: 1.0, affinity: 0, shared: 0, evidence: Matching::Candidate::NO_EVIDENCE, category: false)
     expect(score_of([ c ], downloads: 100).first.fit_score).to eq(0)
   end
 
   it "sorts descending by score, ties broken by higher affinity" do
-    low = candidate(affinity: 0.2, name: "low", shared: 0, evidence: [], category: false)
+    low = candidate(affinity: 0.2, name: "low", shared: 0, evidence: Matching::Candidate::NO_EVIDENCE, category: false)
     # same score via different mix: affinity-heavy vs category-heavy is not equal, so craft equal scores
-    x = candidate(affinity: 1.0, shared: 0, evidence: [], category: false, name: "x")
-    y = candidate(affinity: 0.5, shared: 0, evidence: [], category: true, name: "y")
+    x = candidate(affinity: 1.0, shared: 0, evidence: Matching::Candidate::NO_EVIDENCE, category: false, name: "x")
+    y = candidate(affinity: 0.5, shared: 0, evidence: Matching::Candidate::NO_EVIDENCE, category: true, name: "y")
     result = score_of([ low, y, x ], downloads: 10_000)
     expect(result.map { |s| s.candidate.entity.name }).to eq(%w[x y low])
   end
 
   it "breaks exact score ties by higher affinity" do
-    p_ = candidate(affinity: 1.0, shared: 0, evidence: [], category: false, name: "p")
+    p_ = candidate(affinity: 1.0, shared: 0, evidence: Matching::Candidate::NO_EVIDENCE, category: false, name: "p")
     q = candidate(affinity: 0.5, shared: 5, category: false, name: "q") # 27.5 + 20 + 7.5
-    r = candidate(affinity: 0.0, shared: 10, evidence: [], category: false, name: "r")
+    r = candidate(affinity: 0.0, shared: 10, evidence: Matching::Candidate::NO_EVIDENCE, category: false, name: "r")
     result = score_of([ q, r, p_ ], downloads: 10_000)
     expect(result.map { |s| [ s.candidate.entity.name, s.fit_score ] }).to eq([ [ "p", 55 ], [ "q", 55 ], [ "r", 15 ] ])
   end

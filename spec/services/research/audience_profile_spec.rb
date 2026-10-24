@@ -122,6 +122,21 @@ RSpec.describe Research::AudienceProfile do
     expect(report.agent_steps.pluck(:status)).to include("warning")
   end
 
+  it "keeps the core brand call but skips optional parts once the research budget is spent" do
+    kit = Research::Toolkit.new(report, taste: taste, max_taste_calls: 1)
+    result = described_class.build(kit, seed_entity_ids: seed_ids, seed_tag_ids: tag_ids, country: "US")
+    report.reload
+
+    expect(report.audience["brands"].size).to eq(20)
+    expect(report.audience.values_at("artists", "tv_shows", "podcasts", "tags")).to all(eq([]))
+    expect(report.demographics).to eq("age" => {}, "gender" => {})
+    expect(report.heatmap["points"]).to eq([])
+    expect(result[:thin]).to be(false)
+    expect(report.agent_steps.pluck(:status)).to all(eq("warning"))
+    expect(report.agent_steps.pluck(:output_summary)).to all(include("Skipped to stay within research budget"))
+    expect(report.taste_calls).to eq(1)
+  end
+
   it "lets a failing brand recommendation propagate" do
     allow(taste).to receive(:recommend).and_raise(Taste::Unavailable, "503")
     expect { build }.to raise_error(Taste::Unavailable)

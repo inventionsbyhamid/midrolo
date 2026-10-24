@@ -1,0 +1,27 @@
+# Proven-sponsor scan denylist (R32): names that appear like sponsors in show notes but are platforms or
+# self-promotion. Compared on normalized names (Research::Names.normalize) before any Qloo lookup.
+# The scan also excludes, per run, the user's show and every similar show it reads: their titles, the
+# feed owner (often the host or network) and the owner email's domain. Real sponsors never go here.
+shared:
+  denylist:
+    - patreon
+    - youtube
+    - apple
+    - apple podcasts
+    - spotify
+    - instagram
+    - tiktok
+    - facebook
+    - twitter
+    - x
+    - threads
+    - substack
+    - buy me a coffee
+    - buy me # the capture stops at lowercase words, so "Buy Me a Coffee" arrives as "Buy Me"
+    - ko-fi
+    - kofi
+    - discord
+    - linktree
+    - gumroad
+    - memberful
+    - supercast

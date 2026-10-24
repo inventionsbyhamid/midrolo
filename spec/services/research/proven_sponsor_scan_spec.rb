@@ -11,7 +11,7 @@ RSpec.describe Research::ProvenSponsorScan do
   let(:directory) { instance_double(Podcasts::Directories::Fake) }
   let(:report) { create(:report) }
   let(:toolkit) { Research::Toolkit.new(report, taste: taste, directory: directory) }
-  let(:notion_id) { taste.search(query: "Notion", types: [ :brand ], take: 1).first.id }
+  let(:notion_id) { brand_id("Notion") }
 
   before do
     allow(Resolv).to receive(:getaddresses).and_return([ "93.184.216.34" ])
@@ -20,8 +20,30 @@ RSpec.describe Research::ProvenSponsorScan do
     allow(directory).to receive(:search).with("The Sponsored Show", limit: 5).and_return([ info ])
   end
 
+  def brand_id(name) = taste.search(query: name, types: [ :brand ], take: 1).first.id
+
   def scan(names = [ "The Sponsored Show" ], limit: 8)
     described_class.call(toolkit, podcast_names: names, limit: limit)
+  end
+
+  # Synthetic RSS: one item per description (HTML allowed), newest first, a week apart.
+  def feed_xml(descriptions, title: "The Sponsored Show", owner: "Sam Sponsor", email: "host@sponsored.example.com")
+    items = descriptions.each_with_index.map do |html, i|
+      date = (Time.utc(2026, 10, 12, 9) - i.weeks).rfc2822
+      "<item><title>Episode #{descriptions.size - i}</title><description><![CDATA[#{html}]]></description>" \
+        "<pubDate>#{date}</pubDate><guid>ep-#{descriptions.size - i}</guid></item>"
+    end
+    <<~XML
+      <?xml version="1.0" encoding="UTF-8"?>
+      <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel><title>#{title}</title>
+        <itunes:owner><itunes:name>#{owner}</itunes:name><itunes:email>#{email}</itunes:email></itunes:owner>
+        #{items.join("\n")}
+      </channel></rss>
+    XML
+  end
+
+  def serve(descriptions, **opts)
+    stub_request(:get, feed_url).to_return(status: 200, body: feed_xml(descriptions, **opts))
   end
 
   it "extracts sponsor candidates from the sponsored feed" do
@@ -34,18 +56,22 @@ RSpec.describe Research::ProvenSponsorScan do
     result = scan
 
     expect(result.keys).to eq([ notion_id ])
-    expect(result[notion_id]).to eq([
-      { show: "The Sponsored Show", episode_title: "Episode 3: Notes that organise themselves", published_at: Time.utc(2026, 10, 12, 9) }
-    ])
-    expect(result[notion_id].first[:published_at]).to be_a(Time)
+    expect(result[notion_id]).to eq(
+      items: [ { show: "The Sponsored Show", episode_title: "Episode 3: Notes that organise themselves", published_at: Time.utc(2026, 10, 12, 9) } ],
+      count: 1
+    )
+    expect(result[notion_id][:items].first[:published_at]).to be_a(Time)
     expect(toolkit.seen_entity_ids).to include(notion_id)
   end
 
-  it "logs a friendly step per show" do
+  it "logs a friendly step per show, then one step confirming the names on Qloo" do
     scan
-    step = report.agent_steps.last
-    expect(step).to have_attributes(tool: "proven_sponsor_scan", label: "Checking who sponsors The Sponsored Show…", status: "ok")
-    expect(step.output_summary).to eq("Found 1 sponsor on Qloo: Notion")
+    show_step, confirm_step = report.agent_steps.order(:position).last(2)
+
+    expect(show_step).to have_attributes(tool: "proven_sponsor_scan", label: "Checking who sponsors The Sponsored Show…", status: "ok")
+    expect(show_step.output_summary).to eq("Found 2 sponsor reads: Notion, acme.com")
+    expect(confirm_step).to have_attributes(tool: "proven_sponsor_scan", label: "Confirming sponsors on Qloo…", status: "ok")
+    expect(confirm_step.output_summary).to eq("Matched 1 of 2 names on Qloo: Notion")
   end
 
   it "exposes the resolved brand entities" do
@@ -62,7 +88,7 @@ RSpec.describe Research::ProvenSponsorScan do
     result = scan([ "The Sponsored Show", "The Sponsored Show Again" ])
     expect(taste).to have_received(:search).with(hash_including(query: "Notion")).once
     expect(taste).to have_received(:search).with(hash_including(query: "acme")).once
-    expect(result[notion_id].map { |e| e[:show] }).to eq([ "The Sponsored Show", "The Sponsored Show Again" ])
+    expect(result[notion_id][:items].map { |e| e[:show] }).to eq([ "The Sponsored Show", "The Sponsored Show Again" ])
   end
 
   it "lists each brand's evidence newest first across shows" do
@@ -73,7 +99,105 @@ RSpec.describe Research::ProvenSponsorScan do
     allow(directory).to receive(:search).with("Older Show", limit: 5).and_return([ info.with(title: "Older Show", feed_url: older_url) ])
 
     result = scan([ "Older Show", "The Sponsored Show" ])
-    expect(result[notion_id].map { |e| e[:show] }).to eq([ "The Sponsored Show", "Older Show" ])
+    expect(result[notion_id][:items].map { |e| e[:show] }).to eq([ "The Sponsored Show", "Older Show" ])
+  end
+
+  it "keeps the 3 latest evidence items per brand plus the total count" do
+    serve(Array.new(5) { "This episode is sponsored by Notion." })
+    evidence = scan[notion_id]
+
+    expect(evidence[:count]).to eq(5)
+    expect(evidence[:items].map { |e| e[:episode_title] }).to eq([ "Episode 5", "Episode 4", "Episode 3" ])
+  end
+
+  it "resolves at most 15 names per scan, the most frequent first (R31)" do
+    once = %w[Alder Birch Cedar Dogwood Elmwood Firtree Ginkgo Hazel Ironbark Juniper Kapok Larch Maplewood Nutmeg Olivewood Pinewood]
+    serve(once.map { |n| "This episode is sponsored by #{n}." } + Array.new(3) { "This episode is sponsored by Notion." })
+    allow(taste).to receive(:search).and_call_original
+
+    result = scan
+    expect(taste).to have_received(:search).exactly(15).times
+    expect(taste).to have_received(:search).with(hash_including(query: "Notion"))
+    expect(taste).not_to have_received(:search).with(hash_including(query: "Pinewood"))
+    expect(result.keys).to eq([ notion_id ])
+    expect(report.agent_steps.order(:position).last.output_summary).to include("15 most frequent of 17 names")
+  end
+
+  it "stops resolving once the run's research budget is spent" do
+    kit = Research::Toolkit.new(report, taste: taste, directory: directory, max_taste_calls: 1)
+    serve([ "This episode is sponsored by Ramp.", "This episode is sponsored by Notion." ])
+
+    expect(described_class.call(kit, podcast_names: [ "The Sponsored Show" ], limit: 8).keys).to eq([ brand_id("Ramp") ])
+    expect(report.agent_steps.order(:position).last).to have_attributes(status: "warning")
+    expect(report.agent_steps.order(:position).last.output_summary).to include("Skipped to stay within research budget")
+  end
+
+  describe "platform and self-promotion links (R32)" do
+    before { report.show.update!(title: "My Own Show") }
+
+    it "never treats them as sponsors, but keeps real sponsors" do
+      serve([
+        "Support us: go to patreon.com/ourshow today.",
+        "This episode is brought to you by Patreon supporters like you.",
+        "This episode is brought to you by the letter A.",
+        "Brought to you by A. Thanks to our sponsor X.",
+        "Thanks to our sponsor Spotify.",
+        "Use code SHOW at gumroad.com for the workbook.",
+        "Go to ko-fi.com/ourshow to tip.",
+        "This episode is sponsored by Apple Podcasts subscribers.",
+        "Support for this show comes from Buy Me a Coffee.",
+        "This episode is brought to you by The Sponsored Show.",
+        "Today's show is brought to you by Sam Sponsor.",
+        "Go to sponsored.com/merch for shirts.",
+        "Brought to you by My Own Show.",
+        "This episode is sponsored by Squarespace."
+      ])
+      squarespace_id = brand_id("Squarespace")
+      allow(taste).to receive(:search).and_call_original
+
+      result = scan
+      expect(result.keys).to eq([ squarespace_id ])
+      expect(taste).to have_received(:search).with(hash_including(types: [ :brand ])).once
+    end
+
+    it "excludes each similar show's own title" do
+      serve([ "This episode is brought to you by Other Pod.", "This episode is sponsored by Notion." ])
+      allow(directory).to receive(:search).with("Other Pod", limit: 5).and_return([])
+      allow(taste).to receive(:search).and_call_original
+
+      scan([ "The Sponsored Show", "Other Pod" ])
+      expect(taste).not_to have_received(:search).with(hash_including(query: "Other Pod"))
+    end
+
+    it "loads the denylist from config/proven_scan.yml" do
+      expect(Rails.application.config_for(:proven_scan)[:denylist]).to include("patreon", "buy me a coffee", "ko-fi")
+      expect(described_class.denylisted?("Patreon")).to be(true)
+      expect(described_class.denylisted?("Buy Me a Coffee")).to be(true)
+      expect(described_class.denylisted?("kofi.com")).to be(true)
+      expect(described_class.denylisted?("X")).to be(true)
+      expect(described_class.denylisted?("Squarespace")).to be(false)
+      expect(described_class.denylisted?("Notion")).to be(false)
+    end
+  end
+
+  describe "real-world show notes (R33)" do
+    it "reads up to 4,000 characters of each description, so late sponsor lines are found" do
+      serve([ "<p>#{'Long show notes. ' * 50}</p><p>This episode is sponsored by Notion.</p>" ])
+      allow(toolkit.feed_reader).to receive(:read).and_call_original
+
+      expect(scan.keys).to eq([ notion_id ])
+      expect(toolkit.feed_reader).to have_received(:read).with(feed_url, max_episodes: 20, description_limit: 4000)
+    end
+
+    it "does not run paragraphs together" do
+      serve([ "<p>Sponsored by Notion</p><p>Visit Today</p>" ])
+      expect(scan.keys).to eq([ notion_id ])
+    end
+
+    it "resolves a possessive capture to the brand" do
+      serve([ "This episode is brought to you by Notion’s new AI." ])
+      expect(scan.keys).to eq([ notion_id ])
+    end
   end
 
   it "honours the limit and skips blanks, duplicates and the user's own show" do
@@ -126,9 +250,13 @@ RSpec.describe Research::ProvenSponsorScan do
       "Today's show is brought to you by Rocket Money." => [ "Rocket Money" ],
       "Support for this show comes from Booking.com. Book now." => [ "Booking.com" ],
       "Sponsored by Notion. Try it free" => [ "Notion" ],
+      "Sponsored by Notion\nVisit Today" => [ "Notion" ],
       "Go to betterhelp.com/money for 10% off" => [ "betterhelp" ],
       "Use promo code SAVE for hellofresh.com" => [ "hellofresh.com" ],
       "brought to you by AG1, the daily drink" => [ "AG1" ],
+      "This episode is sponsored by Café Nero." => [ "Café Nero" ],
+      "Today's show is brought to you by Trader Joe’s." => [ "Trader Joe’s" ],
+      "This episode is brought to you by the letter A." => [],
       "No sponsors here, thanks for listening." => [],
       "" => []
     }.each do |text, expected|

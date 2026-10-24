@@ -46,6 +46,18 @@ RSpec.describe Research::Seeds do
         expect(seeds[:sources]["urn:tag:interest:personal_finance"]).to eq("Topic: personal finance")
       end
 
+      it "caps hint and topic lookups like from_lookup, counting unresolved ones (R31)" do
+        show.update_columns(hints: { "comparable_shows" => Array.new(12) { |i| "Zzqx Missing #{i}" },
+                                     "topics" => Array.new(7) { |i| "qqzzx#{i}" } })
+        allow(taste).to receive(:search).and_call_original
+        allow(taste).to receive(:find_tags).and_call_original
+        seeds = described_class.deterministic(toolkit)
+
+        expect(taste).to have_received(:search).exactly(1 + described_class::MAX_LOOKUP_NAMES).times
+        expect(taste).to have_received(:find_tags).exactly(described_class::MAX_LOOKUP_TOPICS + 1).times # + category
+        expect(seeds[:unresolved].size).to eq(described_class::MAX_LOOKUP_NAMES + described_class::MAX_LOOKUP_TOPICS)
+      end
+
       it "keeps at most 5 tag seeds, topics first" do
         show.update!(hints: { topics: [ "personal finance", "remote work", "side projects", "early adopters", "commuting" ] })
         seeds = described_class.deterministic(toolkit)

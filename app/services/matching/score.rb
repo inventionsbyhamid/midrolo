@@ -38,11 +38,13 @@ module Matching
       (100 * weighted - small_show_penalty(candidate.entity.popularity)).clamp(0, 100).round
     end
 
+    # evidence: {items: [{show:, episode_title:, published_at:}], count:} (see Matching::Candidate), or nil.
     def proven_weight(evidence)
-      return 0 if evidence.blank?
+      items = Array(evidence && evidence[:items])
+      return 0 if items.empty?
 
       cutoff = @now - PROVEN_WINDOW
-      evidence.any? { |e| e[:published_at] && e[:published_at] >= cutoff } ? 1.0 : 0.5
+      items.any? { |e| e[:published_at] && e[:published_at] >= cutoff } ? 1.0 : 0.5
     end
 
     def small_show_penalty(popularity)

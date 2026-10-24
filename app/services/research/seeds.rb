@@ -18,7 +18,8 @@ module Research
     def self.from_lookup(toolkit, names:, topics:) = new(toolkit).from_lookup(names, topics)
 
     # No LLM: the show itself on Qloo, then the shows the user listed, then their topics, then the show's
-    # categories as media genre tags.
+    # categories as media genre tags. Lookups are capped like from_lookup's (10 names, 5 topics), and an
+    # unresolved hint still uses up its lookup.
     def self.deterministic(toolkit) = new(toolkit).deterministic
 
     def initialize(toolkit)
@@ -64,7 +65,7 @@ module Research
     end
 
     def find_comparable_shows
-      names = distinct(show.hints[:comparable_shows])
+      names = distinct(show.hints[:comparable_shows]).first(MAX_LOOKUP_NAMES)
       return if names.empty?
 
       log.step("find_on_qloo", "Looking up the shows you listed…", input: names.join(", ")) do |step|
@@ -74,7 +75,7 @@ module Research
     end
 
     def find_topic_and_category_tags
-      topics = distinct(show.hints[:topics])
+      topics = distinct(show.hints[:topics]).first(MAX_LOOKUP_TOPICS)
       categories = distinct(show.categories)
       return if topics.empty? && categories.empty?
 
