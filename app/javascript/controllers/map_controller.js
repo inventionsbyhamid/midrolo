@@ -39,18 +39,21 @@ export default class extends Controller {
   disconnect() {
     this.observer?.disconnect()
     clearTimeout(this.errorTimer)
+    this.errorTimer = null
     this.map?.remove()
     this.map = null
   }
 
   async load() {
     try {
-      const { Map, NavigationControl, LngLatBounds } = await import("maplibre-gl")
-      if (!this.element.isConnected) return
+      const { Map: MapLibreMap, NavigationControl, LngLatBounds } = await import("maplibre-gl")
+      if (!this.element.isConnected || this.map) return
 
+      this.ready = false
+      this.failed = false
       const bounds = this.pointsValue.reduce((box, p) => box.extend([p.lng, p.lat]), new LngLatBounds())
       this.canvasTarget.replaceChildren() // a restored Turbo snapshot may carry a dead copy of the last map
-      this.map = new Map({
+      this.map = new MapLibreMap({
         container: this.canvasTarget,
         style: this.styleValue,
         bounds,

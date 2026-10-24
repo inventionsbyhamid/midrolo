@@ -4,14 +4,22 @@ require "rails_helper"
 # the scripted runner with templated reasons), then read the sections. Jobs run inline, so the report is finished
 # when the redirect lands; live Turbo updates are covered by the request and model specs.
 #
-# The map needs MapLibre from cdn.jsdelivr.net and a WebGL context, so this spec needs network access.
+# The map needs MapLibre from cdn.jsdelivr.net and a WebGL context, so this spec needs network access (the
+# map style itself is inlined).
 RSpec.describe "Report flow" do
+  # A one-layer style: no tile downloads, and nothing heavy for software WebGL to draw under load.
+  blank_style = "data:application/json,#{ERB::Util.url_encode({ version: 8, sources: {},
+                                                                layers: [ { id: "bg", type: "background" } ] }.to_json)}"
+
   around do |example|
     adapter = ActiveJob::Base.queue_adapter
+    style = ENV["MAP_STYLE_URL"]
     ActiveJob::Base.queue_adapter = :inline
+    ENV["MAP_STYLE_URL"] = blank_style
     example.run
   ensure
     ActiveJob::Base.queue_adapter = adapter
+    ENV["MAP_STYLE_URL"] = style
   end
 
   before do
@@ -28,13 +36,14 @@ RSpec.describe "Report flow" do
   def count_cards(filter = "") = all(card(filter), visible: :all).size
 
   it "runs a full report and shows the steps, the map and filterable sponsor matches" do
+    # Page loads and the debounced search can outlast Capybara's 2-second default under load.
     visit "/users/sign_in"
     click_button "Continue with Google"
 
-    fill_in "Podcast title", with: "Founder"
-    within("#search_results") { click_button "This is my show" }
-    click_link "Skip for now"
-    click_button "Run full report"
+    fill_in "Podcast title", with: "Founder", wait: 10
+    within("#search_results") { click_button "This is my show", wait: 10 }
+    click_link "Skip for now", wait: 10
+    click_button "Run full report", wait: 10
 
     expect(page).to have_text("Report ready", wait: 30) # the job runs inside the POST
     within("aside") do
@@ -52,7 +61,8 @@ RSpec.describe "Report flow" do
     end
 
     scroll_to(find("#report_map"), align: :center) # the map loads MapLibre once it nears the viewport
-    expect(page).to have_css("#report_map canvas.maplibregl-canvas", wait: 20)
+    expect(page).to have_css("#report_map canvas.maplibregl-canvas", wait: 30)
+    expect(page).to have_css("#report_map [data-map-target='status']", visible: :hidden, wait: 30) # the heatmap drew
     map_box = evaluate_script("document.querySelector('#report_map .maplibregl-map').getBoundingClientRect().toJSON()")
     expect(map_box["height"]).to be > 200 # MapLibre's own CSS must not collapse the map
     within("#report_map") { expect(page).to have_text("Top metros") }
