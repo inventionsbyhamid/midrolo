@@ -1,6 +1,6 @@
 <% content_for :title, "Pipeline" %>
 <% groups = @matches.group_by(&:status) %>
-<% due = @matches.filter_map(&:follow_up_state).tally %>
+<% due = @matches.filter_map(&:follow_up_alert).tally %>
 <div class="flex flex-col gap-8">
   <header class="flex flex-wrap items-end justify-between gap-4">
     <div class="min-w-0 basis-96 grow">

@@ -1,8 +1,8 @@
 <%# locals: (sponsor_match:) -%>
-<%# One brand on the pipeline page. A follow-up due today or overdue is flagged (data-follow-up). %>
+<%# One brand on the pipeline page. An open deal's follow-up due today or overdue is flagged (data-follow-up). %>
 <% match = sponsor_match %>
 <% name_id = dom_id(match, :pipeline_name) %>
-<article class="card pipeline-entry" data-pipeline-entry data-follow-up="<%= match.follow_up_state %>" aria-labelledby="<%= name_id %>">
+<article class="card pipeline-entry" data-pipeline-entry <%= tag.attributes(data: { follow_up: match.follow_up_alert }) %> aria-labelledby="<%= name_id %>">
   <div class="flex items-start gap-3">
     <%= render "sponsor_matches/logo", sponsor_match: match, size: "size-11 text-sm" %>
     <div class="min-w-0 flex-1">

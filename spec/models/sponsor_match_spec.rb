@@ -180,6 +180,18 @@ RSpec.describe SponsorMatch do
     end
   end
 
+  describe "#follow_up_alert" do
+    around { |example| travel_to(Date.new(2026, 10, 25)) { example.run } }
+
+    it "flags an open deal's follow-up due today or overdue, never a won or lost one" do
+      expect(build(:sponsor_match, status: "pitched", follow_up_on: Date.new(2026, 10, 25)).follow_up_alert).to eq(:today)
+      expect(build(:sponsor_match, status: "saved", follow_up_on: Date.new(2026, 10, 1)).follow_up_alert).to eq(:overdue)
+      expect(build(:sponsor_match, status: "pitched", follow_up_on: Date.new(2026, 10, 30)).follow_up_alert).to be_nil
+      expect(build(:sponsor_match, status: "won", follow_up_on: Date.new(2026, 10, 1)).follow_up_alert).to be_nil
+      expect(build(:sponsor_match, status: "lost", follow_up_on: Date.new(2026, 10, 25)).follow_up_alert).to be_nil
+    end
+  end
+
   describe "#follow_up_state" do
     around { |example| travel_to(Date.new(2026, 10, 25)) { example.run } }
 

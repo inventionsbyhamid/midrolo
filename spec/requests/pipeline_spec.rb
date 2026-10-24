@@ -73,10 +73,23 @@ RSpec.describe "Pipeline" do
       expect(entries["Today Co"].at_css(".pipeline-follow-up .badge").text).to eq("Due today")
       expect(entries["Late Co"]["data-follow-up"]).to eq("overdue")
       expect(entries["Late Co"].at_css(".pipeline-follow-up .badge").text).to eq("Overdue")
-      expect(entries["Later Co"]["data-follow-up"]).to eq("upcoming")
+      expect(entries["Later Co"]["data-follow-up"]).to be_nil
       expect(entries["Later Co"].css(".pipeline-follow-up .badge").map(&:text)).not_to include("Due today", "Overdue")
       expect(brands_in("pitched")).to eq([ "Late Co", "Today Co", "Later Co" ]) # soonest follow-up first
       expect(page.text.squish).to include("1 follow-up overdue", "1 due today")
+    end
+
+    it "doesn't flag follow-ups on won or lost brands, or count them as due" do
+      create(:sponsor_match, report: report, name: "Won Co", status: "won", follow_up_on: Date.new(2026, 10, 20))
+      create(:sponsor_match, report: report, name: "Lost Co", status: "lost", follow_up_on: Date.new(2026, 10, 25))
+
+      get pipeline_path
+
+      entries = page.css("[data-pipeline-entry]")
+      expect(entries.map { |entry| entry["data-follow-up"] }).to eq([ nil, nil ])
+      expect(entries.map { |entry| entry.at_css("time")&.text }).to contain_exactly("Oct 20", "Oct 25")
+      expect(page.css(".pipeline-follow-up .badge")).to be_empty
+      expect(page.at_css("[data-follow-up-summary]")).to be_nil
     end
 
     it "lists brands across all the user's shows, never another user's" do

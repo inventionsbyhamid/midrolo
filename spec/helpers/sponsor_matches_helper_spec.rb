@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe SponsorMatchesHelper do
   around { |example| travel_to(Date.new(2026, 10, 25)) { example.run } }
 
-  def match_due(date) = build(:sponsor_match, follow_up_on: date)
+  def match_due(date) = build(:sponsor_match, status: "pitched", follow_up_on: date)
 
   describe "#follow_up_flag" do
     it "says today, overdue, or the date" do
@@ -11,6 +11,13 @@ RSpec.describe SponsorMatchesHelper do
       expect(helper.follow_up_flag(match_due(Date.new(2026, 10, 1)))).to eq("Follow-up overdue")
       expect(Nokogiri::HTML5.fragment(helper.follow_up_flag(match_due(Date.new(2026, 11, 2)))).text).to eq("Follow up Nov 2")
       expect(helper.follow_up_flag(match_due(nil))).to be_nil
+    end
+
+    it "gives a won or lost brand its date, never a due flag" do
+      won = build(:sponsor_match, status: "won", follow_up_on: Date.new(2026, 10, 1))
+      expect(Nokogiri::HTML5.fragment(helper.follow_up_flag(won)).text).to eq("Follow up Oct 1")
+      expect(helper.follow_up_tone(won)).to eq(:neutral)
+      expect(helper.follow_up_badge(build(:sponsor_match, status: "lost", follow_up_on: Date.new(2026, 10, 25)))).to be_nil
     end
   end
 

@@ -2,6 +2,8 @@ class SponsorMatch < ApplicationRecord
   STATUSES = %w[suggested saved pitched replied won lost].freeze
   # The podcaster's pipeline, in order: every status past "suggested".
   PIPELINE_STATUSES = (STATUSES - %w[suggested]).freeze
+  # A won or lost deal has no follow-up to chase.
+  CLOSED_STATUSES = %w[won lost].freeze
   NOTES_LIMIT = 2_000
   # A date input left half-typed can submit a year like 0002; nobody follows up outside these years.
   FOLLOW_UP_YEARS = 2000..2100
@@ -59,6 +61,12 @@ class SponsorMatch < ApplicationRecord
     return :today if follow_up_on == today
 
     follow_up_on < today ? :overdue : :upcoming
+  end
+
+  # :overdue or :today when an open deal's follow-up needs doing; nil otherwise, and always for won or lost.
+  def follow_up_alert
+    state = follow_up_state
+    state if state.in?(%i[overdue today]) && !status.in?(CLOSED_STATUSES)
   end
 
   # True for a Snapshot match past the plan's visible limit, in report order: the report shows it blurred with

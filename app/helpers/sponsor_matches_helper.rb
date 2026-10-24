@@ -1,6 +1,6 @@
 # The pipeline pieces of a match card (sponsor_matches/_status_form) and of the /pipeline page.
 module SponsorMatchesHelper
-  FOLLOW_UP_TONES = { overdue: :danger, today: :warning, upcoming: :neutral }.freeze
+  FOLLOW_UP_TONES = { overdue: :danger, today: :warning }.freeze
   FOLLOW_UP_BADGES = { overdue: "Overdue", today: "Due today" }.freeze
   STATUS_TONES = { "saved" => :accent, "pitched" => :accent, "replied" => :accent, "won" => :success }.freeze
 
@@ -23,11 +23,12 @@ module SponsorMatchesHelper
 
   def status_badge(status) = ui_badge(status.humanize, tone: STATUS_TONES.fetch(status, :neutral))
 
-  def follow_up_tone(match) = FOLLOW_UP_TONES[match.follow_up_state]
+  # Danger when an open deal's follow-up is overdue, warning when it's due today, otherwise neutral.
+  def follow_up_tone(match) = FOLLOW_UP_TONES.fetch(match.follow_up_alert, :neutral)
 
-  # "Due today" or "Overdue", or nil for a later date.
+  # "Due today" or "Overdue" on an open deal, or nil.
   def follow_up_badge(match)
-    text = FOLLOW_UP_BADGES[match.follow_up_state]
+    text = FOLLOW_UP_BADGES[match.follow_up_alert]
     ui_badge(text, tone: follow_up_tone(match)) if text
   end
 
@@ -37,12 +38,14 @@ module SponsorMatchesHelper
     tag.time(text, datetime: date.iso8601)
   end
 
-  # The closed notes panel's flag: "Follow up Nov 2", "Follow up today" or "Follow-up overdue".
+  # The closed notes panel's flag: "Follow up today" or "Follow-up overdue" on an open deal, else "Follow up Nov 2".
   def follow_up_flag(match)
-    case match.follow_up_state
+    return unless match.follow_up_on
+
+    case match.follow_up_alert
     when :today then "Follow up today"
     when :overdue then "Follow-up overdue"
-    when :upcoming then safe_join([ "Follow up ", follow_up_time(match.follow_up_on) ])
+    else safe_join([ "Follow up ", follow_up_time(match.follow_up_on) ])
     end
   end
 end
