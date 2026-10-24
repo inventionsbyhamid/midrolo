@@ -9,6 +9,7 @@
 
 # Ignore all environment files.
 /.env*
+!/.env.example
 
 # Ignore all logfiles and tempfiles.
 /log/*
@@ -40,5 +41,3 @@
 # Recorded vendor responses must never be committed.
 /spec/fixtures/private/
 
-# Local environment
-.env
