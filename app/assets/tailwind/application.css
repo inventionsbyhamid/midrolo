@@ -725,6 +725,7 @@
     max-width: 60ch;
     font-size: var(--text-xl);
     line-height: 1.55;
+    white-space: pre-line; /* keep the summary's own line breaks */
     text-wrap: pretty;
   }
 
