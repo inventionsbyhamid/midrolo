@@ -12,6 +12,8 @@ shared:
     business: 1.5
     finance: 1.5
     technology: 1.5
+    investing: 1.5
+    money: 1.5
     health: 1.2
     education: 1.2
     default: 1.0
