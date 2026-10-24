@@ -19,6 +19,13 @@ RSpec.describe "Pipeline" do
 
   def csv_rows = CSV.parse(csv_text, headers: true)
 
+  def count_queries
+    queries = 0
+    counter = ->(*, payload) { queries += 1 unless payload[:name] == "SCHEMA" }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { yield }
+    queries
+  end
+
   def brands_in(status) = stage(status).css("[data-pipeline-entry] h3").map { |h| h.text.squish }
 
   it "requires sign in" do
@@ -90,6 +97,19 @@ RSpec.describe "Pipeline" do
       expect(entries.map { |entry| entry.at_css("time")&.text }).to contain_exactly("Oct 20", "Oct 25")
       expect(page.css(".pipeline-follow-up .badge")).to be_empty
       expect(page.at_css("[data-follow-up-summary]")).to be_nil
+    end
+
+    it "renders without a query per entry" do
+      create(:sponsor_match, report: report, status: "saved")
+      count_queries { get pipeline_path } # the first request also records the sign-in (Devise trackable)
+      with_one = count_queries { get pipeline_path }
+
+      second = create(:report, show: create(:show, user: user), kind: "agent", status: "done")
+      create_list(:sponsor_match, 3, report: report, status: "pitched", notes: "Emailed", follow_up_on: Date.new(2026, 10, 25))
+      create_list(:sponsor_match, 3, report: second, status: "won")
+
+      expect(count_queries { get pipeline_path }).to eq(with_one)
+      expect(page.css("[data-pipeline-entry]").size).to eq(7)
     end
 
     it "lists brands across all the user's shows, never another user's" do
@@ -219,12 +239,14 @@ RSpec.describe "Pipeline" do
     describe "CSV export" do
       it "redirects to pricing without CSV export on the plan" do
         stub_plan(csv_export?: false)
+        allow(Pipeline::Matches).to receive(:for).and_call_original
         create(:sponsor_match, report: report, status: "saved")
 
         get pipeline_path(format: :csv)
 
         expect(response).to redirect_to(pricing_path)
         expect(flash[:notice]).to include("Pro plan")
+        expect(Pipeline::Matches).not_to have_received(:for) # the plan is checked before the pipeline is loaded
         get pipeline_path
         expect(page.at_css("a[href='#{pipeline_path(format: :csv)}']")).to be_nil
         expect(page.at_css("a[href='#{pricing_path}']").text.squish).to include("Export CSV")
@@ -244,6 +266,7 @@ RSpec.describe "Pipeline" do
 
           expect(response.media_type).to eq("text/csv")
           expect(response.headers["Content-Disposition"]).to include("attachment", "midrolo-pipeline-2026-10-25.csv")
+          expect(response.body.b).to start_with("\xEF\xBB\xBF".b) # UTF-8 BOM, so Excel reads it as UTF-8
           rows = csv_rows
           expect(rows.headers).to eq([ "Show", "Brand", "Status", "Fit score", "Tier", "Category", "Website",
                                        "Follow-up date", "Notes", "Why it fits" ])
@@ -253,16 +276,17 @@ RSpec.describe "Pipeline" do
         end
 
         it "neutralizes values that a spreadsheet would run as formulas" do
+          show.update!(title: "=Show Title")
           create(:sponsor_match, report: report, name: "=HYPERLINK(\"http://evil.example\")", status: "saved",
-                                 category: "+cmd", notes: "-2+3", website: "@SUM(A1)", reason: "Fine reason")
+                                 category: "+cmd", notes: "-2+3", website: "@SUM(A1)", reason: "Fine reason", fit_score: 90)
+          create(:sponsor_match, report: report, name: "\tTabbed Brand", status: "saved", reason: "\rCarriage return",
+                                 notes: "Café ☕ – fine", fit_score: 80)
           get pipeline_path(format: :csv)
 
-          row = CSV.parse(response.body, headers: true).first
-          expect(row["Brand"]).to eq("'=HYPERLINK(\"http://evil.example\")")
-          expect(row["Category"]).to eq("'+cmd")
-          expect(row["Notes"]).to eq("'-2+3")
-          expect(row["Website"]).to eq("'@SUM(A1)")
-          expect(row["Why it fits"]).to eq("Fine reason")
+          first, second = csv_rows.map(&:to_h)
+          expect(first).to include("Show" => "'=Show Title", "Brand" => "'=HYPERLINK(\"http://evil.example\")",
+                                   "Category" => "'+cmd", "Notes" => "'-2+3", "Website" => "'@SUM(A1)", "Why it fits" => "Fine reason")
+          expect(second).to include("Brand" => "'\tTabbed Brand", "Why it fits" => "'\rCarriage return", "Notes" => "Café ☕ – fine")
         end
       end
     end

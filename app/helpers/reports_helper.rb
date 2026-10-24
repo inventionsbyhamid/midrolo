@@ -1,8 +1,9 @@
 # Formatting for the report sections (app/views/reports/sections). Section data is jsonb, so hashes arrive with
 # string keys; the shapes are documented in Research::AudienceProfile and Research::Tools::Save*.
 module ReportsHelper
-  TIERS = { "easy_yes" => [ "Easy yes", :success ], "realistic" => [ "Realistic", :accent ],
-            "long_shot" => [ "Long shot", :warning ] }.freeze
+  TIER_TONES = { "easy_yes" => :success, "realistic" => :accent, "long_shot" => :warning }.freeze
+  # tier => [label, badge tone], in tier order.
+  TIERS = Matching::Tier::LABELS.to_h { |tier, label| [ tier, [ label, TIER_TONES.fetch(tier) ] ] }.freeze
   HIGH_FIT = 75
   AUDIENCE_TABS = { "brands" => "Brands", "artists" => "Music", "tv_shows" => "TV", "podcasts" => "Podcasts",
                     "tags" => "Taste tags" }.freeze
