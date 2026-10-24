@@ -14,7 +14,8 @@ class Report < ApplicationRecord
 
   belongs_to :show
   has_many :agent_steps, -> { order(:position, :id) }, dependent: :destroy
-  has_many :sponsor_matches, -> { order(:position) }, dependent: :destroy
+  # In the order the report lists them, which is also the order the plan's visible limit counts in (R43).
+  has_many :sponsor_matches, -> { order(*SponsorMatch::IN_REPORT_ORDER) }, dependent: :destroy
 
   enum :kind, KINDS.index_with(&:itself), validate: true
   enum :status, STATUSES.index_with(&:itself), validate: true

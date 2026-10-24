@@ -5,6 +5,11 @@ class SponsorMatch < ApplicationRecord
   NOTES_LIMIT = 2_000
   # A date input left half-typed can submit a year like 0002; nobody follows up outside these years.
   FOLLOW_UP_YEARS = 2000..2100
+  # The order a report lists its matches in (Report#sponsor_matches), and so the order the plan's visible limit
+  # counts in (R43). REPORT_RANK_SQL numbers each match in that order within its report, from 1.
+  IN_REPORT_ORDER = %i[position id].freeze
+  REPORT_RANK_SQL = "ROW_NUMBER() OVER (PARTITION BY sponsor_matches.report_id " \
+                    "ORDER BY #{IN_REPORT_ORDER.map { |column| "sponsor_matches.#{column}" }.join(', ')})".freeze
 
   belongs_to :report
   belongs_to :show
@@ -17,29 +22,34 @@ class SponsorMatch < ApplicationRecord
   validates :notes, length: { maximum: NOTES_LIMIT, message: "can be at most %{count} characters" }
   validate :follow_up_on_is_a_date
 
-  # Matches holding any of the podcaster's pipeline work: a status, notes or a follow-up date.
-  scope :tracked, -> { where.not(status: "suggested").or(where.not(notes: nil)).or(where.not(follow_up_on: nil)) }
+  # Brings the podcaster's pipeline work onto a new report's matches (R46a). Each match still at its defaults takes
+  # status, notes and follow-up date, as a unit, from its brand's copy that counts on the show's earlier reports
+  # (Pipeline::Matches: the newest, never a locked one), so whatever the podcaster cleared stays cleared. A match the
+  # plan locks (R43) gets nothing, so a locked brand never reaches the pipeline.
+  def self.carry_forward!(report)
+    targets = report.sponsor_matches.reload.select(&:at_defaults?)
+    return if targets.empty?
 
-  # Copies the podcaster's pipeline work from an earlier report's matches onto the same brands (by
-  # brand_entity_id) on a newer report (R46). Only fields set on the source are copied, and a field already set on
-  # the target is never overwritten, so a second call changes nothing and edits made on the new report stay.
-  def self.carry_forward!(from_report, to_report)
-    sources = from_report.sponsor_matches.tracked.index_by(&:brand_entity_id)
-    return if sources.empty?
-
+    sources = Pipeline::Matches.earlier_copies(report, brand_entity_ids: targets.map(&:brand_entity_id))
+    plan = Entitlements.for(report.show.user)
     transaction do
-      to_report.sponsor_matches.where(brand_entity_id: sources.keys).each do |target|
-        target.carry_from(sources.fetch(target.brand_entity_id))
+      targets.each do |target|
+        source = sources[target.brand_entity_id]
+        next if source.nil? || target.locked?(plan)
+
+        target.update!(status: source.status, notes: source.notes, follow_up_on: source.follow_up_on)
       end
     end
   end
 
-  def carry_from(source)
-    self.status = source.status if suggested? && !source.suggested?
-    self.notes = source.notes if notes.blank? && source.notes.present?
-    self.follow_up_on = source.follow_up_on if follow_up_on.nil? && source.follow_up_on
-    save! if changed?
+  # SQL twin of locked? (false there, true here), for a relation selecting report_kind and report_rank
+  # (Pipeline::Matches). The limit is read when the query runs, so it follows plan changes.
+  def self.unlocked_sql(limit)
+    sanitize_sql_array([ "NOT (sponsor_matches.report_kind = 'snapshot' AND sponsor_matches.report_rank > ?)", limit ])
   end
+
+  # Untouched by the podcaster (or by an earlier carry-forward).
+  def at_defaults? = suggested? && notes.nil? && follow_up_on.nil?
 
   # :overdue, :today or :upcoming against Date.current; nil without a follow-up date.
   def follow_up_state
@@ -51,8 +61,9 @@ class SponsorMatch < ApplicationRecord
     follow_up_on < today ? :overdue : :upcoming
   end
 
-  # True for a Snapshot match past the plan's visible limit, by position: the report shows it blurred with nothing
-  # about the brand (R43), so nothing may change or reveal it. Agent reports are always fully visible (R44).
+  # True for a Snapshot match past the plan's visible limit, in report order: the report shows it blurred with
+  # nothing about the brand (R43), so nothing may change or reveal it. Agent reports are always fully visible (R44).
+  # unlocked_sql states the same rule in SQL.
   def locked?(plan)
     return false unless report.snapshot?
 

@@ -9,13 +9,6 @@ RSpec.describe "Sponsor matches" do
 
   def page = Nokogiri::HTML5.fragment(response.body)
 
-  def stub_plan(**overrides)
-    plan = Class.new(Entitlements::Plan) do
-      overrides.each { |name, value| define_method(name) { value } }
-    end.new
-    allow(Entitlements).to receive(:for).and_return(plan)
-  end
-
   it "requires sign in" do
     patch sponsor_match_path(brand_match), params: { sponsor_match: { status: "saved" } }
     expect(response).to redirect_to("/users/sign_in")

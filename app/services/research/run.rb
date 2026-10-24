@@ -49,13 +49,10 @@ module Research
       AgentRunner.call(@report)
     end
 
-    # Statuses, notes and follow-up dates move onto the new matches from each earlier report of the show. Newest
-    # first: carry_forward! never overwrites a field already set, so the first report to set a field decides it,
-    # and newest first makes that each brand's latest known state. A failure here must not fail a good report.
+    # Statuses, notes and follow-up dates move onto the new matches from each brand's latest copy on the show's
+    # earlier reports (R46a). A failure here must not fail a good report.
     def carry_pipeline_forward
-      @report.show.reports.where(id: ...@report.id).order(created_at: :desc, id: :desc).each do |earlier|
-        SponsorMatch.carry_forward!(earlier, @report)
-      end
+      SponsorMatch.carry_forward!(@report)
     rescue StandardError => e
       Rails.logger.error("[Research::Run] carrying the pipeline forward failed for report #{@report.id}: #{e.class}: #{e.message}")
       Rails.error.report(e, handled: true, context: { report_id: @report.id, while: "carrying the pipeline forward" })

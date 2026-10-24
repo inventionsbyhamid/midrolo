@@ -49,68 +49,134 @@ RSpec.describe SponsorMatch do
     end
   end
 
-  describe ".carry_forward!" do
-    it "keeps pitched and its notes for the same brand on the new report" do
-      create(:sponsor_match, report: old_report, brand_entity_id: "b-ledger", status: "pitched", notes: "Emailed Sam on Oct 20")
-      target = create(:sponsor_match, report: new_report, brand_entity_id: "b-ledger")
+  describe ".carry_forward! (R46a)" do
+    # Reports made in order, each newer than the last, as re-runs are.
+    def report_on(show = self.show, kind: "agent", status: "done") = create(:report, show: show, kind: kind, status: status)
 
-      described_class.carry_forward!(old_report, new_report)
+    def copy(report, brand = "b1", **attributes) = create(:sponsor_match, report: report, brand_entity_id: brand, **attributes)
+
+    it "keeps pitched and its notes for the same brand on the new report" do
+      copy(old_report, "b-ledger", status: "pitched", notes: "Emailed Sam on Oct 20")
+      target = copy(new_report, "b-ledger")
+
+      described_class.carry_forward!(new_report)
 
       expect(target.reload).to have_attributes(status: "pitched", notes: "Emailed Sam on Oct 20")
     end
 
-    it "carries the follow-up date" do
-      create(:sponsor_match, report: old_report, brand_entity_id: "b1", status: "saved", follow_up_on: Date.new(2026, 11, 2))
-      target = create(:sponsor_match, report: new_report, brand_entity_id: "b1")
+    it "copies status, notes and follow-up date as a unit from the newest earlier copy" do
+      first = report_on
+      second = report_on
+      copy(first, status: "pitched", notes: "First pitch", follow_up_on: Date.new(2026, 11, 2))
+      copy(second, status: "replied", notes: "They replied", follow_up_on: nil)
+      target = copy(report_on(status: "running"))
 
-      described_class.carry_forward!(old_report, new_report)
+      described_class.carry_forward!(target.report)
 
-      expect(target.reload.follow_up_on).to eq(Date.new(2026, 11, 2))
+      expect(target.reload).to have_attributes(status: "replied", notes: "They replied", follow_up_on: nil)
     end
 
-    it "copies only the fields set on the source" do
-      create(:sponsor_match, report: old_report, brand_entity_id: "b1", status: "suggested", notes: "Maybe in spring")
-      target = create(:sponsor_match, report: new_report, brand_entity_id: "b1")
+    it "keeps a note the podcaster cleared on the newest copy cleared" do
+      first = report_on
+      second = report_on
+      copy(first, status: "pitched", notes: "Old note")
+      copy(second, status: "pitched", notes: nil)
+      target = copy(report_on(status: "running"))
 
-      described_class.carry_forward!(old_report, new_report)
+      described_class.carry_forward!(target.report)
 
-      expect(target.reload).to have_attributes(status: "suggested", notes: "Maybe in spring", follow_up_on: nil)
+      expect(target.reload).to have_attributes(status: "pitched", notes: nil)
     end
 
-    it "never overwrites a field already set on the target" do
-      create(:sponsor_match, report: old_report, brand_entity_id: "b1", status: "pitched", notes: "Old note",
-                             follow_up_on: Date.new(2026, 11, 2))
-      target = create(:sponsor_match, report: new_report, brand_entity_id: "b1", status: "won", notes: "Signed!",
-                                      follow_up_on: nil)
+    it "keeps a brand set back to suggested suggested" do
+      first = report_on
+      second = report_on
+      copy(first, status: "pitched", notes: "Old note")
+      copy(second, status: "suggested")
+      target = copy(report_on(status: "running"))
 
-      described_class.carry_forward!(old_report, new_report)
+      described_class.carry_forward!(target.report)
 
-      expect(target.reload).to have_attributes(status: "won", notes: "Signed!", follow_up_on: Date.new(2026, 11, 2))
+      expect(target.reload).to have_attributes(status: "suggested", notes: nil)
+    end
+
+    it "carries a brand missing from the previous report but present two reports back" do
+      first = report_on
+      second = report_on
+      copy(first, status: "won", notes: "Signed")
+      copy(second, "other-brand")
+      target = copy(report_on(status: "running"))
+
+      described_class.carry_forward!(target.report)
+
+      expect(target.reload).to have_attributes(status: "won", notes: "Signed")
+    end
+
+    it "skips a suggested copy on an earlier report that never finished" do
+      first = report_on
+      failed = report_on(status: "failed")
+      copy(first, status: "pitched")
+      copy(failed, status: "suggested")
+      target = copy(report_on(status: "running"))
+
+      described_class.carry_forward!(target.report)
+
+      expect(target.reload.status).to eq("pitched")
+    end
+
+    it "leaves a match the podcaster already changed alone" do
+      copy(old_report, status: "pitched", notes: "Old note", follow_up_on: Date.new(2026, 11, 2))
+      target = copy(new_report, notes: "Mine")
+
+      described_class.carry_forward!(new_report)
+
+      expect(target.reload).to have_attributes(status: "suggested", notes: "Mine", follow_up_on: nil)
     end
 
     it "matches by brand and leaves other brands alone" do
-      create(:sponsor_match, report: old_report, brand_entity_id: "b1", status: "pitched")
-      create(:sponsor_match, report: old_report, brand_entity_id: "gone", status: "won")
-      other = create(:sponsor_match, report: new_report, brand_entity_id: "b2")
+      copy(old_report, "b1", status: "pitched")
+      other = copy(new_report, "b2")
 
-      expect { described_class.carry_forward!(old_report, new_report) }.not_to change(described_class, :count)
+      expect { described_class.carry_forward!(new_report) }.not_to change(described_class, :count)
       expect(other.reload.status).to eq("suggested")
     end
 
     it "is idempotent" do
-      create(:sponsor_match, report: old_report, brand_entity_id: "b1", status: "replied", notes: "They said yes to a call")
-      target = create(:sponsor_match, report: new_report, brand_entity_id: "b1")
+      copy(old_report, status: "replied", notes: "They said yes to a call")
+      target = copy(new_report)
 
-      2.times { described_class.carry_forward!(old_report, new_report) }
+      2.times { described_class.carry_forward!(new_report) }
 
       expect(target.reload).to have_attributes(status: "replied", notes: "They said yes to a call")
     end
 
-    it "does nothing when the earlier report has no tracked matches" do
-      create(:sponsor_match, report: old_report, brand_entity_id: "b1")
-      target = create(:sponsor_match, report: new_report, brand_entity_id: "b1")
+    context "with a Snapshot the plan limits to 1 visible match (R43)" do
+      before { stub_plan(visible_matches_limit: 1) }
 
-      expect { described_class.carry_forward!(old_report, new_report) }.not_to(change { target.reload.updated_at })
+      it "gives a locked match nothing, so its brand can't reach the pipeline" do
+        copy(old_report, "b1", status: "pitched")
+        copy(old_report, "b2", status: "won")
+        snapshot = report_on(kind: "snapshot", status: "running")
+        visible = copy(snapshot, "b1", position: 1)
+        locked = copy(snapshot, "b2", position: 2)
+
+        described_class.carry_forward!(snapshot)
+
+        expect(visible.reload.status).to eq("pitched")
+        expect(locked.reload.status).to eq("suggested")
+      end
+
+      it "never takes a locked copy as the source; a visible older copy wins" do
+        copy(old_report, "b1", status: "pitched", notes: "Visible copy")
+        snapshot = report_on(kind: "snapshot")
+        copy(snapshot, "b0", position: 1)
+        copy(snapshot, "b1", position: 2, status: "won", notes: "Locked copy")
+        target = copy(report_on(status: "running"), "b1")
+
+        described_class.carry_forward!(target.report)
+
+        expect(target.reload).to have_attributes(status: "pitched", notes: "Visible copy")
+      end
     end
   end
 
@@ -133,6 +199,14 @@ RSpec.describe SponsorMatch do
       matches = [ 3, 1, 2 ].map { |position| create(:sponsor_match, report: snapshot, position: position) }
 
       expect(matches.map { |match| match.locked?(plan) }).to eq([ true, false, false ])
+    end
+
+    it "breaks a position tie by id, the order the report lists them in" do
+      snapshot = create(:report, show: show, kind: "snapshot", status: "done")
+      matches = Array.new(3) { create(:sponsor_match, report: snapshot, position: 1) }
+
+      expect(matches.map { |match| match.locked?(plan) }).to eq([ false, false, true ])
+      expect(snapshot.sponsor_matches.to_a).to eq(matches)
     end
 
     it "never locks a match on an agent report (R44)" do

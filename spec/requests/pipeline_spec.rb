@@ -12,14 +12,12 @@ RSpec.describe "Pipeline" do
 
   def page = Nokogiri::HTML(response.body)
 
-  def stub_plan(**overrides)
-    plan = Class.new(Entitlements::Plan) do
-      overrides.each { |name, value| define_method(name) { value } }
-    end.new
-    allow(Entitlements).to receive(:for).and_return(plan)
-  end
-
   def stage(status) = page.at_css("#stage_#{status}")
+
+  # The download as text, without the UTF-8 byte order mark it starts with for Excel.
+  def csv_text = response.body.dup.force_encoding("UTF-8").delete_prefix("\uFEFF")
+
+  def csv_rows = CSV.parse(csv_text, headers: true)
 
   def brands_in(status) = stage(status).css("[data-pipeline-entry] h3").map { |h| h.text.squish }
 
@@ -143,6 +141,39 @@ RSpec.describe "Pipeline" do
       end
     end
 
+    describe "locked Snapshot copies (R43)" do
+      before do
+        create(:sponsor_match, report: report, brand_entity_id: "b1", name: "Fieldnote Coffee", status: "pitched")
+        snapshot = create(:report, show: show, kind: "snapshot", status: "done")
+        create(:sponsor_match, report: snapshot, position: 1, brand_entity_id: "b0", name: "Visible Snapshot Brand")
+        create(:sponsor_match, report: snapshot, position: 2, brand_entity_id: "b1", name: "Locked Copy Name",
+                               website: "https://locked.example.com", status: "won")
+        create(:sponsor_match, report: snapshot, position: 3, brand_entity_id: "b9", name: "Locked Only Brand", status: "saved")
+      end
+
+      it "never shows a copy the plan locks; a visible older copy counts instead, on the page and in the CSV" do
+        stub_plan(visible_matches_limit: 1, csv_export?: true)
+
+        get pipeline_path
+        expect(brands_in("pitched")).to eq([ "Fieldnote Coffee" ])
+        expect(response.body).not_to include("Locked Copy Name", "locked.example.com", "Locked Only Brand")
+        expect(page.css("[data-pipeline-entry]").size).to eq(1)
+
+        get pipeline_path(format: :csv)
+        expect(csv_rows.map { |row| row["Brand"] }).to eq([ "Fieldnote Coffee" ])
+        expect(csv_text).not_to include("Locked Copy Name", "locked.example.com", "Locked Only Brand")
+      end
+
+      it "follows the plan: once the limit takes in the newer copy, it counts" do
+        stub_plan(visible_matches_limit: 50)
+
+        get pipeline_path
+        expect(brands_in("won")).to eq([ "Locked Copy Name" ])
+        expect(brands_in("saved")).to eq([ "Locked Only Brand" ])
+        expect(response.body).not_to include("Fieldnote Coffee")
+      end
+    end
+
     it "explains how to add brands when the pipeline is empty" do
       create(:sponsor_match, report: report, status: "suggested")
       get pipeline_path
@@ -200,7 +231,7 @@ RSpec.describe "Pipeline" do
 
           expect(response.media_type).to eq("text/csv")
           expect(response.headers["Content-Disposition"]).to include("attachment", "midrolo-pipeline-2026-10-25.csv")
-          rows = CSV.parse(response.body, headers: true)
+          rows = csv_rows
           expect(rows.headers).to eq([ "Show", "Brand", "Status", "Fit score", "Tier", "Category", "Website",
                                        "Follow-up date", "Notes", "Why it fits" ])
           expect(rows.first.to_h).to include("Show" => "The Founder's Ledger", "Brand" => "Fieldnote Coffee",
