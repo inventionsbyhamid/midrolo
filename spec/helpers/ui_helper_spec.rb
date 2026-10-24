@@ -88,10 +88,12 @@ RSpec.describe UiHelper do
     end
 
     it "is false when demo mode is not configured" do
+      hide_const("DemoMode")
       expect(helper.demo_mode?).to be(false)
     end
 
-    it "reads Rails.configuration.x.demo_mode until DemoMode exists" do
+    it "reads Rails.configuration.x.demo_mode when DemoMode is not defined" do
+      hide_const("DemoMode")
       Rails.configuration.x.demo_mode = true
 
       expect(helper.demo_mode?).to be(true)

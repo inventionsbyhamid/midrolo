@@ -47,6 +47,7 @@ RSpec.describe "Styleguide" do
 
     it "shows the demo banner in every layout only when demo mode is on" do
       original = Rails.configuration.x.demo_mode
+      hide_const("DemoMode")
 
       layouts.each do |layout|
         Rails.configuration.x.demo_mode = false
