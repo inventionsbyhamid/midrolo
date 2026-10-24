@@ -38,4 +38,18 @@ RSpec.describe "App configs" do
     expect(samples.size).to eq(3)
     expect(samples.map(&:keys).uniq).to eq([ %i[slug directory_id] ])
   end
+
+  it "stores production uploads on Cloudflare R2 from the R2_* variables, and tests on the test service" do
+    env = { "R2_ACCOUNT_ID" => "acct", "R2_ACCESS_KEY_ID" => "key", "R2_SECRET_ACCESS_KEY" => "secret", "R2_BUCKET" => "kits" }
+    stub_const("ENV", ENV.to_h.merge(env))
+    r2 = ActiveSupport::ConfigurationFile.parse(Rails.root.join("config/storage.yml"))["r2"]
+
+    expect(r2).to include("service" => "S3", "endpoint" => "https://acct.r2.cloudflarestorage.com", "bucket" => "kits",
+                          "access_key_id" => "key", "secret_access_key" => "secret", "region" => "auto")
+    expect(Rails.configuration.active_storage.service).to eq(:test)
+  end
+
+  it "sends mail from MAIL_FROM, defaulting to the app name at midrolo.com" do
+    expect(ApplicationMailer.default[:from].call).to eq("Midrolo <hello@midrolo.com>")
+  end
 end

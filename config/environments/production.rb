@@ -21,8 +21,9 @@ Rails.application.configure do
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Uploaded kit photos go to Cloudflare R2 (config/storage.yml): R2_ACCOUNT_ID, R2_ACCESS_KEY_ID,
+  # R2_SECRET_ACCESS_KEY and R2_BUCKET must be set. Image variants need libvips in the container.
+  config.active_storage.service = :r2
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true
@@ -53,12 +54,13 @@ Rails.application.configure do
   config.active_job.queue_adapter = :solid_queue
   config.solid_queue.connects_to = { database: { writing: :queue } }
 
-  # Ignore bad email addresses and do not raise email delivery errors.
-  # Set this to true and configure the email server for immediate delivery to raise delivery errors.
-  # config.action_mailer.raise_delivery_errors = false
+  # Mail goes out through Resend (the resend gem's delivery method; RESEND_API_KEY, see config/initializers/resend.rb).
+  # Errors raise, so a missing key or a rejected send fails the mail job visibly instead of vanishing.
+  config.action_mailer.delivery_method = :resend
+  config.action_mailer.raise_delivery_errors = true
 
   # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: "example.com" }
+  config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "midrolo.com"), protocol: "https" }
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.
   # config.action_mailer.smtp_settings = {

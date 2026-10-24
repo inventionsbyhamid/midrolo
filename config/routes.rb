@@ -30,9 +30,10 @@ Rails.application.routes.draw do
   end
   get "pipeline", to: "pipeline#index", as: :pipeline
 
-  # Design system gallery. Development only: production has no such route.
+  # Design system gallery and sent mail (letter_opener_web). Development only: production has no such routes.
   if Rails.env.development?
     get "styleguide" => "styleguide#show", as: :styleguide
+    mount LetterOpenerWeb::Engine, at: "/letter_opener" if defined?(LetterOpenerWeb) # a development-group gem
   end
 
   # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
