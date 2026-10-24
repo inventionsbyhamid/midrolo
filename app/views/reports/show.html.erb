@@ -1,6 +1,5 @@
 <% content_for :title, "#{@show.title} report" %>
 <% content_for :head, turbo_refreshes_with(method: :morph, scroll: :preserve) %>
-<% content_for :head, stylesheet_link_tag(maplibre_stylesheet_url, crossorigin: "anonymous") %>
 <%= turbo_stream_from @report %>
 <% tone = { "done" => :success, "failed" => :danger, "needs_input" => :warning }.fetch(@report.status, :accent) %>
 <div class="flex flex-col gap-6">

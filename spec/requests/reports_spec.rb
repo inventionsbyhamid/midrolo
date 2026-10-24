@@ -119,6 +119,32 @@ RSpec.describe "Reports" do
         expect(page.css(".skeleton")).to be_empty
       end
 
+      it "leads a snapshot that needs input with the ask, not the upsell" do
+        report = create(:report, show: show, kind: "snapshot", status: "needs_input")
+        get show_report_path(show, report)
+        page = Nokogiri::HTML(response.body)
+        expect(page.at_css("#report_seeds form input[name='rerun']")["value"]).to eq("snapshot")
+        expect(page.text).not_to include("This is your free Snapshot")
+      end
+
+      it "doesn't stack the upsell under a failed snapshot's Try again" do
+        report = create(:report, show: show, kind: "snapshot", status: "failed", error_message: Report::FAILURE_MESSAGE)
+        get show_report_path(show, report)
+        expect(response.body).to include("Try again")
+        expect(response.body).not_to include("This is your free Snapshot")
+      end
+
+      it "leaves the MapLibre stylesheet to the map controller instead of blocking first paint" do
+        report = create(:report, show: show, kind: "agent", status: "done",
+                                 heatmap: { "location" => "US", "country" => "US",
+                                            "points" => [ { "lat" => 40.7, "lng" => -74.0, "affinity" => 0.9, "label" => "New York" } ] })
+        get show_report_path(show, report)
+        page = Nokogiri::HTML(response.body)
+        expect(page.css("head link[href*='maplibre-gl']")).to be_empty
+        expect(page.at_css("[data-controller~='map']")["data-map-stylesheet-value"])
+          .to match(%r{\Ahttps://cdn\.jsdelivr\.net/npm/maplibre-gl@\d+\.\d+\.\d+/dist/maplibre-gl\.css\z})
+      end
+
       it "renders a finished report's matches with one query" do
         report = create(:report, show: show, kind: "agent", status: "done")
         create_list(:sponsor_match, 6, report: report)

@@ -65,6 +65,7 @@ RSpec.describe "Report flow" do
     expect(page).to have_css("#report_map [data-map-target='status']", visible: :hidden, wait: 30) # the heatmap drew
     map_box = evaluate_script("document.querySelector('#report_map .maplibregl-map').getBoundingClientRect().toJSON()")
     expect(map_box["height"]).to be > 200 # MapLibre's own CSS must not collapse the map
+    expect(page).to have_css("head link[rel='stylesheet'][href*='maplibre-gl.css']", visible: :all, count: 1) # linked lazily
     within("#report_map") { expect(page).to have_text("Top metros") }
 
     total = count_cards

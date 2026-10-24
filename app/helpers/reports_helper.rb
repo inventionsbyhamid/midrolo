@@ -141,7 +141,8 @@ module ReportsHelper
 
   def map_style_url = ENV["MAP_STYLE_URL"].presence || DEFAULT_MAP_STYLE_URL
 
-  # The stylesheet that ships with the pinned MapLibre build (same version, same folder).
+  # The stylesheet that ships with the pinned MapLibre build (same version, same folder). map_controller links it
+  # when it imports the library, so report pages don't wait on it for first paint.
   def maplibre_stylesheet_url
     Rails.application.importmap.packages.fetch("maplibre-gl").path.sub(/\.mjs\z/, ".css")
   end

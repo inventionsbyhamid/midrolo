@@ -22,7 +22,7 @@
         <figure id="<%= dom_id(report, :heatmap) %>" class="map-frame" data-turbo-permanent
                 aria-label="<%= heatmap_label(heatmap) %>"
                 data-controller="map" data-map-points-value="<%= points.map { |p| p.slice("lat", "lng", "affinity") }.to_json %>"
-                data-map-style-value="<%= map_style_url %>">
+                data-map-style-value="<%= map_style_url %>" data-map-stylesheet-value="<%= maplibre_stylesheet_url %>">
           <div class="map-canvas" data-map-target="canvas"></div>
           <p class="map-loading" data-map-target="status">Loading map…</p>
         </figure>

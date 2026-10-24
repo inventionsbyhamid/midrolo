@@ -1,10 +1,11 @@
 import { Controller } from "@hotwired/stimulus"
 
-// The "where your kind of listener lives" heatmap. MapLibre (~1 MB) is imported only when the map nears the
-// viewport. Points are [{lat, lng, affinity}]; affinity weights the heat. If MapLibre can't load, WebGL is
+// The "where your kind of listener lives" heatmap. MapLibre (~1 MB) and its stylesheet (the stylesheet value, the
+// pinned version's CSS) load only when the map nears the viewport, so nothing about the map blocks first paint. Points are [{lat, lng, affinity}]; affinity weights the heat. If MapLibre can't load, WebGL is
 // missing, or an error leaves the map unrendered a few seconds later (the style failed), the figure hides
 // itself and the server-rendered "Top metros" list beside it stands alone.
 const ERROR_GRACE_MS = 6000
+const STYLESHEET_WAIT_MS = 3000
 
 // The ramp runs from the page's plum to the tally amber, so the hottest spot glows like the live lamp.
 const HEAT_COLORS = [
@@ -19,7 +20,7 @@ const HEAT_COLORS = [
 
 export default class extends Controller {
   static targets = ["canvas", "status"]
-  static values = { points: Array, style: String }
+  static values = { points: Array, style: String, stylesheet: String }
 
   connect() {
     if (this.pointsValue.length === 0) return
@@ -46,7 +47,7 @@ export default class extends Controller {
 
   async load() {
     try {
-      const { Map: MapLibreMap, NavigationControl, LngLatBounds } = await import("maplibre-gl")
+      const [{ Map: MapLibreMap, NavigationControl, LngLatBounds }] = await Promise.all([import("maplibre-gl"), this.linkStylesheet()])
       if (!this.element.isConnected || this.map) return
 
       this.ready = false
@@ -74,6 +75,25 @@ export default class extends Controller {
     } catch (error) {
       this.fail(error)
     }
+  }
+
+  // Adds the MapLibre stylesheet once per page and waits for it briefly; the map still works if it never comes.
+  linkStylesheet() {
+    if (!this.stylesheetValue) return Promise.resolve()
+
+    let link = [...document.querySelectorAll("link[rel=stylesheet]")].find((l) => l.href === this.stylesheetValue)
+    if (link?.sheet) return Promise.resolve()
+
+    if (!link) {
+      link = Object.assign(document.createElement("link"), { rel: "stylesheet", href: this.stylesheetValue, crossOrigin: "anonymous" })
+      document.head.append(link)
+    }
+    return new Promise((resolve) => {
+      const done = () => { clearTimeout(timer); resolve() }
+      const timer = setTimeout(done, STYLESHEET_WAIT_MS)
+      link.addEventListener("load", done, { once: true })
+      link.addEventListener("error", done, { once: true })
+    })
   }
 
   draw() {

@@ -55,6 +55,11 @@ RSpec.describe "reports/sections/_map" do
     expect(html.at_css("[data-controller~='map']")["aria-label"]).to eq("Heatmap of where people with your listeners' tastes live")
   end
 
+  it "hands the controller the pinned MapLibre stylesheet to load with the library" do
+    render_section
+    expect(html.at_css("[data-controller~='map']")["data-map-stylesheet-value"]).to eq(view.maplibre_stylesheet_url)
+  end
+
   it "shows an empty state with no points" do
     report.update!(heatmap: { "location" => "US", "country" => "US", "points" => [] })
     render_section
