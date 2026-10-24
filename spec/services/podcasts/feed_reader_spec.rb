@@ -41,6 +41,45 @@ RSpec.describe Podcasts::FeedReader do
     end
   end
 
+  describe "episode text" do
+    def one_item_feed(description_html)
+      <<~XML
+        <?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0"><channel><title>Text Show</title>
+          <item><title>Ep 1</title><description><![CDATA[#{description_html}]]></description>
+          <pubDate>Mon, 12 Oct 2026 09:00:00 -0000</pubDate><guid>text-1</guid></item>
+        </channel></rss>
+      XML
+    end
+
+    it "keeps block elements apart instead of running their text together" do
+      html = "<p>Sponsored by Notion</p><p>Visit Today</p><ul><li>One</li><li>Two</li></ul>Line<br>break<h2>Head</h2><div>Tail</div>"
+      stub_request(:get, url).to_return(status: 200, body: one_item_feed(html))
+
+      expect(reader.read(url).episodes.first.description).to eq("Sponsored by Notion\nVisit Today\nOne\nTwo\nLine\nbreak\nHead\nTail")
+    end
+
+    it "truncates descriptions to 600 characters by default" do
+      stub_request(:get, url).to_return(status: 200, body: one_item_feed("<p>#{'filler ' * 150}</p><p>This episode is sponsored by Notion.</p>"))
+      description = reader.read(url).episodes.first.description
+
+      expect(description.length).to eq(600)
+      expect(description).not_to include("Notion")
+    end
+
+    it "takes a larger description_limit and caches it separately" do
+      stub_request(:get, url).to_return(status: 200, body: one_item_feed("<p>#{'filler ' * 150}</p><p>This episode is sponsored by Notion.</p>"))
+
+      short = reader.read(url).episodes.first.description
+      long = reader.read(url, description_limit: 4000).episodes.first.description
+      expect(short.length).to eq(600)
+      expect(long).to end_with("This episode is sponsored by Notion.")
+      expect(a_request(:get, url)).to have_been_made.twice
+      reader.read(url, description_limit: 4000)
+      expect(a_request(:get, url)).to have_been_made.twice
+    end
+  end
+
   describe "thin feeds" do
     it "handles episodes without descriptions and falls back to managingEditor" do
       stub_request(:get, url).to_return(status: 200, body: feed_fixture("no_descriptions"))
