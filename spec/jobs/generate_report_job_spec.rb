@@ -48,6 +48,11 @@ RSpec.describe "Report jobs" do
         expect { job.perform_now(report.id) }.not_to raise_error
       end
 
+      it "does not mask the original error when the report is deleted mid-run" do
+        allow(Research::Run).to receive(:call) { |r| r.destroy!; raise "boom" }
+        expect { job.perform_now(report.id) }.not_to raise_error
+      end
+
       it "ignores a report that is not queued" do
         report.update!(status: "done")
         expect(Research::Run).not_to receive(:call)

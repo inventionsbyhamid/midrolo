@@ -61,7 +61,8 @@ RSpec.describe "Reports" do
         Report::SECTIONS.each { |name| expect(response.body).to include(%(id="report_#{name}")) }
         expect(response.body.scan(/class="skeleton"/).size).to be >= 5
         expect(response.body).to include("Media kit", "Coming soon", 'name="turbo-refresh-method" content="morph"')
-        expect(response.body).to match(/<details[^>]*id="agent_rail"[^>]* open[ >]/)
+        expect(response.body).to match(/<details[^>]*id="agent_rail_report_#{report.id}"[^>]* open[ >]/)
+        expect(response.body).to include(%(id="agent_steps_report_#{report.id}"))
       end
 
       it "disables Re-run while active and enables it when finished" do

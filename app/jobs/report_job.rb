@@ -16,14 +16,15 @@ class ReportJob < ApplicationJob
       fail_report(report)
     ensure
       # Anything else (SIGTERM during a deploy, Interrupt) must not leave the report running forever.
-      fail_report(report) if report.reload.active?
+      fail_report(report)
     end
   end
 
   private
 
   def fail_report(report)
-    report.reload.mark_failed! if report.reload.active?
+    current = Report.find_by(id: report.id)
+    current&.mark_failed! if current&.active?
   rescue StandardError => e
     Rails.error.report(e, handled: true, context: { report_id: report.id, while: "marking failed" })
   end
