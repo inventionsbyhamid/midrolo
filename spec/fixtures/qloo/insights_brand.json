@@ -1,0 +1,13 @@
+{"success":true,"results":{"entities":[
+ {"entity_id":"SYN-BRAND-001","name":"Acme Ledger","subtype":"urn:entity:brand","popularity":0.42,
+  "query":{"affinity":0.87},
+  "properties":{"description":"Synthetic bookkeeping software.","image":{"url":"https://img.example.com/acme.png"},"official_site":"https://acmeledger.example.com","websites":["https://other.example.com"]},
+  "tags":[{"id":"urn:tag:genre:brand:finance","name":"Finance","type":"urn:tag:genre:brand"}]},
+ {"entity_id":"SYN-BRAND-002","name":"Borealis Bank","subtype":"urn:entity:brand","popularity":0.7,
+  "affinity":0.64,
+  "official_site":"https://borealis.example.com",
+  "properties":{"description":"Synthetic neobank."},
+  "tags":[{"tag_id":"urn:tag:genre:brand:finance","name":"Finance","subtype":"urn:tag:genre:brand"}]},
+ {"entity_id":"SYN-BRAND-003","name":"Cobalt Cloud","subtype":"urn:entity:brand","popularity":0.95,
+  "query":{"affinity":0.5},"properties":{"websites":["https://cobalt.example.com"]},"tags":[]}
+]}}

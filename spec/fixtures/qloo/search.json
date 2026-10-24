@@ -1,0 +1,6 @@
+{"results":[
+ {"entity_id":"SYN-POD-001","name":"Widget Hour","subtype":"urn:entity:podcast","types":["urn:entity:podcast"],"popularity":0.31,
+  "properties":{"description":"A synthetic show about widgets.","image":{"url":"https://img.example.com/widget-hour.png"},"websites":["https://widgethour.example.com"]},
+  "tags":[{"id":"urn:tag:genre:media:business","name":"Business","type":"urn:tag:genre:media"}]},
+ {"entity_id":"SYN-POD-002","name":"Gadget Gossip","subtype":"urn:entity:podcast","popularity":0.12,"properties":{},"tags":[]}
+]}

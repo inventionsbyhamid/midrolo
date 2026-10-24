@@ -1,0 +1,4 @@
+{"success":true,"results":{"heatmap":[
+ {"location":{"latitude":40.71,"longitude":-74.0,"geohash":"dr5regw","name":"New York"},"query":{"affinity":0.9,"affinity_rank":0.8,"popularity":0.4}},
+ {"location":{"latitude":34.05,"longitude":-118.24,"geohash":"9q5ctr1"},"query":{"affinity":0.6,"popularity":0.3}}
+]}}

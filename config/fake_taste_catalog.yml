@@ -1,0 +1,263 @@
+# Synthetic catalog for Taste::Providers::Fake (dev/demo only; not Qloo data).
+# brands: category => { name: popularity }. Includes every Podcasts::Directories::Fake::FAKE_SPONSORS name.
+brands:
+  finance:
+    Mercury: 0.52
+    Ramp: 0.55
+    Rocket Money: 0.58
+    Wealthfront: 0.46
+    Betterment: 0.44
+    Acorns: 0.5
+    Robinhood: 0.82
+    Chime: 0.7
+    SoFi: 0.66
+    Credit Karma: 0.72
+    PayPal: 0.95
+    Visa: 0.97
+    Brex: 0.4
+  technology:
+    Squarespace: 0.74
+    Linear: 0.38
+    Vercel: 0.42
+    DigitalOcean: 0.5
+    Cloudflare: 0.62
+    GitHub: 0.8
+    Figma: 0.68
+    Framer: 0.36
+    Postman: 0.44
+    1Password: 0.55
+    NordVPN: 0.6
+    Google: 0.99
+    Apple: 0.99
+  productivity:
+    Notion: 0.78
+    Todoist: 0.4
+    Airtable: 0.5
+    Superhuman: 0.34
+    Grammarly: 0.64
+    Evernote: 0.6
+    Trello: 0.58
+    Asana: 0.57
+    Zapier: 0.56
+    Loom: 0.52
+    Calendly: 0.6
+    Slack: 0.86
+  ecommerce:
+    Shopify: 0.84
+    BigCommerce: 0.4
+    Etsy: 0.8
+    Gumroad: 0.3
+    Faire: 0.28
+    Printful: 0.33
+    Klaviyo: 0.45
+    Stripe: 0.78
+    eBay: 0.91
+    Amazon: 0.99
+    Wayfair: 0.7
+  food_beverage:
+    HelloFresh: 0.71
+    Blue Apron: 0.5
+    Factor: 0.35
+    Athletic Brewing: 0.3
+    Liquid Death: 0.46
+    Magic Spoon: 0.32
+    Graza: 0.2
+    Thrive Market: 0.38
+    Huel: 0.42
+    Starbucks: 0.96
+    Trade Coffee: 0.24
+    Our Place: 0.3
+  health_wellness:
+    Calm: 0.7
+    AG1: 0.6
+    Headspace: 0.62
+    Hims: 0.55
+    Oura: 0.5
+    Whoop: 0.45
+    Ritual: 0.34
+    Eight Sleep: 0.36
+    BetterHelp: 0.58
+    Talkspace: 0.42
+    Seed Health: 0.3
+    Athletic Greens Labs: 0.2
+  fitness:
+    Peloton: 0.8
+    Strava: 0.6
+    Gymshark: 0.65
+    Lululemon: 0.85
+    MyFitnessPal: 0.66
+    Fitbod: 0.22
+    Tonal: 0.36
+    Hydrow: 0.25
+    Nike: 0.98
+    Garmin: 0.76
+    Vuori: 0.4
+  fashion:
+    Allbirds: 0.55
+    Everlane: 0.5
+    Bombas: 0.45
+    Warby Parker: 0.62
+    Away: 0.48
+    Outdoor Voices: 0.35
+    Adidas: 0.96
+    Patagonia: 0.78
+    Rothys: 0.38
+    Untuckit: 0.3
+    Quince: 0.34
+  travel:
+    Airbnb: 0.9
+    Booking.com: 0.88
+    Expedia: 0.84
+    Hopper: 0.4
+    Going: 0.2
+    Vacasa: 0.36
+    Hipcamp: 0.25
+    Wanderlog: 0.15
+    Kayak: 0.7
+    Away Lodging: 0.22
+    Rover: 0.34
+    Turo: 0.45
+  education:
+    Skillshare: 0.55
+    MasterClass: 0.7
+    Duolingo: 0.82
+    Coursera: 0.78
+    Brilliant: 0.38
+    Babbel: 0.5
+    Udemy: 0.72
+    Khan Academy: 0.8
+    Codecademy: 0.52
+    Blinkist: 0.4
+    Audible: 0.9
+    Imprint: 0.12
+  entertainment:
+    Netflix: 0.98
+    Spotify: 0.97
+    Twitch: 0.8
+    Patreon: 0.6
+    Substack: 0.5
+    Audible Originals: 0.3
+    Nebula: 0.28
+    Dropout: 0.2
+    Curiosity Stream: 0.36
+    Letterboxd: 0.34
+    Bandcamp: 0.4
+    Discord: 0.84
+  home:
+    Casper: 0.52
+    Purple: 0.4
+    Brooklinen: 0.35
+    Ring: 0.7
+    SimpliSafe: 0.5
+    Article: 0.3
+    Parachute: 0.28
+    Dyson: 0.86
+    Tempur-Pedic: 0.56
+    Sonos: 0.64
+    Lovesac: 0.33
+    Ikea: 0.95
+artists:
+  Nova Reyes: 0.62
+  The Paper Lanterns: 0.48
+  Marlow & Finch: 0.35
+  Kestrel Hollow: 0.28
+  DJ Tangerine: 0.55
+  Ivy Calder: 0.7
+  Static Orchard: 0.22
+  The Velvet Meridian: 0.4
+  Juno Park: 0.66
+  Brass Compass: 0.31
+  Echo Valley: 0.5
+  Lena Mirov: 0.58
+tv_shows:
+  The Long Harbor: 0.6
+  Signal Lost: 0.52
+  Crown Heights Kitchen: 0.4
+  Night Shift Detectives: 0.5
+  Paper Tigers: 0.35
+  The Startup Years: 0.45
+  Orbit Street: 0.3
+  Quiet Hours: 0.28
+  Laugh Factory Lane: 0.55
+  Cold Water: 0.62
+podcasts:
+  The Founder's Ledger: { popularity: 0.3, genre: business }
+  Index Fund Mornings: { popularity: 0.35, genre: business }
+  Code & Coffee Weekly: { popularity: 0.32, genre: technology }
+  Side Hustle Spreadsheet: { popularity: 0.28, genre: business }
+  Bootstrapped Brains: { popularity: 0.26, genre: business }
+  Laugh Track Lab: { popularity: 0.4, genre: comedy }
+  Whole Body Reset: { popularity: 0.38, genre: health_fitness }
+  Cold Case Cafe: { popularity: 0.45, genre: true_crime }
+  Study Hall Stories: { popularity: 0.25, genre: education }
+  Pickup Game Podcast: { popularity: 0.3, genre: sports }
+  Dollar Dispatch: { popularity: 0.33, genre: business }
+  Shipping Soon: { popularity: 0.27, genre: technology }
+  Main Street Stories: { popularity: 0.36, genre: society_culture }
+  Deep Work Daily: { popularity: 0.5, genre: business }
+  The Prompt Engineers: { popularity: 0.42, genre: technology }
+  Midnight Mysteries: { popularity: 0.55, genre: true_crime }
+media_genres:
+  business: Business
+  technology: Technology
+  comedy: Comedy
+  health_fitness: Health & Fitness
+  education: Education
+  true_crime: True Crime
+  sports: Sports
+  society_culture: Society & Culture
+extra_tags:
+  - { id: "urn:tag:genre:media:entrepreneurship", name: Entrepreneurship, type: "urn:tag:genre:media" }
+  - { id: "urn:tag:genre:media:news", name: News, type: "urn:tag:genre:media" }
+  - { id: "urn:tag:genre:media:self_improvement", name: Self Improvement, type: "urn:tag:genre:media" }
+  - { id: "urn:tag:interest:early_adopters", name: Early Adopters, type: "urn:tag:interest" }
+  - { id: "urn:tag:interest:remote_work", name: Remote Work, type: "urn:tag:interest" }
+  - { id: "urn:tag:interest:personal_finance", name: Personal Finance, type: "urn:tag:interest" }
+  - { id: "urn:tag:interest:outdoor_activities", name: Outdoor Activities, type: "urn:tag:interest" }
+  - { id: "urn:tag:interest:healthy_eating", name: Healthy Eating, type: "urn:tag:interest" }
+  - { id: "urn:tag:interest:side_projects", name: Side Projects, type: "urn:tag:interest" }
+  - { id: "urn:tag:interest:commuting", name: Commuting, type: "urn:tag:interest" }
+# Coordinates for Taste::Providers::Fake#heatmap. Every metro in config/geo.yml must appear here.
+countries:
+  US: { name: United States, lat: 39.8, lng: -98.6 }
+  GB: { name: United Kingdom, lat: 54.0, lng: -2.0 }
+  CA: { name: Canada, lat: 56.1, lng: -106.3 }
+  AU: { name: Australia, lat: -25.3, lng: 133.8 }
+  IN: { name: India, lat: 22.4, lng: 79.0 }
+metros:
+  New York: [US, 40.71, -74.01]
+  Los Angeles: [US, 34.05, -118.24]
+  Chicago: [US, 41.88, -87.63]
+  Houston: [US, 29.76, -95.37]
+  Phoenix: [US, 33.45, -112.07]
+  Philadelphia: [US, 39.95, -75.17]
+  San Antonio: [US, 29.42, -98.49]
+  San Diego: [US, 32.72, -117.16]
+  Dallas: [US, 32.78, -96.8]
+  Austin: [US, 30.27, -97.74]
+  Seattle: [US, 47.61, -122.33]
+  Denver: [US, 39.74, -104.99]
+  London: [GB, 51.51, -0.13]
+  Manchester: [GB, 53.48, -2.24]
+  Birmingham: [GB, 52.49, -1.89]
+  Glasgow: [GB, 55.86, -4.25]
+  Leeds: [GB, 53.8, -1.55]
+  Bristol: [GB, 51.45, -2.59]
+  Toronto: [CA, 43.65, -79.38]
+  Montreal: [CA, 45.5, -73.57]
+  Vancouver: [CA, 49.28, -123.12]
+  Calgary: [CA, 51.05, -114.07]
+  Ottawa: [CA, 45.42, -75.7]
+  Edmonton: [CA, 53.55, -113.49]
+  Sydney: [AU, -33.87, 151.21]
+  Melbourne: [AU, -37.81, 144.96]
+  Brisbane: [AU, -27.47, 153.03]
+  Perth: [AU, -31.95, 115.86]
+  Adelaide: [AU, -34.93, 138.6]
+  Canberra: [AU, -35.28, 149.13]
+  Mumbai: [IN, 19.08, 72.88]
+  Delhi: [IN, 28.61, 77.21]
+  Bengaluru: [IN, 12.97, 77.59]
+  Hyderabad: [IN, 17.39, 78.49]
+  Chennai: [IN, 13.08, 80.27]
+  Pune: [IN, 18.52, 73.86]

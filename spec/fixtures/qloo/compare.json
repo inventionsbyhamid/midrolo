@@ -1,0 +1,4 @@
+{"success":true,"results":{"tags":[
+ {"tag_id":"urn:tag:genre:media:business","name":"Business","subtype":"urn:tag:genre:media","popularity":0.5,"query":{"score":0.77}},
+ {"tag_id":"urn:tag:genre:brand:finance","name":"Finance","subtype":"urn:tag:genre:brand","query":{"score":0.5}}
+]}}

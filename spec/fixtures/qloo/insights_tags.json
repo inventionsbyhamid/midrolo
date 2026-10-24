@@ -1,0 +1,4 @@
+{"success":true,"results":{"tags":[
+ {"id":"urn:tag:genre:media:business","name":"Business","type":"urn:tag:genre:media","query":{"affinity":0.91}},
+ {"tag_id":"urn:tag:genre:media:comedy","name":"Comedy","subtype":"urn:tag:genre:media","query":{"score":0.4}}
+]}}

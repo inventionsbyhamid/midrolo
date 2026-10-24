@@ -1,0 +1,218 @@
+require "rails_helper"
+
+RSpec.describe Taste::Providers::Qloo do
+  let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+  let(:adapter) { described_class.new(api_key: "test-key", cache: cache) }
+  let(:base) { "https://hackathon.api.qloo.com" }
+
+  def fixture(name) = Rails.root.join("spec/fixtures/qloo/#{name}.json").read
+
+  def json(name, status: 200, headers: {})
+    { status: status, body: fixture(name), headers: { "Content-Type" => "application/json" }.merge(headers) }
+  end
+
+  describe "#recommend" do
+    let(:params) do
+      { type: :brand, entity_ids: [ "E1" ], tag_ids: [ "T1" ], filter_tags: [ "urn:tag:genre:brand:finance" ], popularity_max: 0.9, take: 50 }
+    end
+
+    it "sends the insights request shape and maps entities, reading affinity and website tolerantly" do
+      stub = stub_request(:get, "#{base}/v2/insights").with(
+        query: {
+          "filter.type" => "urn:entity:brand", "signal.interests.entities" => "E1", "signal.interests.tags" => "T1",
+          "filter.tags" => "urn:tag:genre:brand:finance", "filter.popularity.max" => "0.9", "take" => "50"
+        },
+        headers: { "X-Api-Key" => "test-key" }
+      ).to_return(json("insights_brand"))
+
+      entities = adapter.recommend(**params)
+
+      expect(stub).to have_been_requested
+      expect(entities.map(&:id)).to eq(%w[SYN-BRAND-001 SYN-BRAND-002 SYN-BRAND-003])
+      a, b, c = entities
+      expect(a).to be_a(Taste::Entity)
+      expect(a.type).to eq(:brand)
+      expect(a.affinity).to eq(0.87)
+      expect(b.affinity).to eq(0.64)
+      expect(a.website).to eq("https://acmeledger.example.com")
+      expect(b.website).to eq("https://borealis.example.com")
+      expect(c.website).to eq("https://cobalt.example.com")
+      expect(a.image_url).to eq("https://img.example.com/acme.png")
+      expect(a.description).to eq("Synthetic bookkeeping software.")
+      expect(a.popularity).to eq(0.42)
+      expect(a.tags.first).to eq(Taste::Tag.new(id: "urn:tag:genre:brand:finance", name: "Finance", type: "urn:tag:genre:brand", score: nil))
+      expect(b.tags.first.id).to eq("urn:tag:genre:brand:finance")
+    end
+
+    it "joins array params with commas" do
+      stub = stub_request(:get, "#{base}/v2/insights")
+        .with(query: hash_including("signal.interests.entities" => "E1,E2")).to_return(json("empty"))
+      expect(adapter.recommend(type: :artist, entity_ids: %w[E1 E2])).to eq([])
+      expect(stub).to have_been_requested
+    end
+
+    it "returns [] for an empty entities array" do
+      stub_request(:get, "#{base}/v2/insights").with(query: hash_including({})).to_return(json("empty"))
+      expect(adapter.recommend(type: :brand, entity_ids: [ "E1" ])).to eq([])
+    end
+
+    it "rejects unknown types" do
+      expect { adapter.recommend(type: :spaceship) }.to raise_error(ArgumentError)
+    end
+  end
+
+  describe "#search" do
+    it "maps podcasts using the urn type" do
+      stub_request(:get, "#{base}/search").with(query: { "query" => "widget", "types" => "urn:entity:podcast", "take" => "5" })
+        .to_return(json("search"))
+      results = adapter.search(query: "widget", types: [ :podcast ])
+      expect(results.map(&:name)).to eq([ "Widget Hour", "Gadget Gossip" ])
+      expect(results.first.type).to eq(:podcast)
+      expect(results.first.website).to eq("https://widgethour.example.com")
+      expect(results.last.affinity).to be_nil
+    end
+  end
+
+  describe "#find_tags and #taste_tags" do
+    it "maps tags with id/tag_id and type/subtype variants" do
+      stub_request(:get, "#{base}/v2/tags").with(query: { "filter.query" => "business", "feature.semantic_search" => "true", "take" => "10" })
+        .to_return(json("tags"))
+      tags = adapter.find_tags(query: "business")
+      expect(tags.map(&:id)).to eq(%w[urn:tag:genre:media:business urn:tag:genre:media:entrepreneurship])
+      expect(tags.last.type).to eq("urn:tag:genre:media")
+    end
+
+    it "requests the tag taste profile" do
+      stub = stub_request(:get, "#{base}/v2/insights")
+        .with(query: { "filter.type" => "urn:tag", "signal.interests.entities" => "E1", "take" => "20" }).to_return(json("insights_tags"))
+      tags = adapter.taste_tags(entity_ids: [ "E1" ])
+      expect(stub).to have_been_requested
+      expect(tags.map(&:score)).to eq([ 0.91, 0.4 ])
+    end
+  end
+
+  describe "#affinity_for" do
+    it "scopes insights to candidate ids and returns id => affinity" do
+      stub = stub_request(:get, "#{base}/v2/insights")
+        .with(query: hash_including("filter.results.entities" => "SYN-BRAND-001,SYN-BRAND-002", "signal.interests.entities" => "E1"))
+        .to_return(json("insights_brand"))
+      result = adapter.affinity_for(candidate_ids: %w[SYN-BRAND-001 SYN-BRAND-002], entity_ids: [ "E1" ])
+      expect(stub).to have_been_requested
+      expect(result).to eq("SYN-BRAND-001" => 0.87, "SYN-BRAND-002" => 0.64)
+    end
+  end
+
+  describe "#demographics" do
+    it "parses results.demographics[0].query into hashes" do
+      stub_request(:get, "#{base}/v2/insights").with(query: { "filter.type" => "urn:demographics", "signal.interests.entities" => "SYN-POD-001" })
+        .to_return(json("demographics"))
+      demo = adapter.demographics(entity_ids: [ "SYN-POD-001" ])
+      expect(demo).to be_a(Taste::Demographics)
+      expect(demo.age["30_to_34"]).to eq(0.31)
+      expect(demo.age.keys.size).to eq(6)
+      expect(demo.gender).to eq("male" => 0.18, "female" => -0.18)
+    end
+
+    it "returns empty hashes when there is no demographics data" do
+      stub_request(:get, "#{base}/v2/insights").with(query: hash_including({})).to_return(body: '{"results":{"demographics":[]}}')
+      expect(adapter.demographics(entity_ids: [ "x" ])).to eq(Taste::Demographics.new(age: {}, gender: {}))
+    end
+  end
+
+  describe "#heatmap" do
+    it "sends the heatmap request and maps points" do
+      stub = stub_request(:get, "#{base}/v2/insights").with(query: {
+        "filter.type" => "urn:heatmap", "filter.location.query" => "United States", "output.heatmap.boundary" => "urn:entity:locality",
+        "signal.interests.entities" => "E1", "take" => "50"
+      }).to_return(json("heatmap"))
+      points = adapter.heatmap(location: "United States", entity_ids: [ "E1" ])
+      expect(stub).to have_been_requested
+      expect(points.size).to eq(2)
+      expect(points.first).to eq(Taste::HeatPoint.new(lat: 40.71, lng: -74.0, geohash: "dr5regw", affinity: 0.9, popularity: 0.4, label: "New York"))
+      expect(points.last.label).to be_nil
+    end
+  end
+
+  describe "#compare" do
+    it "calls the compare endpoint and maps results.tags" do
+      stub = stub_request(:get, "#{base}/v2/analysis/compare")
+        .with(query: { "a.signal.interests.entities" => "A1", "b.signal.interests.entities" => "B1,B2", "take" => "10" })
+        .to_return(json("compare"))
+      tags = adapter.compare(a_entity_ids: [ "A1" ], b_entity_ids: %w[B1 B2])
+      expect(stub).to have_been_requested
+      expect(tags.map(&:name)).to eq(%w[Business Finance])
+      expect(tags.first.score).to eq(0.77)
+    end
+  end
+
+  describe "errors" do
+    it "raises AuthError on 401 and 403, and does not cache it" do
+      stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return(status: 401, body: '{"message":"bad key"}')
+      2.times { expect { adapter.find_tags(query: "x") }.to raise_error(Taste::AuthError) }
+      expect(stub).to have_been_requested.twice
+      stub_request(:get, "#{base}/search").with(query: hash_including({})).to_return(status: 403)
+      expect { adapter.search(query: "x", types: [ :brand ]) }.to raise_error(Taste::AuthError)
+    end
+
+    it "raises RateLimited after 3 attempts on 429, honoring Retry-After" do
+      stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including({}))
+        .to_return(status: 429, headers: { "Retry-After" => "0" }, body: '{"code":429,"reason":"rate","message":"slow"}')
+      expect { adapter.find_tags(query: "x") }.to raise_error(Taste::RateLimited)
+      expect(stub).to have_been_requested.times(3)
+    end
+
+    it "raises Unavailable after retrying 5xx" do
+      stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return(status: 503, headers: { "Retry-After" => "0" })
+      expect { adapter.find_tags(query: "x") }.to raise_error(Taste::Unavailable)
+      expect(stub).to have_been_requested.times(3)
+    end
+
+    it "raises Unavailable on timeouts and bad JSON" do
+      stub_request(:get, "#{base}/v2/tags").with(query: hash_including("filter.query" => "t")).to_timeout
+      expect { adapter.find_tags(query: "t") }.to raise_error(Taste::Unavailable)
+      stub_request(:get, "#{base}/v2/tags").with(query: hash_including("filter.query" => "j")).to_return(status: 200, body: "<html>")
+      expect { adapter.find_tags(query: "j") }.to raise_error(Taste::Unavailable)
+    end
+
+    it "recovers on a retry after a 429" do
+      stub_request(:get, "#{base}/v2/tags").with(query: hash_including({}))
+        .to_return({ status: 429, headers: { "Retry-After" => "0" } }, json("tags"))
+      expect(adapter.find_tags(query: "x").size).to eq(2)
+    end
+  end
+
+  describe "caching and instrumentation" do
+    it "serves a repeated identical call from cache and reports cached: true" do
+      stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return(json("tags"))
+      events = []
+      sub = ActiveSupport::Notifications.subscribe("request.taste") { |*, payload| events << payload }
+
+      adapter.find_tags(query: "business")
+      adapter.find_tags(query: "business")
+
+      expect(stub).to have_been_requested.times(1)
+      expect(events.map { |e| e[:cached] }).to eq([ false, true ])
+      expect(events.first).to include(path: "/v2/tags", status: 200)
+      expect(events.first[:duration_ms]).to be_a(Numeric)
+      expect(cache.instance_variable_get(:@data).keys.first).to match(/\Ataste:v1:\h{64}\z/)
+    ensure
+      ActiveSupport::Notifications.unsubscribe(sub)
+    end
+
+    it "keys the cache independent of param order" do
+      adapter.send(:cache_key, "/p", { "b" => "1", "a" => "2" }).then do |k|
+        expect(k).to eq(adapter.send(:cache_key, "/p", { "a" => "2", "b" => "1" }))
+      end
+    end
+
+    it "emits an event with the error status when a request fails" do
+      stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return(status: 401)
+      events = []
+      sub = ActiveSupport::Notifications.subscribe("request.taste") { |*, payload| events << payload }
+      expect { adapter.find_tags(query: "x") }.to raise_error(Taste::AuthError)
+      expect(events.first).to include(status: 401, cached: false)
+    ensure
+      ActiveSupport::Notifications.unsubscribe(sub)
+    end
+  end
+end
