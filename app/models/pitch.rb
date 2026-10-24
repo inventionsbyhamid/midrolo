@@ -30,7 +30,10 @@ class Pitch < ApplicationRecord
 
   def word_count = body.to_s.split.size
 
+  # A pitch that went stale while it was written already shows as failed, so it stays failed and uncounted.
   def complete!(attributes, model:)
+    return mark_failed! if stale?
+
     update!(attributes.slice(*FIELDS).merge(status: "done", model: model, cost_usd: spent, error_message: nil))
   end
 

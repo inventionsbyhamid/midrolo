@@ -34,7 +34,7 @@ class GeneratePitchJob < ApplicationJob
       pitch.mark_failed!(Pitch::PAUSED_MESSAGE)
     rescue Pitches::Writer::Ungrounded
       pitch.mark_failed!(Pitch::UNGROUNDED_MESSAGE)
-    rescue Pitches::Writer::Malformed
+    rescue Pitches::Writer::Malformed, Pitches::Writer::Stale
       pitch.mark_failed!
     rescue StandardError => e
       Rails.error.report(e, handled: true, context: { pitch_id: pitch_id, job: self.class.name })

@@ -35,6 +35,14 @@ RSpec.describe Pitch do
     expect(described_class.in_flight).to eq([ fresh ])
   end
 
+  it "won't complete a pitch that went stale: it stays failed and uncounted" do
+    stale = described_class.create!(sponsor_match: match, created_at: (Pitch::STALE_AFTER + 1.minute).ago)
+    stale.complete!({ "subject" => "Late", "body" => "Too late" }, model: "fake")
+
+    expect(stale.reload).to have_attributes(status: "failed", subject: nil, error_message: Pitch::FAILURE_MESSAGE)
+    expect(described_class.counted).to be_empty
+  end
+
   it "allows only one queued pitch per match in the database (R53)" do
     described_class.create!(sponsor_match: match)
     described_class.create!(sponsor_match: match, status: "done")

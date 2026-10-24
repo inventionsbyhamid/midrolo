@@ -240,6 +240,16 @@ RSpec.describe Pitches::Writer do
       expect(RubyLLM::Test.requests.size).to eq(2)
     end
 
+    it "stops before the corrective call once the pitch has gone stale" do
+      RubyLLM::Test.stub_responses(good_pitch(body: "Our 10k listeners love you."), good_pitch)
+      allow(Llm::StructuredCall).to receive(:call).and_wrap_original do |original, **args|
+        original.call(**args).tap { pitch.update_column(:created_at, (Pitch::STALE_AFTER + 1.minute).ago) }
+      end
+
+      expect { described_class.call(brand_match, pitch: pitch) }.to raise_error(Pitches::Writer::Stale)
+      expect(RubyLLM::Test.requests.size).to eq(1)
+    end
+
     it "keeps the first three angles and asks again when there are fewer than three or a field is blank" do
       RubyLLM::Test.stub_response(good_pitch(angles: %w[One Two Three Four]))
       expect(described_class.call(brand_match, pitch: pitch)["angles"]).to eq(%w[One Two Three])

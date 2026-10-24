@@ -5,8 +5,8 @@ module Pitches
   # Grounding (R49): third-party text (Qloo brand data, other shows' RSS, the show's own listing) reaches the model
   # only inside Research::Untrusted markers, and the subject, body, offer and follow-up may cite only numbers from
   # this pitch's Inputs. A draft that cites others, or comes back malformed, gets one corrective retry that names the
-  # problems; a second miss raises Ungrounded (numbers) or Malformed (shape). Every call records its spend on the
-  # pitch; a retry is not a second pitch.
+  # problems; a second miss raises Ungrounded (numbers) or Malformed (shape). The retry isn't made for a pitch that
+  # went stale meanwhile (Stale). Every call records its spend on the pitch; a retry is not a second pitch.
   class Writer
     # The pitch can't be written; the subclass says why.
     class Rejected < StandardError; end
@@ -14,6 +14,8 @@ module Pitches
     class Ungrounded < Rejected; end
     # The rewrite was grounded but still missing a field, short of angles or over the subject limit.
     class Malformed < Rejected; end
+    # The pitch went stale before the corrective call: it already shows as failed.
+    class Stale < Rejected; end
 
     SUBJECT_LIMIT = 80
     ANGLES = 3
@@ -66,6 +68,7 @@ module Pitches
       draft = ask(prompt)
       problems = problems_with(draft)
       return draft if problems.empty?
+      raise Stale, "pitch #{@pitch.id} went stale before the corrective call" if @pitch&.reload&.stale?
 
       draft = ask(corrective_prompt(problems.values.flatten))
       problems = problems_with(draft)

@@ -80,6 +80,14 @@ RSpec.describe GeneratePitchJob do
     expect(pitch.reload).to have_attributes(status: "failed", error_message: Pitch::FAILURE_MESSAGE)
   end
 
+  it "fails, uncounted, when the writer stops because the pitch went stale" do
+    allow(Pitches::Writer).to receive(:call).and_raise(Pitches::Writer::Stale)
+    described_class.perform_now(pitch.id)
+
+    expect(pitch.reload).to have_attributes(status: "failed", error_message: Pitch::FAILURE_MESSAGE)
+    expect(Pitch.counted).to be_empty
+  end
+
   it "re-enqueues on a transient error, with a wait and without sleeping, and keeps the pitch queued for it" do
     allow(Pitches::Writer).to receive(:call).and_raise(RubyLLM::OverloadedError)
     expect_any_instance_of(described_class).not_to receive(:sleep)
