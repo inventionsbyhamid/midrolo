@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe GeneratePitchJob do
+  include ActiveJob::TestHelper
+
   let(:user) { create(:user, judge: true) }
   let(:show) { create(:show, user: user, downloads_per_episode: 1500) }
   let(:report) { create(:report, show: show, kind: "agent", status: "done") }
@@ -11,8 +13,6 @@ RSpec.describe GeneratePitchJob do
   end
 
   def stream_for(record) = Turbo::StreamsChannel.send(:stream_name_from, record)
-
-  before { allow_any_instance_of(described_class).to receive(:sleep) }
 
   it "writes the pitch, marks it done and streams it into the open dialog" do
     allow(Llm).to receive(:mode).and_return(:fake)
@@ -80,6 +80,18 @@ RSpec.describe GeneratePitchJob do
     expect(pitch.reload).to have_attributes(status: "failed", error_message: Pitch::FAILURE_MESSAGE)
   end
 
+  it "re-enqueues on a transient error, with a wait and without sleeping, and keeps the pitch queued for it" do
+    allow(Pitches::Writer).to receive(:call).and_raise(RubyLLM::OverloadedError)
+    expect_any_instance_of(described_class).not_to receive(:sleep)
+
+    freeze_time do
+      wait = described_class::RETRY_WAIT
+      expect { described_class.perform_now(pitch.id) } # retry_on adds up to 15% jitter to the wait
+        .to have_enqueued_job(described_class).with(pitch.id).at(a_value_between(wait.from_now, (wait * 1.15).from_now))
+    end
+    expect(pitch.reload).to be_queued
+  end
+
   it "retries a transient error and then succeeds" do
     calls = 0
     allow(Pitches::Writer).to receive(:call) do
@@ -88,7 +100,7 @@ RSpec.describe GeneratePitchJob do
 
       written
     end
-    described_class.perform_now(pitch.id)
+    perform_enqueued_jobs { described_class.perform_later(pitch.id) }
 
     expect(calls).to eq(3)
     expect(pitch.reload.status).to eq("done")
@@ -96,9 +108,23 @@ RSpec.describe GeneratePitchJob do
 
   it "stops after a bounded number of transient errors and fails the pitch" do
     allow(Pitches::Writer).to receive(:call).and_raise(Faraday::TimeoutError)
-    expect { described_class.perform_now(pitch.id) }.not_to raise_error
+    expect(Rails.error).to receive(:report).with(an_instance_of(Faraday::TimeoutError), hash_including(handled: true))
+    expect { perform_enqueued_jobs { described_class.perform_later(pitch.id) } }.not_to raise_error
 
     expect(Pitches::Writer).to have_received(:call).exactly(described_class::ATTEMPTS).times
+    expect(pitch.reload).to have_attributes(status: "failed", error_message: Pitch::FAILURE_MESSAGE)
+  end
+
+  it "fails a pitch that went stale while it waited for a retry, without writing it" do
+    calls = 0
+    allow(Pitches::Writer).to receive(:call) do
+      calls += 1
+      pitch.update_column(:created_at, (Pitch::STALE_AFTER + 1.minute).ago)
+      raise RubyLLM::RateLimitError
+    end
+    perform_enqueued_jobs { described_class.perform_later(pitch.id) }
+
+    expect(calls).to eq(1)
     expect(pitch.reload).to have_attributes(status: "failed", error_message: Pitch::FAILURE_MESSAGE)
   end
 
