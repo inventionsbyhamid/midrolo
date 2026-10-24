@@ -1,10 +1,9 @@
 <%# locals: (sponsor_match:) -%>
-<%# "Write my pitch" is a placeholder until Task 14 wires it to the pitch pack (R42). %>
-<% hint_id = dom_id(sponsor_match, :pitch_hint) %>
+<%# A visible card's actions: the pitch pack (pitches/_button) and the pipeline form (Task 13). %>
 <div class="flex flex-col gap-4">
   <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-    <%= ui_button "Write my pitch", type: "button", size: :sm, disabled: true, aria: { describedby: hint_id } %>
-    <p id="<%= hint_id %>" class="text-[0.8125rem] text-ink-soft">Pitch writing is coming soon</p>
+    <%= render "pitches/button", sponsor_match: sponsor_match %>
+    <p class="text-[0.8125rem] text-ink-soft">Email, ad-read angles and an offer</p>
   </div>
   <%= render "sponsor_matches/status_form", sponsor_match: sponsor_match %>
 </div>

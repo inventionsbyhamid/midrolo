@@ -1,0 +1,5 @@
+<% if @catch_up %>
+  <%= turbo_stream.replace dom_id(@pitch), partial: "pitches/pitch", locals: { pitch: @pitch } %>
+<% else %>
+  <%= turbo_stream.update "pitch_dialog", partial: "pitches/dialog", locals: { sponsor_match: @sponsor_match, pitch: @pitch } %>
+<% end %>

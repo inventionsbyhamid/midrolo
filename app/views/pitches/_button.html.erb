@@ -1,0 +1,13 @@
+<%# locals: (sponsor_match:) -%>
+<%#
+  The card's way into its pitch pack: Write my pitch until the match has one, then Open pitch, so a second click never
+  spends another pitch. Either answers with a Turbo Stream that opens the dialog (pitches/_dialog); a new pitch's
+  create response swaps this in for the Open pitch link.
+%>
+<div id="<%= dom_id(sponsor_match, :pitch_button) %>" class="contents">
+  <% if pitch_written?(sponsor_match) %>
+    <%= link_to "Open pitch", sponsor_match_pitch_path(sponsor_match), class: "btn btn-primary btn-sm", data: { turbo_stream: true } %>
+  <% else %>
+    <%= button_to "Write my pitch", sponsor_match_pitch_path(sponsor_match), class: "btn btn-primary btn-sm", form_class: "contents" %>
+  <% end %>
+</div>

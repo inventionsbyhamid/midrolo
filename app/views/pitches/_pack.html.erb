@@ -1,0 +1,23 @@
+<%# locals: (sponsor_match:, pitch:, limit_reason: nil) -%>
+<%#
+  What the dialog (or the no-JavaScript page) shows for one match: an upgrade notice when over the plan's limit, then
+  the newest pitch, or the offer to write one. Regenerate swaps this whole block. While the pitch is being written the
+  block subscribes to its signed stream (Pitch#broadcast_result replaces pitches/_pitch there), and stream-catchup
+  fetches its state once the subscription is up, in case it finished first.
+%>
+<% writing = pitch&.in_flight? %>
+<div id="<%= dom_id(sponsor_match, :pitch_pack) %>" class="pitch-pack"
+     <%= tag.attributes(data: { controller: "stream-catchup", stream_catchup_url_value: sponsor_match_pitch_path(sponsor_match, pitch_id: pitch.id) }) if writing %>>
+  <% if limit_reason %>
+    <%= render "pitches/upgrade", reason: limit_reason %>
+  <% end %>
+  <% if pitch %>
+    <%= turbo_stream_from pitch if writing %>
+    <%= render "pitches/pitch", pitch: pitch %>
+  <% elsif !limit_reason %>
+    <div class="pitch-empty">
+      <p>Get a ready-to-send email, three ad-read angles, an offer priced from your rate card and a follow-up for next week.</p>
+      <%= button_to "Write my pitch", sponsor_match_pitch_path(sponsor_match), params: { regenerate: 1 }, class: "btn btn-primary btn-md" %>
+    </div>
+  <% end %>
+</div>

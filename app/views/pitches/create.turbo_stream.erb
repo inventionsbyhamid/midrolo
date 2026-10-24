@@ -1,0 +1,7 @@
+<%# From inside the open dialog, swap its pack; from the card, open the dialog. Either way the card now opens it. %>
+<% if @regenerate %>
+  <%= turbo_stream.replace dom_id(@sponsor_match, :pitch_pack), partial: "pitches/pack", locals: { sponsor_match: @sponsor_match, pitch: @pitch } %>
+<% else %>
+  <%= turbo_stream.update "pitch_dialog", partial: "pitches/dialog", locals: { sponsor_match: @sponsor_match, pitch: @pitch } %>
+<% end %>
+<%= turbo_stream.replace dom_id(@sponsor_match, :pitch_button), partial: "pitches/button", locals: { sponsor_match: @sponsor_match } %>

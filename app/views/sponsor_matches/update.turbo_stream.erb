@@ -1,5 +1,10 @@
 <%= turbo_stream.replace dom_id(@sponsor_match, :status_form), method: :morph,
       partial: "sponsor_matches/status_form", locals: { sponsor_match: @sponsor_match, conflict: @newer.present? } %>
+<% if @saved || @newer %>
+  <%# The open pitch dialog's Mark as pitched follows a save or a refusal (no-op without the dialog). Not after an
+      invalid save, whose unsaved status is still on the record. %>
+  <%= turbo_stream.replace dom_id(@sponsor_match, :mark_pitched), partial: "pitches/mark_pitched", locals: { sponsor_match: @sponsor_match } %>
+<% end %>
 <% if @saved %>
   <%# A fresh element each save, so its fade animation starts over; the region around it stays put. %>
   <%= turbo_stream.update dom_id(@sponsor_match, :status_saved) do %>

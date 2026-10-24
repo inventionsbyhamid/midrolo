@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./report.css";
 @import "./pipeline.css";
+@import "./pitch.css";
 
 /*
  * Midrolo design tokens.

@@ -90,16 +90,20 @@ RSpec.describe "reports/sections/_matches" do
       expect(link["target"]).to eq("_blank")
     end
 
-    it "carries the filter data and the pitch placeholder" do
+    it "carries the filter data" do
       expect(card["data-category"]).to eq("Coffee")
       expect(card["data-tier"]).to eq("easy_yes")
       expect(card["data-proven"]).to eq("true")
       expect(card["data-fit"]).to eq("91")
+    end
 
-      pitch = card.at_xpath(".//button[contains(., 'Write my pitch')]")
-      expect(pitch["disabled"]).not_to be_nil
-      expect(html.at_css("##{pitch['aria-describedby']}").text).to eq("Pitch writing is coming soon")
-      expect(card.text).not_to include("Coming in the next step")
+    it "has a Write my pitch button that posts to the match's pitch" do
+      match = report.sponsor_matches.first
+      form = card.at_xpath(".//form[.//button[contains(., 'Write my pitch')]]")
+      expect(form["action"]).to eq("/sponsor_matches/#{match.id}/pitch")
+      expect(form["method"]).to eq("post")
+      expect(form.at_css("button")["disabled"]).to be_nil
+      expect(card.text).not_to include("coming soon")
     end
 
     it "offers a live pipeline form: a labelled status select that saves on change, notes and a follow-up date" do
@@ -162,7 +166,9 @@ RSpec.describe "reports/sections/_matches" do
       render_section
 
       superseded, current = html.css("[data-filter-target='item']")
-      expect(superseded.css("form, select, textarea")).to be_empty
+      # The pipeline form is gone; the pitch button stays on any visible card (R51).
+      expect(superseded.css("form:not([action$='/pitch']), select, textarea")).to be_empty
+      expect(superseded.at_xpath(".//button[contains(., 'Write my pitch')]")).to be_present
       state = superseded.at_css("[data-superseded]")
       expect(state.text.squish).to eq("Pipeline Pitched Tracked on your latest report →")
       href = show_report_path(newer_report.show, newer_report, anchor: ActionView::RecordIdentifier.dom_id(newer))
@@ -186,9 +192,19 @@ RSpec.describe "reports/sections/_matches" do
     limit_visible_to(50, pipeline: false)
     render_section
     card = html.at_css("[data-filter-target='item']")
-    expect(card.css("form, select, textarea")).to be_empty
+    expect(card.css("form:not([action$='/pitch']), select, textarea")).to be_empty
     link = card.at_css("a[href='/pricing']")
     expect(link.text.squish).to eq("Track this brand in your pipeline — Creator plan")
+  end
+
+  it "opens the written pitch instead of writing another once the match has one" do
+    match = create(:sponsor_match, report: report)
+    Pitch.create!(sponsor_match: match, status: "done")
+    render_section
+    card = html.at_css("[data-filter-target='item']")
+    link = card.at_css("a[href='/sponsor_matches/#{match.id}/pitch'][data-turbo-stream='true']")
+    expect(link.text.squish).to eq("Open pitch")
+    expect(card.at_xpath(".//button[contains(., 'Write my pitch')]")).to be_nil
   end
 
   it "leaves the tier line out of the unlock prompt when no locked tier is known" do

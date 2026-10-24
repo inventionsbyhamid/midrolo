@@ -1,0 +1,10 @@
+<%# locals: (sponsor_match:, pitch:, limit_reason: nil) -%>
+<%#
+  The pitch dialog, put into #pitch_dialog on the report page by a Turbo Stream and opened as it lands. A full-height
+  sheet on a phone. Closing it returns focus to the card's pitch button, which the same response may have replaced.
+%>
+<div data-controller="dialog" data-dialog-open-value="true" data-dialog-return-to-value="<%= dom_id(sponsor_match, :pitch_button) %>">
+  <%= render "components/dialog", title: "Pitch for #{sponsor_match.name}", id: dom_id(sponsor_match, :pitch_dialog), sheet: :mobile do %>
+    <%= render "pitches/pack", sponsor_match: sponsor_match, pitch: pitch, limit_reason: limit_reason %>
+  <% end %>
+</div>

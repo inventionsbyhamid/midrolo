@@ -1,0 +1,12 @@
+<%# locals: (sponsor_match:, pitch:, limit_reason: nil) -%>
+<%# The pitch pack as a page, for a browser without JavaScript (the dialog's content, under a heading). %>
+<% content_for :title, "Pitch for #{sponsor_match.name}" %>
+<div class="mx-auto flex max-w-2xl flex-col gap-6">
+  <p class="text-sm">
+    <%= link_to show_report_path(sponsor_match.show_id, sponsor_match.report_id, anchor: dom_id(sponsor_match)), class: "link" do %><span aria-hidden="true">← </span>Back to the report<% end %>
+  </p>
+  <h1 class="type-h2">Pitch for <%= sponsor_match.name %></h1>
+  <div class="card p-5 sm:p-6">
+    <%= render "pitches/pack", sponsor_match: sponsor_match, pitch: pitch, limit_reason: limit_reason %>
+  </div>
+</div>

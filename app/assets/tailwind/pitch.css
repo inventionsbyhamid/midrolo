@@ -1,0 +1,186 @@
+/*
+ * The pitch pack (app/views/pitches), shown in the pitch dialog, imported from application.css.
+ * Colours come from the @theme tokens there; nothing here is hard-coded.
+ */
+@layer components {
+  .pitch-pack,
+  .pitch {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .pitch-section {
+    min-width: 0;
+  }
+
+  /* Section names: small and quiet, so the email itself leads. */
+  .pitch-label {
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    font-stretch: 106%;
+    letter-spacing: 0.02em;
+    color: var(--color-ink-soft);
+  }
+
+  /* The email as it will be sent: a subject line over the body, like a compose window. */
+  .pitch-email {
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+  }
+
+  .pitch-subject {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-line);
+    font-weight: 650;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  .pitch-subject-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+  }
+
+  .pitch-text {
+    padding: 1rem;
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  .pitch-text-quiet {
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
+  }
+
+  .pitch-email-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    padding: 0 1rem 1rem;
+  }
+
+  .pitch-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .pitch-meta {
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Angles: numbered like cue cards. */
+  .pitch-angles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    counter-reset: angle;
+  }
+
+  .pitch-angles li {
+    position: relative;
+    padding-left: 2.25rem;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    counter-increment: angle;
+  }
+
+  .pitch-angles li::before {
+    content: counter(angle);
+    position: absolute;
+    left: 0;
+    top: 0.0625rem;
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+    background: var(--color-plum-soft);
+    color: var(--color-plum);
+    font-size: 0.8125rem;
+    font-weight: 700;
+  }
+
+  /* Offer and contact side by side once there's room. */
+  .pitch-pair {
+    display: grid;
+    gap: 1.5rem;
+
+    @media (width >= 36rem) {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .pitch-offer {
+    padding: 0.75rem 1rem;
+    border-left: 3px solid var(--color-plum);
+    border-radius: 0 var(--radius-control) var(--radius-control) 0;
+    background: var(--color-plum-soft);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  .pitch-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-line);
+  }
+
+  .mark-pitched {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .mark-pitched-done {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-success);
+  }
+
+  .pitch-empty,
+  .pitch-upgrade {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .pitch-upgrade {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
+  }
+
+  .pitch-failed {
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-danger-soft);
+    border-radius: var(--radius-control);
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+}

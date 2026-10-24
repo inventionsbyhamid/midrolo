@@ -54,6 +54,8 @@ RSpec.describe "Sponsor matches" do
       error = form.at_css("##{notes['aria-describedby'].split.last}")
       expect(error.text).to include("Notes can be at most #{SponsorMatch::NOTES_LIMIT} characters")
       expect(page.at_css("turbo-stream[action='update']")).to be_nil
+      # The unsaved "pitched" mustn't reach an open pitch dialog's Mark as pitched either.
+      expect(page.at_css("turbo-stream[target='#{ActionView::RecordIdentifier.dom_id(brand_match, :mark_pitched)}']")).to be_nil
     end
 
     it "ignores attributes the podcaster can't edit" do

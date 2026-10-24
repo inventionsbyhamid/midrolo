@@ -25,7 +25,9 @@ Rails.application.routes.draw do
   resources :shows, only: %i[index new create show edit update] do
     resources :reports, only: %i[create show]
   end
-  resources :sponsor_matches, only: :update
+  resources :sponsor_matches, only: :update do
+    resource :pitch, only: %i[show create]
+  end
   get "pipeline", to: "pipeline#index", as: :pipeline
 
   # Design system gallery. Development only: production has no such route.
