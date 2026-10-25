@@ -34,6 +34,9 @@ module Research
         compact(result.is_a?(Hash) ? result[:error] || result.to_json : result)
       rescue Taste::AuthError, Taste::MissingCredentials, Taste::CallCapReached
         raise
+      rescue Taste::BadRequest, Taste::Unsupported, Taste::NotFound => e
+        # The same request gets the same answer (R110), so the model shouldn't spend a turn and a call on it.
+        compact("Qloo error: #{StepLogger.describe(e)} Nothing changed. Don't retry this request; carry on with what you have.")
       rescue Taste::Error => e
         compact("Qloo error: #{StepLogger.describe(e)} Nothing changed. Retry once, or carry on with what you have.")
       end

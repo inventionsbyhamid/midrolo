@@ -179,6 +179,17 @@ RSpec.describe Research::Tools do
       expect(out).to include("Qloo is rate limiting us")
     end
 
+    it "tells the model not to retry a request Qloo can't use, doesn't support or has nothing for (R110)" do
+      seed!
+      [ Taste::BadRequest, Taste::Unsupported, Taste::NotFound ].each do |error|
+        allow(taste).to receive(:recommend).and_raise(error, "x")
+        out = run("find_sponsor_candidates", categories: [ "Finance" ])
+        expect(out).to include("Don't retry this request").and(satisfy { |text| !text.include?("Retry once") })
+      end
+      allow(taste).to receive(:recommend).and_raise(Taste::Unavailable, "503")
+      expect(run("find_sponsor_candidates", categories: [ "Finance" ])).to include("Retry once")
+    end
+
     it "lets Qloo auth errors through" do
       seed!
       allow(taste).to receive(:recommend).and_raise(Taste::AuthError)

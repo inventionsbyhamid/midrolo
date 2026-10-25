@@ -104,18 +104,22 @@ RSpec.describe Taste::Smoke do
       expect(a_request(:get, "#{base}/search").with(query: hash_including("query" => "SmartLess"))).to have_been_made.twice
     end
 
-    it "saves no response bodies anywhere in the repo: no file is added or changed" do
-      # Logs, bootsnap's compile cache and git's own files change for other reasons; .env files are never touched.
-      ignored = %r{\A(?:\.git/|log/|tmp/cache/|node_modules/|storage/|\.env)}
-      snapshot = lambda do
-        Dir.glob("**/*", File::FNM_DOTMATCH, base: Rails.root).reject { |path| path.match?(ignored) }
-           .select { |path| File.file?(Rails.root.join(path)) }.to_h { |path| [ path, File.mtime(Rails.root.join(path)) ] }
+    it "writes no file and never prints the key (R110)" do
+      writes = []
+      %i[write binwrite].each do |name|
+        allow(File).to receive(name).and_wrap_original { |original, path, *rest, **opts| writes << path.to_s && original.call(path, *rest, **opts) }
       end
-      before = snapshot.call
+      allow(File).to receive(:open).and_wrap_original do |original, path, *rest, **opts, &block|
+        writes << path.to_s if (rest.first || opts[:mode]).to_s.match?(/[wa+]/)
+        original.call(path, *rest, **opts, &block)
+      end
+      key = "synthetic-qloo-key-7f3a"
 
-      smoke.call
+      smoke(api_key: key).call
 
-      expect(snapshot.call).to eq(before)
+      expect(writes).to be_empty
+      expect(io.string).not_to include(key)
+      expect(a_request(:get, %r{hackathon\.api\.qloo\.com/search}).with(headers: { "X-Api-Key" => key })).to have_been_made.at_least_once
     end
 
     it "fails a call whose answer breaks its expectation, and says so" do
@@ -175,6 +179,17 @@ RSpec.describe Taste::Smoke do
       expect(result).not_to be_passed
       expect(a_request(:get, /hackathon\.api\.qloo\.com/)).to have_been_made.times(10)
       expect(io.string).to include("ABORT", "budget of 10 live calls")
+    end
+
+    it "aborts on a rejected key (401), making no more calls (R110)" do
+      stub_request(:get, %r{hackathon\.api\.qloo\.com}).to_return(status: 401, body: '{"message":"No API key found in request"}')
+
+      result = smoke.call
+
+      expect(result).to be_aborted
+      expect(result.calls).to eq(1)
+      expect(a_request(:get, %r{hackathon\.api\.qloo\.com})).to have_been_made.once
+      expect(io.string).to include("ABORT", "rejected the key")
     end
 
     it "aborts when the global call guard refuses, making no more calls" do

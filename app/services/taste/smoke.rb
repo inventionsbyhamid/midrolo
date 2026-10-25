@@ -1,8 +1,8 @@
 module Taste
   # rake qloo:smoke (R92): the live smoke checklist (docs/live-smoke.md) against the real Qloo API, through
   # Taste::Providers::Qloo, within a hard budget of BUDGET live calls, retries included. Every attempt asks the budget
-  # first, then the global call guard, so the smoke counts toward the day's calls; a spent budget or a refusal from the
-  # guard aborts the run before the next call. It reads past the response cache to see what Qloo sends now, and writes
+  # first, then the global call guard, so the smoke counts toward the day's calls; a spent budget, a refusal from the
+  # guard or a rejected key (401) aborts the run before the next call. It reads past the response cache to see what Qloo sends now, and writes
   # nothing anywhere: per call it prints the endpoint, the HTTP status, the result count, which parsing paths matched
   # and PASS or FAIL against the expectation, plus at most NAMES_SHOWN names. Never a body, an id or the key.
   #
@@ -27,7 +27,7 @@ module Taste
     class BudgetSpent < StandardError; end
 
     # outcomes: {step => :pass, :fail or :skip} for the steps that ran; calls: live calls made; aborted: whether the
-    # budget or the call guard stopped the run.
+    # budget, the call guard or a rejected key stopped the run.
     Result = Data.define(:outcomes, :calls, :aborted) do
       def aborted? = aborted
       def passed? = !aborted && outcomes.any? && outcomes.values.all?(:pass)
@@ -102,9 +102,17 @@ module Taste
     def run_steps
       @steps.each.with_index(1) { |step, number| send(step, number) }
       false
-    rescue BudgetSpent, CallCapReached => e
-      @io.puts "ABORT: #{e.is_a?(BudgetSpent) ? e.message : "the call guard refused (#{e.message})"}"
+    rescue BudgetSpent, CallCapReached, AuthError => e
+      @io.puts "ABORT: #{abort_reason(e)}"
       true
+    end
+
+    def abort_reason(error)
+      case error
+      when BudgetSpent then error.message
+      when AuthError then "Qloo rejected the key (HTTP 401), so no more calls were made"
+      else "the call guard refused (#{error.message})"
+      end
     end
 
     def summary(result)
@@ -194,13 +202,13 @@ module Taste
 
     # ---- running and printing one check ----
 
-    # The block makes one call and returns [items, passed, parsing paths]. A Qloo error fails the check; a spent budget
-    # or the call guard's refusal ends the run.
+    # The block makes one call and returns [items, passed, parsing paths]. A Qloo error fails the check; a spent budget,
+    # the call guard's refusal or a rejected key ends the run.
     def check(number, name, path, expectation)
       @last = nil
       items, passed, shape = begin
         yield
-      rescue CallCapReached
+      rescue CallCapReached, AuthError
         raise
       rescue Error => e
         [ [], false, [ "raised #{e.class.name}" ] ]

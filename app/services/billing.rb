@@ -28,11 +28,7 @@ module Billing
       requested = ENV["BILLING_MODE"].to_s.strip.downcase.presence || "waitlist"
       case requested
       when "waitlist" then :waitlist
-      when "live"
-        return fall_back("BILLING_MODE=live needs DODO_API_KEY and DODO_ENVIRONMENT=live_mode") unless Provider.live?
-
-        blockers = Margins.check.blockers
-        blockers.empty? ? :live : fall_back("BILLING_MODE=live waits for the go live check: #{blockers.join('; ')}")
+      when "live" then Current.live_billing_mode ||= live_mode
       when "test"
         Provider.test_mode? ? :test : fall_back("BILLING_MODE=test needs a payment provider in test mode")
       else fall_back("unknown BILLING_MODE #{requested.inspect}")
@@ -110,14 +106,25 @@ module Billing
       product_ids.find { |_key, id| id.to_s == product_id.to_s }&.first&.to_s
     end
 
-    # Forgets the memoized provider, plans.yml and the warnings given (after ENV changes, in specs).
+    # Forgets the memoized provider, plans.yml, this request's live mode and the warnings given (after ENV changes, in
+    # specs).
     def reset!
+      Current.live_billing_mode = nil
       Provider.reset!
       Entitlements.reset_plans!
       @warned = nil
     end
 
     private
+
+    # :live, or :waitlist with a warning until payments and the go live check allow it (R94). Billing.mode keeps the
+    # answer for the rest of the request or job (Current).
+    def live_mode
+      return fall_back("BILLING_MODE=live needs DODO_API_KEY and DODO_ENVIRONMENT=live_mode") unless Provider.live?
+
+      blockers = Margins.check.blockers
+      blockers.empty? ? :live : fall_back("BILLING_MODE=live waits for the go live check: #{blockers.join('; ')}")
+    end
 
     def product_ids = Entitlements.plans[:product_ids] || {}
 

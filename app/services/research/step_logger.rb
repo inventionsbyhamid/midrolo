@@ -60,6 +60,7 @@ module Research
       when Taste::Unavailable then "Qloo is unavailable right now."
       when Taste::BadRequest then "Qloo couldn't use that request."
       when Taste::Unsupported then "Qloo doesn't support that request."
+      when Taste::NotFound then "Qloo has no results for that request."
       when Podcasts::Directory::Unavailable then "The podcast directory is unavailable right now."
       else "Something went wrong (#{error.class.name.demodulize})."
       end

@@ -159,6 +159,10 @@ RSpec.describe Research::StepLogger do
     )
   end
 
+  it "says Qloo has nothing for a request that 404s (R110)" do
+    expect(described_class.describe(Taste::NotFound.new("404"))).to eq("Qloo has no results for that request.")
+  end
+
   it "says taste data is busy when our own call guard refused an optional call (R92)" do
     logger.step("audience", "Building…") { |step| step.optional("Leans") { raise Taste::CallCapReached, "daily limit" } }
     expect(report.agent_steps.last.output_summary).to eq("Leans skipped: Taste data is busy right now.")

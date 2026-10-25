@@ -91,10 +91,14 @@ RSpec.describe Taste::Providers::Qloo do
       expect(results.last.affinity).to be_nil
     end
 
-    it "returns [] when Qloo answers 404 No results (M1), and doesn't cache the miss" do
+    it "returns [] when Qloo answers 404 No results (M1), and remembers the miss for a day (R110)" do
       stub = stub_request(:get, "#{base}/search").with(query: hash_including({}))
         .to_return(status: 404, body: '{"code":404,"reason":"Not Found","message":"No results"}')
       2.times { expect(adapter.search(query: "zzqxv nonexistent show", types: [ :podcast ])).to eq([]) }
+      expect(stub).to have_been_requested.once
+      expect(guard.usage.today).to eq(1)
+
+      travel(1.day + 1.second) { adapter.search(query: "zzqxv nonexistent show", types: [ :podcast ]) }
       expect(stub).to have_been_requested.twice
     end
   end
@@ -254,11 +258,11 @@ RSpec.describe Taste::Providers::Qloo do
       expect(Rails.logger).to have_received(:warn).with(a_string_including("2 heatmap entries", "geo", "score"))
     end
 
-    it "returns no points when Qloo can't place the location, a 400 (M2), and doesn't cache the miss" do
+    it "returns no points when Qloo can't place the location, a 400 (M2), remembering the miss for a day (R110)" do
       stub = stub_request(:get, "#{base}/v2/insights").with(query: hash_including("filter.location.query" => "Atlantis"))
         .to_return(status: 400, body: '{"message":"No localities found"}')
       2.times { expect(adapter.heatmap(location: "Atlantis", entity_ids: [ "E1" ])).to eq([]) }
-      expect(stub).to have_been_requested.twice
+      expect(stub).to have_been_requested.once
     end
   end
 
@@ -302,6 +306,23 @@ RSpec.describe Taste::Providers::Qloo do
         expect(error).to be_a(Taste::Error)
         expect(error).not_to be_a(Taste::AuthError)
       end
+    end
+
+    it "raises a remembered 400 or 404 again from the cache, as cached, without a request; other errors aren't kept (R110)" do
+      bad = stub_request(:get, "#{base}/v2/tags").with(query: hash_including("filter.query" => "bad")).to_return(status: 400, body: "{}")
+      down = stub_request(:get, "#{base}/v2/tags").with(query: hash_including("filter.query" => "down")).to_return(status: 503)
+      events = []
+      sub = ActiveSupport::Notifications.subscribe("request.taste") { |*, payload| events << payload }
+
+      2.times { expect { adapter.find_tags(query: "bad") }.to raise_error(Taste::BadRequest) }
+      2.times { expect { adapter.find_tags(query: "down") }.to raise_error(Taste::Unavailable) }
+
+      expect(bad).to have_been_requested.once
+      expect(down).to have_been_requested.times(4) # two calls, each retried once
+      expect(events.select { |e| e[:cached] }).to eq([ events.find { |e| e[:cached] } ])
+      expect(events.find { |e| e[:cached] }).to include(path: "/v2/tags", status: 400)
+    ensure
+      ActiveSupport::Notifications.unsubscribe(sub)
     end
 
     it "raises NotFound on a 404 from a call where it doesn't mean no results" do

@@ -13,6 +13,10 @@ module Taste
       CACHE_TTL = 7.days
       STABLE_CACHE_TTL = 30.days
       STABLE_PATHS = %w[/search /v2/tags].freeze
+      # R110: a 400 or 404 answers the same params the same way, so it is remembered for a day, as a miss marker.
+      MISS_TTL = 1.day
+      MISS_KEY = "qloo_miss_status".freeze
+      MISSES = { 400 => BadRequest, 404 => NotFound }.freeze
       AFFINITY_CHUNK = 50
       # Qloo ignores take on heatmaps (8,421 points for the United States, R106): only this many are kept and cached.
       HEATMAP_KEEP = 200
@@ -108,20 +112,30 @@ module Taste
 
       # ---- HTTP ----
 
-      # keep: trims a live answer before it is cached and returned.
+      # keep: trims a live answer before it is cached and returned. A remembered miss raises as the live one did.
       def get(path, params, keep: nil)
         params = normalize(params)
         key = cache_key(path, params)
         started = monotonic
         if (cached = @cache.read(key))
-          notify(path, true, 200, started)
+          miss = cached[MISS_KEY]
+          notify(path, true, miss || 200, started)
+          raise MISSES.fetch(miss), "Qloo #{path} returned HTTP #{miss} (remembered for a day)" if miss
+
           return cached
         end
 
-        json = parse(path, live_body(path, params))
+        json = parse(path, live_body_remembering_misses(path, params, key))
         json = keep.call(json) if keep
         @cache.write(key, json, expires_in: STABLE_PATHS.include?(path) ? STABLE_CACHE_TTL : CACHE_TTL)
         json
+      end
+
+      def live_body_remembering_misses(path, params, key)
+        live_body(path, params)
+      rescue BadRequest, NotFound => e
+        @cache.write(key, { MISS_KEY => MISSES.key(e.class) }, expires_in: MISS_TTL)
+        raise
       end
 
       # The body of a 2xx answer, after at most one retry. Raises for any other outcome.

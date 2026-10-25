@@ -48,6 +48,13 @@ RSpec.describe Billing do
         end
       end
 
+      it "works the live check out once a request or job, not on every call (R110)" do
+        AppSettings.set(:qloo_cost_per_call_usd, "0.001")
+        allow(Billing::Margins).to receive(:check).and_call_original
+        with_billing_env(live) { 3.times { expect(described_class.mode).to eq(:live) } }
+        expect(Billing::Margins).to have_received(:check).once
+      end
+
       it "lists nothing to fix unless BILLING_MODE asks for live" do
         with_billing_env("BILLING_MODE" => "test") { expect(described_class.go_live_blockers).to eq([]) }
         with_billing_env { expect(described_class.go_live_blockers).to eq([]) }
