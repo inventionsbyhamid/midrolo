@@ -34,6 +34,16 @@ RSpec.describe "rake qloo:smoke" do
     expect { task.invoke }.not_to raise_error
   end
 
+  it "runs only the checks named in STEPS (R107)" do
+    saved = ENV["STEPS"]
+    ENV["STEPS"] = "search_podcast,heatmap"
+    allow(Taste::Smoke).to receive(:call).and_return(result({ search_podcast: :pass, heatmap: :pass }))
+    task.invoke
+    expect(Taste::Smoke).to have_received(:call).with(steps: "search_podcast,heatmap")
+  ensure
+    saved.nil? ? ENV.delete("STEPS") : ENV["STEPS"] = saved
+  end
+
   it "exits non-zero when a check fails or the run aborts" do
     allow(Taste::Smoke).to receive(:call).and_return(result({ search_podcast: :fail }))
     expect { task.invoke }.to raise_error(SystemExit).and output(/did not pass/).to_stderr

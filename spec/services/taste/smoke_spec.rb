@@ -11,8 +11,8 @@ RSpec.describe Taste::Smoke do
 
   def fixture(name) = { status: 200, body: Rails.root.join("spec/fixtures/qloo/#{name}.json").read }
 
-  def smoke(env: development, api_key: "test-key")
-    described_class.new(api_key: api_key, env: env, io: io, sleeper: ->(_seconds) { })
+  def smoke(env: development, api_key: "test-key", steps: nil)
+    described_class.new(api_key: api_key, env: env, io: io, sleeper: ->(_seconds) { }, steps: steps)
   end
 
   def insights(params) = stub_request(:get, "#{base}/v2/insights").with(query: hash_including(params))
@@ -41,6 +41,11 @@ RSpec.describe Taste::Smoke do
   describe "refusing to run" do
     it "refuses without QLOO_API_KEY" do
       expect { smoke(api_key: " ").call }.to raise_error(described_class::Refused, /QLOO_API_KEY/)
+    end
+
+    it "refuses an unknown step, naming the ones it knows, before any call" do
+      expect { smoke(steps: "heatmap,compare").call }.to raise_error(described_class::Refused, /compare.*search_podcast/m)
+      expect(a_request(:any, /qloo/)).not_to have_been_made
     end
 
     it "refuses outside development and production, the test environment included" do
@@ -120,6 +125,30 @@ RSpec.describe Taste::Smoke do
       expect(result.outcomes[:demographics]).to eq(:fail)
       expect(result).not_to be_passed
       expect(io.string).to include("1 demographics block", "FAIL")
+    end
+
+    it "passes the miss when Qloo's fuzzy search answers near shows, none close to the nonsense query (R107)" do
+      stub_request(:get, "#{base}/search").with(query: hash_including("query" => "zzqxv nonexistent show")).to_return(fixture("search"))
+      result = smoke.call
+
+      expect(result.outcomes[:search_miss]).to eq(:pass)
+      expect(io.string).to match(/search_miss  GET \/search  HTTP 200  2 results  PASS/)
+    end
+
+    it "fails the miss when a result's name is close to the nonsense query" do
+      close = { results: [ { entity_id: "SYN-POD-404", name: "Zzqxv Nonexistent Show", subtype: "urn:entity:podcast" } ] }
+      stub_request(:get, "#{base}/search").with(query: hash_including("query" => "zzqxv nonexistent show"))
+        .to_return(status: 200, body: close.to_json)
+      expect(smoke.call.outcomes[:search_miss]).to eq(:fail)
+    end
+
+    it "runs only the steps asked for, adding the podcast search they need, so a rerun spends only what it checks (R107)" do
+      result = smoke(steps: "heatmap, search_miss").call
+
+      expect(result.outcomes.keys).to eq(%i[search_podcast search_miss heatmap])
+      expect(result.calls).to eq(3)
+      expect(result).to be_passed
+      expect(io.string).to include("3 checks", "3 passed, 0 failed, 0 skipped; 3 live calls of 10")
     end
 
     it "skips the calls that need a podcast when the search finds none, making no call for them" do

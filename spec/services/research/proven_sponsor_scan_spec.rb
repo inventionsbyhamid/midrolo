@@ -142,6 +142,16 @@ RSpec.describe Research::ProvenSponsorScan do
     expect(report.agent_steps.order(:position).last.output_summary).to include("8 most frequent of 17 names")
   end
 
+  it "takes 3 hits from one lookup and keeps the one with the same name, since Qloo search is fuzzy (R107)" do
+    serve([ "This episode is sponsored by Notion." ])
+    notion = taste.search(query: "Notion", types: [ :brand ], take: 1).first
+    decoy = notion.with(id: "fake:brand:notion-calendar", name: "Notion Calendar")
+    allow(taste).to receive(:search).and_return([ decoy, notion ])
+
+    expect(scan.keys).to eq([ notion.id ])
+    expect(taste).to have_received(:search).with(query: "Notion", types: [ :brand ], take: 3).once
+  end
+
   it "stops resolving once the run's research budget is spent" do
     kit = Research::Toolkit.new(report, taste: taste, directory: directory, max_taste_calls: 1)
     serve([ "This episode is sponsored by Ramp.", "This episode is sponsored by Notion." ])

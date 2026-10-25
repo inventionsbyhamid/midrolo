@@ -6,7 +6,9 @@ module Taste
   # nothing anywhere: per call it prints the endpoint, the HTTP status, the result count, which parsing paths matched
   # and PASS or FAIL against the expectation, plus at most NAMES_SHOWN names. Never a body, an id or the key.
   #
-  # It runs only with QLOO_API_KEY set, in development or production. Specs drive it against WebMock.
+  # It runs only with QLOO_API_KEY set, in development or production. STEPS=heatmap,search_miss runs only those checks,
+  # in checklist order, plus the podcast search the others need (R107), so a rerun spends only what it checks. Specs
+  # drive it against WebMock.
   class Smoke
     BUDGET = 10
     NAMES_SHOWN = 3
@@ -18,6 +20,8 @@ module Taste
     AGE_BUCKETS = 6
     # No compare (R105): Qloo's compare finds no shared tags between a podcast and a brand, so reports don't call it.
     STEPS = %i[search_podcast search_miss brand_tags brand_recs union demographics heatmap taste_tags].freeze
+    # The checks that use the podcast the first one finds.
+    NEEDS_PODCAST = %i[brand_recs demographics heatmap taste_tags].freeze
 
     class Refused < StandardError; end
     class BudgetSpent < StandardError; end
@@ -49,20 +53,23 @@ module Taste
 
     def self.call(**) = new(**).call
 
-    def initialize(api_key: ENV["QLOO_API_KEY"], env: Rails.env, io: $stdout, sleeper: ->(seconds) { sleep(seconds) })
+    def initialize(api_key: ENV["QLOO_API_KEY"], env: Rails.env, io: $stdout, sleeper: ->(seconds) { sleep(seconds) },
+                   steps: ENV["STEPS"])
       @api_key = api_key.to_s.strip
       @env = env
       @io = io
       @sleeper = sleeper
+      @asked = steps.to_s.split(",").map(&:strip).reject(&:empty?).map(&:to_sym)
     end
 
     def call
       refuse_unless_allowed!
+      @steps = planned_steps
       @budget = Budget.new(CallGuard.new, BUDGET)
       @qloo = Providers::Qloo.new(api_key: @api_key, cache: ActiveSupport::Cache::NullStore.new, guard: @budget,
                                   sleeper: @sleeper, on_response: ->(status:, body:, **) { @last = { status: status, body: body } })
       @outcomes = {}
-      @io.puts "Qloo smoke: #{STEPS.size} checks, a hard budget of #{BUDGET} live calls. Shapes and counts only."
+      @io.puts "Qloo smoke: #{@steps.size} checks, a hard budget of #{BUDGET} live calls. Shapes and counts only."
       aborted = run_steps
       result = Result.new(outcomes: @outcomes, calls: @budget.used, aborted: aborted)
       @io.puts summary(result)
@@ -78,8 +85,22 @@ module Taste
       raise Refused, "Qloo smoke refused: it runs only in development or production, not #{@env}."
     end
 
+    # Every check, or the ones asked for plus the podcast search they need, in checklist order.
+    def planned_steps
+      return STEPS if @asked.empty?
+
+      unknown = @asked - STEPS
+      if unknown.any?
+        raise Refused, "Qloo smoke refused: no #{'step'.pluralize(unknown.size)} called #{unknown.join(', ')}. " \
+                       "The steps are #{STEPS.join(', ')}."
+      end
+
+      wanted = @asked.intersect?(NEEDS_PODCAST) ? @asked | [ :search_podcast ] : @asked
+      STEPS & wanted
+    end
+
     def run_steps
-      STEPS.each.with_index(1) { |step, number| send(step, number) }
+      @steps.each.with_index(1) { |step, number| send(step, number) }
       false
     rescue BudgetSpent, CallCapReached => e
       @io.puts "ABORT: #{e.is_a?(BudgetSpent) ? e.message : "the call guard refused (#{e.message})"}"
@@ -102,11 +123,13 @@ module Taste
       end
     end
 
-    # A miss is 404 or 200 with an empty list; either way the client returns no results (M1).
+    # Qloo search is fuzzy (R107): a nonsense query gets the nearest shows with a 200, so a miss means no result whose
+    # name is close to it, the test every caller applies (Research::Names.close?). A 404 means no results (M1).
     def search_miss(number)
-      check(number, :search_miss, "/search", "no results (404 or an empty 200)") do
+      check(number, :search_miss, "/search", "no result close to the nonsense query (200 or 404)") do
         results = @qloo.search(query: MISS_QUERY, types: [ :podcast ], take: 5)
-        [ results, results.empty? && [ 200, 404 ].include?(status), [] ]
+        close = results.any? { |entity| Research::Names.close?(entity.name, MISS_QUERY) }
+        [ results, !close && [ 200, 404 ].include?(status), [] ]
       end
     end
 

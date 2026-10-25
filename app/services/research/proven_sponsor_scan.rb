@@ -27,6 +27,7 @@ module Research
     DESCRIPTION_LIMIT = 4000
     DIRECTORY_RESULTS = 5
     MAX_RESOLUTIONS = Research.caps.fetch(:proven_scan_resolutions)
+    LOOKUP_HITS = 3
     EVIDENCE_ITEMS = 3
     MIN_NAME_LENGTH = 2
 
@@ -163,12 +164,13 @@ module Research
       end
     end
 
-    # One Qloo lookup per name; a domain is searched without its suffix, a possessive without the "’s".
+    # One Qloo lookup per name; a domain is searched without its suffix, a possessive without the "’s". Qloo search is
+    # fuzzy (R107), so the lookup takes LOOKUP_HITS and keeps the one with the same name.
     def resolve(name, step)
       base = name.sub(POSSESSIVE, "")
       step.optional("Looking up #{name}") do
-        hit = taste.search(query: base.sub(Names::DOMAIN_SUFFIX, ""), types: [ :brand ], take: 1).first
-        hit if hit && (Names.same?(hit.name, name) || Names.same?(hit.name, base))
+        hits = taste.search(query: base.sub(Names::DOMAIN_SUFFIX, ""), types: [ :brand ], take: LOOKUP_HITS)
+        hits.find { |hit| Names.same?(hit.name, name) || Names.same?(hit.name, base) }
       end
     end
 
