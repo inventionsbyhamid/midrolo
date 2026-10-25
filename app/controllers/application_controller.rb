@@ -27,6 +27,16 @@ class ApplicationController < ActionController::Base
     redirect_to path, flash: messages.merge(upgrade: error.details.as_json)
   end
 
+  # The app's friendly 429 (ThrottledResponse) for a rate_limit's with:. Rails doesn't say how long its window has
+  # left, so Retry-After is the whole window.
+  def render_throttled(retry_after:)
+    status, headers, body = ThrottledResponse.new(request, retry_after: retry_after).to_rack
+    self.status = status
+    self.content_type = headers.fetch("content-type")
+    response.set_header("retry-after", headers.fetch("retry-after"))
+    self.response_body = body
+  end
+
   def any_browser? = false
 
   def layout_for_devise

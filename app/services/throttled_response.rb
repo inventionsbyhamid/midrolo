@@ -1,15 +1,21 @@
-# The 429 Rack::Attack sends (config/initializers/rack_attack.rb, R69), shaped for whoever asked: a Turbo Stream
-# request gets a stream that swaps the page's flash for MESSAGE, a Turbo Frame request gets MESSAGE inside its frame,
-# and anything else gets the static public/429.html. Each carries Retry-After: the seconds until the throttle's
-# window ends.
+# The app's 429 (R69), from Rack::Attack (config/initializers/rack_attack.rb) and from controllers' rate_limit
+# (ApplicationController#render_throttled), shaped for whoever asked: a Turbo Stream request gets a stream that swaps
+# the page's flash for MESSAGE, a Turbo Frame request gets MESSAGE inside its frame, and anything else gets the static
+# public/429.html. Each carries Retry-After in seconds.
 class ThrottledResponse
   MESSAGE = "Too many requests — try again in a few minutes.".freeze
   STATUS = 429
 
-  def self.call(request) = new(request).to_rack
+  # For Rack::Attack: Retry-After is the time left in the throttle's window.
+  def self.call(request)
+    match = request.env["rack.attack.match_data"]
+    new(request, retry_after: match[:period] - (match[:epoch_time] % match[:period])).to_rack
+  end
 
-  def initialize(request)
+  # request is a Rack::Request (Rack::Attack's or ActionDispatch's).
+  def initialize(request, retry_after:)
     @request = request
+    @retry_after = retry_after.to_i
   end
 
   def to_rack
@@ -25,12 +31,7 @@ class ThrottledResponse
   private
 
   def respond(content_type, body)
-    [ STATUS, { "content-type" => "#{content_type}; charset=utf-8", "retry-after" => retry_after.to_s }, [ body ] ]
-  end
-
-  def retry_after
-    match = @request.env["rack.attack.match_data"]
-    match[:period] - (match[:epoch_time] % match[:period])
+    [ STATUS, { "content-type" => "#{content_type}; charset=utf-8", "retry-after" => @retry_after.to_s }, [ body ] ]
   end
 
   def turbo_stream? = @request.get_header("HTTP_ACCEPT").to_s.include?("text/vnd.turbo-stream.html")

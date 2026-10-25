@@ -13,6 +13,21 @@ RSpec.describe "Rate limits", :rack_attack do
 
   def from(ip) = { "REMOTE_ADDR" => ip }
 
+  # Sends limit requests spread over requests ([method, path] pairs), each reaching its action as the signed-in user,
+  # then one more of each pair: every one of those is throttled.
+  def expect_all_counted(requests, limit:, **options)
+    limit.times do |n|
+      method, path = requests[n % requests.size]
+      public_send(method, path, **options)
+      expect(response.status).to be_between(200, 399), "#{method.upcase} #{path} answered #{response.status}"
+      expect(response.location.to_s).not_to include("/users/sign_in")
+    end
+    requests.each do |method, path|
+      public_send(method, path, **options)
+      expect(response).to have_http_status(:too_many_requests), "expected #{method.upcase} #{path} to be throttled"
+    end
+  end
+
   def expect_friendly_page(retry_after:)
     expect(response).to have_http_status(:too_many_requests)
     expect(response.media_type).to eq("text/html")
@@ -43,6 +58,19 @@ RSpec.describe "Rate limits", :rack_attack do
       60.times { get "/pricing" }
       get "/account"
       expect(response).to have_http_status(:too_many_requests)
+    end
+
+    it "keys on the proxy's X-Forwarded-For, never on a Forwarded header the client sent (R83)" do
+      behind_proxy = from("172.18.0.5")
+      60.times do |n|
+        get "/pricing", headers: { "X-Forwarded-For" => "198.51.100.1", "Forwarded" => "for=203.0.113.#{n}" }, env: behind_proxy
+        expect(response).to have_http_status(:redirect)
+      end
+      get "/pricing", headers: { "X-Forwarded-For" => "198.51.100.1", "Forwarded" => "for=203.0.113.250" }, env: behind_proxy
+      expect(response).to have_http_status(:too_many_requests)
+
+      get "/pricing", headers: { "X-Forwarded-For" => "198.51.100.2" }, env: behind_proxy
+      expect(response).to have_http_status(:redirect)
     end
 
     it "never counts or blocks assets, the health check, Action Cable, Active Storage or webhooks" do
@@ -172,6 +200,54 @@ RSpec.describe "Rate limits", :rack_attack do
       expect(response).to have_http_status(:see_other)
       post show_verification_path(create(:show, user: user)), params: { kind: "email" }
       expect(response).to have_http_status(:see_other)
+    end
+  end
+
+  describe "other spellings of a throttled path, which reach the same action (R83)" do
+    before { sign_in user }
+
+    it "counts report creates with a format, doubled slashes or a trailing slash" do
+      show = create(:show, user: user)
+      requests = [ [ :post, "/shows/#{show.id}/reports.html" ], [ :post, "/shows//#{show.id}//reports" ],
+                   [ :post, "/shows/#{show.id}/reports/" ] ]
+      expect_all_counted(requests, limit: 10, params: { kind: "snapshot" })
+    end
+
+    it "counts pitch creates the same way" do
+      judge = create(:user, judge: true)
+      sign_in judge
+      match = create(:sponsor_match, report: create(:report, show: create(:show, user: judge), kind: "agent", status: "done"))
+      requests = [ [ :post, "/sponsor_matches/#{match.id}/pitch.html" ], [ :post, "/sponsor_matches//#{match.id}//pitch" ],
+                   [ :post, "/sponsor_matches/#{match.id}/pitch/" ] ]
+      expect_all_counted(requests, limit: 30, headers: turbo_stream)
+    end
+
+    it "counts show searches sent as HEAD as well as GET" do
+      requests = [ [ :head, "/shows/search?q=money" ], [ :get, "/shows/search.html?q=money" ],
+                   [ :get, "/shows//search?q=money" ], [ :head, "/shows/search/?q=money" ] ]
+      expect_all_counted(requests, limit: 20)
+    end
+
+    it "counts verification code sends the same way, however the show's id is spelled" do
+      show = create(:show, user: user)
+      encoded_id = show.id.to_s.chars.map { |digit| format("%%%02X", digit.ord) }.join
+      requests = [ [ :post, "/shows/#{show.id}/verification.html" ], [ :post, "/shows//#{show.id}/verification" ],
+                   [ :post, "/shows/0#{show.id}/verification/" ], [ :post, "/shows/#{encoded_id}/verification" ] ]
+      expect_all_counted(requests, limit: 5, params: { kind: "email" })
+    end
+
+    it "counts judge code attempts per IP the same way" do
+      requests = [ [ :post, "/account/judge_code.html" ], [ :post, "/account//judge_code" ], [ :post, "/account/judge_code/" ] ]
+      5.times do |n|
+        sign_in create(:user)
+        post requests[n % 3].last, params: { code: "guess" }
+        expect(response).to redirect_to(account_path)
+      end
+      requests.each do |_method, path|
+        sign_in create(:user)
+        post path, params: { code: "guess" }
+        expect(response).to have_http_status(:too_many_requests), "expected POST #{path} to be throttled"
+      end
     end
   end
 
