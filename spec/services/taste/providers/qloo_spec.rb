@@ -2,7 +2,11 @@ require "rails_helper"
 
 RSpec.describe Taste::Providers::Qloo do
   let(:cache) { ActiveSupport::Cache::MemoryStore.new }
-  let(:adapter) { described_class.new(api_key: "test-key", cache: cache) }
+  let(:guard) { Taste::CallGuard.new(store: ActiveSupport::Cache::MemoryStore.new) }
+  let(:sleeps) { [] }
+  let(:adapter) do
+    described_class.new(api_key: "test-key", cache: cache, guard: guard, retry_interval: 0.25, sleeper: ->(seconds) { sleeps << seconds })
+  end
   let(:base) { "https://hackathon.api.qloo.com" }
 
   def fixture(name) = Rails.root.join("spec/fixtures/qloo/#{name}.json").read
@@ -292,30 +296,107 @@ RSpec.describe Taste::Providers::Qloo do
                 .and(satisfy { |line| !line.include?("test-key") && !line.include?("secret show title") }))
     end
 
-    it "raises RateLimited after 3 attempts on 429, honoring Retry-After" do
-      stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including({}))
-        .to_return(status: 429, headers: { "Retry-After" => "0" }, body: '{"code":429,"reason":"rate","message":"slow"}')
-      expect { adapter.find_tags(query: "x") }.to raise_error(Taste::RateLimited)
-      expect(stub).to have_been_requested.times(3)
-    end
-
-    it "raises Unavailable after retrying 5xx" do
-      stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return(status: 503, headers: { "Retry-After" => "0" })
-      expect { adapter.find_tags(query: "x") }.to raise_error(Taste::Unavailable)
-      expect(stub).to have_been_requested.times(3)
-    end
-
     it "raises Unavailable on timeouts and bad JSON" do
       stub_request(:get, "#{base}/v2/tags").with(query: hash_including("filter.query" => "t")).to_timeout
       expect { adapter.find_tags(query: "t") }.to raise_error(Taste::Unavailable)
       stub_request(:get, "#{base}/v2/tags").with(query: hash_including("filter.query" => "j")).to_return(status: 200, body: "<html>")
       expect { adapter.find_tags(query: "j") }.to raise_error(Taste::Unavailable)
     end
+  end
 
-    it "recovers on a retry after a 429" do
-      stub_request(:get, "#{base}/v2/tags").with(query: hash_including({}))
-        .to_return({ status: 429, headers: { "Retry-After" => "0" } }, json("tags"))
+  describe "retries (R92)" do
+    def tags_stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including({}))
+
+    it "waits out a 429's Retry-After of 5 seconds or less once, then retries once" do
+      stub = tags_stub.to_return({ status: 429, headers: { "Retry-After" => "5" } }, json("tags"))
       expect(adapter.find_tags(query: "x").size).to eq(2)
+      expect(stub).to have_been_requested.twice
+      expect(sleeps).to eq([ 5 ])
+    end
+
+    it "raises RateLimited when the one retry gets a 429 too" do
+      stub = tags_stub.to_return(status: 429, headers: { "Retry-After" => "1" }, body: '{"code":429,"reason":"rate","message":"slow"}')
+      expect { adapter.find_tags(query: "x") }.to raise_error(Taste::RateLimited)
+      expect(stub).to have_been_requested.twice
+      expect(sleeps).to eq([ 1 ])
+    end
+
+    it "never retries a 429 blindly: a long, missing or unreadable Retry-After raises at once" do
+      [ { "Retry-After" => "30" }, {}, { "Retry-After" => "soon" } ].each_with_index do |headers, i|
+        stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including("filter.query" => "q#{i}")).to_return(status: 429, headers: headers)
+        expect { adapter.find_tags(query: "q#{i}") }.to raise_error(Taste::RateLimited)
+        expect(stub).to have_been_requested.once
+      end
+      expect(sleeps).to be_empty
+    end
+
+    it "reads a Retry-After given as an HTTP date" do
+      travel_to Time.utc(2026, 10, 25, 12) do
+        tags_stub.to_return({ status: 429, headers: { "Retry-After" => (Time.current + 3).httpdate } }, json("tags"))
+        expect(adapter.find_tags(query: "x").size).to eq(2)
+        expect(sleeps).to eq([ 3 ])
+      end
+    end
+
+    it "retries a 5xx once after a short backoff, then raises Unavailable" do
+      stub = tags_stub.to_return(status: 503)
+      expect { adapter.find_tags(query: "x") }.to raise_error(Taste::Unavailable)
+      expect(stub).to have_been_requested.twice
+      expect(sleeps).to eq([ 0.25 ])
+    end
+
+    it "recovers when the retry after a 5xx succeeds" do
+      tags_stub.to_return({ status: 502 }, json("tags"))
+      expect(adapter.find_tags(query: "x").size).to eq(2)
+    end
+
+    it "retries a timeout once, then raises Unavailable" do
+      stub = tags_stub.to_timeout
+      expect { adapter.find_tags(query: "x") }.to raise_error(Taste::Unavailable)
+      expect(stub).to have_been_requested.twice
+      expect(sleeps).to eq([ 0.25 ])
+    end
+
+    it "never retries a 4xx" do
+      { 400 => Taste::BadRequest, 401 => Taste::AuthError, 403 => Taste::Unsupported, 404 => Taste::NotFound,
+        422 => Taste::Error }.each do |status, error|
+        stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including("filter.query" => "s#{status}")).to_return(status: status)
+        expect { adapter.find_tags(query: "s#{status}") }.to raise_error(error)
+        expect(stub).to have_been_requested.once
+      end
+      expect(sleeps).to be_empty
+    end
+  end
+
+  describe "call guard (R92)" do
+    it "refuses before any HTTP request once a cap is reached" do
+      AppSettings.set(:qloo_daily_call_limit, 1)
+      stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return(json("tags"))
+
+      adapter.find_tags(query: "a")
+      expect { adapter.find_tags(query: "b") }.to raise_error(Taste::CallCapReached)
+      expect(stub).to have_been_requested.once
+    end
+
+    it "serves cached answers without taking a slot" do
+      AppSettings.set(:qloo_daily_call_limit, 1)
+      stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return(json("tags"))
+
+      2.times { adapter.find_tags(query: "a") }
+      expect(guard.usage.today).to eq(1)
+    end
+
+    it "takes a slot for every attempt, a retry included" do
+      stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return({ status: 503 }, json("tags"))
+      adapter.find_tags(query: "a")
+      expect(guard.usage.today).to eq(2)
+    end
+
+    it "stops before the retry when the retry would pass a cap" do
+      AppSettings.set(:qloo_daily_call_limit, 1)
+      stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return(status: 503)
+      expect { adapter.find_tags(query: "a") }.to raise_error(Taste::CallCapReached)
+      expect(stub).to have_been_requested.once
     end
   end
 

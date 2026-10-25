@@ -184,6 +184,12 @@ RSpec.describe Research::Tools do
       allow(taste).to receive(:recommend).and_raise(Taste::AuthError)
       expect { run("find_sponsor_candidates", categories: [ "Finance" ]) }.to raise_error(Taste::AuthError)
     end
+
+    it "lets the call guard's refusal through, so the run fails as busy instead of the model retrying (R92)" do
+      seed!
+      allow(taste).to receive(:recommend).and_raise(Taste::CallCapReached, "daily limit")
+      expect { run("find_sponsor_candidates", categories: [ "Finance" ]) }.to raise_error(Taste::CallCapReached)
+    end
   end
 
   describe "explain_matches" do

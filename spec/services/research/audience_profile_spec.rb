@@ -91,7 +91,8 @@ RSpec.describe Research::AudienceProfile do
   end
 
   it "falls back to metros when the Qloo client can't place the country, a 400 (M2)" do
-    qloo = Taste::Providers::Qloo.new(api_key: "test-key", cache: ActiveSupport::Cache::MemoryStore.new)
+    qloo = Taste::Providers::Qloo.new(api_key: "test-key", cache: ActiveSupport::Cache::MemoryStore.new,
+                                      guard: Taste::CallGuard.new(store: ActiveSupport::Cache::MemoryStore.new))
     insights = "https://hackathon.api.qloo.com/v2/insights"
     fixture = ->(name) { { body: Rails.root.join("spec/fixtures/qloo/#{name}.json").read } }
     stub_request(:get, insights).with(query: hash_including({})).to_return(fixture.call("empty"))

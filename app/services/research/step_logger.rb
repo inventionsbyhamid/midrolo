@@ -56,6 +56,7 @@ module Research
     def self.describe(error)
       case error
       when Taste::AuthError then "Qloo rejected our API key."
+      when Taste::CallCapReached then "Taste data is busy right now."
       when Taste::RateLimited then "Qloo is rate limiting us."
       when Taste::Unavailable then "Qloo is unavailable right now."
       when Taste::BadRequest then "Qloo couldn't use that request."

@@ -12,6 +12,8 @@ module Taste
   class NotFound < Error; end
   # 429 from the vendor that we may not retry.
   class RateLimited < Error; end
+  # Our own call guard (Taste::CallGuard, R92) refused a live request before it was made: a cap is reached.
+  class CallCapReached < RateLimited; end
   # 5xx, timeouts, connection failures or unparseable bodies.
   class Unavailable < Error; end
   class MissingCredentials < Error; end

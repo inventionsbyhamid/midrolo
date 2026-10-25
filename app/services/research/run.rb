@@ -5,10 +5,12 @@ module Research
   #   agent, fake LLM mode → ScriptedRunner with templated reasons
   #   agent                → AgentRunner
   # Fewer than 2 seeds ends needs_input (Review Focus #1). A Qloo auth error fails the report and counts
-  # toward pausing runs (Review Focus #4). A finished run picks up the podcaster's pipeline work from the show's
-  # earlier reports (R46). Returns the run's toolkit, or nil when the run didn't finish.
+  # toward pausing runs (Review Focus #4). A required taste call refused by the call guard, or rate limited by Qloo,
+  # fails it as busy (R92). A failed report is never charged. A finished run picks up the podcaster's pipeline work
+  # from the show's earlier reports (R46). Returns the run's toolkit, or nil when the run didn't finish.
   class Run
     PAUSED_MESSAGE = "Full reports are paused right now. Nothing was charged. Try again later.".freeze
+    BUSY_MESSAGE = "Taste data is busy right now. Try again later.".freeze
     LIMIT_MESSAGES = {
       tool_calls: "The research needed more steps than one report allows, so we stopped it. Nothing was charged. Try again.",
       time: "The research took too long, so we stopped it. Nothing was charged. Try again."
@@ -32,6 +34,9 @@ module Research
     rescue Taste::AuthError => e
       AppSettings.record_taste_auth_failure!
       fail_with(e)
+    rescue Taste::RateLimited => e
+      # Our own cap is expected on a busy day; only Qloo's 429 is worth an error report.
+      fail_with(e.is_a?(Taste::CallCapReached) ? nil : e, BUSY_MESSAGE)
     rescue Llm::BudgetExceeded
       fail_with(nil, PAUSED_MESSAGE)
     rescue LimitReached => e

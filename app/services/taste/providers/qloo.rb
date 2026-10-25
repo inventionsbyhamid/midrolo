@@ -1,21 +1,31 @@
 module Taste
   module Providers
     # Qloo REST adapter. All calls are GET; array params are joined with commas.
+    #
+    # Call discipline (R92): answers are cached and shared by every report; an uncached request takes a slot from the
+    # call guard (Taste::CallGuard) before each attempt, and is tried at most twice. A 429 is retried once only when
+    # its Retry-After is MAX_RETRY_AFTER seconds or less, a 5xx or a timeout once after a short backoff, any other 4xx
+    # never.
     class Qloo
       DEFAULT_BASE_URL = "https://hackathon.api.qloo.com".freeze
       CACHE_TTL = 7.days
       AFFINITY_CHUNK = 50
       TIMEOUT = 20
       OPEN_TIMEOUT = 5
-      ATTEMPTS = 3
-      RETRY_STATUSES = [ 429, 500, 502, 503, 504 ].freeze
+      ATTEMPTS = 2
+      MAX_RETRY_AFTER = 5
       AGE_BUCKETS = %w[24_and_younger 25_to_29 30_to_34 35_to_44 45_to_54 55_and_older].freeze
 
-      def initialize(api_key:, base_url: ENV.fetch("QLOO_BASE_URL", DEFAULT_BASE_URL), cache: Rails.cache, retry_interval: 0.5)
+      # cache: where answers are kept (a NullStore reads live every time); guard: what each live attempt asks first;
+      # sleeper: how a retry waits (specs record the waits instead).
+      def initialize(api_key:, base_url: ENV.fetch("QLOO_BASE_URL", DEFAULT_BASE_URL), cache: Rails.cache,
+                     guard: CallGuard.new, retry_interval: 0.5, sleeper: ->(seconds) { sleep(seconds) })
         @api_key = api_key
         @base_url = base_url.to_s.chomp("/")
         @cache = cache
+        @guard = guard
         @retry_interval = retry_interval
+        @sleeper = sleeper
       end
 
       # A 404 here is Qloo's "No results" (R87).
@@ -103,17 +113,60 @@ module Taste
           return cached
         end
 
-        response = connection.get(path, params)
-        status = response.status
-        notify(path, false, status, started)
-        raise_for_status!(path, params, response)
-
-        json = parse(path, response.body)
+        json = parse(path, live_body(path, params))
         @cache.write(key, json, expires_in: CACHE_TTL)
         json
+      end
+
+      # The body of a 2xx answer, after at most one retry. Raises for any other outcome.
+      def live_body(path, params)
+        (1..ATTEMPTS).each do |attempt|
+          retry_left = attempt < ATTEMPTS
+          response = request_once(path, params, retry_left)
+          next unless response # a timeout or a failed connection, waited out for the retry
+
+          wait = retry_wait(response) if retry_left
+          next @sleeper.call(wait) if wait
+
+          raise_for_status!(path, params, response)
+          return response.body
+        end
+      end
+
+      # One HTTP request, after the call guard gives it a slot. nil when it failed in a way the retry may fix.
+      def request_once(path, params, retry_left)
+        @guard.acquire!
+        started = monotonic
+        response = connection.get(path, params)
+        notify(path, false, response.status, started)
+        response
+      rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
+        notify(path, false, nil, started)
+        unavailable!(path, "failed: #{e.class}") unless retry_left
+        @sleeper.call(@retry_interval)
+        nil
       rescue Faraday::Error => e
         notify(path, false, nil, started)
         unavailable!(path, "failed: #{e.class}: #{e.message}")
+      end
+
+      # Seconds to wait before retrying this response, or nil when it isn't retried.
+      def retry_wait(response)
+        case response.status
+        when 429 then retry_after(response)
+        when 500..599 then @retry_interval
+        end
+      end
+
+      # A 429's Retry-After (seconds or an HTTP date) when it is MAX_RETRY_AFTER seconds or less; nil otherwise.
+      def retry_after(response)
+        value = response.headers["Retry-After"].to_s.strip
+        seconds = if value.match?(/\A\d+\z/) then value.to_i
+        elsif value.present? then [ (Time.httpdate(value) - Time.current).ceil, 0 ].max
+        end
+        seconds if seconds && seconds <= MAX_RETRY_AFTER
+      rescue ArgumentError
+        nil
       end
 
       def normalize(params)
@@ -176,10 +229,9 @@ module Taste
 
       def monotonic = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
+      # No retry middleware: retries happen in live_body, so each one passes the call guard.
       def connection
         @connection ||= Faraday.new(url: @base_url, headers: { "X-Api-Key" => @api_key, "Accept" => "application/json" }) do |f|
-          f.request :retry, max: ATTEMPTS - 1, interval: @retry_interval, max_interval: 10, retry_statuses: RETRY_STATUSES,
-                            methods: %i[get], exceptions: [ Faraday::TimeoutError, Faraday::ConnectionFailed, Faraday::RetriableResponse ]
           f.options.timeout = TIMEOUT
           f.options.open_timeout = OPEN_TIMEOUT
           f.adapter Faraday.default_adapter

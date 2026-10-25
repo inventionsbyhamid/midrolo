@@ -3,7 +3,8 @@ module Research
     # Shared plumbing: a tool is built with the run's toolkit, is named for the model after its class
     # ("ReadShowFeed" => "read_show_feed"), and always answers with a String under 1,500 characters.
     # Qloo trouble the model can work around (rate limits, outages, bad requests) comes back as a message;
-    # auth errors propagate, since the runner pauses runs on them.
+    # auth errors propagate, since the runner pauses runs on them, and so does our own call guard's refusal (R92):
+    # retrying can't help, so the run fails as busy rather than spending LLM turns.
     class Base < RubyLLM::Tool
       LIMIT = 1500
       IGNORED_NOTE_LIMIT = 300
@@ -31,7 +32,7 @@ module Research
       def call(**)
         result = super
         compact(result.is_a?(Hash) ? result[:error] || result.to_json : result)
-      rescue Taste::AuthError, Taste::MissingCredentials
+      rescue Taste::AuthError, Taste::MissingCredentials, Taste::CallCapReached
         raise
       rescue Taste::Error => e
         compact("Qloo error: #{StepLogger.describe(e)} Nothing changed. Retry once, or carry on with what you have.")

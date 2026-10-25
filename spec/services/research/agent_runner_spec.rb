@@ -210,6 +210,18 @@ RSpec.describe Research::AgentRunner do
     expect(SpendEntry.count).to eq(1)
   end
 
+  it "fails the report as busy, never as an auth failure, when the call guard refuses a required call in a tool (R92)" do
+    allow_any_instance_of(Taste::Providers::Fake).to receive(:search).and_raise(Taste::CallCapReached, "daily limit")
+    allow(AppSettings).to receive(:record_taste_auth_failure!)
+    RubyLLM::Test.stub_responses(*playbook)
+    GenerateReportJob.perform_now(report.id)
+
+    expect(report.reload).to have_attributes(status: "failed", error_message: Research::Run::BUSY_MESSAGE)
+    expect(report.agent_steps.find_by(tool: "find_on_qloo").status).to eq("error")
+    expect(AppSettings).not_to have_received(:record_taste_auth_failure!)
+    expect(SpendEntry.count).to eq(1)
+  end
+
   it "stops after the time limit" do
     allow(Llm).to receive(:agent_max_seconds).and_return(0)
     RubyLLM::Test.stub_responses(*playbook)

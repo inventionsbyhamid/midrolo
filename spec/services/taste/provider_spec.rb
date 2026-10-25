@@ -13,10 +13,17 @@ RSpec.describe Taste::Provider do
     described_class.reset!
   end
 
-  it "returns Qloo when the key is present" do
+  it "returns Qloo when the key is present, outside the test environment" do
+    allow(Rails.env).to receive(:test?).and_return(false)
     ENV["QLOO_API_KEY"] = "k"
     expect(described_class.current).to be_a(Taste::Providers::Qloo)
     expect(described_class.fake?).to be(false)
+  end
+
+  it "never builds the live provider in the test environment, even with QLOO_API_KEY exported (R92)" do
+    ENV["QLOO_API_KEY"] = "k"
+    expect(Taste::Providers::Qloo).not_to receive(:new)
+    expect(described_class.current).to be_a(Taste::Providers::Fake)
   end
 
   it "returns Fake when the key is missing outside production" do
@@ -32,7 +39,7 @@ RSpec.describe Taste::Provider do
   end
 
   it "raises a clear error in production without the key" do
-    allow(Rails.env).to receive(:production?).and_return(true)
+    allow(Rails.env).to receive_messages(production?: true, test?: false)
     expect { described_class.current }.to raise_error(Taste::MissingCredentials, /QLOO_API_KEY/)
   end
 end

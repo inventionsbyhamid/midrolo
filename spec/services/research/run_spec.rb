@@ -188,6 +188,31 @@ RSpec.describe Research::Run do
     expect(AppSettings.runs_paused?).to be(false)
   end
 
+  describe "when taste data is busy (R92)" do
+    it "fails a report whose required calls the call guard refuses, without charging, reporting nothing" do
+      report = create(:report, show: show, kind: "snapshot")
+      allow(Rails.error).to receive(:report)
+      allow_any_instance_of(Taste::Providers::Fake).to receive(:search).and_raise(Taste::CallCapReached, "daily limit")
+
+      BuildSnapshotJob.perform_now(report.id)
+
+      expect(report.reload).to have_attributes(status: "failed", error_message: "Taste data is busy right now. Try again later.")
+      expect(Rails.error).not_to have_received(:report)
+      expect(Entitlements.for(show.user).used(:snapshot)).to eq(0)
+    end
+
+    it "fails as busy when Qloo itself rate limits a required call, and never counts it as an auth failure" do
+      report = create(:report, show: show, kind: "snapshot")
+      allow(AppSettings).to receive(:record_taste_auth_failure!)
+      allow_any_instance_of(Taste::Providers::Fake).to receive(:search).and_raise(Taste::RateLimited, "429")
+
+      run(report)
+
+      expect(report).to have_attributes(status: "failed", error_message: Research::Run::BUSY_MESSAGE)
+      expect(AppSettings).not_to have_received(:record_taste_auth_failure!)
+    end
+  end
+
   it "lets other Qloo outages fail through the job with the friendly message" do
     report = create(:report, show: show, kind: "snapshot")
     allow_any_instance_of(Taste::Providers::Fake).to receive(:search).and_raise(Taste::Unavailable)

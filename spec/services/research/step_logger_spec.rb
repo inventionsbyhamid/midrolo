@@ -159,6 +159,11 @@ RSpec.describe Research::StepLogger do
     )
   end
 
+  it "says taste data is busy when our own call guard refused an optional call (R92)" do
+    logger.step("audience", "Building…") { |step| step.optional("Leans") { raise Taste::CallCapReached, "daily limit" } }
+    expect(report.agent_steps.last.output_summary).to eq("Leans skipped: Taste data is busy right now.")
+  end
+
   describe "research budget" do
     let(:logger) { described_class.new(report, max_taste_calls: 2) }
 

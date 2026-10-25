@@ -37,7 +37,11 @@ module Taste
 
       private
 
+      # Never the live API from a spec, even with QLOO_API_KEY exported (R92): specs that exercise the Qloo adapter
+      # build it themselves, against WebMock.
       def build
+        return Providers::Fake.new if Rails.env.test?
+
         key = ENV["QLOO_API_KEY"].presence
         return Providers::Qloo.new(api_key: key) if key
         raise MissingCredentials, "Taste provider is not configured: set QLOO_API_KEY" if Rails.env.production?
