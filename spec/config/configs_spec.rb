@@ -81,4 +81,10 @@ RSpec.describe "App configs" do
   it "sends mail from MAIL_FROM, defaulting to the app name at midrolo.com" do
     expect(ApplicationMailer.default[:from].call).to eq("Midrolo <hello@midrolo.com>")
   end
+
+  # R126: without a terminal (CI, a background shell, some IDEs) the plain watcher exits at once, and foreman then
+  # stops web and jobs with it.
+  it "runs bin/dev's Tailwind watcher in always mode, so it survives without a terminal" do
+    expect(Rails.root.join("Procfile.dev").read.lines.map(&:strip)).to include("css: bin/rails tailwindcss:watch[always]")
+  end
 end
