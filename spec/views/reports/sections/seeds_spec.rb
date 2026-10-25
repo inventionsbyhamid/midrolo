@@ -21,6 +21,16 @@ RSpec.describe "reports/sections/_seeds" do
     expect(html.text).to include("Nonexistent Pod Zzz")
   end
 
+  it "is a subsection of How we built this on a finished report, and leads the page when it needs input" do
+    render_section
+    expect(html.at_css("#report_seeds h3").text).to eq("Taste profile")
+    expect(html.at_css("#report_seeds h2")).to be_nil
+
+    report.update!(status: "needs_input")
+    render_section
+    expect(html.at_css("#report_seeds h2").text).to eq("Taste profile")
+  end
+
   it "says a direct profile is built from the show on Qloo" do
     report.update!(profile_kind: "direct")
     render_section

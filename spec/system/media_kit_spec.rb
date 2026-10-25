@@ -105,19 +105,27 @@ RSpec.describe "Media kit" do
       expect(horizontal_overflow).to eq(0)
     end
 
-    it "prints without buttons or the map canvas, keeping the top metros and the contact address" do
+    it "prints without buttons or the map canvas, keeping the top places, every taste and the contact address" do
       visit public_kit_path(podcast.slug)
-      expect(page).to have_css("[data-top-metros]", text: "New York")
+      expect(page).to have_css("[data-top-places]", text: "New York")
 
       execute_script("window.print = () => { window.printed = true }")
       click_button "Print or save as PDF"
       expect(evaluate_script("window.printed")).to be(true)
 
+      # See all tastes prints open, however printing starts, and closes again after.
+      expect(page).to have_css("details.kit-more:not([open])", visible: :all)
+      execute_script("window.dispatchEvent(new Event('beforeprint'))")
+      expect(page).to have_css("details.kit-more[open]", visible: :all)
+      execute_script("window.dispatchEvent(new Event('afterprint'))")
+      expect(page).to have_css("details.kit-more:not([open])", visible: :all)
+
       page.driver.browser.page.command("Emulation.setEmulatedMedia", media: "print")
       expect(computed("[data-controller='print']", "display")).to eq("none")
       expect(computed(".kit-contact-button", "display")).to eq("none")
       expect(computed(".kit-map .map-frame", "display")).to eq("none")
-      expect(computed("[data-top-metros]", "display")).not_to eq("none")
+      expect(computed("[data-top-places]", "display")).not_to eq("none")
+      expect(computed("details.kit-more > summary", "display")).to eq("none")
       expect(computed(".kit-contact-address", "display")).not_to eq("none")
       expect(computed(".kit-rates", "break-inside")).to eq("avoid")
     ensure

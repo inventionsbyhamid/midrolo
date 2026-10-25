@@ -1,9 +1,6 @@
 <%# locals: (sponsor_match:) -%>
-<%# A visible card's actions: the pitch pack (pitches/_button) and the pipeline form (Task 13). %>
-<div class="flex flex-col gap-4">
-  <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-    <%= render "pitches/button", sponsor_match: sponsor_match %>
-    <p class="text-[0.8125rem] text-ink-soft">Email, ad read angles and an offer</p>
-  </div>
+<%# A visible row's actions, small on the right: the pitch pack (pitches/_button) beside the pipeline form (Task 13). %>
+<div class="match-actions-row">
+  <div class="flex-none"><%= render "pitches/button", sponsor_match: sponsor_match %></div>
   <%= render "sponsor_matches/status_form", sponsor_match: sponsor_match %>
 </div>

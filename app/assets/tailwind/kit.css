@@ -335,6 +335,15 @@
 
   /* ---- Audience ---- */
 
+  /* The top tastes sit right under the note; the full lists wait behind See all tastes (R99). */
+  .kit-block.kit-tastes {
+    margin-top: 0.5rem;
+  }
+
+  .kit-more > .kit-block {
+    margin-top: 1.25rem;
+  }
+
   .kit-brands {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
@@ -612,7 +621,8 @@
   .kit-contact-button,
   .kit-screen-only,
   .flash,
-  .map-layout .map-frame {
+  .kit-map .map-frame,
+  .kit-more > summary {
     display: none !important;
   }
 
@@ -665,25 +675,13 @@
     max-width: 42mm;
   }
 
-  /* Without the canvas, the metros list takes the whole row, in two columns. */
-  .map-layout {
-    display: block;
-  }
-
-  .map-layout [data-top-metros] ol {
-    display: block;
-    column-count: 2;
-    column-gap: 10mm;
-  }
-
   .kit-keep,
   .kit-stat,
   .kit-brand,
   .kit-rates,
   .kit-block,
   .kit-slot,
-  .lean,
-  .metro {
+  .leans {
     break-inside: avoid;
   }
 

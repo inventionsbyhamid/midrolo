@@ -1,29 +1,14 @@
-<%# locals: (id:, heatmap:, points:, metros:, heading: :h3) -%>
-<%# The heatmap figure (map_controller) and the ranked Top metros beside it, shared by the report and the media kit.
-    If the map can't load it hides itself and the list stands alone; print stylesheets hide the canvas the same way. %>
-<div class="map-layout mt-5 grid gap-6 md:grid-cols-[minmax(0,1fr)_14rem]">
-  <%# Kept through page-refresh morphs so the live map isn't torn down; a section broadcast still replaces it. %>
-  <figure id="<%= id %>" class="map-frame" data-turbo-permanent
-          aria-label="<%= heatmap_label(heatmap) %>"
-          data-controller="map" data-map-points-value="<%= points.map { |p| p.slice("lat", "lng", "affinity") }.to_json %>"
-          data-map-style-value="<%= map_style_url %>" data-map-stylesheet-value="<%= maplibre_stylesheet_url %>">
-    <div class="map-canvas" data-map-target="canvas"></div>
-    <p class="map-loading" data-map-target="status">Loading map…</p>
-  </figure>
-  <% if metros.any? %>
-    <div data-top-metros>
-      <%= content_tag heading, "Top metros", class: "text-[0.9375rem] font-bold font-semiwide" %>
-      <ol class="mt-2 flex flex-col">
-        <% metros.each_with_index do |(name, share), i| %>
-          <li class="metro">
-            <span class="metro-rank"><%= i + 1 %></span>
-            <span class="min-w-0 flex-1">
-              <span class="block truncate text-[0.9375rem]" data-metro-name><%= name %></span>
-              <span class="metro-bar" aria-hidden="true"><span style="width: <%= (share * 100).round %>%"></span></span>
-            </span>
-          </li>
-        <% end %>
-      </ol>
-    </div>
-  <% end %>
-</div>
+<%# locals: (id:, heatmap:, points:) -%>
+<%# The top places in words, then the heatmap figure (map_controller), shared by the report and the media kit. If the
+    map can't load it hides itself and the words stand alone; print stylesheets hide the canvas the same way. %>
+<% if (places = top_places(points)) %>
+  <p class="map-places" data-top-places><span class="map-places-label">Top places:</span> <%= places %></p>
+<% end %>
+<%# Kept through page-refresh morphs so the live map isn't torn down; a section broadcast still replaces it. %>
+<figure id="<%= id %>" class="map-frame" data-turbo-permanent
+        aria-label="<%= heatmap_label(heatmap) %>"
+        data-controller="map" data-map-points-value="<%= points.map { |p| p.slice("lat", "lng", "affinity") }.to_json %>"
+        data-map-style-value="<%= map_style_url %>" data-map-stylesheet-value="<%= maplibre_stylesheet_url %>">
+  <div class="map-canvas" data-map-target="canvas"></div>
+  <p class="map-loading" data-map-target="status">Loading map…</p>
+</figure>

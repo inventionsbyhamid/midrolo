@@ -1,41 +1,37 @@
-<%# locals: (demographics:, heading: :h3) -%>
-<%# Age and gender leans as pan meters, shared by the report's Leans section and the media kit. Never percentages. %>
-<% groups = { "Age" => demographics["age"], "Gender" => demographics["gender"] }.select { |_, leans| leans.is_a?(Hash) && leans.any? } %>
-<% if groups.empty? %>
-  <p class="mt-4 text-ink-soft">No clear age or gender leans came back for this audience.</p>
+<%# locals: (demographics:) -%>
+<%#
+  Age and gender leans in one compact block, shared by the report and the media kit (R99): age as one short column
+  chart (a bar above the line leans above average, below it below), gender as one line, and the note that both are
+  modeled, not measured. Words, never percentages.
+%>
+<% age = demographics["age"].is_a?(Hash) ? demographics["age"] : {} %>
+<% gender = demographics["gender"].is_a?(Hash) ? demographics["gender"] : {} %>
+<% if age.empty? && gender.empty? %>
+  <p class="mt-2 text-ink-soft">No clear age or gender leans came back for this audience.</p>
 <% else %>
   <% scale = lean_scale(demographics) %>
-  <div class="mt-5 flex max-w-xl flex-col gap-6">
-    <% groups.each do |title, leans| %>
-      <div>
-        <div class="lean lean-legend">
-          <%= content_tag heading, title, class: "text-[0.9375rem] font-bold font-semiwide" %>
-          <span class="lean-axis" aria-hidden="true"><span>Under</span><span>Over</span></span>
-        </div>
-        <ul class="flex flex-col">
-          <% (title == "Age" ? age_buckets_in_order(leans) : leans).each do |bucket, value| %>
-            <% lit = lean_segments(value, scale) %>
+  <div class="leans">
+    <% if age.any? %>
+      <div class="age-chart">
+        <p class="leans-label" aria-hidden="true">Age</p>
+        <ol class="age-bars" aria-label="Age">
+          <% age_buckets_in_order(age).first(6).each do |bucket, value| %>
             <% direction = lean_direction(value) %>
-            <li class="lean" data-lean="<%= direction %>">
-              <span class="lean-label" data-lean-label><%= title == "Age" ? age_bucket_label(bucket) : gender_label(bucket) %></span>
-              <span class="lean-bar" aria-hidden="true">
-                <span class="lean-side lean-side-under">
-                  <% ReportsHelper::LEAN_SEGMENTS.times do |i| %>
-                    <span class="<%= class_names("lean-seg", "lean-seg-under" => direction == "under" && i >= ReportsHelper::LEAN_SEGMENTS - lit) %>"></span>
-                  <% end %>
-                </span>
-                <span class="lean-center"></span>
-                <span class="lean-side">
-                  <% ReportsHelper::LEAN_SEGMENTS.times do |i| %>
-                    <span class="<%= class_names("lean-seg", "lean-seg-over" => direction == "over" && i < lit) %>"></span>
-                  <% end %>
-                </span>
+            <li class="age-bar" data-lean="<%= direction %>">
+              <span class="age-bar-track" aria-hidden="true">
+                <span class="age-bar-fill" style="height: <%= (lean_segments(value, scale) * 50.0 / ReportsHelper::LEAN_SEGMENTS).round %>%"></span>
               </span>
-              <span class="lean-word"><%= lean_word(value) %></span>
+              <span class="age-bar-label" data-lean-label><%= age_bucket_label(bucket) %></span>
+              <span class="sr-only">: <%= lean_word(value) %></span>
             </li>
           <% end %>
-        </ul>
+        </ol>
+        <p class="leans-key" aria-hidden="true">Above the line: more than average. Below: less.</p>
       </div>
     <% end %>
+    <% if (line = gender_line(gender)) %>
+      <p class="gender-line" data-gender-line><span class="leans-label">Gender</span> <%= line %></p>
+    <% end %>
   </div>
+  <p class="leans-note">Modeled from Qloo taste data, not measured.</p>
 <% end %>

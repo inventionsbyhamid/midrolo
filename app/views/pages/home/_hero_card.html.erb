@@ -14,7 +14,7 @@
     <ol class="hero-matches">
       <% matches.each do |match| %>
         <% chips = evidence_chips(match) %>
-        <% chip = chips.find { |c| c.to_s.start_with?("Sponsored") } || chips.first %>
+        <% chip = chips.find { |c| c.to_s.start_with?("Sponsors") } || chips.first %>
         <li class="hero-match">
           <%= render "sponsor_matches/logo", sponsor_match: match, size: "size-10 text-sm" %>
           <div class="min-w-0 flex-1">

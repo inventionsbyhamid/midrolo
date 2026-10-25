@@ -1,31 +1,41 @@
 <%# locals: (report:, read_only:) -%>
-<%# A finished Snapshot gets the upgrade card. Any other Snapshot (running, needs_input, failed) falls through, so a
-    needs-input ask or a failure leads the page instead of an upsell (Review Focus #1). %>
-<%# read_only (a public sample, R78) has no upgrade card: the run buttons belong to the show's owner. %>
-<% title = read_only ? "This show's audience at a glance" : "Your audience at a glance" %>
-<% if report.snapshot? && report.done? && !read_only %>
-  <%= render "reports/section", name: "summary", title: title do %>
-    <% if report.summary.present? %>
-      <p class="report-summary"><%= report.summary %></p>
-    <% end %>
-    <div class="upgrade-card">
-      <p class="max-w-prose">This is your free Snapshot. Upgrade for the full agent report: reasons, proven sponsors, pitch emails.</p>
-      <div class="mt-4 flex flex-wrap gap-3">
-        <% if AppSettings.runs_paused? %>
-          <%= ui_button "Run full report", type: "button", disabled: true %>
-        <% else %>
-          <%= button_to "Run full report", show_reports_path(report.show, kind: "agent"), method: :post, class: "btn btn-primary btn-md" %>
-        <% end %>
-        <%= ui_button "See plans", "/pricing", variant: :secondary %>
-      </div>
-    </div>
-  <% end %>
-<% elsif report.summary.present? %>
-  <%= render "reports/section", name: "summary", title: title do %>
-    <p class="report-summary"><%= report.summary %></p>
+<%#
+  At a glance (R99): at most three bullets under the header. Who listens (the summary's first bullet, or for a
+  Snapshot a line from its top interests), the best fits (the top three visible matches, so a locked brand never shows,
+  R43, with the summary's second bullet under them) and the next step. The summary's caveat, if any, sits below.
+  Only a finished report has one: a needs-input ask or a failure leads the page instead (Review Focus #1).
+%>
+<% if report.done? %>
+  <% visible, _locked = split_matches(report) %>
+  <% points = report.summary_points %>
+  <% audience = points.first || glance_audience(report) %>
+  <% best = visible.first(3) %>
+  <%= render "reports/section", name: "summary", title: "At a glance" do %>
+    <ul class="glance">
+      <% if audience %>
+        <li class="glance-row">
+          <span class="glance-label">Who listens</span>
+          <div class="glance-body"><p class="glance-text"><%= audience %></p></div>
+        </li>
+      <% end %>
+      <% if best.any? %>
+        <li class="glance-row">
+          <span class="glance-label">Best fits</span>
+          <div class="glance-body">
+            <p class="glance-text"><%= and_join(best.map { |match| link_to(match.name, "##{dom_id(match)}", class: "glance-brand") }) %></p>
+            <% if points[1] %><p class="glance-aside"><%= points[1] %></p><% end %>
+          </div>
+        </li>
+      <% end %>
+      <li class="glance-row">
+        <span class="glance-label">Next step</span>
+        <div class="glance-body"><%= render "reports/next_step", report: report, read_only: read_only, matches: visible %></div>
+      </li>
+    </ul>
+    <% if points[2] %><p class="glance-note"><%= points[2] %></p><% end %>
   <% end %>
 <% elsif section_pending?(report) %>
-  <%= render "reports/section", name: "summary", title: title do %>
+  <%= render "reports/section", name: "summary", title: "At a glance" do %>
     <%= render "components/skeleton", lines: 3, label: "Writing your summary", title: false %>
   <% end %>
 <% else %>

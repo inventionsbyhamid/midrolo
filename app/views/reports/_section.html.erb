@@ -1,14 +1,15 @@
-<%# locals: (name:, title: nil, hidden: false, aside: nil) -%>
+<%# locals: (name:, title: nil, hidden: false, aside: nil, level: 2) -%>
 <%#
   One report section. The id is the Turbo Stream target of Report#save_section!, so a hidden section (one a
-  finished report never got) still renders, empty, and can be filled in later.
+  finished report never got) still renders, empty, and can be filled in later. A level 3 section sits inside the one
+  before it (age and gender under the audience) or inside How we built this (the seeds).
 %>
 <% if hidden %>
   <section id="report_<%= name %>" class="report-section" hidden></section>
 <% else %>
-  <section id="report_<%= name %>" class="report-section" aria-labelledby="report_<%= name %>_title">
+  <section id="report_<%= name %>" class="<%= class_names("report-section", "report-subsection" => level > 2) %>" aria-labelledby="report_<%= name %>_title">
     <header class="report-section-header">
-      <h2 id="report_<%= name %>_title" class="report-section-title"><%= title %></h2>
+      <%= content_tag "h#{level}", title, id: "report_#{name}_title", class: level > 2 ? "report-subsection-title" : "report-section-title" %>
       <%= aside %>
     </header>
     <%= yield %>

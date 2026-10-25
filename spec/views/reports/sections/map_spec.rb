@@ -29,10 +29,11 @@ RSpec.describe "reports/sections/_map" do
     expect(html.at_css("[data-controller~='map']")["data-map-style-value"]).to eq("https://tiles.example.com/style.json")
   end
 
-  it "ranks the top 8 metros by summed affinity beside the map" do
+  it "names the top 3 places in words above a small map" do
     render_section
-    metros = html.css("[data-top-metros] li").map { |li| li.at_css("[data-metro-name]").text }
-    expect(metros).to eq([ "New York", "Austin", "Seattle", "Town 1", "Town 2", "Town 3", "Town 4", "Town 5" ])
+    expect(html.at_css("[data-top-places]").text.squish).to eq("Top places: New York, Austin and Seattle")
+    expect(html.css("[data-top-metros], .metro")).to be_empty
+    expect(html.at_css("h2").text).to eq("Where they are")
   end
 
   it "names the country and says the map is modeled" do
@@ -51,7 +52,7 @@ RSpec.describe "reports/sections/_map" do
     report.update!(heatmap: { "location" => "metros", "country" => nil, "points" => points })
     render_section
     expect(html.at_css("#report_map .badge")).to be_nil
-    expect(html.text.squish).not_to match(/(?<!Top) metros/) # no orphaned " metros" badge
+    expect(html.text.squish).not_to include(" metros") # no orphaned " metros" badge
     expect(html.at_css("[data-controller~='map']")["aria-label"]).to eq("Heatmap of where people with your listeners' tastes live")
   end
 

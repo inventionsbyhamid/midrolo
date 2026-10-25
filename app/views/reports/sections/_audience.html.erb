@@ -1,52 +1,43 @@
 <%# locals: (report:, read_only:) -%>
-<% tabs = audience_tabs(report.audience) %>
+<%#
+  The audience as a few grouped chips with no scores (R99), and every list behind See all tastes, where each score
+  reads as words. A Snapshot has only its interests.
+%>
+<% groups = audience_groups(report.audience) %>
 <% listeners = report_listeners(read_only) %>
-<% if tabs.empty? %>
+<% title = read_only ? "This show's audience" : "Your audience" %>
+<% if groups.empty? %>
   <% if section_pending?(report) %>
-    <%= render "reports/section", name: "audience", title: "What #{listeners} love" do %>
+    <%= render "reports/section", name: "audience", title: title do %>
       <%= render "components/skeleton", lines: 4, label: "Reading #{read_only ? "the" : "your"} audience", title: false %>
     <% end %>
   <% else %>
     <%= render "reports/section", name: "audience", hidden: true %>
   <% end %>
 <% else %>
-  <%= render "reports/section", name: "audience", title: "What #{listeners} love" do %>
-    <p class="report-section-note">What people with <%= listeners %>' tastes love more than most people do, ranked by Qloo affinity (0 to 1).</p>
-    <div data-controller="tabs">
-      <div class="tab-row" role="tablist" aria-label="<%= listeners.upcase_first %>' tastes">
-        <% tabs.each_with_index do |(key, label, _), i| %>
-          <button type="button" role="tab" class="tab" id="<%= dom_id(report, "#{key}_tab") %>"
-                  aria-selected="<%= i.zero? %>" aria-controls="<%= dom_id(report, "#{key}_panel") %>" tabindex="<%= i.zero? ? 0 : -1 %>"
-                  data-tabs-target="tab" data-action="tabs#select keydown->tabs#navigate"><%= label %></button>
+  <%= render "reports/section", name: "audience", title: title do %>
+    <p class="report-section-note">What people with <%= listeners %>' tastes love more than most people do, from Qloo taste data.</p>
+    <%= render "reports/taste_chips", groups: top_tastes(groups.map { |_, label, items| [ label, items.map { |item| item["name"] } ] }) %>
+    <details class="taste-more">
+      <summary class="disclosure"><span>See all tastes</span></summary>
+      <p class="report-section-note mt-3">Each one says how much more this audience likes it than most people do.</p>
+      <div class="taste-lists">
+        <% groups.each do |key, label, items| %>
+          <section class="taste-list-group" aria-labelledby="<%= dom_id(report, "#{key}_list") %>">
+            <h3 id="<%= dom_id(report, "#{key}_list") %>" class="taste-list-title"><%= label %></h3>
+            <ol class="taste-list">
+              <% items.each do |item| %>
+                <li>
+                  <span class="taste-name" data-item-name><%= item["name"] %></span>
+                  <% if (band = taste_band(key == "tags" ? item["score"] : item["affinity"])) %>
+                    <span class="taste-band"><%= band %></span>
+                  <% end %>
+                </li>
+              <% end %>
+            </ol>
+          </section>
         <% end %>
       </div>
-      <% tabs.each_with_index do |(key, label, items), i| %>
-        <div role="tabpanel" id="<%= dom_id(report, "#{key}_panel") %>" aria-labelledby="<%= dom_id(report, "#{key}_tab") %>"
-             tabindex="0" data-tabs-target="panel" class="pt-4" <%= "hidden" unless i.zero? %>>
-          <ol class="grid gap-x-8 sm:grid-cols-2">
-            <% items.each do |item| %>
-              <% value = key == "tags" ? item["score"] : item["affinity"] %>
-              <li class="taste-item">
-                <% unless key == "tags" %>
-                  <span class="avatar size-10" aria-hidden="true" data-controller="logo">
-                    <%= initials_for(item["name"]) %>
-                    <% if (src = safe_external_url(item["image_url"])) %>
-                      <img src="<%= src %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
-                           data-logo-target="image" data-action="error->logo#fallback">
-                    <% end %>
-                  </span>
-                <% end %>
-                <span class="min-w-0 flex-1">
-                  <span class="block truncate text-[0.9375rem] font-medium" data-item-name><%= item["name"] %></span>
-                  <% if value %>
-                    <%= ui_meter value, label: "#{item['name']} affinity", show_label: false %>
-                  <% end %>
-                </span>
-              </li>
-            <% end %>
-          </ol>
-        </div>
-      <% end %>
-    </div>
+    </details>
   <% end %>
 <% end %>

@@ -3,7 +3,8 @@
 <%= turbo_stream_from @report %>
 <% tone = { "done" => :success, "failed" => :danger, "needs_input" => :warning }.fetch(@report.status, :accent) %>
 <% paused = AppSettings.runs_paused? %>
-<div class="flex flex-col gap-6">
+<%# One reading column once the report is done (R99); a live run also has its steps rail beside the sections. %>
+<div class="<%= class_names("report-page flex flex-col gap-6", "report-page-live" => @report.active?) %>">
   <%# Sticky under the site header on desktop only: on a phone it would eat a third of the screen. %>
   <header class="flex flex-wrap items-center gap-4 border-b border-line bg-paper py-3 lg:sticky lg:top-16 lg:z-10">
     <%= render "shows/artwork", show: @show, size: "size-12" %>

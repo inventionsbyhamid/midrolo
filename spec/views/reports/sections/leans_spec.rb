@@ -12,43 +12,42 @@ RSpec.describe "reports/sections/_leans" do
 
   def render_section = render(partial: "reports/sections/leans", locals: { report: report, read_only: false })
 
-  it "labels the leans as modeled from Qloo taste data, not a headcount" do
+  it "sits under the audience as Age and gender, labelled modeled from Qloo taste data, not measured" do
     render_section
-    expect(html.text.squish).to match(/modeled from Qloo taste data: how people with your listeners' tastes lean, not a headcount/i)
+    expect(html.at_css("#report_leans h3").text).to eq("Age and gender")
+    expect(html.at_css(".leans-note").text).to eq("Modeled from Qloo taste data, not measured.")
   end
 
-  it "draws a diverging bar per age bucket and gender, centered on zero, with words instead of percentages" do
+  it "draws age as one short chart of at most 6 bars around the average, in words, never percentages" do
     render_section
-    rows = html.css("[data-lean]")
-    expect(rows.map { |row| row.at_css("[data-lean-label]").text.squish })
-      .to eq([ "24 and under", "25 to 29", "30 to 34", "35 to 44", "45 to 54", "55+", "Men", "Women" ])
-    expect(rows.map { |row| row["data-lean"] }).to eq(%w[under over over even under under over under])
+    bars = html.css(".age-bars [data-lean]")
+    expect(bars.size).to eq(6)
+    expect(bars.map { |bar| bar.at_css("[data-lean-label]").text.squish })
+      .to eq([ "24 and under", "25 to 29", "30 to 34", "35 to 44", "45 to 54", "55+" ])
+    expect(bars.map { |bar| bar["data-lean"] }).to eq(%w[under over over even under under])
+    expect(bars[1].at_css(".sr-only").text).to include("Well above average")
+    expect(bars[5].at_css(".sr-only").text).to include("Well below average")
+    expect(html.text).not_to include("%", "0.42", "index")
+  end
 
-    over = rows[1] # 25 to 29, the strongest positive lean
-    expect(over.css(".lean-seg-over").size).to be > 0
-    expect(over.css(".lean-seg-under")).to be_empty
-    under = rows[5] # 55+, the strongest negative lean
-    expect(under.css(".lean-seg-under").size).to be > 0
-    expect(under.css(".lean-seg-over")).to be_empty
-    expect(rows[3].css(".lean-seg-over, .lean-seg-under")).to be_empty # exactly even
-
-    expect(over.text).to include("Over-indexes")
-    expect(under.text).to include("Under-indexes")
-    expect(html.text).not_to include("%", "0.42")
+  it "puts gender on one line" do
+    render_section
+    expect(html.at_css("[data-gender-line]").text.squish).to eq("Gender Leans a little toward men")
+    expect(html.css("[data-lean]").size).to eq(6) # no bars for gender
   end
 
   it "orders age buckets youngest first whatever order jsonb returns them in" do
     report.update!(demographics: demographics) # jsonb sorts keys by length: "24_and_younger" comes back last
     render(partial: "reports/sections/leans", locals: { report: Report.find(report.id), read_only: false })
     labels = html.css("[data-lean-label]").map { |label| label.text.squish }
-    expect(labels.first(6)).to eq([ "24 and under", "25 to 29", "30 to 34", "35 to 44", "45 to 54", "55+" ])
+    expect(labels).to eq([ "24 and under", "25 to 29", "30 to 34", "35 to 44", "45 to 54", "55+" ])
   end
 
   it "skips a group with no data" do
     demographics["gender"] = {}
     render_section
     expect(html.css("[data-lean]").size).to eq(6)
-    expect(html.text).not_to include("Gender")
+    expect(html.css("[data-gender-line]")).to be_empty
   end
 
   it "shows a skeleton while the run is going" do

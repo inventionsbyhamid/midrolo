@@ -1,6 +1,7 @@
 <%# locals: (report:, read_only:) -%>
+<%# A small map and its top three places in words (R99), which stand alone if the map can't load. %>
 <% heatmap = report.heatmap.is_a?(Hash) ? report.heatmap : nil %>
-<% title = read_only ? "Where this show's kind of listener lives" : "Where your kind of listener lives" %>
+<% title = "Where they are" %>
 <% if heatmap.nil? %>
   <% if section_pending?(report) %>
     <%= render "reports/section", name: "map", title: title do %>
@@ -13,11 +14,11 @@
   <% points = heatmap_points(heatmap) %>
   <% place = heatmap_place(heatmap) %>
   <%= render "reports/section", name: "map", title: title, aside: (ui_badge(place, tone: :accent) if place) do %>
-    <p class="report-section-note">Modeled from Qloo taste data. Handy for regional brands and local sponsors.</p>
     <% if points.empty? %>
-      <p class="mt-4 rounded-control border border-dashed border-line-strong px-4 py-6 text-ink-soft">Not enough location data for this audience</p>
+      <p class="mt-2 rounded-control border border-dashed border-line-strong px-4 py-6 text-ink-soft">Not enough location data for this audience</p>
     <% else %>
-      <%= render "reports/heatmap", id: dom_id(report, :heatmap), heatmap: heatmap, points: points, metros: top_metros(points) %>
+      <%= render "reports/heatmap", id: dom_id(report, :heatmap), heatmap: heatmap, points: points %>
     <% end %>
+    <p class="report-section-note mt-3">Modeled from Qloo taste data. Handy for regional and local sponsors.</p>
   <% end %>
 <% end %>

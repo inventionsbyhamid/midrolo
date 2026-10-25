@@ -1,0 +1,59 @@
+<%# locals: (sponsor_match:) -%>
+<%#
+  Why it fits, collapsed under a match's row: the full evidence, with Qloo's taste data kept apart from what the
+  podcast feeds showed and from Midrolo's own fit score (R86). The audience is spoken of as a group (Qloo SAFE_USE).
+%>
+<% match = sponsor_match %>
+<% shared = shared_tastes(match) %>
+<% proven = proven_evidence(match) %>
+<% items = Matching::Evidence.items(proven) %>
+<% count = Matching::Evidence.count(proven) %>
+<% band = taste_band(match.affinity) %>
+<details class="match-why">
+  <summary class="disclosure disclosure-sm"><span>Why it fits</span></summary>
+  <dl class="why-list">
+    <% if match.reason.present? && match.reason.squish != match_reason_line(match) %>
+      <div><dt>Full reason</dt><dd><%= match.reason %></dd></div>
+    <% end %>
+    <% if band || shared.any? %>
+      <div>
+        <dt>Qloo taste data</dt>
+        <dd>
+          <% if band %><p>This audience likes <%= match.name %> <%= band.downcase %> people do.</p><% end %>
+          <% if shared.any? %><p>Shared tastes: <%= shared.to_sentence(last_word_connector: " and ") %>.</p><% end %>
+        </dd>
+      </div>
+    <% end %>
+    <% if items.any? || count.positive? %>
+      <div>
+        <dt>Proven sponsor</dt>
+        <dd>
+          <p>Sponsored <%= pluralize([ count, items.size ].max, "episode") %> on similar shows.</p>
+          <% if items.any? %>
+            <ul class="why-items">
+              <% items.each do |item| %><li><%= proven_item_line(item) %></li><% end %>
+            </ul>
+          <% end %>
+        </dd>
+      </div>
+    <% end %>
+    <% if match.fit_score %>
+      <div>
+        <dt><%= APP_NAME %> fit score</dt>
+        <dd><%= match.fit_score %> of 100<% if (hint = tier_hint(match.tier)) %>. <%= tier_label(match.tier) %>: <%= hint %><% end %>.</dd>
+      </div>
+    <% end %>
+    <% if (url = safe_external_url(match.website)) %>
+      <div>
+        <dt>Website</dt>
+        <dd>
+          <%= link_to url, class: "link inline-flex items-center gap-1", target: "_blank", rel: "noopener noreferrer" do %>
+            <%= display_host(url) %>
+            <svg viewBox="0 0 16 16" class="size-3.5" aria-hidden="true"><path d="M6 3h7v7M13 3 4 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="sr-only">(opens in a new tab)</span>
+          <% end %>
+        </dd>
+      </div>
+    <% end %>
+  </dl>
+</details>

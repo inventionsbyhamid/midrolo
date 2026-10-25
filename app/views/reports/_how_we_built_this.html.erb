@@ -1,0 +1,51 @@
+<%# locals: (report:, read_only:) -%>
+<%#
+  How the report was made, collapsed at the bottom (R99): the taste profile it started from (the seeds section, a
+  Turbo Stream target; a report that needs input shows it at the top instead), the research steps (the live rail holds
+  them while the run goes), and the method, which keeps Qloo's data apart from Midrolo's own fit score (R86).
+%>
+<section id="report_how" class="report-section" aria-labelledby="report_how_title">
+  <header class="report-section-header">
+    <h2 id="report_how_title" class="report-section-title">How we built this</h2>
+  </header>
+  <details class="report-how">
+    <summary class="disclosure"><span>Show the seeds, steps and method</span></summary>
+    <div class="report-how-body">
+      <% unless report.needs_input? %>
+        <%= render "reports/sections/seeds", report: report, read_only: read_only %>
+      <% end %>
+      <% unless report.active? %>
+        <section class="report-subsection" aria-labelledby="<%= dom_id(report, :steps_title) %>">
+          <h3 id="<%= dom_id(report, :steps_title) %>" class="report-subsection-title">Research steps</h3>
+          <div class="mt-3"><%= render "reports/progress_rail", report: report %></div>
+        </section>
+      <% end %>
+      <section class="report-subsection" aria-labelledby="<%= dom_id(report, :method_title) %>">
+        <h3 id="<%= dom_id(report, :method_title) %>" class="report-subsection-title">Method</h3>
+        <dl class="method-list">
+          <div>
+            <dt>Qloo taste data</dt>
+            <dd>
+              What people with this audience's tastes like more than most people do, how they lean by age and gender,
+              and where they live. It describes the audience as a group, modeled from the taste profile above, not measured.
+            </dd>
+          </div>
+          <% if report.agent? %>
+            <div>
+              <dt>Proven sponsors</dt>
+              <dd>Brands named as sponsors in the episode notes of similar shows, read from their public podcast feeds.</dd>
+            </div>
+          <% end %>
+          <div>
+            <dt><%= APP_NAME %> fit score</dt>
+            <dd>
+              Our own ranking from 0 to 100 of how well a brand suits the show: mostly how much the audience likes it, then
+              proven sponsorships, shared tastes and category. The tier says how big the brand is: easy yes, realistic
+              or long shot.
+            </dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  </details>
+</section>

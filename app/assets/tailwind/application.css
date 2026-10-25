@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./report.css";
+@import "./matches.css";
 @import "./pipeline.css";
 @import "./pitch.css";
 @import "./kit.css";

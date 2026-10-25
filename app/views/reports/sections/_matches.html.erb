@@ -1,5 +1,10 @@
 <%# locals: (report:, read_only:) -%>
-<%# Preloaded by ReportsController#show; Report#save_section! resets the association before a broadcast. %>
+<%#
+  Preloaded by ReportsController#show; Report#save_section! resets the association before a broadcast.
+  The top 10 show as rows (R99). The rest wait behind Show all, a <details> that works without JS; its filters need
+  JS, so the filter controller shows them only while the full list is open. Locked Snapshot matches come last and
+  carry no brand data at all (R43).
+%>
 <% matches = report.sponsor_matches.to_a %>
 <% if matches.empty? %>
   <% if section_pending?(report) %>
@@ -21,61 +26,28 @@
     <%= render "reports/section", name: "matches", hidden: true %>
   <% end %>
 <% else %>
-  <%# The plan's visible limit locks Snapshot matches only: an agent report stays whole for its owner (R44, R64). %>
-  <% limit = report.snapshot? ? Entitlements.for(report.show.user).visible_matches_limit : matches.size %>
-  <% visible = matches.first(limit) %>
-  <% locked = matches.drop(limit) %>
-  <% categories = visible.filter_map { |m| m.category.presence }.tally.sort_by { |name, count| [ -count, name ] }.map(&:first) %>
-  <% any_proven = visible.any? { |m| proven_sponsor?(m) } %>
-  <% list_id = dom_id(report, :match_list) %>
+  <% visible, locked = split_matches(report) %>
+  <% top = visible.first(ReportsHelper::TOP_MATCHES) %>
+  <% rest = visible.drop(ReportsHelper::TOP_MATCHES) %>
+  <% list_ids = [ dom_id(report, :top_matches), dom_id(report, :more_matches) ] %>
   <%= render "reports/section", name: "matches", title: "Sponsor matches",
         aside: tag.p("#{pluralize(matches.size, 'brand')}, best fit first", class: "text-sm text-ink-soft") do %>
-    <div data-controller="filter" class="mt-1">
-      <div class="match-toolbar">
-        <div class="filter-row" role="group" aria-labelledby="<%= dom_id(report, :tier_filters) %>">
-          <span id="<%= dom_id(report, :tier_filters) %>" class="filter-row-label">Tier</span>
-          <% ReportsHelper::TIERS.each do |tier, (label, tone)| %>
-            <button type="button" class="filter-chip" aria-pressed="false" aria-controls="<%= list_id %>"
-                    data-filter-target="chip" data-group="tier" data-value="<%= tier %>" data-action="filter#toggle">
-              <span class="filter-chip-dot filter-chip-dot-<%= tone %>" aria-hidden="true"></span><%= label %>
-            </button>
-          <% end %>
-          <% if any_proven %>
-            <button type="button" class="filter-chip" aria-pressed="false" aria-controls="<%= list_id %>"
-                    data-filter-target="chip" data-group="proven" data-value="true" data-action="filter#toggle">Proven sponsors only</button>
-          <% end %>
-        </div>
-        <% if categories.size > 1 %>
-          <div class="filter-row" role="group" aria-labelledby="<%= dom_id(report, :category_filters) %>">
-            <span id="<%= dom_id(report, :category_filters) %>" class="filter-row-label">Category</span>
-            <% categories.each do |category| %>
-              <button type="button" class="filter-chip" aria-pressed="false" aria-controls="<%= list_id %>"
-                      data-filter-target="chip" data-group="category" data-value="<%= category %>" data-action="filter#toggle"><%= category %></button>
-            <% end %>
-          </div>
-        <% end %>
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <label class="flex items-center gap-2 text-sm">
-            <span class="font-semibold">Sort</span>
-            <select class="input select-sm" data-filter-target="sort" data-action="filter#sort" aria-controls="<%= list_id %>">
-              <option value="fit">Best fit</option>
-              <option value="tier">Easiest to land</option>
-            </select>
-          </label>
-          <p class="text-sm text-ink-soft" data-filter-target="status" aria-live="polite">Showing <%= visible.size %> of <%= visible.size %></p>
-          <button type="button" class="link text-sm" data-filter-target="clear" data-action="filter#clear" hidden>Clear filters</button>
-        </div>
-      </div>
-
-      <ol id="<%= list_id %>" class="match-grid" data-filter-target="list" aria-label="Sponsor matches">
-        <% visible.each do |match| %>
-          <li data-filter-target="item" data-category="<%= match.category %>" data-tier="<%= match.tier %>"
-              data-tier-rank="<%= tier_rank(match.tier) %>" data-proven="<%= proven_sponsor?(match) %>"
-              data-fit="<%= match.fit_score.to_i %>" data-position="<%= match.position.to_i %>">
-            <%= render "sponsor_matches/sponsor_match", sponsor_match: match, read_only: read_only %>
-          </li>
-        <% end %>
+    <div data-controller="filter">
+      <ol id="<%= list_ids.first %>" class="match-list" data-filter-target="list" aria-label="Top sponsor matches">
+        <%= render partial: "sponsor_matches/list_item", collection: top, as: :sponsor_match, locals: { read_only: read_only } %>
       </ol>
+      <% if rest.any? %>
+        <details class="match-more" data-filter-target="more" data-action="toggle->filter#expanded">
+          <summary class="disclosure match-more-summary">
+            <span class="when-closed">Show all <%= visible.size %> matches</span>
+            <span class="when-open">Show only the top <%= top.size %></span>
+          </summary>
+          <%= render "reports/match_filters", report: report, matches: visible, list_ids: list_ids %>
+          <ol id="<%= list_ids.last %>" class="match-list" data-filter-target="list" aria-label="More sponsor matches">
+            <%= render partial: "sponsor_matches/list_item", collection: rest, as: :sponsor_match, locals: { read_only: read_only } %>
+          </ol>
+        </details>
+      <% end %>
       <div class="mt-4" data-filter-target="empty" hidden>
         <%= render "components/empty_state", title: "No matches fit these filters.", body: "Turn a filter off to see more brands." %>
       </div>
@@ -83,8 +55,8 @@
 
     <% if locked.any? %>
       <div class="locked-matches">
-        <ol class="match-grid locked-grid" aria-hidden="true" inert>
-          <%= render partial: "sponsor_matches/locked", collection: locked, as: :sponsor_match %>
+        <ol class="match-list locked-list" aria-hidden="true" inert>
+          <%= render partial: "sponsor_matches/locked", collection: locked.first(ReportsHelper::TOP_MATCHES), as: :sponsor_match %>
         </ol>
         <div class="locked-overlay">
           <div class="locked-cta">

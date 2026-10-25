@@ -17,6 +17,9 @@ RSpec.describe "Copy has no dashes", type: :request do
     /\b(?:founding-member|sign-in|signed-in|mid-roll|pre-roll|post-roll|follow-up|ad-read|per-episode|re-run|self-reported)\b/i
   end
 
+  # Words the reports and kits put plainly (R99): "loves more than most people do", "above average".
+  def jargon = /\baffinit|\b(?:over|under)[ -]?index/i
+
   def root = Rails.root
 
   # "path:line: text" for each line of text with a dash.
@@ -118,7 +121,8 @@ RSpec.describe "Copy has no dashes", type: :request do
       report.reload
     end
 
-    it "renders the public and signed-in pages without a dash or an unneeded hyphen", :aggregate_failures do
+    it "renders the public and signed-in pages without a dash or an unneeded hyphen, and the reports and kit without jargon",
+       :aggregate_failures do
       allow(Llm).to receive(:mode).and_return(:fake)
       Taste::Provider.reset!
       Podcasts::Directory.reset!
@@ -132,12 +136,18 @@ RSpec.describe "Copy has no dashes", type: :request do
       report = own_report
       expect(report).to be_done
       show = report.show
+      # The Snapshot report reads differently (no reasons, locked rows, the upgrade as its next step), so it is checked too.
+      snapshot = show.reports.create!(kind: "snapshot", status: "queued")
+      BuildSnapshotJob.perform_now(snapshot.id)
+      expect(snapshot.reload).to be_done
       match = report.sponsor_matches.order(:position).first
       perform_enqueued_jobs { post sponsor_match_pitch_path(match) }
       create(:media_kit, :published, show: show)
 
-      private_paths = [ "/shows", "/shows/new", show_path(show), show_report_path(show, report), sponsor_match_pitch_path(match),
-                        "/pipeline", "/account", edit_show_media_kit_path(show), show_media_kit_path(show), public_kit_path(show.reload.slug) ]
+      reports = [ show_report_path(show, report), show_report_path(show, snapshot), "/samples/#{sample.sample_slug}",
+                  public_kit_path(show.reload.slug) ]
+      private_paths = [ "/shows", "/shows/new", show_path(show), *reports.values_at(0, 1), sponsor_match_pitch_path(match),
+                        "/pipeline", "/account", edit_show_media_kit_path(show), show_media_kit_path(show), reports.last ]
       private_paths.each { |path| rendered[path] = get(path) && [ response.status, response.body ] }
 
       rendered.each do |path, (status, body)|
@@ -146,6 +156,9 @@ RSpec.describe "Copy has no dashes", type: :request do
         expect(lines.grep(dash).uniq).to be_empty, "#{path} shows a dash in:\n#{lines.grep(dash).uniq.join("\n")}"
         expect(lines.grep(unneeded_hyphens).uniq).to be_empty,
                                                      "#{path} shows an unneeded hyphen in:\n#{lines.grep(unneeded_hyphens).uniq.join("\n")}"
+        next unless reports.include?(path)
+
+        expect(lines.grep(jargon).uniq).to be_empty, "#{path} uses jargon in:\n#{lines.grep(jargon).uniq.join("\n")}"
       end
     end
   end

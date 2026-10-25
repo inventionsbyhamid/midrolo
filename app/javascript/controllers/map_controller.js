@@ -3,7 +3,7 @@ import { Controller } from "@hotwired/stimulus"
 // The "where your kind of listener lives" heatmap. MapLibre (~1 MB) and its stylesheet (the stylesheet value, the
 // pinned version's CSS) load only when the map nears the viewport, so nothing about the map blocks first paint. Points are [{lat, lng, affinity}]; affinity weights the heat. If MapLibre can't load, WebGL is
 // missing, or an error leaves the map unrendered a few seconds later (the style failed), the figure hides
-// itself and the server-rendered "Top metros" list beside it stands alone.
+// itself and the server-rendered "Top places" line above it stands alone.
 const ERROR_GRACE_MS = 6000
 const STYLESHEET_WAIT_MS = 3000
 
@@ -130,7 +130,7 @@ export default class extends Controller {
     if (this.failed) return
 
     this.failed = true
-    console.warn("Midrolo: the map couldn't load, showing the top metros list instead.", error)
+    console.warn("Midrolo: the map couldn't load, showing the top places in words instead.", error)
     this.map?.remove()
     this.map = null
     this.element.hidden = true

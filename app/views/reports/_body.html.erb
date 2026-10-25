@@ -1,18 +1,30 @@
 <%# locals: (report:, read_only:) -%>
-<%# The report itself: the agent rail beside the sections. The owner's page and the public sample page (read_only:
-    no pitch, pipeline or owner controls, and third-person copy, R78) share it. read_only has no default, here and in
-    every section and match card, so each caller says which page it renders for. %>
-<div class="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10">
-  <aside aria-label="Agent steps" class="lg:sticky lg:top-40 lg:max-h-[calc(100dvh-11rem)] lg:self-start lg:overflow-y-auto lg:pb-4">
-    <%# One rail: open on desktop, collapsed on mobile (responsive-details controller). %>
-    <details id="<%= dom_id(report, :agent_rail) %>" class="rail" open data-turbo-permanent data-controller="responsive-details">
-      <summary class="cursor-pointer font-semibold">Show agent steps</summary>
-      <div class="mt-2"><%= render "reports/progress_rail", report: report %></div>
-    </details>
-  </aside>
+<%#
+  The report in reading order (R99): At a glance, the sponsor matches, the audience with its age and gender leans,
+  where they live, and How we built this (seeds, steps and method) collapsed at the bottom. While a run is live its
+  steps show in a rail beside the sections; once it ends they fold into How we built this. A report that needs input
+  leads with its ask (the seeds section and its form). The owner's page and the public sample page (read_only: no
+  pitch, pipeline or owner controls, and third-person copy, R78) share it. read_only has no default, here and in every
+  section and match card, so each caller says which page it renders for.
+%>
+<% live = report.active? %>
+<div class="<%= class_names("report-body", "report-body-live" => live) %>">
+  <% if live %>
+    <aside aria-label="Agent steps" class="report-rail">
+      <%# One rail: open on desktop, collapsed on mobile (responsive-details controller). %>
+      <details id="<%= dom_id(report, :agent_rail) %>" class="rail" open data-turbo-permanent data-controller="responsive-details">
+        <summary class="cursor-pointer font-semibold">Show agent steps</summary>
+        <div class="mt-2"><%= render "reports/progress_rail", report: report %></div>
+      </details>
+    </aside>
+  <% end %>
   <div class="report-sections">
-    <% Report::SECTIONS.each do |name| %>
+    <% if report.needs_input? %>
+      <%= render "reports/sections/seeds", report: report, read_only: read_only %>
+    <% end %>
+    <% %w[summary matches audience leans map].each do |name| %>
       <%= render "reports/sections/#{name}", report: report, read_only: read_only %>
     <% end %>
+    <%= render "reports/how_we_built_this", report: report, read_only: read_only %>
   </div>
 </div>

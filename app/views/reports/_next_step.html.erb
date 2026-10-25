@@ -1,0 +1,31 @@
+<%# locals: (report:, read_only:, matches:) -%>
+<%#
+  The one thing to do next, in At a glance: a stranger on a sample gets their own Snapshot; a Snapshot's owner runs the
+  full report; a full report's owner pitches the best visible match not pitched yet (its card, where Write my pitch
+  is), or adds comparable shows when nothing matched.
+%>
+<% if read_only %>
+  <div class="glance-next">
+    <p class="glance-text">See who fits your own show.</p>
+    <%= ui_button "Get your own Snapshot", snapshot_start_path %>
+  </div>
+<% elsif report.snapshot? %>
+  <p class="glance-text">This is your free Snapshot. Run the full report for reasons, proven sponsors and pitch emails.</p>
+  <div class="mt-3 flex flex-wrap gap-3">
+    <% if AppSettings.runs_paused? %>
+      <%= ui_button "Run full report", type: "button", disabled: true %>
+    <% else %>
+      <%= button_to "Run full report", show_reports_path(report.show, kind: "agent"), method: :post, class: "btn btn-primary btn-md" %>
+    <% end %>
+    <%= ui_button "See plans", pricing_path, variant: :secondary %>
+  </div>
+<% elsif (target = matches.find { |match| !pitch_written?(match) }) %>
+  <p class="glance-text">
+    <%= link_to "#{matches.any? { |match| pitch_written?(match) } ? 'Write your next pitch' : 'Write your first pitch'} to #{target.name}",
+          "##{dom_id(target)}", class: "glance-action" %>
+  </p>
+<% elsif matches.any? %>
+  <p class="glance-text"><%= link_to "Follow up in your pipeline", pipeline_path, class: "glance-action" %></p>
+<% else %>
+  <p class="glance-text"><%= link_to "Add comparable shows and run it again", edit_show_path(report.show), class: "glance-action" %></p>
+<% end %>

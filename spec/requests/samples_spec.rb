@@ -26,7 +26,21 @@ RSpec.describe "Sample reports" do
       expect(main).to include("Sample report. Not affiliated with the show.", "The Founder's Ledger", "Fieldnote Coffee",
                               "Index Fund Mornings", "People with this show's taste plan their money.")
       expect(page.at_css("#report_matches")).to be_present
-      expect(page.at_css("aside[aria-label='Agent steps']").text).to include("Reading your last 15 episodes…")
+      # A finished report has no steps rail: its steps wait in How we built this, collapsed (R99).
+      expect(page.at_css("aside[aria-label='Agent steps']")).to be_nil
+      expect(page.at_css("#report_how details:not([open])").text).to include("Reading your last 15 episodes…")
+    end
+
+    it "reads in the same order as the owner's report: At a glance, matches, audience, where they are, How we built this" do
+      report.update!(audience: { "tags" => [ { "id" => "t1", "name" => "Personal Finance", "score" => 0.9 } ] },
+                     heatmap: { "location" => "US", "points" => [ { "lat" => 40.7, "lng" => -74.0, "affinity" => 0.9, "label" => "New York" } ] })
+      get "/samples/sample-one"
+
+      ids = page.css(".report-sections > section:not([hidden])").map { |section| section["id"] }
+      expect(ids).to eq(%w[report_summary report_matches report_audience report_map report_how])
+      glance = page.css("#report_summary ul.glance > li")
+      expect(glance.size).to be <= 3
+      expect(glance.last.text.squish).to include("Get your own Snapshot")
     end
 
     it "hides pitch, pipeline and every owner control, even from a signed-in user" do
@@ -48,13 +62,14 @@ RSpec.describe "Sample reports" do
       get "/samples/sample-one"
 
       titles = page.css(".report-section-title").map { |title| title.text.squish }
-      expect(titles).to include("This show's audience at a glance", "What this show's listeners love",
-                                "Where this show's kind of listener lives")
+      expect(titles).to include("At a glance", "This show's audience", "Where they are")
       # The page's own copy; agent-written text (the summary, step labels, reasons) stays as generated.
-      copy = page.css(".report-section-title, .report-section-note, .profile-banner, [role='tablist']")
+      # The next step speaks to the reader about a show of their own ("Get your own Snapshot"), so it isn't counted.
+      copy = page.css(".report-section-title, .report-subsection-title, .report-section-note, .profile-banner, .glance-label, " \
+                      ".leans-note, .method-list")
                  .map { |node| [ node.text, node["aria-label"] ].join(" ").squish }.join(" ")
-      expect(copy).to include("Built from the show on Qloo", "Qloo knows the show",
-                              "how people with this show's listeners' tastes lean", "This show's listeners' tastes")
+      expect(copy).to include("Built from the show on Qloo", "Qloo knows the show", "Modeled from Qloo taste data, not measured.",
+                              "What people with this show's listeners' tastes love")
       expect(copy).not_to match(/\byour\b/i)
     end
 

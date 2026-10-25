@@ -19,30 +19,30 @@ RSpec.describe "reports/sections/_matches" do
     { "shared_tags" => [ "Investing" ], "proven" => { "items" => items, "count" => count } }
   end
 
-  context "with 50 matches on a Snapshot and a plan that shows 5" do
+  context "with 50 matches on a Snapshot and a plan that shows 12" do
     before do
       report.update!(kind: "snapshot")
       (1..50).each do |i|
         create(:sponsor_match, report: report, position: i, name: "Brand #{format('%02d', i)}", reason: "Reason for brand #{i}.",
                                website: "https://brand#{i}.example.com", image_url: "https://img.example.com/#{i}.png",
                                tier: %w[easy_yes realistic long_shot][i % 3], fit_score: 100 - i, evidence: proven("Show #{i}"),
-                               category: i == 7 ? "Zz Locked Only Category" : %w[Finance Coffee][i % 2],
+                               category: i == 20 ? "Zz Locked Only Category" : %w[Finance Coffee][i % 2],
                                brand_description: "Qloo blurb for brand #{i}.")
       end
-      limit_visible_to(5)
+      limit_visible_to(12)
       render_section
     end
 
-    it "renders the top 5 in full and the rest blurred behind an unlock overlay" do
-      expect(html.css("[data-filter-target='item']").size).to eq(5)
-      expect(html.css("[data-locked-match]").size).to eq(45)
+    it "renders the 12 visible matches in full and a few locked rows behind an unlock overlay" do
+      expect(html.css("[data-filter-target='item']").size).to eq(12)
+      expect(html.css("[data-locked-match]").size).to eq(10) # shapes only; the count is in the prompt
       unlock = html.at_css("a[href='/pricing']")
-      expect(unlock.text.squish).to eq("Unlock 45 more matches")
+      expect(unlock.text.squish).to eq("Unlock 38 more matches")
     end
 
-    it "puts no hidden brand's name, reason, image, website or evidence in the HTML" do
-      expect(rendered).to include("Brand 05", "Reason for brand 5.", "brand5.example.com")
-      (6..50).each do |i|
+    it "puts no hidden brand's name, reason, image, website or evidence in the HTML (R43)" do
+      expect(rendered).to include("Brand 12", "Reason for brand 12.")
+      (13..50).each do |i|
         expect(rendered).not_to include("Brand #{format('%02d', i)}")
         expect(rendered).not_to include("Reason for brand #{i}.")
         expect(rendered).not_to include("brand#{i}.example.com", "img.example.com/#{i}.png")
@@ -50,15 +50,51 @@ RSpec.describe "reports/sections/_matches" do
       end
       expect(rendered).not_to include("Zz Locked Only Category")
       expect(rendered).not_to include("Qloo blurb") # R52: the description feeds the pitch writer only, never a card
-      expect(html.css("button[data-group='category']").map { |chip| chip["data-value"] }).to contain_exactly("Finance", "Coffee")
+      options = html.css("select[data-filter-target='category'] option").map { |option| option["value"] }
+      expect(options).to contain_exactly("", "Finance", "Coffee")
     end
 
-    it "shows only a silhouette, the tier and a fit bucket on a blurred card" do
-      card = html.css("[data-locked-match]").first # match 6: fit 94, easy yes
-      expect(card.text.squish).to eq("•• Easy yes High fit")
-      expect(card.css("img, a, form, select")).to be_empty
-      expect(html.css("[data-locked-match]").last.text.squish).to eq("•• Long shot Good fit") # match 50: fit 50
+    it "shows only a silhouette, the tier and a fit bucket on a locked row" do
+      rows = html.css("[data-locked-match]")
+      expect(rows.first.text.squish).to eq("•• Realistic High fit") # match 13: fit 87
+      expect(rows.css("img, a, form, select, details")).to be_empty
+      expect(html.at_css(".locked-matches ol")["aria-hidden"]).to eq("true")
     end
+  end
+
+  context "with 50 matches on an agent report" do
+    before do
+      (1..50).each { |i| create(:sponsor_match, report: report, position: i, name: "Brand #{format('%02d', i)}", category: %w[Finance Coffee][i % 2]) }
+      render_section
+    end
+
+    it "shows the top 10 by default and the rest behind a collapsed Show all, which works without JS" do
+      doc = html
+      top = doc.at_css("ol.match-list")
+      expect(top.css("[data-filter-target='item']").size).to eq(10)
+      expect(top.text).to include("Brand 01", "Brand 10")
+      expect(top.ancestors("details")).to be_empty
+
+      details = doc.at_css("details.match-more")
+      expect(details["open"]).to be_nil
+      expect(details.at_css("summary").text.squish).to start_with("Show all 50 matches")
+      more = details.at_css("ol.match-list")
+      expect(more.css("[data-filter-target='item']").size).to eq(40)
+      expect(more.text).to include("Brand 11", "Brand 50")
+    end
+
+    it "keeps the filters as one compact row inside the full list, hidden until JS shows it" do
+      toolbar = html.at_css("details.match-more [data-filter-target='toolbar']")
+      expect(toolbar["hidden"]).not_to be_nil
+      expect(html.css("[data-filter-target='toolbar']").size).to eq(1)
+    end
+  end
+
+  it "leaves out Show all and the filters with 10 matches or fewer" do
+    create_list(:sponsor_match, 10, report: report)
+    render_section
+    expect(html.css("[data-filter-target='item']").size).to eq(10)
+    expect(html.css("details.match-more, [data-filter-target='toolbar']")).to be_empty
   end
 
   it "shows every match of an agent report, whatever its owner's plan now is (R64)" do
@@ -84,23 +120,35 @@ RSpec.describe "reports/sections/_matches" do
 
     let(:card) { html.at_css("[data-filter-target='item']") }
 
-    it "shows logo initials, name, category, fit meter, tier and reason" do
+    it "shows logo initials, name, category, the fit score with its tier, and one reason line" do
       expect(card.at_css("h3").text.squish).to eq("Fieldnote Coffee")
-      expect(card.text).to include("FC", "Coffee", "Easy yes", "Your audience shares 6 taste signals with Fieldnote fans.")
-      meter = card.at_css("[role='meter']")
-      expect(meter["aria-valuenow"]).to eq("91")
-      expect(meter.text).to include("91")
+      expect(card.at_css(".match-fit").text.squish).to eq("91 fit Easy yes")
+      expect(card.text).to include("FC", "Coffee")
+      expect(card.css("[data-match-reason]").map(&:text)).to eq([ "Your audience shares 6 taste signals with Fieldnote fans." ])
     end
 
-    it "shows the evidence chips with the newest proven sponsorships and a count of the rest" do
-      chips = card.css(".chip").map { |chip| chip.text.squish }
-      expect(chips).to eq([ "Shares 6 taste tags", "Affinity 0.82", "Sponsored Harbor Lights · Oct 12",
-                            "Sponsored Tide Tables · Oct 11", "+2 more" ])
+    it "shows at most 3 evidence chips, with no scores: shared tastes, the newest proven show and a count of the rest" do
+      chips = card.css(".match-chips .chip").map { |chip| chip.text.squish }
+      expect(chips).to eq([ "Shares 6 tastes", "Sponsors Harbor Lights", "+3 more" ])
       expect(card.at_css(".chip em").text).to eq("Harbor Lights")
+      expect(card.at_css(".match-chips").text).not_to include("0.82", "Affinity")
     end
 
-    it "links the website safely" do
-      link = card.at_css("a[href='https://fieldnote.example.com/shop']")
+    it "keeps the full evidence behind Why it fits, collapsed, with Qloo's data apart from the fit score (R86)" do
+      why = card.at_css("details.match-why")
+      expect(why["open"]).to be_nil
+      expect(why.at_css("summary").text.squish).to eq("Why it fits")
+      terms = why.css("dt").map(&:text)
+      expect(terms).to eq([ "Qloo taste data", "Proven sponsor", "Midrolo fit score", "Website" ])
+      expect(why.text.squish).to include("This audience likes Fieldnote Coffee much more than most people do.",
+                                         "Shared tastes: A, B, C, D, E and F.", "Sponsored 4 episodes on similar shows.",
+                                         "Sponsored Harbor Lights on “Ep 0”, Oct 12", "Sponsored Tide Tables on “Ep 1”, Oct 11",
+                                         "91 of 100. Easy yes: a smaller brand, likely to welcome a show this size.")
+      expect(why.text).not_to include("affinity", "0.82")
+    end
+
+    it "links the website safely, inside Why it fits" do
+      link = card.at_css("details.match-why a[href='https://fieldnote.example.com/shop']")
       expect(link.text).to include("fieldnote.example.com")
       expect(link["rel"]).to include("noopener")
       expect(link["target"]).to eq("_blank")
@@ -137,7 +185,7 @@ RSpec.describe "reports/sections/_matches" do
       expect(form.at_css("noscript").inner_html).to include("Save")
       expect(form.at_css("[role='status']")).to be_present
 
-      details = form.at_css("details")
+      details = form.at_css("details.status-notes")
       expect(details["open"]).to be_nil
       expect(details.at_css("summary").text.squish).to eq("Notes & follow up")
       %w[notes follow_up_on].each do |field|
@@ -159,7 +207,7 @@ RSpec.describe "reports/sections/_matches" do
     after { travel_back }
 
     it "flags both on the closed notes panel" do
-      summary = html.at_css("details summary")
+      summary = html.at_css("details.status-notes summary")
       expect(summary.text.squish).to eq("Notes & follow up Note Follow up today")
       expect(html.at_css("select option[selected]")["value"]).to eq("pitched")
     end
@@ -259,21 +307,22 @@ RSpec.describe "reports/sections/_matches" do
       create(:sponsor_match, report: report, tier: tier, position: i + 1)
     end
     render_section
-    badges = html.css("[data-filter-target='item'] .badge").map(&:text)
+    badges = html.css("[data-filter-target='item'] .match-fit .badge").map(&:text)
     expect(badges).to eq([ "Easy yes", "Realistic", "Long shot" ])
   end
 
-  it "offers category, tier and proven filters and a sort, all unpressed" do
+  it "offers tier and proven filters, a category menu and a sort, all unset" do
     create(:sponsor_match, report: report, category: "Finance", position: 1)
     create(:sponsor_match, report: report, category: "Coffee", position: 2, evidence: proven("Harbor Lights"))
-    create(:sponsor_match, report: report, category: "Finance", position: 3)
+    (3..12).each { |i| create(:sponsor_match, report: report, category: "Finance", position: i) }
     render_section
 
     chips = html.css("button[aria-pressed]")
-    expect(chips.map { |c| c.text.squish }).to eq([ "Easy yes", "Realistic", "Long shot", "Proven sponsors only", "Finance", "Coffee" ])
+    expect(chips.map { |c| c.text.squish }).to eq([ "Easy yes", "Realistic", "Long shot", "Proven sponsors" ])
     expect(chips.map { |c| c["aria-pressed"] }.uniq).to eq([ "false" ])
+    expect(html.css("select[data-filter-target='category'] option").map(&:text)).to eq([ "All categories", "Finance", "Coffee" ])
     expect(html.css("select[data-filter-target='sort'] option").map(&:text)).to eq([ "Best fit", "Easiest to land" ])
-    expect(html.css("[data-filter-target='item']").map { |c| c["data-proven"] }).to eq(%w[false true false])
+    expect(html.css("[data-filter-target='item']").map { |c| c["data-proven"] }.first(3)).to eq(%w[false true false])
   end
 
   it "leaves out the reason on a snapshot match" do
@@ -281,6 +330,15 @@ RSpec.describe "reports/sections/_matches" do
     create(:sponsor_match, report: report, reason: nil)
     render_section
     expect(html.css("[data-match-reason]")).to be_empty
+    expect(html.at_css("details.match-why dt").text).to eq("Qloo taste data")
+  end
+
+  it "shows an older reason over 25 words as its first sentence on the row and in full in Why it fits" do
+    long = "Fits this audience well. #{'Its fans love slow travel and coffee. ' * 4}"
+    create(:sponsor_match, report: report, reason: long)
+    render_section
+    expect(html.at_css("[data-match-reason]").text).to eq("Fits this audience well.")
+    expect(html.at_css("details.match-why dd").text.squish).to eq(long.squish)
   end
 
   it "says so when a finished report has no matches" do

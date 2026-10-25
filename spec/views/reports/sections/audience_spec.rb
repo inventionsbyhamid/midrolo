@@ -7,11 +7,13 @@ RSpec.describe "reports/sections/_audience" do
   end
 
   let(:audience) do
-    { "brands" => [ entity("Fieldnote Coffee", 0.91, image_url: "https://images.example.com/fieldnote.png"), entity("Northbound Packs", 0.74) ],
-      "artists" => [ entity("Phoebe Bridgers", 0.66) ],
-      "tv_shows" => [ entity("The Bear", 0.71) ],
-      "podcasts" => [ entity("Acquired", 0.88) ],
-      "tags" => [ { "id" => "t1", "name" => "Personal Finance", "score" => 0.93 }, { "id" => "t2", "name" => "Slow Travel", "score" => 0.41 } ] }
+    { "brands" => [ entity("Fieldnote Coffee", 0.91), entity("Northbound Packs", 0.74), entity("Lumen Sleep", 0.6),
+                    entity("Tidewater Tapes", 0.5) ],
+      "artists" => [ entity("Phoebe Bridgers", 0.66), entity("Ivy Calder", 0.6) ],
+      "tv_shows" => [ entity("The Bear", 0.71), entity("Cold Water", 0.5) ],
+      "podcasts" => [ entity("Acquired", 0.88), entity("Shipping Soon", 0.8), entity("Study Hall", 0.7) ],
+      "tags" => [ { "id" => "t1", "name" => "Personal Finance", "score" => 0.93 }, { "id" => "t2", "name" => "Slow Travel", "score" => 0.41 },
+                  { "id" => "t3", "name" => "Cycling", "score" => 0.4 } ] }
   end
   let(:report) { create(:report, kind: "agent", status: "done", audience: audience) }
 
@@ -19,52 +21,48 @@ RSpec.describe "reports/sections/_audience" do
 
   def render_section = render(partial: "reports/sections/audience", locals: { report: report, read_only: false })
 
-  it "renders accessible tabs for brands, music, TV, podcasts and taste tags" do
-    render_section
-    tablist = html.at_css("[role='tablist']")
-    tabs = tablist.css("[role='tab']")
-    expect(tabs.map { |t| t.text.squish }).to eq([ "Brands", "Music", "TV", "Podcasts", "Taste tags" ])
-    expect(tabs.map { |t| t["aria-selected"] }).to eq(%w[true false false false false])
+  def chips = html.css(".taste-chips [data-taste-chip]").map(&:text)
 
-    tabs.each do |tab|
-      panel = html.at_css("##{tab['aria-controls']}")
-      expect(panel["role"]).to eq("tabpanel")
-      expect(panel["aria-labelledby"]).to eq(tab["id"])
-    end
-    expect(html.css("[role='tabpanel']").map { |p| p["hidden"].nil? }).to eq([ true, false, false, false, false ])
+  it "shows at most 8 top tastes as chips, mixed across kinds and grouped, with no scores" do
+    render_section
+    expect(chips.size).to eq(8)
+    groups = html.css(".taste-chip-group").to_h { |group| [ group.at_css("dt").text, group.css("[data-taste-chip]").map(&:text) ] }
+    expect(groups).to eq("Interests" => [ "Personal Finance", "Slow Travel" ], "Brands" => [ "Fieldnote Coffee", "Northbound Packs" ],
+                         "Podcasts" => [ "Acquired", "Shipping Soon" ], "TV" => [ "The Bear" ], "Music" => [ "Phoebe Bridgers" ])
+    expect(html.at_css(".taste-chips").text).not_to match(/\d/)
   end
 
-  it "shows each item with its image or initials and an affinity meter" do
+  it "keeps every list behind a collapsed See all tastes, with each score in plain words" do
     render_section
-    brands = html.css("[role='tabpanel']").first.css("li")
-    expect(brands.first.at_css("img")["src"]).to eq("https://images.example.com/fieldnote.png")
-    expect(brands.first.at_css("img")["onerror"]).to be_nil
-    expect(brands.first.at_css("img")["data-action"]).to eq("error->logo#fallback")
-    expect(brands.last.text).to include("NP", "Northbound Packs")
-    expect(brands.first.at_css("[role='meter']")["aria-valuenow"]).to eq("91")
+    details = html.at_css("details.taste-more")
+    expect(details["open"]).to be_nil
+    expect(details.at_css("summary").text.squish).to eq("See all tastes")
+    lists = details.css(".taste-list-group").to_h { |group| [ group.at_css("h3").text, group.css("[data-item-name]").map(&:text) ] }
+    expect(lists.keys).to eq([ "Interests", "Brands", "Podcasts", "TV", "Music" ])
+    expect(lists["Brands"]).to eq([ "Fieldnote Coffee", "Northbound Packs", "Lumen Sleep", "Tidewater Tapes" ])
 
-    tags = html.css("[role='tabpanel']").last.css("li")
-    expect(tags.map { |li| li.at_css("[data-item-name]").text }).to eq([ "Personal Finance", "Slow Travel" ])
-    expect(tags.first.at_css("[role='meter']")["aria-valuenow"]).to eq("93")
+    first = details.css(".taste-list-group")[1].at_css("li")
+    expect(first.text.squish).to eq("Fieldnote Coffee Far more than most")
+    expect(details.text).not_to include("0.91", "affinity", "Affinity")
   end
 
-  it "skips a list that came back empty" do
-    audience["artists"] = []
+  it "says the tastes come from Qloo taste data, about people with these tastes" do
     render_section
-    expect(html.css("[role='tab']").map { |t| t.text.squish }).to eq([ "Brands", "TV", "Podcasts", "Taste tags" ])
+    expect(html.at_css(".report-section-note").text.squish)
+      .to eq("What people with your listeners' tastes love more than most people do, from Qloo taste data.")
   end
 
-  it "shows only the taste tags tab on a snapshot" do
+  it "shows only the interests on a snapshot" do
     report.update!(kind: "snapshot", audience: { "tags" => audience["tags"] })
     render_section
-    expect(html.css("[role='tab']").map { |t| t.text.squish }).to eq([ "Taste tags" ])
-    expect(html.css("[role='tabpanel']").first["hidden"]).to be_nil
+    expect(html.css(".taste-chip-group dt").map(&:text)).to eq([ "Interests" ])
+    expect(chips).to eq([ "Personal Finance", "Slow Travel", "Cycling" ])
   end
 
-  it "never renders an image from a non-http URL" do
-    audience["brands"][0]["image_url"] = "javascript:alert(1)"
-    render_section
-    expect(rendered).not_to include("javascript:")
+  it "speaks in the third person on a public sample (R78)" do
+    render(partial: "reports/sections/audience", locals: { report: report, read_only: true })
+    expect(html.at_css("h2").text).to eq("This show's audience")
+    expect(html.text).not_to include("your")
   end
 
   it "shows a skeleton while the run is going" do

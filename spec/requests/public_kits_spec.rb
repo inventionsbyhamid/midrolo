@@ -56,6 +56,33 @@ RSpec.describe "Public media kits" do
       expect(response.body).not_to include("s3cret")
     end
 
+    it "reads like the report: at most 8 taste chips, every list behind See all tastes, compact leans and top places (R99)" do
+      brands = (1..14).map { |i| { "id" => "b#{i}", "name" => "Brand #{i}", "affinity" => 0.9 } }
+      tags = (1..12).map { |i| { "id" => "t#{i}", "name" => "Taste #{i}", "score" => 0.8 } }
+      podcasts = (1..6).map { |i| { "id" => "p#{i}", "name" => "Pod #{i}", "affinity" => 0.8 } }
+      report.update!(audience: { "brands" => brands, "tags" => tags, "podcasts" => podcasts },
+                     demographics: { "age" => { "25_to_29" => 0.3, "30_to_34" => -0.2 }, "gender" => { "female" => 0.3 } },
+                     heatmap: { "location" => "US", "points" => [ { "lat" => 30.3, "lng" => -97.7, "affinity" => 1.0, "label" => "Austin" },
+                                                                 { "lat" => 39.7, "lng" => -105.0, "affinity" => 0.5, "label" => "Denver" } ] })
+      get public_kit_path(show.slug), headers: { "User-Agent" => browser }
+      doc = Nokogiri::HTML(response.body)
+
+      chips = doc.css(".taste-chips [data-taste-chip]").map(&:text)
+      expect(chips.size).to eq(8)
+      expect(chips).not_to include("Brand 2") # hidden by the owner, chips included
+      expect(doc.at_css(".taste-chips").text).not_to match(/\d\.\d/)
+      more = doc.at_css("details.kit-more")
+      expect(more["open"]).to be_nil
+      expect(more.at_css("summary").text.squish).to eq("See all tastes")
+      brand_names = more.css(".kit-brand-name").map(&:text)
+      expect(brand_names).to include("Brand 1", "Brand 13")
+      expect(brand_names).not_to include("Brand 2")
+      expect(doc.css(".age-bars [data-lean]").size).to eq(2)
+      expect(doc.at_css("[data-gender-line]").text.squish).to eq("Gender Leans strongly toward women")
+      expect(doc.at_css(".leans-note").text).to eq("Modeled from Qloo taste data, not measured.")
+      expect(doc.at_css("[data-top-places]").text.squish).to eq("Top places: Austin and Denver")
+    end
+
     it "never lists sponsor matches" do
       create(:sponsor_match, report: report, name: "Secret Sponsor Co")
       visit_kit

@@ -100,6 +100,22 @@ RSpec.describe "Reports" do
         expect(response.body).to include(%(id="agent_steps_report_#{report.id}"))
       end
 
+      it "folds the steps into How we built this once the report is done: no rail, one column (R99)" do
+        report = create(:report, show: show, kind: "agent", status: "done", summary: "Founders who love finance tools.")
+        create(:agent_step, report: report, label: "Reading your last 15 episodes…", status: "ok")
+        create_list(:sponsor_match, 3, report: report)
+        get show_report_path(show, report)
+        page = Nokogiri::HTML(response.body)
+
+        expect(page.at_css("aside[aria-label='Agent steps']")).to be_nil
+        expect(page.at_css(".report-page")["class"]).not_to include("report-page-live")
+        expect(page.at_css("#report_how details:not([open])").text).to include("Reading your last 15 episodes…")
+        glance = page.css("#report_summary ul.glance > li")
+        expect(glance.size).to eq(3)
+        expect(glance.last.text.squish).to include("Write your first pitch to")
+        expect(page.css("#pitch_dialog")).to be_present
+      end
+
       it "disables Re-run while active and enables it when finished" do
         report = create(:report, show: show, status: "running")
         get show_report_path(show, report)

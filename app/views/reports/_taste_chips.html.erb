@@ -1,0 +1,15 @@
+<%# locals: (groups:) -%>
+<%# The top tastes as chips grouped by kind ([[label, names]], from ReportsHelper#top_tastes), shared by the report and
+    the media kit. Names only: no scores on a chip (R99). %>
+<dl class="taste-chips">
+  <% groups.each do |label, names| %>
+    <div class="taste-chip-group">
+      <dt class="taste-chip-label"><%= label %></dt>
+      <dd>
+        <ul class="taste-chip-row">
+          <% names.each do |name| %><li class="taste-chip" data-taste-chip><%= name %></li><% end %>
+        </ul>
+      </dd>
+    </div>
+  <% end %>
+</dl>
