@@ -84,7 +84,7 @@ RSpec.describe Admin::SettingsForm do
       [ "", "-0.1", "1.01", "40%", "lots" ].each do |value|
         record = form(qloo_free_share: value)
         expect(record).not_to be_valid, "expected #{value.inspect} to be refused"
-        expect(record.errors.full_messages).to eq([ "Free Snapshot share of Qloo calls must be from 0 to 1, like 0.4." ])
+        expect(record.errors.full_messages).to eq([ "Free and promo share of Qloo calls must be from 0 to 1, like 0.4." ])
       end
     end
 

@@ -12,6 +12,8 @@ module Entitlements
   USAGE_LOCK_NAMESPACE = 16_016
   # The LLM spend bucket each plan's work draws on (R62); free work never spends.
   SPEND_BUCKETS = { free: nil, creator: :paid, pro: :paid, sprint: :paid, judge: :judge, promo: :promo }.freeze
+  # Plans whose runs share qloo_free_share of the day's Qloo calls (R108): users who are neither judges nor paying.
+  CAPPED_TASTE_PLANS = %i[free promo].freeze
   # The plans.yml keys a plan takes from the plan it grants (grants_plan).
   LIMIT_KEYS = %i[shows snapshots_per_month agent_reports agent_reports_total pitches visible_matches kit_badge
                   deep_scan_similar csv_export pipeline].freeze

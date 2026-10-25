@@ -201,28 +201,48 @@ RSpec.describe Research::Run do
       expect(Entitlements.for(show.user).used(:snapshot)).to eq(0)
     end
 
-    it "runs a free user's Snapshot in the free lane, and a paid user's in the shared one (R95)" do
+    def record_lanes
       lanes = {}
       allow_any_instance_of(Taste::Providers::Fake).to receive(:search).and_wrap_original do |original, **kw|
         lanes[kw[:query]] ||= Taste::CallGuard.current_lane
         original.call(**kw)
       end
+      lanes
+    end
 
+    def pod(title, user) = create(:show, user: user, title: title, feed_url: "fake://fake-1", categories: [ "Business" ])
+
+    it "runs a free user's Snapshot in the capped lane, and a paying user's in the shared one (R95, R108)" do
+      lanes = record_lanes
       run(create(:report, show: show, kind: "snapshot"))
-      paid = create(:show, user: create(:user, :subscribed), title: "Paid Pod", feed_url: "fake://fake-1", categories: [ "Business" ])
-      run(create(:report, show: paid, kind: "snapshot"))
+      run(create(:report, show: pod("Paid Pod", create(:user, :subscribed)), kind: "snapshot"))
 
-      expect(lanes).to include(show.title => :free, "Paid Pod" => nil)
+      expect(lanes).to include(show.title => :capped, "Paid Pod" => nil)
       expect(Taste::CallGuard.current_lane).to be_nil
     end
 
-    it "tells a free user that free Snapshots are busy today when the free share is spent (R95)" do
-      report = create(:report, show: show, kind: "snapshot")
+    it "runs a promo user's report in the capped lane, and judges' and sample generation in the shared one (R108)" do
+      allow(Llm).to receive(:mode).and_return(:fake)
+      AppSettings.set(:promo_pro_until, (Date.current + 7).iso8601)
+      lanes = record_lanes
+      run(create(:report, show: pod("Promo Pod", create(:user)), kind: "agent", spend_bucket: "promo"))
+      run(create(:report, show: pod("Judge Pod", create(:user, judge: true)), kind: "agent", spend_bucket: "judge"))
+      run(create(:report, show: pod("Sample Pod", create(:user)), kind: "agent", spend_bucket: "sample"))
+
+      expect(lanes).to include("Promo Pod" => :capped, "Judge Pod" => nil, "Sample Pod" => nil)
+    end
+
+    it "tells a capped user that free Snapshots, or reports, are busy today when the share is spent (R95, R108)" do
       allow_any_instance_of(Taste::Providers::Fake).to receive(:search).and_raise(Taste::FreeShareSpent, "free share")
+      snapshot = create(:report, show: show, kind: "snapshot")
+      BuildSnapshotJob.perform_now(snapshot.id)
+      expect(snapshot.reload).to have_attributes(status: "failed", error_message: "Free Snapshots are busy today. Try again tomorrow.")
 
-      BuildSnapshotJob.perform_now(report.id)
-
-      expect(report.reload).to have_attributes(status: "failed", error_message: "Free Snapshots are busy today. Try again tomorrow.")
+      allow(Llm).to receive(:mode).and_return(:fake)
+      AppSettings.set(:promo_pro_until, (Date.current + 7).iso8601)
+      agent = create(:report, show: pod("Promo Pod", create(:user)), kind: "agent", spend_bucket: "promo")
+      GenerateReportJob.perform_now(agent.id)
+      expect(agent.reload).to have_attributes(status: "failed", error_message: "Reports are busy today. Try again tomorrow.")
     end
 
     it "fails as busy when Qloo itself rate limits a required call, and never counts it as an auth failure" do

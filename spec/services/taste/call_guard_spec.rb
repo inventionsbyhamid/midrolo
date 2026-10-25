@@ -63,7 +63,7 @@ RSpec.describe Taste::CallGuard do
     expect { null.acquire! }.to raise_error(Taste::CallCapReached, /counter/)
   end
 
-  describe "the free share (R95)" do
+  describe "the free share (R95, R108)" do
     before { AppSettings.set(:qloo_daily_call_limit, 10) }
 
     it "defaults to 40% of the daily limit, as set in admin" do
@@ -74,8 +74,8 @@ RSpec.describe Taste::CallGuard do
       expect(guard.usage.free_limit).to eq(2)
     end
 
-    it "lets free Snapshot runs use at most their share, while other runs use the rest of the day" do
-      described_class.lane(:free) do
+    it "lets capped runs (free and promo users, R108) use at most their share, while other runs use the rest of the day" do
+      described_class.lane(:capped) do
         4.times { guard.acquire! }
         expect { guard.acquire! }.to raise_error(Taste::FreeShareSpent) { |error| expect(error).to be_a(Taste::CallCapReached) }
       end
@@ -88,26 +88,37 @@ RSpec.describe Taste::CallGuard do
 
     it "still holds free runs to the daily limit when other runs used it up" do
       10.times { guard.acquire! }
-      described_class.lane(:free) { expect { guard.acquire! }.to raise_error(Taste::CallCapReached) }
+      described_class.lane(:capped) { expect { guard.acquire! }.to raise_error(Taste::CallCapReached) }
       expect(guard.usage).to have_attributes(today: 10, free_today: 0)
     end
 
     it "gives no free calls at a share of 0, and reads a bad share as the default" do
       AppSettings.set(:qloo_free_share, "0")
-      described_class.lane(:free) { expect { guard.acquire! }.to raise_error(Taste::FreeShareSpent) }
+      described_class.lane(:capped) { expect { guard.acquire! }.to raise_error(Taste::FreeShareSpent) }
       AppSettings.set(:qloo_free_share, "1.5")
       expect(described_class.free_share).to eq(BigDecimal("0.4"))
     end
 
+    it "says a capped run would be refused once its share, or the whole day, is used up (R108)" do
+      expect(guard).not_to be_capped_spent
+      described_class.lane(:capped) { 4.times { guard.acquire! } }
+      expect(guard).to be_capped_spent
+
+      other = described_class.new(store: ActiveSupport::Cache::MemoryStore.new, clock: clock)
+      10.times { other.acquire! }
+      expect(other).to be_capped_spent
+    end
+
     it "sets the lane for the block only, on this thread, even when the block raises" do
       expect(described_class.current_lane).to be_nil
-      expect { described_class.lane(:free) { raise ArgumentError } }.to raise_error(ArgumentError)
+      expect { described_class.lane(:capped) { raise ArgumentError } }.to raise_error(ArgumentError)
+      expect { described_class.lane(:free) { nil } }.to raise_error(ArgumentError, /unknown call lane/)
       expect(described_class.current_lane).to be_nil
-      described_class.lane(:free) do
-        expect(described_class.current_lane).to eq(:free)
+      described_class.lane(:capped) do
+        expect(described_class.current_lane).to eq(:capped)
         expect(Thread.new { described_class.current_lane }.value).to be_nil
         described_class.lane(nil) { expect(described_class.current_lane).to be_nil }
-        expect(described_class.current_lane).to eq(:free)
+        expect(described_class.current_lane).to eq(:capped)
       end
     end
   end

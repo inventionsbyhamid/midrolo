@@ -179,15 +179,15 @@ RSpec.describe "Admin" do
         expect(section("Go live check").text.squish).to include("Not set")
       end
 
-      it "shows Qloo calls today, this minute and free Snapshots' calls against their caps (R92, R95)" do
+      it "shows Qloo calls today, this minute and free and promo runs' calls against their caps (R92, R95, R108)" do
         allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
         2.times { Taste::CallGuard.new.acquire! }
-        Taste::CallGuard.lane(:free) { Taste::CallGuard.new.acquire! }
+        Taste::CallGuard.lane(:capped) { Taste::CallGuard.new.acquire! }
 
         get "/admin", headers: basic_auth
 
         meters = section("Qloo calls").css("[role='meter']").to_h { |meter| [ meter["aria-label"], meter.at_css(".meter-value").text ] }
-        expect(meters).to include("Qloo calls today" => "3 / 100", "This minute" => "3 / 30", "Free Snapshots today" => "1 / 40")
+        expect(meters).to include("Qloo calls today" => "3 / 100", "This minute" => "3 / 30", "Free and promo runs today" => "1 / 40")
         expect(section("Settings").at_css("input[name='settings[qloo_daily_call_limit]']")["value"]).to eq("100")
       end
     end

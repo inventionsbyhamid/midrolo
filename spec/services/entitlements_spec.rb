@@ -264,6 +264,42 @@ RSpec.describe Entitlements do
     end
   end
 
+  describe "the capped Qloo lane (R108)" do
+    let(:promo_until) { (Date.current + 7).iso8601 }
+
+    def spend_the_share
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      AppSettings.set(:qloo_daily_call_limit, 10) # a share of 0.4: 4 calls
+      Taste::CallGuard.lane(:capped) { 4.times { Taste::CallGuard.new.acquire! } }
+    end
+
+    it "caps free and promo users, never judges or paying users" do
+      expect(described_class.for(user)).to be_capped_taste
+      AppSettings.set(:promo_pro_until, promo_until)
+      expect(described_class.for(user)).to have_attributes(key: :promo, capped_taste?: true)
+      expect(described_class.for(create(:user, judge: true))).not_to be_capped_taste
+      expect(described_class.for(create(:user, :subscribed))).not_to be_capped_taste
+    end
+
+    it "refuses a capped user's Snapshot or report with reason :busy once the share of today's calls is spent" do
+      AppSettings.set(:promo_pro_until, promo_until)
+      expect(reason(described_class.for(user), :agent)).to be_nil
+      spend_the_share
+
+      expect(reason(described_class.for(user), :snapshot)).to eq(:busy)
+      expect(reason(described_class.for(user), :agent)).to eq(:busy)
+      expect(reason(described_class.for(user), :pitch)).to be_nil # pitches make no Qloo calls
+      expect(reason(described_class.for(create(:user, judge: true)), :agent)).to be_nil
+      expect(reason(described_class.for(create(:user, :subscribed)), :agent)).to be_nil
+    end
+
+    it "keeps the plan's own refusals first" do
+      spend_the_share
+      report("snapshot")
+      expect(reason(described_class.for(user), :snapshot)).to eq(:limit)
+    end
+  end
+
   describe "judge" do
     before { user.update!(judge: true) }
 

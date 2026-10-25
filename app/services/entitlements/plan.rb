@@ -31,6 +31,9 @@ module Entitlements
     def duration_days = @limits[:duration_days]
     def can_pitch? = limit(:pitch).positive?
 
+    # Whether this user's Snapshots and reports run in the capped Qloo lane (R108).
+    def capped_taste? = CAPPED_TASTE_PLANS.include?(key)
+
     # A judge's work always draws on the judge reserve, even on a paid plan (R62a).
     def spend_bucket = @user&.judge? ? :judge : SPEND_BUCKETS.fetch(key)
 
@@ -76,8 +79,9 @@ module Entitlements
     end
 
     # Why the plan won't start one more now, or nil: :paused (the kill switch, before anything else), :plan (not on
-    # this plan), :limit (done and in-flight work fill the limit) or :budget (the spend bucket is out of money).
-    # Snapshots spend nothing on the LLM, so only the others ask the budget.
+    # this plan), :limit (done and in-flight work fill the limit), :budget (the spend bucket is out of money) or :busy
+    # (a capped user's share of today's Qloo calls is used up, R108). Snapshots spend nothing on the LLM, so only the
+    # others ask the budget; pitches make no Qloo calls, so they are never busy.
     def refusal(kind)
       kind = kind.to_sym
       raise ArgumentError, "unknown kind #{kind.inspect}" unless KINDS.include?(kind)
@@ -85,6 +89,7 @@ module Entitlements
       return :plan unless limit(kind).positive?
       return :limit if left(kind) - in_flight(kind) <= 0
       return :budget if kind != :snapshot && !Llm::Budget.allow?(spend_bucket)
+      return :busy if kind != :pitch && capped_taste? && Taste::CallGuard.new.capped_spent?
 
       nil
     end

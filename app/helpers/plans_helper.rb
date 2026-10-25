@@ -4,7 +4,7 @@
 module PlansHelper
   UpgradePrompt = Data.define(:message, :detail, :action)
 
-  REASONS = %i[limit budget paused plan].freeze
+  REASONS = %i[limit budget paused plan busy].freeze
   # Each kind's noun in a sentence, and its label on the account page.
   KINDS = { agent: { noun: "report", label: "Full reports" },
             snapshot: { noun: "Snapshot", label: "Snapshots" },
@@ -30,6 +30,8 @@ module PlansHelper
       end
     when :paused
       UpgradePrompt.new(AppSettings.get(:runs_paused_reason).to_s.presence || PAUSED_MESSAGE, nil, nil)
+    when :busy
+      UpgradePrompt.new(Research::Run.busy_message(kind), nil, nil)
     else
       kind == :pitch ? UpgradePrompt.new("Pitch packs are on Creator and up", PITCH_PACK, "See plans")
                      : UpgradePrompt.new("Full agent reports are on Creator and up", nil, "See plans")

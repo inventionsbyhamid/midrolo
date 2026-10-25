@@ -37,6 +37,15 @@ RSpec.describe "shared/_upgrade_prompt" do
     end
   end
 
+  describe ":busy (R108)" do
+    it "tells a capped user taste data is busy today, by kind, with nothing to buy" do
+      snapshot = render_prompt(reason: :busy, kind: :snapshot, bucket: nil)
+      expect(snapshot.text.squish).to eq("Free Snapshots are busy today. Try again tomorrow.")
+      expect(link(snapshot)).to be_nil
+      expect(render_prompt(reason: :busy, kind: :agent, bucket: :promo).text.squish).to eq("Reports are busy today. Try again tomorrow.")
+    end
+  end
+
   describe ":budget (R63a)" do
     it "sends a promo user to the waitlist once the promo pool is spent" do
       node = render_prompt(reason: :budget, kind: :agent, bucket: :promo)

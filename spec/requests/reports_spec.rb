@@ -68,6 +68,20 @@ RSpec.describe "Reports" do
         expect(prompt.text).not_to include("waitlist")
       end
 
+      it "tells a free user that free Snapshots are busy today, without queuing one, once the share is spent (R108)" do
+        allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+        AppSettings.set(:qloo_daily_call_limit, 10)
+        Taste::CallGuard.lane(:capped) { 4.times { Taste::CallGuard.new.acquire! } }
+        sign_in(free_user = create(:user))
+        free_show = create(:show, user: free_user)
+
+        expect { post show_reports_path(free_show), params: { kind: "snapshot" } }.not_to change(Report, :count)
+        expect(response).to redirect_to(show_path(free_show))
+        follow_redirect!
+        expect(Nokogiri::HTML(response.body).at_css(".upgrade-prompt").text.squish)
+          .to eq("Free Snapshots are busy today. Try again tomorrow.")
+      end
+
       it "tells a free user full reports are on Creator and up" do
         sign_in(free_user = create(:user))
         post show_reports_path(create(:show, user: free_user)), params: { kind: "agent" }

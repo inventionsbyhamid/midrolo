@@ -12,7 +12,7 @@ module Admin
     LABELS = { promo_budget_usd: "Promo budget", judge_reserve_usd: "Judge reserve",
                llm_daily_budget_usd: "Daily LLM budget", promo_pro_until: "Promo Pro until",
                qloo_daily_call_limit: "Qloo calls a day", qloo_cost_per_call_usd: "Qloo cost per call",
-               qloo_free_share: "Free Snapshot share of Qloo calls" }.freeze
+               qloo_free_share: "Free and promo share of Qloo calls" }.freeze
     # Whole dollars or dollars and cents, never negative: "10", "0.5", ".5".
     DOLLARS = /\A(?:\d+(?:\.\d+)?|\.\d+)\z/
     WHOLE_NUMBER = /\A\d+\z/
