@@ -50,6 +50,6 @@ RSpec.describe "rake qloo:smoke" do
 
     task.reenable
     allow(Taste::Smoke).to receive(:call).and_return(result({ search_podcast: :pass }, aborted: true))
-    expect { task.invoke }.to raise_error(SystemExit)
+    expect { task.invoke }.to raise_error(SystemExit).and output(/did not pass/).to_stderr
   end
 end
