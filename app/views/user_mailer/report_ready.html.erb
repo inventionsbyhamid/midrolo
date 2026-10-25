@@ -1,4 +1,4 @@
-<% best = best_fits(@matches).map(&:name) %>
+<% best = best_fits(@matches).map(&:name) -%>
 <p style="margin:0 0 16px;">Your full report for <strong><%= @title %></strong> is ready.</p>
 <% if @matches.any? %>
   <p style="margin:0 0 8px;">It found <%= pluralize(@matches.size, "sponsor match", plural: "sponsor matches") %>.</p>

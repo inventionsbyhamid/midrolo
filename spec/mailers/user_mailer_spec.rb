@@ -15,13 +15,22 @@ RSpec.describe UserMailer do
   # The mail's one call to action: the link styled as a button.
   def button(mail) = html(mail).at_css("a[data-mail-button]")
 
+  it "starts no text email with a blank line: a leading line of ERB code trims its newline" do
+    Dir[Rails.root.join("app/views/*_mailer/*.text.erb")].each do |path|
+      first = File.readlines(path).first.to_s.strip
+      code_only = first.match?(/\A<%[^=#].*%>\z/)
+      expect(code_only && !first.end_with?("-%>")).to be(false), "#{path} starts with a blank line"
+    end
+  end
+
   describe "#welcome" do
     let(:mail) { described_class.welcome(user) }
 
     it "greets the new user by first name and points to adding a show" do
       expect(mail.to).to eq([ "ada@example.com" ])
       expect(mail.subject).to eq("Welcome to Midrolo")
-      expect(text(mail)).to include("Hi Ada,", "Add your show", "free Snapshot", "http://example.com/shows/new")
+      expect(text(mail)).to include("Hi Ada,", "sponsors your audience already loves", "Add your show", "free Snapshot",
+                                    "http://example.com/shows/new")
       expect(button(mail).text.squish).to eq("Add your show")
       expect(button(mail)["href"]).to eq("http://example.com/shows/new")
       expect(text(mail) + mail.html_part.body.to_s).not_to match(dash)
@@ -67,23 +76,63 @@ RSpec.describe UserMailer do
       expect(text(mail)).to include("4 sponsor matches", "Fieldnote Coffee, Ramp and Notion")
       expect(text(mail)).not_to include("Away")
       expect(button(mail).text.squish).to eq("Open your report")
+      expect(text(mail)).to start_with("Your full report") # no blank first line
       expect(button(mail)["href"]).to eq("http://example.com/shows/#{show.id}/reports/#{report.id}")
       expect(text(mail) + mail.html_part.body.to_s).not_to match(dash)
     end
   end
 
-  describe ReportReadyMailJob do
+  describe "#report_needs_input" do
+    let(:report) { create(:report, show: show, kind: "agent", status: "needs_input", finished_at: 3.minutes.ago) }
+    let(:mail) { described_class.report_needs_input(report) }
+
+    it "asks for the one missing thing and links to where to give it (R113)" do
+      expect(mail.to).to eq([ "ada@example.com" ])
+      expect(mail.subject).to eq("Your report needs one more thing")
+      expect(text(mail)).to include("The Founder's Ledger", "2 or 3 shows your listeners also love")
+      expect(button(mail).text.squish).to eq("Add comparable shows")
+      expect(button(mail)["href"]).to eq("http://example.com/shows/#{show.id}/reports/#{report.id}#report_seeds")
+      expect(text(mail)).not_to start_with("\n")
+      expect(text(mail) + mail.html_part.body.to_s).not_to match(dash)
+    end
+  end
+
+  describe ReportMailJob do
     let(:report) { create(:report, show: show, kind: "agent", status: "done", finished_at: 2.minutes.ago) }
+    let(:needs_input) do
+      create(:report, show: create(:show, user: user), kind: "agent", status: "needs_input", finished_at: 2.minutes.ago)
+    end
+
+    def subjects = ActionMailer::Base.deliveries.map(&:subject)
 
     it "mails the owner when the report finished and nobody opened it since" do
       expect { described_class.perform_now(report.id) }.to change { ActionMailer::Base.deliveries.size }.by(1)
       expect(ActionMailer::Base.deliveries.last.subject).to include("is ready")
     end
 
-    it "isn't sent if the report was viewed after finishing" do
-      report.update!(viewed_at: report.finished_at + 5.seconds)
+    it "mails the owner of a full report that needs input (R113)" do
+      described_class.perform_now(needs_input.id)
 
-      expect { described_class.perform_now(report.id) }.not_to(change { ActionMailer::Base.deliveries.size })
+      expect(subjects).to eq([ "Your report needs one more thing" ])
+    end
+
+    it "claims each mail before sending it, so a job that runs twice sends it once (R113)" do
+      2.times { described_class.perform_now(report.id) }
+      2.times { described_class.perform_now(needs_input.id) }
+
+      expect(subjects).to eq([ "Your sponsor report for The Founder's Ledger is ready", "Your report needs one more thing" ])
+      expect(report.reload.ready_mailed_at).to be_present
+      expect(needs_input.reload.needs_input_mailed_at).to be_present
+    end
+
+    it "isn't sent if the report was viewed after finishing, whatever its outcome" do
+      report.update!(viewed_at: report.finished_at + 5.seconds)
+      needs_input.update!(viewed_at: needs_input.finished_at + 5.seconds)
+
+      expect do
+        described_class.perform_now(report.id)
+        described_class.perform_now(needs_input.id)
+      end.not_to(change { ActionMailer::Base.deliveries.size })
     end
 
     it "is still sent when the only view came before the report finished" do
@@ -92,7 +141,7 @@ RSpec.describe UserMailer do
       expect { described_class.perform_now(report.id) }.to change { ActionMailer::Base.deliveries.size }.by(1)
     end
 
-    it "sends nothing for a Snapshot, an unfinished report, a sample or a deleted report" do
+    it "sends nothing for a Snapshot, a failed report, a sample or a deleted report" do
       snapshot = create(:report, show: show, kind: "snapshot", status: "done", finished_at: 2.minutes.ago)
       failed = create(:report, show: create(:show, user: user), kind: "agent", status: "failed", finished_at: 2.minutes.ago)
       owner = User.create!(email: User::SAMPLES_EMAIL)
@@ -105,7 +154,7 @@ RSpec.describe UserMailer do
     end
   end
 
-  describe "scheduling the report ready mail" do
+  describe "scheduling the report mail" do
     let(:report) { create(:report, show: show, kind: "agent", status: "queued", spend_bucket: "paid") }
 
     before do
@@ -115,17 +164,26 @@ RSpec.describe UserMailer do
     it "queues it 2 minutes after a full report finishes" do
       freeze_time do
         expect { GenerateReportJob.perform_now(report.id) }
-          .to have_enqueued_job(ReportReadyMailJob).with(report.id).at(2.minutes.from_now)
+          .to have_enqueued_job(ReportMailJob).with(report.id).at(2.minutes.from_now)
+      end
+    end
+
+    it "queues it 2 minutes after a full report ends needing input (R113)" do
+      allow(Research::Run).to receive(:call) { |r| r.mark_needs_input! }
+
+      freeze_time do
+        expect { GenerateReportJob.perform_now(report.id) }
+          .to have_enqueued_job(ReportMailJob).with(report.id).at(2.minutes.from_now)
       end
     end
 
     it "queues nothing for a Snapshot or a report that failed" do
       snapshot = create(:report, show: create(:show, user: user), kind: "snapshot", status: "queued")
-      expect { BuildSnapshotJob.perform_now(snapshot.id) }.not_to have_enqueued_job(ReportReadyMailJob)
+      expect { BuildSnapshotJob.perform_now(snapshot.id) }.not_to have_enqueued_job(ReportMailJob)
 
       allow(Research::Run).to receive(:call).and_raise(Taste::Unavailable, "503")
       allow(Rails.error).to receive(:report)
-      expect { GenerateReportJob.perform_now(report.id) }.not_to have_enqueued_job(ReportReadyMailJob)
+      expect { GenerateReportJob.perform_now(report.id) }.not_to have_enqueued_job(ReportMailJob)
     end
   end
 

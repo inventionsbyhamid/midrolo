@@ -280,14 +280,13 @@ RSpec.describe "Reports" do
         expect(page.css("[data-superseded]").size).to eq(3)
       end
 
-      it "tells the owner a full report takes minutes and they'll get an email, in a live status (Task 20)" do
+      it "tells the owner of a running full report they'll get an email, in a live status (Task 20, R113)" do
         report = create(:report, show: show, kind: "agent", status: "running")
         get show_report_path(show, report)
         page = Nokogiri::HTML(response.body)
 
         expect(page.at_css("#report_status")["aria-live"]).to eq("polite")
-        expect(page.at_css("[data-run-note]").text.squish)
-          .to eq("A full report takes a few minutes. You can leave this page: we'll email you when it's ready.")
+        expect(page.at_css("[data-run-note]").text.squish).to eq("We'll email you when it's ready or if we need anything.")
 
         report.update!(status: "done")
         get show_report_path(show, report)
@@ -303,6 +302,12 @@ RSpec.describe "Reports" do
         get show_report_path(show, report)
         expect(report.reload.viewed_at).to be_within(5.seconds).of(Time.current)
         expect(report.viewed_since_finish?).to be(true)
+
+        # A report that needs input counts as seen too, so its mail is skipped (R113).
+        asking = create(:report, show: create(:show, user: user), kind: "agent", status: "running")
+        asking.mark_needs_input!
+        get show_report_path(asking.show, asking)
+        expect(asking.reload.viewed_since_finish?).to be(true)
       end
 
       it "404s for another user's report" do

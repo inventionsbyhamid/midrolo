@@ -1,0 +1,4 @@
+<p style="margin:0 0 16px;">Your full report for <strong><%= @title %></strong> needs one more thing: 2 or 3 shows your listeners also love.</p>
+<p style="margin:0;">We need a little more to go on. Name a few comparable shows and we'll research it again.</p>
+<%= mail_button "Add comparable shows", show_report_url(@show, @report, anchor: "report_seeds") %>
+<%= mail_footnote "We email when a full report needs you while you're away." %>

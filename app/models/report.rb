@@ -111,19 +111,29 @@ class Report < ApplicationRecord
     update!(status: "failed", finished_at: Time.current, error_message: message)
   end
 
-  # The owner opened the finished report (ReportsController#show), so the report ready mail can skip it. A column
+  # A full report's outcomes that mail its owner (ReportMailJob, R113): ready, or waiting on comparable shows. Each
+  # names the column that claims its mail. A failed report sends nothing.
+  MAILED_OUTCOMES = { "done" => :ready_mailed_at, "needs_input" => :needs_input_mailed_at }.freeze
+
+  # The owner opened the report after it ended (ReportsController#show), so its outcome mail can skip it. A column
   # write: no callbacks, no broadcast, and updated_at stays the run's.
   def mark_viewed!
-    update_column(:viewed_at, Time.current) if done? && !viewed_since_finish?
+    update_column(:viewed_at, Time.current) if MAILED_OUTCOMES.key?(status) && !viewed_since_finish?
   end
 
   def viewed_since_finish? = viewed_at.present? && finished_at.present? && viewed_at >= finished_at
 
-  # Whether the report ready mail (ReportReadyMailJob, Task 20) should go: a full report that finished while its owner
+  # Whether the outcome mail (ReportMailJob) should go: a full report that ended done or needs_input while its owner
   # was away. Never for a Snapshot (it takes seconds, so they are on the page), a sample or an account with no address.
-  def ready_email_due?
+  def outcome_mail_due?
     owner = show.user
-    agent? && done? && !viewed_since_finish? && owner.email.present? && !owner.samples_owner?
+    agent? && MAILED_OUTCOMES.key?(status) && !viewed_since_finish? && owner.email.present? && !owner.samples_owner?
+  end
+
+  # Takes this outcome's mail for the caller: true once, for the first claim, so an at-least-once job sends it once.
+  def claim_outcome_mail!
+    column = MAILED_OUTCOMES.fetch(status)
+    self.class.where(id: id, column => nil).update_all(column => Time.current) == 1
   end
 
   # Saves one section and pushes it to open report pages. Matches live in their own table, so

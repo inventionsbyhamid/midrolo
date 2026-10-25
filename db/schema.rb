@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_070100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -119,6 +119,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_070100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "viewed_at"
+    t.datetime "ready_mailed_at"
+    t.datetime "needs_input_mailed_at"
     t.index ["sample_slug"], name: "index_reports_on_sample_slug", unique: true, where: "(sample_slug IS NOT NULL)"
     t.index ["show_id"], name: "index_reports_on_show_id"
     t.index ["show_id"], name: "index_reports_one_active_per_show", unique: true, where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('running'::character varying)::text]))"
