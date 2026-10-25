@@ -43,5 +43,10 @@ module Midrolo
     # one auth path for all of /admin.
     config.mission_control.jobs.base_controller_class = "Admin::BaseController"
     config.mission_control.jobs.http_basic_auth_enabled = false
+
+    # A Client-IP header that disagrees with X-Forwarded-For is the client's doing: a 400, never a 500 and an error mail.
+    # ClientIp::RejectConflictingHeaders (config/initializers/client_ip.rb) answers it before Rails' request log can
+    # raise it outside ShowExceptions; this covers it anywhere else.
+    config.action_dispatch.rescue_responses["ActionDispatch::RemoteIp::IpSpoofAttackError"] = :bad_request
   end
 end
