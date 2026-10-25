@@ -12,6 +12,13 @@ module Taste
           Demographics.new(age: mean_leans(queries.map { |q| q["age"] }), gender: mean_leans(queries.map { |q| q["gender"] }))
         end
 
+        # The heatmap answer cut to the keep entries with the most affinity (entries without one last), and nothing else.
+        def top_heatmap(json, keep)
+          entries = Array(dig_results(json, "heatmap")).select { |h| h.is_a?(Hash) }
+          top = entries.sort_by { |h| -(float(h.dig("query", "affinity") || h["affinity"]) || -1.0) }.first(keep)
+          { "results" => { "heatmap" => top } }
+        end
+
         # The points Qloo's heatmap answer holds; a non-empty answer that reads as no points is logged with its keys.
         def heat_points(json)
           raw = Array(dig_results(json, "heatmap")).select { |h| h.is_a?(Hash) }

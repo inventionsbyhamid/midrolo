@@ -3,7 +3,8 @@ module Research
   #   audience     {brands: top 20, podcasts: top 10, tags: top 15}: a list per TYPES entry (config/research.yml,
   #                R93: brands and podcasts by default; artists and tv_shows, top 10 each, when configured)
   #   leans        {age: {bucket => lean}, gender: {gender => lean}} (the demographics column)
-  #   map          {location: country code or "metros", country:, points: [{lat, lng, affinity, label}]} (heatmap)
+  #   map          {location: country code or "metros", country:, points: [{lat, lng, affinity, label}]} (heatmap),
+  #                each label the nearest metro's name (Research::Places, R106) or nil
   # Returns {digest: String (< 1,500 chars, for the agent), thin: Boolean (fewer than 8 brands)}.
   #
   # A snapshot (R36) passes entities: false and include_demographics: false: the audience section then holds
@@ -110,8 +111,10 @@ module Research
       end
     end
 
+    # Each point named after its nearest metro (R106: Qloo's geohash cells have no names), so Top places can add up.
     def heatmap(step, location)
-      step.optional(location) { taste.heatmap(location: location, **signals, take: HEATMAP_TAKE) } || []
+      points = step.optional(location) { taste.heatmap(location: location, **signals, take: HEATMAP_TAKE) } || []
+      points.map { |point| point.with(label: Places.name_for(point.lat, point.lng)) }
     end
 
     def thin? = @entities ? @lists[:brand].size < THIN_BELOW : @tags.empty?

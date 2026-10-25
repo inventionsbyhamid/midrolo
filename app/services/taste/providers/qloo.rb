@@ -14,6 +14,8 @@ module Taste
       STABLE_CACHE_TTL = 30.days
       STABLE_PATHS = %w[/search /v2/tags].freeze
       AFFINITY_CHUNK = 50
+      # Qloo ignores take on heatmaps (8,421 points for the United States, R106): only this many are kept and cached.
+      HEATMAP_KEEP = 200
       TIMEOUT = 20
       OPEN_TIMEOUT = 5
       ATTEMPTS = 2
@@ -77,12 +79,13 @@ module Taste
         Mapping.demographics(get("/v2/insights", { "filter.type" => "urn:demographics" }.merge(signals(entity_ids, tag_ids))))
       end
 
-      # A location Qloo can't place is a 400 (or a 404): that location yields no points, so the caller's metro fallback
-      # runs (R87).
+      # The documented geohash output (R106: the locality boundary param 502s). Qloo sends every cell whatever take
+      # says, so only the HEATMAP_KEEP points with the most affinity are kept, and cached, never the whole answer. A
+      # location Qloo can't place is a 400 (or a 404): it yields no points, so the caller's metro fallback runs (R87).
       def heatmap(location:, entity_ids: [], tag_ids: [], take: 50)
-        params = { "filter.type" => "urn:heatmap", "filter.location.query" => location,
-                   "output.heatmap.boundary" => "urn:entity:locality", "take" => take }.merge(signals(entity_ids, tag_ids))
-        Mapping.heat_points(get("/v2/insights", params))
+        params = { "filter.type" => "urn:heatmap", "filter.location.query" => location, "take" => take }
+                   .merge(signals(entity_ids, tag_ids))
+        Mapping.heat_points(get("/v2/insights", params, keep: ->(json) { Mapping.top_heatmap(json, HEATMAP_KEEP) }))
       rescue BadRequest, NotFound
         []
       end
@@ -105,7 +108,8 @@ module Taste
 
       # ---- HTTP ----
 
-      def get(path, params)
+      # keep: trims a live answer before it is cached and returned.
+      def get(path, params, keep: nil)
         params = normalize(params)
         key = cache_key(path, params)
         started = monotonic
@@ -115,6 +119,7 @@ module Taste
         end
 
         json = parse(path, live_body(path, params))
+        json = keep.call(json) if keep
         @cache.write(key, json, expires_in: STABLE_PATHS.include?(path) ? STABLE_CACHE_TTL : CACHE_TTL)
         json
       end

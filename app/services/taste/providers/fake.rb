@@ -93,8 +93,9 @@ module Taste
             _name, lat0, lng0 = centers[rng.rand(centers.size)]
             lat = (lat0 + (rng.rand - 0.5) * 0.4).round(4)
             lng = (lng0 + (rng.rand - 0.5) * 0.4).round(4)
+            # Qloo's documented geohash cells carry no place name (R106); Research::Places names them.
             HeatPoint.new(lat: lat, lng: lng, geohash: geohash(lat, lng), affinity: (0.2 + rng.rand * 0.8).round(3),
-                          popularity: (rng.rand * 0.6).round(3), label: nearest_metro(lat, lng))
+                          popularity: (rng.rand * 0.6).round(3), label: nil)
           end
         end
       end
@@ -188,10 +189,6 @@ module Taste
         end
         metro = metros.find { |name, _| name.downcase == loc }
         metro ? [ [ metro[0], metro[1][1], metro[1][2] ] ] : []
-      end
-
-      def nearest_metro(lat, lng)
-        metros.min_by { |_, (_, mlat, mlng)| (mlat - lat)**2 + (mlng - lng)**2 }.first
       end
 
       def geohash(lat, lng, precision = 7)

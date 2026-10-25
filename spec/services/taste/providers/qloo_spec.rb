@@ -207,16 +207,32 @@ RSpec.describe Taste::Providers::Qloo do
   end
 
   describe "#heatmap" do
-    it "sends the heatmap request and maps points" do
+    it "asks for the documented geohash output, with no boundary param (R106), and maps points" do
       stub = stub_request(:get, "#{base}/v2/insights").with(query: {
-        "filter.type" => "urn:heatmap", "filter.location.query" => "United States", "output.heatmap.boundary" => "urn:entity:locality",
-        "signal.interests.entities" => "E1", "take" => "50"
+        "filter.type" => "urn:heatmap", "filter.location.query" => "United States", "signal.interests.entities" => "E1", "take" => "50"
       }).to_return(json("heatmap"))
       points = adapter.heatmap(location: "United States", entity_ids: [ "E1" ])
       expect(stub).to have_been_requested
       expect(points.size).to eq(2)
-      expect(points.first).to eq(Taste::HeatPoint.new(lat: 40.71, lng: -74.0, geohash: "dr5regw", affinity: 0.9, popularity: 0.4, label: "New York"))
-      expect(points.last.label).to be_nil
+      expect(points.first).to eq(Taste::HeatPoint.new(lat: 40.71, lng: -74.0, geohash: "dr5regw", affinity: 0.9, popularity: 0.4, label: nil))
+    end
+
+    it "keeps the 200 points with the most affinity, and caches only those, never the whole answer (R106)" do
+      entries = (1..450).map do |i|
+        { location: { latitude: 30 + (i * 0.01), longitude: -97.0, geohash: "9v6k#{i}" }, query: { affinity: ((i * 37) % 450) / 450.0, popularity: 0.1 } }
+      end
+      stub = stub_request(:get, "#{base}/v2/insights").with(query: hash_including("filter.type" => "urn:heatmap"))
+        .to_return(status: 200, body: { results: { heatmap: entries } }.to_json)
+
+      points = adapter.heatmap(location: "United States", entity_ids: [ "E1" ])
+      expected = entries.map { |e| e[:query][:affinity] }.sort.reverse.first(200)
+      expect(points.map(&:affinity)).to eq(expected)
+
+      cached = cache.instance_variable_get(:@data).keys.map { |key| cache.read(key) }
+      expect(cached.size).to eq(1)
+      expect(cached.first.dig("results", "heatmap").size).to eq(200)
+      expect(adapter.heatmap(location: "United States", entity_ids: [ "E1" ]).map(&:affinity)).to eq(expected)
+      expect(stub).to have_been_requested.once
     end
 
     it "reads lat with lon or lng, nested under location or flat, and drops points off the globe (M5)" do

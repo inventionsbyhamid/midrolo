@@ -107,6 +107,17 @@ RSpec.describe Research::AudienceProfile do
     expect(report.agent_steps.find_by(tool: "heatmap").status).to eq("ok")
   end
 
+  it "names each point after the nearest metro within 75 km, or leaves it unnamed, with no extra call (R106)" do
+    near_austin = Taste::HeatPoint.new(lat: 30.3, lng: -97.7, geohash: "9v6kp", affinity: 0.9, popularity: 0.2, label: nil)
+    nowhere = Taste::HeatPoint.new(lat: 38.9, lng: -101.0, geohash: "9y3", affinity: 0.4, popularity: 0.1, label: "Ignored")
+    allow(taste).to receive(:heatmap).and_return([ near_austin, nowhere ])
+
+    build
+    expect(taste).to have_received(:heatmap).once
+    expect(report.reload.heatmap["points"].map { |p| p["label"] }).to eq([ "Austin", nil ])
+    expect(report.agent_steps.find_by(tool: "heatmap").output_summary).to include("strongest in Austin")
+  end
+
   it "skips a failing metro with a warning" do
     allow(taste).to receive(:heatmap).and_wrap_original do |original, **kw|
       next [] if kw[:location] == "United States"

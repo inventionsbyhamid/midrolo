@@ -122,20 +122,21 @@ RSpec.describe Taste::Providers::Fake do
   end
 
   describe "#heatmap" do
-    it "returns 20-50 points near the location for a country code or name, labelled with a metro" do
+    it "returns 20-50 geohash points near the location for a country code or name, unnamed like Qloo's (R106)" do
       %w[US us].push("United States").each do |loc|
         pts = fake.heatmap(location: loc)
         expect(pts.size).to be_between(20, 50)
         expect(pts).to all(be_a(Taste::HeatPoint))
         expect(pts.map(&:lat)).to all(be_between(24, 50))
-        expect(pts.map(&:label)).to all(be_a(String))
+        expect(pts.map(&:label)).to all(be_nil)
+        expect(pts.map(&:geohash)).to all(match(/\A[0-9b-hjkmnp-z]{7}\z/))
         expect(pts.map(&:affinity)).to all(be_between(0, 1))
       end
     end
 
     it "handles metros, take, and unknown locations" do
       pts = fake.heatmap(location: "Austin", entity_ids: [ "x" ])
-      expect(pts.map(&:label).uniq).to eq([ "Austin" ])
+      expect(pts.map { |p| Research::Places.name_for(p.lat, p.lng) }.uniq).to eq([ "Austin" ])
       expect(pts.map(&:lat)).to all(be_within(1).of(30.27))
       expect(fake.heatmap(location: "US", take: 21).size).to be <= 21
       expect(fake.heatmap(location: "Atlantis")).to eq([])
