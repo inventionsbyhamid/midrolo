@@ -15,8 +15,9 @@ Work top to bottom. Deploy steps themselves are in [deploy.md](deploy.md).
 
 - [ ] `JUDGE_CODE` is set in the server's `.env`. Redeem it once on a throwaway account to prove it works.
 - [ ] `PROMO_PRO_UNTIL=2026-11-06` is set, so the promo covers judging.
-- [ ] Raise the Qloo daily cap in `/admin` (`qloo_daily_call_limit`, for example 500). One judge's three full reports
-      use about 90 calls, and the default is 100 a day.
+- [ ] Ask Qloo what daily allowance the hackathon key has. Then set `qloo_daily_call_limit` in `/admin` within it.
+      One judge's three full reports can use up to about 90 calls, and the default cap is 100 a day. How high to go
+      is your call.
 - [ ] The LLM budgets have room: `LLM_DAILY_BUDGET_USD`, `PROMO_BUDGET_USD` and `JUDGE_RESERVE_USD` (5, 10 and 5 at
       launch; editable in `/admin`).
 - [ ] The Google OAuth consent screen is published, so any Google account can sign in, not only test users.
@@ -75,6 +76,6 @@ Work top to bottom. Deploy steps themselves are in [deploy.md](deploy.md).
 ## 8. During judging (Nov 2 to 5)
 
 - [ ] Keep the site up. Check `/admin` and `docker compose ps` once a day.
-- [ ] Watch the Qloo calls against the daily cap, and raise it if judges are active.
+- [ ] Watch the Qloo calls against the daily cap. If judges run short, raise it only within the key's allowance.
 - [ ] Backups stay healthy (deploy.md, Backups).
 - [ ] If we're a finalist: rehearse [pitch.md](pitch.md), and be free for prep and the live show on Nov 5.

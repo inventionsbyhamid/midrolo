@@ -24,7 +24,7 @@ In their own words, on r/podcasting:
 - "Sponsorship pricing seems like a mysterious formula."
 
 The tools that help are built for big shows and start around $99 a month. The marketplaces built for small shows keep
-closing: Podcorn shuts down on Nov 1, 2026.
+closing: Podcorn closed on November 1, 2026.
 
 What small shows lack is evidence of fit. Qloo has it.
 
@@ -53,10 +53,11 @@ A free **Snapshot** uses Qloo only, with no AI: taste tags, the map and your top
 Take Qloo away and there is no report. Qloo supplies every brand, taste tag, lean and place. The agent decides what to
 ask and explains the answers, and the server rejects any brand that didn't come from a Qloo result in that run.
 
-We use six Qloo endpoint families: `/search`, `/v2/tags`, and `/v2/insights` for brand and podcast recommendations,
-taste tags (`urn:tag`), demographics (`urn:demographics`) and the heatmap (`urn:heatmap`). We also built
-`/v2/analysis/compare`, then turned it off (see What we learned). Every endpoint, and why, is in
-`docs/how-we-use-qloo.md` in the repo, with a redacted request to result walkthrough of one report.
+We make six kinds of Qloo call across three endpoints: `/search`, `/v2/tags`, and four uses of `/v2/insights`: brand
+and podcast recommendations, taste tags (`urn:tag`), demographics (`urn:demographics`) and the heatmap
+(`urn:heatmap`). We also built `/v2/analysis/compare`, then turned it off by default (see What we learned). Every
+call, and why, is in `docs/how-we-use-qloo.md` in the repo, with a redacted request to result walkthrough of one
+report.
 
 ## How we built it
 
@@ -83,9 +84,9 @@ taste tags (`urn:tag`), demographics (`urn:demographics`) and the heatmap (`urn:
 - **Building before the key arrived.** We wrote the Qloo client against synthetic fixtures modeled on the docs, then
   checked every shape with a live smoke test once the key came. The client now reads fields flat or nested, and several
   coordinate spellings.
-- **A small call allowance.** A full report needs about 30 Qloo calls, and the key's allowance is limited. We added a
-  shared cache, a per minute and daily call guard, a per report cap, and a lane that holds free and promo users to 40%
-  of the day so judges never run dry.
+- **A small call allowance.** A full report makes up to about 30 Qloo calls, and the key's allowance is limited. We
+  added a shared cache, a per minute and daily call guard, a per report cap, and a lane that holds free and promo users
+  to 40% of the day, so judges and paying users keep most of each day's calls.
 - **Small shows aren't on Qloo.** When a show isn't in the graph, the agent builds a **proxy** profile from comparable
   shows and topics, and the report says so. With too little to go on, it asks the host for comparable shows instead of
   showing an empty page.
@@ -103,9 +104,9 @@ taste tags (`urn:tag`), demographics (`urn:demographics`) and the heatmap (`urn:
 
 ## What we learned
 
-- **Compare works within a type, not across.** A podcast compared with its own top brand shares no tags. Each side
-  comes back with its own tags and nothing in common. So we explain a match by the tags a brand shares with the
-  audience's taste tags, which we already have, at no extra call. The compare code stays for later.
+- **One probe turned compare off.** In our live probe, a podcast and its own top brand shared no compare tags: each
+  side came back with its own tags and nothing in common. So compare is off by default, and we explain a match by the
+  tags a brand shares with the audience's taste tags, which we already have, at no extra call.
 - **Use the documented shape.** An undocumented heatmap parameter answered 502. The documented geohash grid works, but
   ignores `take`: 8,421 cells for the United States. We keep the top 200 and name them from a table of 163 metros.
 - **Search is fuzzy.** A nonsense query still returns the nearest shows, so we match names ourselves.
@@ -162,7 +163,7 @@ taste tags (`urn:tag`), demographics (`urn:demographics`) and the heatmap (`urn:
 | Judging consideration | What to look at |
 | --- | --- |
 | Usefulness | A sponsor list, pitch and media kit for one show, in one sitting |
-| Technical execution | Six Qloo endpoint families, an agent with coarse tools, deterministic scoring, a test suite |
+| Technical execution | Six kinds of Qloo call across three endpoints, an agent with coarse tools, deterministic scoring, a test suite |
 | Provenance and user clarity | The live trace, "How we built this" on every report, seeds with sources, brands checked against the run |
 | Responsible data handling | No Qloo data in the repo, a private cache, leans as words, honest labels |
 | Reproducibility | Demo mode with no keys, synthetic fixtures, a live smoke test with a fixed call budget |

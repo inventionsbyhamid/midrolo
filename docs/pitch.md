@@ -1,46 +1,48 @@
 # Live pitch: Nov 5
 
-For the finalists' live show. Three parts: the pitch (3 minutes, about 400 spoken words), the demo, and answers to
-the questions we expect. Say only what's true today: no customers yet, no measured listener data.
+For the finalists' live show. Three parts: the pitch, the demo, and answers to the questions we expect. Say only
+what's true today: no customers yet, no measured listener data.
 
 ## The 3 minute pitch
 
-**0:00. The hook.**
+About 270 spoken words plus a 60 second demo. At about 150 words a minute it ends near 2:50, leaving a few seconds
+of slack. The times below are where each part starts.
+
+**0:00. The hook** (17 words, about 7 seconds).
 "Most podcasts will never land a sponsor. Not because nobody listens. Because they can't prove *who* listens."
 
-**0:15. The problem.**
-"An independent host has downloads and a country chart. Nothing about taste. So they guess which brands to pitch,
-send the same media kit to everyone, and get told they're not big enough. One host put it this way: 'We'll spend
-months reaching out, then maybe get one sponsor for one episode.'
-The tools that help start around $99 a month and are built for big shows. And Podcorn, a marketplace for small
-shows, shuts down on November 1."
+**0:07. The problem** (69 words, about 28 seconds).
+"An independent host has downloads and a country chart. Nothing about taste. So they guess which brands to pitch, and
+get told they're not big enough. One host put it this way: 'We'll spend months reaching out, sending media kits and
+then maybe get one sponsor for one episode.' The tools that help start around $99 a month. And Podcorn, a marketplace
+for small shows, closed on November 1."
 
-**0:45. What Midrolo does.**
+**0:35. What Midrolo does** (62 words, about 25 seconds).
 "Midrolo is a sponsor research agent for one show. You type your show's name. The agent asks Qloo's taste graph what
-people with your show's taste love more than most: brands, podcasts, places. It ranks the brands that fit, and it
-reads the feeds of similar shows to find brands *already sponsoring* shows like yours. Then it writes the pitch and
-builds a media kit with the evidence."
+people with your show's taste love more than most: brands, podcasts, places. It ranks the brands that fit, and reads
+similar shows' feeds to find brands *already sponsoring* shows like yours. Then it writes the pitch and builds a media
+kit."
 
-**1:10. The demo** (about 60 seconds, script below).
+**1:00. The demo** (60 seconds, script below).
 
-**2:10. Why it needs Qloo.**
-"Take Qloo away and there's nothing left. An LLM alone can only guess that tech listeners like gadgets. Every brand
-in a Midrolo report comes from a Qloo result in that run, and the server refuses to save one that didn't. The AI
-plans the research and explains it. Qloo is the evidence."
+**2:00. Why it needs Qloo** (50 words, about 20 seconds).
+"Take Qloo away and there's nothing left. An LLM alone can only guess that tech listeners like gadgets. Every brand in
+a Midrolo report comes from a Qloo result in that run, and the server refuses to save one that didn't. The AI plans
+and explains. Qloo is the evidence."
 
-**2:30. The business.**
-"Subscriptions, no commission. Free gets a Snapshot. Creator is $19 a month, Pro is $49. Our rate card never prices a
-midroll under $25, so one sponsor spot covers a month. Billing is built, and it's held on a founding member waitlist
-until we agree commercial terms with Qloo. The code won't take a live payment until every plan keeps at least a 60%
-margin at full use. Profitable from day 1, by design."
+**2:20. The business** (53 words, about 21 seconds).
+"Subscriptions, no commission: Creator at $19 a month, Pro at $49. One $25 midroll covers a month of Creator. Billing
+waits on a founding member waitlist until we agree terms with Qloo, and the code refuses live payments until every
+plan keeps at least 60% margin at full use. Profitable from day 1."
 
-**2:50. The close.**
+**2:41. The close** (20 words, about 8 seconds).
 "Small shows have always had the audience. Now they have the evidence. Midrolo: find sponsors who already love your
 listeners."
 
 ## Demo script
 
-Have this open in tabs before going live, signed in as a demo account (never a personal email on screen):
+About 120 spoken words with clicks in between, ending near 0:56 of the demo's minute. Have this open in tabs before
+going live, signed in as a demo account (never a personal email on screen):
 
 1. The landing page.
 2. A finished full report for a well known show (a sample report works).
@@ -51,12 +53,12 @@ Have this open in tabs before going live, signed in as a demo account (never a p
 | Time | Show | Say |
 | --- | --- | --- |
 | 0:00 | The running report's trace | "This is the agent working. Each step says what it asked Qloo and what came back." |
-| 0:10 | The finished report, At a glance | "Three lines on who this audience is and who to pitch first." |
-| 0:20 | Leans and the map | "Age and gender as leans, never percentages, because it's modeled, not measured. And where this taste lives." |
-| 0:30 | The match list, a proven sponsor | "Ranked brands, each with a reach tier. This one already sponsors a show like this one, found in that show's own feed." |
-| 0:40 | Write my pitch | "One click: the email, three ad read angles, an offer priced from the rate card, and a follow up." |
-| 0:50 | The media kit preview | "And a media kit the host can send, published only once they prove they own the show." |
-| 1:00 | "How we built this" | "Every report shows its own working: the seeds, where each came from, and every step." |
+| 0:08 | The finished report, At a glance | "Three lines on who this audience is and who to pitch first." |
+| 0:15 | Leans and the map | "Age and gender as leans, never percentages, because it's modeled, not measured. And where this taste lives." |
+| 0:23 | The match list, a proven sponsor | "Ranked brands, each with a reach tier. This one already sponsors a show like this one, found in that show's own feed." |
+| 0:32 | Write my pitch | "One click: the email, three ad read angles, an offer priced from the rate card, and a follow up." |
+| 0:41 | The media kit preview | "And a media kit the host can send, published only once they prove they own the show." |
+| 0:50 | "How we built this" | "Every report shows its own working: the seeds, where each came from, and every step." |
 
 **If something breaks:** the sample reports at /samples need no sign in and no live calls. Go straight to tab 2.
 
@@ -96,9 +98,10 @@ LLM budget has room.
 
 ### Competition: who else does this?
 
-- SponsorUnited is enterprise only. Rephonic starts at $99 a month, and Podchaser's sponsor data comes with its $300
+- Rephonic starts at $99 a month and is aimed at PR and guest booking. Podchaser's sponsor data comes with its $300
   a month tier.
-- Marketplaces for small shows keep closing: Podcorn shuts down Nov 1, and Station, an AI sponsor matcher, has paused.
+- Marketplaces for small shows keep closing: Podcorn closed on November 1, 2026, and Station, an AI sponsor matcher,
+  has paused.
 - A ChatGPT media kit is easy to copy. What isn't: Qloo taste data as evidence, plus which brands already sponsor
   similar shows. That's our edge, at a price a small show can pay.
 
@@ -112,6 +115,6 @@ LLM budget has room.
   we never present it as data about any one person.
 - **How big is the market?** Our estimate is 20,000 to 30,000 shows with 1,000 to 50,000 downloads per episode, about
   half in the US, plus many smaller shows that want their first sponsor.
-- **What surprised you about Qloo's API?** Compare across a podcast and a brand shares no tags, so we explain matches
-  from the tags a brand shares with the audience instead. And the heatmap answers thousands of cells whatever you ask
-  for, so we keep the top 200.
+- **What surprised you about Qloo's API?** In our live probe, a podcast and its own top brand shared no compare tags,
+  so compare is off by default and we explain matches from the tags a brand shares with the audience instead. And
+  the heatmap answers thousands of cells whatever you ask for, so we keep the top 200.

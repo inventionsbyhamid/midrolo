@@ -88,21 +88,24 @@ images and kit photos).
 ```sh
 git clone <this repo> midrolo
 cd midrolo
-bin/setup --skip-server         # bundle install, then bin/rails db:prepare (four local databases)
-SOLID_QUEUE_IN_PUMA=1 bin/dev   # the app, the Tailwind watcher and the job worker
+bin/setup --skip-server   # bundle install, then bin/rails db:prepare (four local databases)
+bin/dev                   # the app, the Tailwind watcher and the job worker (Procfile.dev)
 ```
+
+Plain `bin/setup` does both: it ends by starting `bin/dev`.
 
 Open http://localhost:3100 (bin/dev's default port; `PORT=3200 bin/dev` picks another).
 
-- **Jobs.** Reports, Snapshots and pitches run as background jobs. `SOLID_QUEUE_IN_PUMA=1` runs the worker inside the
-  web server. Or leave it off and run `bin/jobs` in a second terminal.
+- **Jobs.** Reports, Snapshots and pitches run as background jobs, in the `bin/jobs` worker that `bin/dev` starts.
+  Without bin/dev, `SOLID_QUEUE_IN_PUMA=1 bin/rails server` runs the worker inside the web server instead.
 - **Sign in.** With `GOOGLE_CLIENT_ID` unset, the sign in page shows a **Dev sign in** card. Any name and email will
   do. It exists only in development.
 - **Try it.** Add a show from the demo catalog (try "Index Fund Mornings") and run a free Snapshot.
 - **A full report.** A new account is on the free plan. Start the server with `PROMO_PRO_UNTIL=2026-11-06` for one
   promo report, or with `JUDGE_CODE=letmein` and enter that code on the account page for judge access.
-- **Sample reports.** `bin/rails samples:generate` runs the reports in `config/samples.yml` for `/samples`. With the
-  Qloo and Anthropic keys unset it uses the Fakes and costs $0.
+- **Sample reports.** `bin/rails samples:generate` runs the reports in `config/samples.yml` for `/samples`. With no
+  keys set (demo mode) it uses the Fakes and costs $0. The file names demo catalog shows (`fake-1` to `fake-3`) until
+  real Podcast Index ids replace them.
 - **Mail** opens in the browser at http://localhost:3100/letter_opener. The design system is at `/styleguide`.
 - **Admin.** Make yourself an admin with
   `bin/rails runner 'User.find_by!(email: "you@example.com").update!(admin: true)'`, set `ADMIN_USERNAME` and

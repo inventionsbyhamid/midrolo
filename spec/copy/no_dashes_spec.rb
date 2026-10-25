@@ -2,8 +2,8 @@ require "rails_helper"
 
 # The copy rules (R97): no em dash (—) and no en dash (–) in anything a person reads. That covers the views and mailer
 # views, the locales, the public error pages and the web manifest, the strings the app's Ruby code shows people (flash
-# messages, constants, helper copy), the rendered pages themselves, and the docs a judge reads (README.md, docs/devpost.md,
-# docs/pitch.md, docs/how-we-use-qloo.md). Exempt: code comments, ERB comments, spec descriptions, internal docs, and
+# messages, constants, helper copy), the rendered pages themselves, and the docs a judge or the user reads (README.md,
+# docs/devpost.md, docs/pitch.md, docs/how-we-use-qloo.md, docs/judging.md). Exempt: code comments, ERB comments, spec descriptions, internal docs, and
 # what only the agent reads (its tool descriptions and results, and the rake output). The rendered pages and those docs
 # also may not carry the hyphens the rules name as unneeded.
 RSpec.describe "Copy has no dashes", type: :request do
@@ -111,10 +111,11 @@ RSpec.describe "Copy has no dashes", type: :request do
       expect(offenders).to be_empty, "Dashes in app strings:\n#{offenders.join("\n")}"
     end
 
-    # The docs a judge or a user reads (Task 22): the README and the Devpost, pitch and Qloo write-ups. Code spans count
-    # too, so a doc names files and services without the hyphens the rules call unneeded.
+    # The docs a judge or the user reads (Task 22): the README, the Devpost, pitch and Qloo write-ups, and the submission
+    # checklist. Code spans count too, so a doc names files and services without the hyphens the rules call unneeded.
     it "keeps dashes and unneeded hyphens out of the docs a judge reads" do
-      offenders = %w[README.md docs/devpost.md docs/pitch.md docs/how-we-use-qloo.md].flat_map do |path|
+      docs = %w[README.md docs/devpost.md docs/pitch.md docs/how-we-use-qloo.md docs/judging.md]
+      offenders = docs.flat_map do |path|
         text = root.join(path).read
         hyphenated = text.each_line.with_index(1).filter_map do |line, number|
           "#{path}:#{number}: #{line.strip}" if line.match?(unneeded_hyphens)

@@ -1,13 +1,9 @@
 require "rails_helper"
 
 # The docs a judge, a user and an operator read (Task 22): the README, how we use Qloo, the Devpost text, the live pitch
-# and the submission checklist. The copy rules (R97) bind them like the app's copy: no em dash and no en dash.
+# and the submission checklist. Their dashes and hyphens are checked with the app's copy, in spec/copy/no_dashes_spec.rb.
 RSpec.describe "Docs" do
   def doc(path) = Rails.root.join(path).read
-
-  def dash = /[\u2014\u2013]/ # em dash, en dash
-
-  def reader_docs = %w[README.md docs/how-we-use-qloo.md docs/devpost.md docs/pitch.md docs/judging.md]
 
   it "has a README with local setup that works in demo mode, and links to deploy and Qloo docs" do
     readme = doc("README.md")
@@ -18,20 +14,26 @@ RSpec.describe "Docs" do
     expect(readme).to include("AGPL-3.0")
   end
 
-  it "names every Qloo endpoint family the app uses in how-we-use-qloo.md" do
+  # Three endpoints in use, /v2/insights with five filter.type values, and compare (built, off by default: R105).
+  it "names every Qloo endpoint and insights type the app uses in how-we-use-qloo.md" do
     qloo = doc("docs/how-we-use-qloo.md")
 
-    %w[/search /v2/tags /v2/insights urn:demographics urn:heatmap /v2/analysis/compare].each do |endpoint|
-      expect(qloo).to include(endpoint), "how-we-use-qloo.md doesn't mention #{endpoint}"
+    %w[/search /v2/tags /v2/insights /v2/analysis/compare].each do |endpoint|
+      expect(qloo).to include("`#{endpoint}`"), "how-we-use-qloo.md doesn't mention #{endpoint}"
+    end
+    %w[urn:entity:brand urn:entity:podcast urn:tag urn:demographics urn:heatmap].each do |type|
+      expect(qloo).to include("filter.type=#{type}"), "how-we-use-qloo.md doesn't mention filter.type=#{type}"
     end
   end
 
-  # Addendum 5: the walkthrough is built from the synthetic fixtures with their entity ids masked.
-  it "masks the fixture entity ids in the walkthrough and says what a result does not establish" do
-    qloo = doc("docs/how-we-use-qloo.md")
-
-    expect(qloo).not_to match(/SYN-(?:POD|BRAND)-\d+/)
-    expect(qloo).to include("## Limitations", "does not establish")
+  # Addendum 5: the walkthrough is built from the synthetic fixtures with their entity ids masked, and no real looking
+  # Qloo entity id (a UUID) appears in the Qloo write ups.
+  it "masks entity ids in the Qloo write ups and says what a result does not establish" do
+    %w[docs/how-we-use-qloo.md docs/devpost.md].each do |path|
+      expect(doc(path)).not_to match(/SYN-(?:POD|BRAND)-\d+/), "#{path} shows a fixture entity id"
+      expect(doc(path)).not_to match(/\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/), "#{path} shows an entity UUID"
+    end
+    expect(doc("docs/how-we-use-qloo.md")).to include("## Limitations", "does not establish")
   end
 
   it "has the Devpost sections and testing instructions with the judge code placeholder" do
@@ -52,14 +54,6 @@ RSpec.describe "Docs" do
 
   it "has a submission checklist" do
     expect(doc("docs/judging.md")).to include("- [ ]")
-  end
-
-  it "keeps em and en dashes out of every doc a reader sees" do
-    offenders = reader_docs.flat_map do |path|
-      doc(path).each_line.with_index(1).filter_map { |line, n| "#{path}:#{n}: #{line.strip}" if line.match?(dash) }
-    end
-
-    expect(offenders).to be_empty, "Dashes in docs:\n#{offenders.join("\n")}"
   end
 
   # Addendum 2: the design doc keeps up with the build (R84 rate limits, R37/R79 hosting, R105 compare).

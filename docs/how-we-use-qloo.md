@@ -35,11 +35,12 @@ tags), plus `operator.signal.interests.tags=union` when there is more than one t
 
 ### Compare: built, then turned off
 
-We built `/v2/analysis/compare` to explain each match: the tags a show and a brand share. A live probe showed that a
-podcast compared with its own top brand returns no shared tags. Each side comes back with its own tags and no id in
-common ([live-smoke.md](live-smoke.md)). So `config/research.yml` sets `match_explainer_compares: 0`, and `explain_matches`
-works from the overlap between a brand's own Qloo tags and the audience's taste tags, which we already have. That
-costs no extra call. The compare code stays for a later same type use.
+We built `/v2/analysis/compare` to explain each match: the tags a show and a brand share. In our live probe, a
+podcast compared with its own top brand shared no compare tags: each side came back with its own tags and no id in
+common ([live-smoke.md](live-smoke.md)). That was one probe, so we claim no more than it showed. Compare is off by
+default (`match_explainer_compares: 0` in `config/research.yml`), and `explain_matches` works from the overlap between
+a brand's own Qloo tags and the audience's taste tags, which we already have. That costs no extra call. The compare
+code stays in place, unused unless the setting is raised.
 
 ## Two kinds of report
 
@@ -148,14 +149,17 @@ What came back, and what the report shows:
 - **Brands:** Acme Ledger, Borealis Bank and Cobalt Cloud. Under 8 brands is a thin profile, so the tool tells the
   agent, which may change its seeds once and rebuild.
 - **Taste tags:** Business (score 0.91) and Comedy (0.4).
-- **Leans:** the fixture has two blocks, one per signal, and each bucket is averaged. Ages 25 to 34 read "A bit above
-  average", 55 and older "Well below average", and gender "Leans a little toward women". Leans are shown in words,
-  never as percentages.
+- **Leans:** the fixture has two blocks, one per signal, and each bucket is averaged. Ages "25 to 29" and "30 to 34"
+  read "A bit above average", "55+" reads "Well below average", and gender reads "Leans a little toward women". Leans
+  are shown in words, never as percentages.
 - **Map:** two cells, named New York and Los Angeles from the metro table.
 
 ### 4. Find and score the candidates
 
-The agent picks one brand category, Finance, and calls `find_sponsor_candidates`:
+The agent picks one brand category, Finance, and calls `find_sponsor_candidates`. (The category lookup is the one
+illustrative step: the brand tag fixture, `brand_tags.json`, holds food and beverage tags. We show the Finance tag the
+fixture brands carry, `urn:tag:genre:brand:finance`, which is also the id the app falls back to when a lookup finds no
+brand tag.)
 
 ```text
 GET /v2/insights  filter.type=urn:entity:brand  filter.popularity.max=0.97  take=50       (the broad pass)
@@ -232,8 +236,8 @@ This run made 14 uncached Qloo calls. Another report on the same seeds within a 
 - **Proxy profiles.** Many small shows aren't on Qloo. Their profile is built from comparable shows, guests and
   topics, and is only as good as those seeds. The report labels it proxy and names every seed.
 - **Data gaps.** The hackathon data has gaps: thin brand lists for some seeds, entity types a key may not use (a 403,
-  skipped), brand websites mostly missing, and no shared tags from compare across entity types. Search is fuzzy, so we
-  check names ourselves.
+  skipped), brand websites mostly missing, and, in our one live probe, no shared compare tags between a podcast and its
+  top brand. Search is fuzzy, so we check names ourselves.
 - **Proven sponsors come from text.** The scan matches common sponsor read phrases in feed notes. It can miss a read
   that isn't written down, or catch a mention that wasn't paid. Only names Qloo confirms as brands are kept.
 - **Fresh within a week.** Cached answers can be up to 7 days old (30 for lookups).
