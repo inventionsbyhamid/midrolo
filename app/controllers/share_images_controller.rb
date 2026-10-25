@@ -32,18 +32,29 @@ class ShareImagesController < ApplicationController
 
   def serve(card)
     key = card.cache_key
-    image = Rails.cache.read(key)
-    unless image
-      return serve_static(BUSY_AGE) unless Rails.cache.write("#{key}/lock", true, unless_exist: true, expires_in: LOCK_TTL)
-
-      image = draw(card, key)
-      return serve_static(RETRY_AGE) unless image
-    end
+    image = Rails.cache.read(key) || draw_once(card, key)
+    return serve_static(BUSY_AGE) if image == :busy
+    return serve_static(RETRY_AGE) unless image
 
     expires_in image.complete ? MAX_AGE : RETRY_AGE, public: true
     return unless stale?(etag: [ key, image.complete ], public: true)
 
     send_data image.png, type: "image/png", disposition: "inline"
+  end
+
+  # The card, drawn by this request alone (a lock in the cache): :busy while another request holds the lock, nil when
+  # drawing fails. Solid Cache's unless_exist isn't atomic for a missing row, so a request a moment behind another may
+  # get the lock after the card is drawn: it reads again first. Two draws can still race, rarely; that costs CPU, never
+  # a fetch.
+  def draw_once(card, key)
+    lock = "#{key}/lock"
+    return :busy unless Rails.cache.write(lock, true, unless_exist: true, expires_in: LOCK_TTL)
+
+    begin
+      Rails.cache.read(key) || draw(card, key)
+    ensure
+      Rails.cache.delete(lock)
+    end
   end
 
   def draw(card, key)
@@ -53,8 +64,6 @@ class ShareImagesController < ApplicationController
   rescue StandardError => e
     Rails.error.report(e, handled: true, context: { share_image: key })
     nil
-  ensure
-    Rails.cache.delete("#{key}/lock")
   end
 
   def serve_static(max_age)

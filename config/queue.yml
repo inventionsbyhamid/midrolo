@@ -2,10 +2,16 @@ default: &default
   dispatchers:
     - polling_interval: 1
       batch_size: 500
+  # Every queue is named (spec/config/queue_spec.rb checks each job has a worker): a catch-all "*" worker would also
+  # take the artwork fetches, which wait on outside hosts and so get a thread of their own.
   workers:
-    - queues: "*"
+    - queues: [ default, solid_queue_recurring ]
       threads: 3
       processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+      polling_interval: 1
+    - queues: [ artwork ]
+      threads: 1
+      processes: 1
       polling_interval: 1
 
 development:

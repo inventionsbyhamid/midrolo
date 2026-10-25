@@ -25,7 +25,10 @@ RSpec.describe "Share images" do
     expect(response.headers["Cache-Control"]).to include("public", "max-age=#{max_age}")
   end
 
+  # A MemoryStore for Rails.cache, unless the example group already set one up (with the kit's artwork in it).
   def with_memory_cache
+    return if Rails.cache.is_a?(ActiveSupport::Cache::MemoryStore)
+
     allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
   end
 
@@ -43,24 +46,39 @@ RSpec.describe "Share images" do
       expect(response).to have_http_status(:not_modified)
     end
 
-    it "is drawn once and then served from the cache" do
+    it "is drawn once, complete, and then served from the cache" do
       with_memory_cache
       expect(ShareImages::Renderer).to receive(:png).once.and_call_original
 
       2.times { get path }
       expect_card
+      expect(response.headers["Cache-Control"]).to include("max-age=86400")
     end
 
     it "draws once at a time: a request that finds another drawing gets the static image for a minute" do
       with_memory_cache
       get path
-      Rails.cache.clear
       key = card_key
+      Rails.cache.delete(key)
       Rails.cache.write("#{key}/lock", 1)
 
       get path
       expect_static_image(max_age: 60)
       expect(Rails.cache.read(key)).to be_nil
+    end
+
+    it "serves the card another request drew while this one took the lock, instead of drawing it again" do
+      with_memory_cache
+      get path
+      drawn = response.body
+      key = card_key
+      card = Rails.cache.read(key)
+      allow(Rails.cache).to receive(:read).and_call_original
+      allow(Rails.cache).to receive(:read).with(key).and_return(nil, card) # missing at first, there after the lock
+      expect(ShareImages::Renderer).not_to receive(:png)
+
+      get path
+      expect(response.body).to eq(drawn)
     end
 
     it "serves the static image, briefly, when drawing fails" do
@@ -146,7 +164,11 @@ RSpec.describe "Share images" do
       end
 
       it "never fetches anything while drawing: with no artwork stored it draws the mark and queues the fetch" do
-        expect { get path }.to have_enqueued_job(FetchShareArtworkJob).with(show.id)
+        expect(ShareImages::Artwork).not_to receive(:fetch)
+        expect(Podcasts::SafeUrl).not_to receive(:check!)
+        expect(Resolv).not_to receive(:getaddresses)
+
+        expect { get path }.to have_enqueued_job(FetchShareArtworkJob).with(show.id).on_queue("artwork")
 
         expect_card
         expect(response.headers["Cache-Control"]).to include("public", "max-age=3600") # drawn again within the hour

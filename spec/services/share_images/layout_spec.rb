@@ -12,13 +12,13 @@ RSpec.describe ShareImages::Layout do
 
   it "is a 1200x630 SVG with the label, title, subline, stat, tags and note as text" do
     svg = layout(subline: "Hosted by Maya Brandt", stat: [ "4,200", "downloads per episode" ],
-                 tags: [ "Personal finance", "Startups" ], note: "Stats self-reported by the verified owner.").svg
+                 tags: [ "Personal finance", "Startups" ], note: "Stats as reported by the verified owner.").svg
     root = parse(svg).root
 
     expect([ root["width"], root["height"], root["viewBox"] ]).to eq([ "1200", "630", "0 0 1200 630" ])
     expect(texts(svg)).to include("Media kit", "The Founder's Ledger", "Hosted by Maya Brandt", "4,200",
                                   "downloads per episode", "Personal finance", "Startups",
-                                  "Stats self-reported by the verified owner.")
+                                  "Stats as reported by the verified owner.")
   end
 
   it "escapes hostile text in every field instead of letting it close the text or add elements" do
@@ -90,7 +90,7 @@ RSpec.describe ShareImages::Layout do
 
   it "keeps a tall card's facts clear of the waveform" do
     doc = parse(layout(title: "The Founder's Ledger, a long title for two lines", subline: "Hosted by Maya Brandt",
-                       stat: [ "4,200", "downloads per episode" ], note: "Stats self-reported by the verified owner.",
+                       stat: [ "4,200", "downloads per episode" ], note: "Stats as reported by the verified owner.",
                        tags: %w[One Two Three], artwork: :image).svg)
     tags_bottom = doc.at_css("[data-role='tag'] rect").then { |rect| rect["y"].to_f + rect["height"].to_f }
 
