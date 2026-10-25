@@ -145,6 +145,20 @@ RSpec.describe Research::StepLogger do
     expect(Rails.error).to have_received(:report).with(instance_of(ActiveRecord::ConnectionNotEstablished), hash_including(handled: true))
   end
 
+  it "treats a request Qloo can't use (400) or doesn't support (403) like empty in optional work (M2, M7)" do
+    results = []
+    logger.step("audience", "Building…") do |step|
+      results << step.optional("Leans") { raise Taste::Unsupported, "Qloo /v2/insights returned HTTP 403" }
+      results << step.optional("Category pass") { raise Taste::BadRequest, "Qloo /v2/insights returned HTTP 400" }
+    end
+
+    expect(results).to eq([ nil, nil ])
+    expect(report.agent_steps.last).to have_attributes(
+      status: "warning",
+      output_summary: "Leans skipped: Qloo doesn't support that request. · Category pass skipped: Qloo couldn't use that request."
+    )
+  end
+
   describe "research budget" do
     let(:logger) { described_class.new(report, max_taste_calls: 2) }
 

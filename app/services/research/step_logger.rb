@@ -13,8 +13,9 @@ module Research
   # Research budget (R31): one logger serves one run. Once the run has made max_taste_calls uncached taste
   # requests, Step#optional stops calling out. Core calls aren't wrapped in optional, so they always run.
   class StepLogger
-    # Qloo trouble a non-essential sub-call may skip. AuthError is never soft: the runner pauses runs on it.
-    SOFT_ERRORS = [ Taste::Unavailable, Taste::RateLimited ].freeze
+    # Qloo trouble a non-essential sub-call may skip, as if it came back empty: an outage, a rate limit, a request Qloo
+    # couldn't use (400) or a type the key can't use (403, R87). AuthError is never soft: the runner pauses runs on it.
+    SOFT_ERRORS = [ Taste::Unavailable, Taste::RateLimited, Taste::BadRequest, Taste::Unsupported ].freeze
     BUDGET_WARNING = "Skipped to stay within research budget".freeze
     DEFAULT_MAX_TASTE_CALLS = 60
     SUMMARY_LIMIT = 500
@@ -57,6 +58,8 @@ module Research
       when Taste::AuthError then "Qloo rejected our API key."
       when Taste::RateLimited then "Qloo is rate limiting us."
       when Taste::Unavailable then "Qloo is unavailable right now."
+      when Taste::BadRequest then "Qloo couldn't use that request."
+      when Taste::Unsupported then "Qloo doesn't support that request."
       when Podcasts::Directory::Unavailable then "The podcast directory is unavailable right now."
       else "Something went wrong (#{error.class.name.demodulize})."
       end

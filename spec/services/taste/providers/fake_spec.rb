@@ -152,6 +152,12 @@ RSpec.describe Taste::Providers::Fake do
   end
 
   describe "tags" do
+    it "keeps to the tag types asked for, by exact match (M4)" do
+      expect(fake.find_tags(query: "finance").map(&:type).uniq).to include("urn:tag:genre:brand", "urn:tag:interest")
+      expect(fake.find_tags(query: "finance", types: [ "urn:tag:genre:brand" ]).map(&:id)).to eq([ "urn:tag:genre:brand:finance" ])
+      expect(fake.find_tags(query: "finance", types: [ "urn:tag:genre" ])).to eq([])
+    end
+
     it "has the podcast genre tags the category mapping needs" do
       %w[business technology comedy health_fitness education true_crime sports society_culture].each do |g|
         expect(fake.find_tags(query: g.tr("_", " ")).map(&:id)).to include("urn:tag:genre:media:#{g}")

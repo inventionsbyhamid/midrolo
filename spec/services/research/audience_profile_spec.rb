@@ -90,6 +90,24 @@ RSpec.describe Research::AudienceProfile do
     expect(heatmap["points"].map { |p| p["affinity"] }).to eq(heatmap["points"].map { |p| p["affinity"] }.sort.reverse)
   end
 
+  it "falls back to metros when the Qloo client can't place the country, a 400 (M2)" do
+    qloo = Taste::Providers::Qloo.new(api_key: "test-key", cache: ActiveSupport::Cache::MemoryStore.new)
+    insights = "https://hackathon.api.qloo.com/v2/insights"
+    fixture = ->(name) { { body: Rails.root.join("spec/fixtures/qloo/#{name}.json").read } }
+    stub_request(:get, insights).with(query: hash_including({})).to_return(fixture.call("empty"))
+    stub_request(:get, insights).with(query: hash_including("filter.type" => "urn:entity:brand")).to_return(fixture.call("insights_brand"))
+    stub_request(:get, insights).with(query: hash_including("filter.type" => "urn:heatmap")).to_return(fixture.call("heatmap"))
+    country = stub_request(:get, insights).with(query: hash_including("filter.type" => "urn:heatmap", "filter.location.query" => "United States"))
+                                          .to_return(status: 400, body: '{"message":"No localities found"}')
+
+    described_class.build(Research::Toolkit.new(report, taste: qloo), seed_entity_ids: seed_ids, seed_tag_ids: tag_ids, country: "US")
+
+    expect(country).to have_been_requested
+    expect(report.reload.heatmap["location"]).to eq("metros")
+    expect(report.heatmap["points"]).to be_present
+    expect(report.agent_steps.find_by(tool: "heatmap").status).to eq("ok")
+  end
+
   it "skips a failing metro with a warning" do
     allow(taste).to receive(:heatmap).and_wrap_original do |original, **kw|
       next [] if kw[:location] == "United States"

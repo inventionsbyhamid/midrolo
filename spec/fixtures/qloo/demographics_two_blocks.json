@@ -1,0 +1,8 @@
+{"success":true,"results":{"demographics":[
+ {"entity_id":"urn:tag:genre:media:business","query":{
+  "age":{"24_and_younger":-0.2,"25_to_29":0.1,"30_to_34":0.3,"35_to_44":0.2,"45_to_54":-0.1,"55_and_older":-0.3},
+  "gender":{"male":0.1,"female":-0.1}}},
+ {"entity_id":"SYN-POD-001","query":{
+  "age":{"24_and_younger":0.0,"25_to_29":0.3,"30_to_34":0.1,"35_to_44":-0.2,"45_to_54":-0.1},
+  "gender":{"male":-0.3,"female":0.3}}}
+]}}

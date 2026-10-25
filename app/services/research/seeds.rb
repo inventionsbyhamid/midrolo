@@ -9,7 +9,8 @@ module Research
     SHOW_SOURCE = "Your show on Qloo".freeze
     HINT_SOURCE = "You listed it".freeze
     LOOKUP_TYPES = %i[podcast artist tv_show movie book brand].freeze
-    MEDIA_TAG_PREFIX = "urn:tag:genre:media:".freeze
+    MEDIA_TAG_TYPE = "urn:tag:genre:media".freeze
+    MEDIA_TAG_PREFIX = "#{MEDIA_TAG_TYPE}:".freeze
     MAX_ENTITIES = 8
     MAX_TAGS = 5
     MAX_LOOKUP_NAMES = 10
@@ -104,9 +105,10 @@ module Research
       true
     end
 
-    # Categories only count as media genre tags; one with no such tag is skipped (it isn't the user's typo).
+    # Categories only count as media genre tags, so only those are looked up (R87); one with no such tag is skipped (it
+    # isn't the user's typo).
     def add_category_tag(category)
-      tag = taste.find_tags(query: category, take: 5).find { |t| t.id.start_with?(MEDIA_TAG_PREFIX) }
+      tag = taste.find_tags(query: category, take: 5, types: [ MEDIA_TAG_TYPE ]).find { |t| t.id.start_with?(MEDIA_TAG_PREFIX) }
       return false unless tag
 
       @tags[tag.id] ||= tag

@@ -48,6 +48,21 @@ RSpec.describe Research::SponsorCandidates do
     ])
   end
 
+  it "looks category tags up among brand tags only, and spells & as and in the fallback id (M4)" do
+    allow(taste).to receive(:find_tags).and_return([])
+    calls = []
+    allow(taste).to receive(:recommend).and_wrap_original do |original, **kw|
+      calls << kw[:filter_tags] if kw[:filter_tags].present?
+      original.call(**kw)
+    end
+
+    find(categories: [ "Food & Beverage", "Health & Wellness" ])
+
+    expect(taste).to have_received(:find_tags).with(query: "Food & Beverage", types: [ "urn:tag:genre:brand" ])
+    expect(taste).to have_received(:find_tags).with(query: "Health & Wellness", types: [ "urn:tag:genre:brand" ])
+    expect(calls).to eq([ [ "urn:tag:genre:brand:food_and_beverage" ], [ "urn:tag:genre:brand:health_and_wellness" ] ])
+  end
+
   it "runs at most 3 category passes (R31)" do
     allow(taste).to receive(:recommend).and_call_original
     find(categories: %w[Finance Productivity Technology Travel Fitness])

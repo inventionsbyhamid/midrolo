@@ -59,6 +59,21 @@ RSpec.describe Taste::Providers::Qloo do
     it "rejects unknown types" do
       expect { adapter.recommend(type: :spaceship) }.to raise_error(ArgumentError)
     end
+
+    it "reads image, description, website and tags flat or under properties (M6)" do
+      stub_request(:get, "#{base}/v2/insights").with(query: hash_including({})).to_return(json("insights_brand_flat"))
+
+      flat, nested, mixed = adapter.recommend(type: :brand, entity_ids: [ "E1" ])
+
+      expect(flat).to have_attributes(image_url: "https://images.example.com/i/delta-420x-auto.jpg",
+                                      description: "Synthetic flat description.", website: "https://deltadough.example.com",
+                                      affinity: 0.71)
+      expect(flat.tags.map(&:id)).to eq([ "urn:tag:genre:brand:food_and_beverage" ])
+      expect(nested).to have_attributes(image_url: "https://img.example.com/echo.png", website: "https://echo.example.com",
+                                        description: nil)
+      expect(nested.tags.map(&:id)).to eq([ "urn:tag:genre:brand:fashion" ])
+      expect(mixed).to have_attributes(image_url: "https://img.example.com/foxglove.png", website: "https://foxglove.example.com")
+    end
   end
 
   describe "#search" do
@@ -71,6 +86,13 @@ RSpec.describe Taste::Providers::Qloo do
       expect(results.first.website).to eq("https://widgethour.example.com")
       expect(results.last.affinity).to be_nil
     end
+
+    it "returns [] when Qloo answers 404 No results (M1), and doesn't cache the miss" do
+      stub = stub_request(:get, "#{base}/search").with(query: hash_including({}))
+        .to_return(status: 404, body: '{"code":404,"reason":"Not Found","message":"No results"}')
+      2.times { expect(adapter.search(query: "zzqxv nonexistent show", types: [ :podcast ])).to eq([]) }
+      expect(stub).to have_been_requested.twice
+    end
   end
 
   describe "#find_tags and #taste_tags" do
@@ -80,6 +102,15 @@ RSpec.describe Taste::Providers::Qloo do
       tags = adapter.find_tags(query: "business")
       expect(tags.map(&:id)).to eq(%w[urn:tag:genre:media:business urn:tag:genre:media:entrepreneurship])
       expect(tags.last.type).to eq("urn:tag:genre:media")
+    end
+
+    it "scopes a tag lookup to tag types with filter.tag.types (M4)" do
+      stub = stub_request(:get, "#{base}/v2/tags").with(query: {
+        "filter.query" => "food and beverage", "feature.semantic_search" => "true", "take" => "10",
+        "filter.tag.types" => "urn:tag:genre:brand"
+      }).to_return(json("tags"))
+      adapter.find_tags(query: "food and beverage", types: [ "urn:tag:genre:brand" ])
+      expect(stub).to have_been_requested
     end
 
     it "requests the tag taste profile" do
@@ -156,6 +187,19 @@ RSpec.describe Taste::Providers::Qloo do
       stub_request(:get, "#{base}/v2/insights").with(query: hash_including({})).to_return(body: '{"results":{"demographics":[]}}')
       expect(adapter.demographics(entity_ids: [ "x" ])).to eq(Taste::Demographics.new(age: {}, gender: {}))
     end
+
+    it "averages every per-signal block, each bucket over the blocks that have it (M3)" do
+      stub_request(:get, "#{base}/v2/insights")
+        .with(query: hash_including("filter.type" => "urn:demographics", "signal.interests.entities" => "SYN-POD-001",
+                                    "signal.interests.tags" => "urn:tag:genre:media:business"))
+        .to_return(json("demographics_two_blocks"))
+
+      demo = adapter.demographics(entity_ids: [ "SYN-POD-001" ], tag_ids: [ "urn:tag:genre:media:business" ])
+
+      expect(demo.age).to eq("24_and_younger" => -0.1, "25_to_29" => 0.2, "30_to_34" => 0.2, "35_to_44" => 0.0,
+                             "45_to_54" => -0.1, "55_and_older" => -0.3)
+      expect(demo.gender).to eq("male" => -0.1, "female" => 0.1)
+    end
   end
 
   describe "#heatmap" do
@@ -170,6 +214,32 @@ RSpec.describe Taste::Providers::Qloo do
       expect(points.first).to eq(Taste::HeatPoint.new(lat: 40.71, lng: -74.0, geohash: "dr5regw", affinity: 0.9, popularity: 0.4, label: "New York"))
       expect(points.last.label).to be_nil
     end
+
+    it "reads lat with lon or lng, nested under location or flat, and drops points off the globe (M5)" do
+      stub_request(:get, "#{base}/v2/insights").with(query: hash_including("filter.type" => "urn:heatmap")).to_return(json("heatmap_locality"))
+      points = adapter.heatmap(location: "United States", entity_ids: [ "E1" ])
+
+      expect(points).to eq([
+        Taste::HeatPoint.new(lat: 41.88, lng: -87.63, geohash: nil, affinity: 0.8, popularity: 0.5, label: "Chicago"),
+        Taste::HeatPoint.new(lat: 47.61, lng: -122.33, geohash: nil, affinity: 0.7, popularity: nil, label: nil),
+        Taste::HeatPoint.new(lat: 30.27, lng: -97.74, geohash: nil, affinity: 0.6, popularity: 0.2, label: "Austin")
+      ])
+    end
+
+    it "warns, naming the keys it saw, when a non-empty heatmap parses to no points (M5)" do
+      stub_request(:get, "#{base}/v2/insights").with(query: hash_including("filter.type" => "urn:heatmap")).to_return(json("heatmap_unknown"))
+      allow(Rails.logger).to receive(:warn)
+
+      expect(adapter.heatmap(location: "United States", entity_ids: [ "E1" ])).to eq([])
+      expect(Rails.logger).to have_received(:warn).with(a_string_including("2 heatmap entries", "geo", "score"))
+    end
+
+    it "returns no points when Qloo can't place the location, a 400 (M2), and doesn't cache the miss" do
+      stub = stub_request(:get, "#{base}/v2/insights").with(query: hash_including("filter.location.query" => "Atlantis"))
+        .to_return(status: 400, body: '{"message":"No localities found"}')
+      2.times { expect(adapter.heatmap(location: "Atlantis", entity_ids: [ "E1" ])).to eq([]) }
+      expect(stub).to have_been_requested.twice
+    end
   end
 
   describe "#compare" do
@@ -182,15 +252,44 @@ RSpec.describe Taste::Providers::Qloo do
       expect(tags.map(&:name)).to eq(%w[Business Finance])
       expect(tags.first.score).to eq(0.77)
     end
+
+    it "returns [] when Qloo answers 404 No results (M1)" do
+      stub_request(:get, "#{base}/v2/analysis/compare").with(query: hash_including({}))
+        .to_return(status: 404, body: '{"code":404,"reason":"Not Found","message":"No results"}')
+      expect(adapter.compare(a_entity_ids: [ "A1" ], b_entity_ids: [ "B1" ])).to eq([])
+    end
   end
 
   describe "errors" do
-    it "raises AuthError on 401 and 403, and does not cache it" do
+    it "raises AuthError on 401 only, and does not cache it (M7)" do
       stub = stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return(status: 401, body: '{"message":"bad key"}')
       2.times { expect { adapter.find_tags(query: "x") }.to raise_error(Taste::AuthError) }
       expect(stub).to have_been_requested.twice
-      stub_request(:get, "#{base}/search").with(query: hash_including({})).to_return(status: 403)
-      expect { adapter.search(query: "x", types: [ :brand ]) }.to raise_error(Taste::AuthError)
+    end
+
+    it "raises Unsupported, never AuthError, on a 403 for an entity type the key can't use (M7)" do
+      stub_request(:get, "#{base}/v2/insights").with(query: hash_including({}))
+        .to_return(status: 403, body: '{"message":"You do not have permission to access urn:demographics"}')
+      expect { adapter.demographics(entity_ids: [ "E1" ]) }.to raise_error(Taste::Unsupported) do |error|
+        expect(error).to be_a(Taste::Error)
+        expect(error).not_to be_a(Taste::AuthError)
+      end
+    end
+
+    it "raises NotFound on a 404 from a call where it doesn't mean no results" do
+      stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return(status: 404, body: "{}")
+      expect { adapter.find_tags(query: "x") }.to raise_error(Taste::NotFound)
+    end
+
+    it "raises BadRequest on other 400s, logging the param names but never the key (M2)" do
+      stub_request(:get, "#{base}/v2/tags").with(query: hash_including({}))
+        .to_return(status: 400, body: '{"message":"at least one valid signal or filter is required"}')
+      allow(Rails.logger).to receive(:warn)
+
+      expect { adapter.find_tags(query: "secret show title") }.to raise_error(Taste::BadRequest)
+      expect(Rails.logger).to have_received(:warn)
+        .with(a_string_including("HTTP 400", "filter.query", "feature.semantic_search", "take")
+                .and(satisfy { |line| !line.include?("test-key") && !line.include?("secret show title") }))
     end
 
     it "raises RateLimited after 3 attempts on 429, honoring Retry-After" do

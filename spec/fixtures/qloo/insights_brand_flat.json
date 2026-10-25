@@ -1,0 +1,11 @@
+{"success":true,"results":{"entities":[
+ {"entity_id":"SYN-BRAND-101","name":"Delta Dough","subtype":"urn:entity:brand","popularity":0.33,"affinity":0.71,
+  "description":"Synthetic flat description.","url":"https://images.example.com/i/delta-420x-auto.jpg",
+  "official_site":"https://deltadough.example.com",
+  "tags":[{"id":"urn:tag:genre:brand:food_and_beverage","name":"Food and Beverage","type":"urn:tag:genre:brand"}]},
+ {"entity_id":"SYN-BRAND-102","name":"Echo Outfitters","subtype":"urn:entity:brand","popularity":0.5,
+  "properties":{"image":"https://img.example.com/echo.png","websites":["https://echo.example.com"],
+   "tags":[{"id":"urn:tag:genre:brand:fashion","name":"Fashion","type":"urn:tag:genre:brand"}]}},
+ {"entity_id":"SYN-BRAND-103","name":"Foxglove Teas","subtype":"urn:entity:brand","popularity":0.2,
+  "image":{"url":"https://img.example.com/foxglove.png"},"websites":["https://foxglove.example.com"],"tags":[]}
+]}}

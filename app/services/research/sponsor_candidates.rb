@@ -14,7 +14,8 @@ module Research
     MAX_CATEGORIES = 3
     POPULARITY_MAX = 0.97
     MAX_RESULTS = 50
-    BRAND_TAG_PREFIX = "urn:tag:genre:brand:".freeze
+    BRAND_TAG_TYPE = "urn:tag:genre:brand".freeze
+    BRAND_TAG_PREFIX = "#{BRAND_TAG_TYPE}:".freeze
 
     def self.find(toolkit, seed_entity_ids:, seed_tag_ids:, categories:, scan_limit:)
       new(toolkit, seed_entity_ids, seed_tag_ids, categories, scan_limit).find
@@ -76,11 +77,12 @@ module Research
       end
     end
 
-    # R28: the first brand-genre tag Qloo suggests for the name, else the conventional id.
+    # R28: the first brand-genre tag Qloo suggests for the name (looking among brand tags only), else the conventional
+    # id, which spells "&" as "and" like Qloo's own ("Food & Beverage" => food_and_beverage, R87).
     def category_tag_id(name, step)
-      found = step.optional("#{name} category lookup") { taste.find_tags(query: name) }
+      found = step.optional("#{name} category lookup") { taste.find_tags(query: name, types: [ BRAND_TAG_TYPE ]) }
       Array(found).map(&:id).find { |id| id.start_with?(BRAND_TAG_PREFIX) } ||
-        "#{BRAND_TAG_PREFIX}#{name.parameterize(separator: '_')}"
+        "#{BRAND_TAG_PREFIX}#{name.downcase.gsub('&', ' and ').parameterize(separator: '_')}"
     end
 
     def proven_pass

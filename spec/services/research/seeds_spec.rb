@@ -25,6 +25,12 @@ RSpec.describe Research::Seeds do
         seeds = described_class.deterministic(toolkit)
         expect(seeds).to include(entities: [], tags: [], unresolved: [])
       end
+
+      it "looks categories up among media genre tags only (M4)" do
+        allow(taste).to receive(:find_tags).and_call_original
+        described_class.deterministic(toolkit)
+        expect(taste).to have_received(:find_tags).with(query: "Business", take: 5, types: [ "urn:tag:genre:media" ])
+      end
     end
 
     context "with hints" do

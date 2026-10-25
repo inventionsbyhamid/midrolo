@@ -173,6 +173,21 @@ RSpec.describe Research::Run do
     end
   end
 
+  it "never counts a 403 (an entity type the key can't use) as an auth failure (M7)" do
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+    allow(AppSettings).to receive(:record_taste_auth_failure!).and_call_original
+    allow_any_instance_of(Taste::Providers::Fake).to receive(:search).and_raise(Taste::Unsupported, "403")
+
+    3.times do
+      report = create(:report, show: create(:show, feed_url: "fake://fake-1"), kind: "snapshot")
+      BuildSnapshotJob.perform_now(report.id)
+      expect(report.reload).to have_attributes(status: "failed", error_message: Report::FAILURE_MESSAGE)
+    end
+
+    expect(AppSettings).not_to have_received(:record_taste_auth_failure!)
+    expect(AppSettings.runs_paused?).to be(false)
+  end
+
   it "lets other Qloo outages fail through the job with the friendly message" do
     report = create(:report, show: show, kind: "snapshot")
     allow_any_instance_of(Taste::Providers::Fake).to receive(:search).and_raise(Taste::Unavailable)

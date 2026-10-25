@@ -1,0 +1,6 @@
+{"success":true,"results":{"heatmap":[
+ {"location":{"lat":41.88,"lon":-87.63,"name":"Chicago"},"query":{"affinity":0.8,"popularity":0.5}},
+ {"location":{"lat":47.61,"lng":-122.33},"query":{"affinity":0.7}},
+ {"lat":30.27,"lon":-97.74,"name":"Austin","affinity":0.6,"popularity":0.2},
+ {"location":{"latitude":999,"longitude":10,"name":"Nowhere"},"query":{"affinity":0.1}}
+]}}

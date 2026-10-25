@@ -1,6 +1,7 @@
 module Taste
   # Adapter interface (all return value objects, never raw JSON):
-  #   #search(query:, types:, take: 5), #find_tags(query:, take: 10),
+  #   #search(query:, types:, take: 5) (no results is []), #find_tags(query:, take: 10, types: []) (types: tag type
+  #     URNs to keep to, exact matches; none means all),
   #   #recommend(type:, entity_ids: [], tag_ids: [], filter_tags: [], popularity_max: nil, take: 20),
   #   #affinity_for(candidate_ids:, entity_ids: [], tag_ids: [], type: :brand) -> Hash{String=>Float, nil}:
   #     every candidate id is a key; nil means no score (Qloo omitted it, or Fake knows it as another entity type),

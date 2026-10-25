@@ -30,10 +30,13 @@ module Taste
         end
       end
 
-      def find_tags(query:, take: 10)
+      def find_tags(query:, take: 10, types: [])
         instrument("find_tags") do
           q = query.to_s.strip.downcase
+          wanted = Array(types).map(&:to_s)
           scored = @tags.values.filter_map do |t|
+            next if wanted.any? && !wanted.include?(t.type)
+
             rank = match_rank(t.name.downcase, q) || match_rank(t.id.split(":").last.tr("_", " "), q)
             [ rank, t.name, t ] if rank
           end
