@@ -1,6 +1,7 @@
-# Shared run loop for report jobs: running, then done, or failed (keeping any saved sections).
+# Shared run loop for report jobs: running, then done, or failed (keeping any saved sections). Reports run on their own
+# queue and threads (config/queue.yml, R133), so a 6 minute agent run never holds up pitches, mail and webhooks.
 class ReportJob < ApplicationJob
-  queue_as :default
+  queue_as :reports
 
   def perform(report_id)
     report = Report.find_by(id: report_id)

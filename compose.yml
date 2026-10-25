@@ -68,8 +68,8 @@ services:
       - traefik.http.routers.midrolo-www.middlewares=midrolo-www-redirect
       - traefik.http.routers.midrolo-www.service=midrolo-web
 
-  # Solid Queue: every queue in config/queue.yml (default and solid_queue_recurring on 3 threads, artwork on 1), with
-  # outbound HTTPS for Qloo, the LLM, feeds, artwork and R2.
+  # Solid Queue: every queue in config/queue.yml (default and solid_queue_recurring on 3 threads, reports on 3, artwork
+  # on 1), with outbound HTTPS for Qloo, the LLM, feeds, artwork and R2.
   midrolo-jobs:
     restart: unless-stopped
     deploy: { resources: { limits: { cpus: "2", memory: 2G } } }
@@ -82,19 +82,19 @@ services:
     env_file: .env
     environment:
       DB_HOST: midrolo-db
-      RAILS_MAX_THREADS: "6" # the connection pool: every job thread in config/queue.yml (3 + 1), plus 2 for Solid Queue
+      RAILS_MAX_THREADS: "9" # the connection pool: every job thread in config/queue.yml (3 + 3 + 1), plus 2 for Solid Queue
     depends_on:
       midrolo-web:
         condition: service_healthy # its entrypoint has prepared the databases
     networks:
       - midrolo
     healthcheck:
-      # Both workers in config/queue.yml have sent a heartbeat (every minute) in the last 3 minutes.
+      # All 3 workers in config/queue.yml have sent a heartbeat (every minute) in the last 3 minutes.
       test:
         - CMD-SHELL
         - >-
           PGPASSWORD="$$MIDROLO_DATABASE_PASSWORD" psql -qtA -h "$$DB_HOST" -U midrolo -d midrolo_production_queue
-          -c "SELECT count(*) >= 2 FROM solid_queue_processes WHERE kind = 'Worker'
+          -c "SELECT count(*) >= 3 FROM solid_queue_processes WHERE kind = 'Worker'
           AND last_heartbeat_at > now() - interval '3 minutes'" | grep -qx t
       interval: 60s
       timeout: 10s

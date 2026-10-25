@@ -1,7 +1,8 @@
 require "rails_helper"
 
 # config/queue.yml (Solid Queue, as bin/jobs and the Puma plugin run it): the artwork fetch has a queue and a thread
-# of its own, so a slow artwork host never holds up reports, and every job the app enqueues has a worker.
+# of its own, so a slow artwork host never holds up reports; reports have a queue and threads of their own, so a
+# 6 minute agent run never holds up pitches, mail and webhooks (R133); and every job the app enqueues has a worker.
 RSpec.describe "Job queues" do
   let(:config) { YAML.load(ERB.new(Rails.root.join("config/queue.yml").read).result, aliases: true) }
 
@@ -16,6 +17,19 @@ RSpec.describe "Job queues" do
       expect(artwork.size).to eq(1), env
       expect(artwork.first).to include("queues" => [ "artwork" ], "threads" => 1)
       expect(served(env)).not_to include("*") # a catch-all worker would take artwork jobs too
+    end
+  end
+
+  it "runs reports, full and Snapshot, on their own queue and threads, apart from default (R133)" do
+    expect([ GenerateReportJob, BuildSnapshotJob ].map { |job| job.new.queue_name }).to eq(%w[reports reports])
+
+    %w[development production].each do |env|
+      reports = workers(env).select { |worker| Array(worker["queues"]).include?("reports") }
+      expect(reports.size).to eq(1), env
+      expect(reports.first["queues"]).to eq([ "reports" ])
+      expect(reports.first["threads"]).to be >= 2
+      default = workers(env).find { |worker| Array(worker["queues"]).include?("default") }
+      expect(default["threads"]).to be >= 2
     end
   end
 
@@ -34,7 +48,8 @@ RSpec.describe "Job queues" do
     queues["ActionMailer::MailDeliveryJob"] =
       ActionMailer::MailDeliveryJob.new("VerificationMailer", "code", "deliver_now", args: []).queue_name
 
-    expect(queues).to include("GenerateReportJob" => "default", "ActionMailer::MailDeliveryJob" => "default",
+    expect(queues).to include("GenerateReportJob" => "reports", "GeneratePitchJob" => "default",
+                              "ActionMailer::MailDeliveryJob" => "default",
                               "SolidQueue::RecurringJob" => "solid_queue_recurring")
     %w[development production].each do |env|
       missing = queues.reject { |_, queue| served(env).include?(queue) }

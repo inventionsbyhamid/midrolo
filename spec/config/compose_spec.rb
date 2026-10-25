@@ -83,6 +83,9 @@ RSpec.describe "The compose stack" do
 
     expect(services.dig("midrolo-jobs", "command")).to eq([ "./bin/jobs" ])
     expect(services.dig("midrolo-jobs", "environment", "RAILS_MAX_THREADS").to_i).to be >= job_threads + 2
+    # Its health check waits for every worker's heartbeat.
+    workers = queue.dig("production", "workers").sum { |worker| worker["processes"].to_i }
+    expect(services.dig("midrolo-jobs", "healthcheck", "test").join(" ")).to include("count(*) >= #{workers} FROM solid_queue_processes")
     expect(services.dig("midrolo-web", "environment")).not_to have_key("SOLID_QUEUE_IN_PUMA")
     expect(services.dig("midrolo-jobs", "pull_policy")).to eq("never") # the image web built, never one from a registry
   end
