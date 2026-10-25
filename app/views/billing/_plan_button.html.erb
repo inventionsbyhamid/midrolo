@@ -1,0 +1,27 @@
+<%# locals: (price_key:, label: "Choose", note: true) -%>
+<%# The buy button for one price key, as Billing.mode has it (R66). On the waitlist: "Join the founding-member
+    waitlist" (a visitor gives an email), plus a test checkout for judges and admins. In test and live modes: checkout,
+    or sign-in for a visitor. note: false leaves the test-payments note to the page. Task 19's pricing page reuses it. %>
+<div class="flex flex-col items-start gap-2">
+  <% if Billing.mode == :waitlist %>
+    <%= form_with url: waitlist_entries_path, class: "flex flex-wrap items-center gap-2" do |form| %>
+      <%= hidden_field_tag :price_key, price_key, id: nil %>
+      <% unless user_signed_in? %>
+        <%= label_tag "waitlist_email_#{price_key}", "Email", class: "sr-only" %>
+        <%= email_field_tag :email, nil, id: "waitlist_email_#{price_key}", class: "input", required: true,
+                                         autocomplete: "email", placeholder: "you@example.com" %>
+      <% end %>
+      <%= form.submit "Join the founding-member waitlist", class: "btn btn-primary btn-md" %>
+    <% end %>
+    <% if Billing.test_checkout?(current_user) %>
+      <%= button_to "Try checkout in test mode", checkouts_path, params: { price_key: price_key },
+                    class: "btn btn-secondary btn-sm", form: { data: { turbo: false } } %>
+    <% end %>
+  <% elsif user_signed_in? %>
+    <%= button_to label, checkouts_path, params: { price_key: price_key }, class: "btn btn-primary btn-md",
+                  form: { data: { turbo: false } } %>
+  <% else %>
+    <%= link_to "Sign in to subscribe", new_user_session_path, class: "btn btn-primary btn-md" %>
+  <% end %>
+  <%= test_payments_note if note %>
+</div>

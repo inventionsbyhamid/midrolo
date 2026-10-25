@@ -11,6 +11,13 @@ RSpec.describe "App configs" do
     expect(config(:plans).dig(:creator, :price_monthly_usd)).to eq(19)
   end
 
+  it "maps every price key to a provider product id from ENV" do
+    stub_const("ENV", ENV.to_h.merge("DODO_PRODUCT_SPRINT" => "pdt_sprint"))
+
+    expect(config(:plans)[:price_keys]).to eq(creator_monthly: nil, creator_yearly: nil, pro_monthly: nil, pro_yearly: nil,
+                                              sprint: "pdt_sprint")
+  end
+
   it "loads scoring weights" do
     expect(config(:scoring)[:weights]).to eq(affinity: 0.55, proven: 0.20, shared_tags: 0.15, category: 0.10)
   end

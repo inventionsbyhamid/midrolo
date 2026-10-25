@@ -10,7 +10,8 @@ module Entitlements
     # (yearly) is counted month by month from its start (R60a).
     SINGLE_WINDOW = 31.days
 
-    attr_reader :key
+    # subscription: the Subscription the plan comes from (nil for judge, promo and free), for its renewal date.
+    attr_reader :key, :subscription
 
     def initialize(key, user: nil, subscription: nil)
       @key = key.to_sym

@@ -10,6 +10,9 @@
 
   <%= render "components/card", title: "Plan", aside: ui_badge(current_plan.name, tone: current_plan.key == :free ? :neutral : :accent) do %>
     <p class="text-ink-soft"><%= plan_summary(current_plan) %></p>
+    <% if (renewal = renewal_line(current_plan.subscription)) %>
+      <p class="mt-2 text-ink-soft"><%= renewal %></p>
+    <% end %>
     <% if current_plan.key == :free %>
       <%= ui_button "See plans", pricing_path, variant: :secondary, class: "mt-4" %>
     <% end %>
@@ -34,7 +37,22 @@
   <% end %>
 
   <%= render "components/card", title: "Billing" do %>
-    <p class="text-ink-soft">Billing and plan management arrive soon.</p>
+    <% if Billing.portal_subscription(current_user) %>
+      <%= button_to "Manage billing", billing_portal_path, class: "btn btn-secondary btn-md", form: { data: { turbo: false } } %>
+    <% elsif current_plan.subscription %>
+      <p class="text-ink-soft">Your plan is active. Billing management opens with paid plans.</p>
+    <% end %>
+    <% unless current_plan.subscription %>
+      <ul class="flex flex-col divide-y divide-line" aria-label="Plans">
+        <% Billing.prices.each do |price| %>
+          <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+            <span><strong><%= price_plan_name(price) %></strong> <span class="text-ink-soft"><%= price_label(price) %></span></span>
+            <%= render "billing/plan_button", price_key: price.key, note: false %>
+          </li>
+        <% end %>
+      </ul>
+      <%= test_payments_note %>
+    <% end %>
   <% end %>
 
   <%= render "components/card", title: "Sign out" do %>

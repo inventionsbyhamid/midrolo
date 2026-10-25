@@ -38,6 +38,14 @@ Rails.application.routes.draw do
   end
   get "pipeline", to: "pipeline#index", as: :pipeline
 
+  # Billing (Task 17): checkout and the customer portal through Billing::Provider, the founding-member waitlist, and
+  # provider webhooks (an unknown provider is a 404).
+  resources :checkouts, only: :create
+  get "billing/success", to: "checkouts#success", as: :billing_success
+  resource :billing_portal, only: :create
+  resources :waitlist_entries, only: :create
+  post "webhooks/:provider", to: "webhooks#create", as: :webhooks
+
   # Design system gallery and sent mail (letter_opener_web). Development only: production has no such routes.
   if Rails.env.development?
     get "styleguide" => "styleguide#show", as: :styleguide

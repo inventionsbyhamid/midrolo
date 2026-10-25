@@ -100,6 +100,110 @@ RSpec.describe "Account" do
     end
   end
 
+  describe "billing (R66)" do
+    def card(title)
+      Nokogiri::HTML(response.body).css(".card").find { |node| node.at_css("h2")&.text&.squish == title }
+    end
+
+    def forms_to(path) = card("Billing").css("form[action='#{path}']")
+
+    around { |example| travel_to(Time.zone.local(2026, 10, 25, 12)) { example.run } }
+
+    it "offers the founding-member waitlist for every price in waitlist mode, with no checkout" do
+      with_billing_env do
+        sign_in user
+        get "/account"
+      end
+
+      expect(forms_to("/waitlist_entries").map { |form| form.at_css("input[name=price_key]")["value"] })
+        .to eq(%w[creator_monthly creator_yearly pro_monthly pro_yearly sprint])
+      expect(forms_to("/waitlist_entries").map { |form| form.at_css("[type=submit]")["value"] }.uniq)
+        .to eq([ "Join the founding-member waitlist" ])
+      expect(forms_to("/waitlist_entries").css("input[name=email]")).to be_empty # signed in: the account's email
+      expect(forms_to("/checkouts")).to be_empty
+      expect(card("Billing").text).to include("Creator", "$19/month", "$190/year", "Pro", "$49/month", "$490/year",
+                                              "Sprint", "$49 once")
+      expect(card("Billing").text).not_to include("Test mode")
+    end
+
+    it "also offers a judge a test checkout, with the test-card note" do
+      user.update!(judge: true)
+      with_billing_env do
+        sign_in user
+        get "/account"
+      end
+
+      expect(forms_to("/waitlist_entries").size).to eq(5)
+      expect(forms_to("/checkouts").map { |form| form.at_css("[type=submit]").text.squish }.uniq)
+        .to eq([ "Try checkout in test mode" ])
+      expect(card("Billing").text).to include("Test mode — use Dodo's test card; nothing is charged.")
+    end
+
+    it "offers checkout to everyone in test mode" do
+      with_billing_env("BILLING_MODE" => "test") do
+        sign_in user
+        get "/account"
+      end
+
+      expect(forms_to("/checkouts").map { |form| form.at_css("input[name=price_key]")["value"] })
+        .to eq(%w[creator_monthly creator_yearly pro_monthly pro_yearly sprint])
+      expect(forms_to("/waitlist_entries")).to be_empty
+      expect(card("Billing").text).to include("Test mode — use Dodo's test card; nothing is charged.")
+    end
+
+    it "shows a subscriber the renewal date and Manage billing, in test and live modes" do
+      create(:subscription, user: user, provider: "fake", provider_customer_id: "fake_cus_1",
+                            current_period_end: Time.zone.local(2026, 11, 24, 12))
+      with_billing_env("BILLING_MODE" => "test") do
+        sign_in user
+        get "/account"
+      end
+
+      expect(card("Plan").text.squish).to include("Renews on Nov 24, 2026.")
+      expect(forms_to("/billing_portal").at_css("[type=submit]").text.squish).to eq("Manage billing")
+      expect(forms_to("/checkouts")).to be_empty
+    end
+
+    it "hides Manage billing on the waitlist and without a customer id" do
+      create(:subscription, user: user, provider: "fake", provider_customer_id: "fake_cus_1")
+      with_billing_env do
+        sign_in user
+        get "/account"
+      end
+      expect(forms_to("/billing_portal")).to be_empty
+
+      other = create(:user)
+      create(:subscription, user: other, provider: "fake", provider_customer_id: nil)
+      with_billing_env("BILLING_MODE" => "test") do
+        sign_in other
+        get "/account"
+      end
+      expect(forms_to("/billing_portal")).to be_empty
+    end
+
+    it "says when a plan ends instead of renewing" do
+      create(:subscription, user: user, status: "canceled", current_period_end: Time.zone.local(2026, 11, 2, 9))
+      sign_in user
+      get "/account"
+      expect(card("Plan").text.squish).to include("Ends on Nov 2, 2026 — it won't renew.")
+
+      user.subscriptions.sole.update!(status: "active", cancel_at_period_end: true)
+      get "/account"
+      expect(card("Plan").text.squish).to include("Ends on Nov 2, 2026 — it won't renew.")
+    end
+
+    it "gives a sprint's end and a failed payment's warning" do
+      create(:subscription, user: user, plan: "sprint", current_period_end: Time.zone.local(2026, 11, 20, 12))
+      sign_in user
+      get "/account"
+      expect(card("Plan").text.squish).to include("Your Sprint ends on Nov 20, 2026.")
+
+      user.subscriptions.sole.update!(plan: "creator", price_key: "creator_monthly", status: "past_due")
+      get "/account"
+      expect(card("Plan").text.squish).to include("Your last payment failed. Update your card in Manage billing to keep your plan.")
+    end
+  end
+
   it "renders the avatar when there is one" do
     sign_in create(:user, avatar_url: "https://example.com/a.png")
     get "/account"

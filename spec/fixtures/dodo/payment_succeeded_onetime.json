@@ -1,0 +1,66 @@
+{
+  "business_id": "bus_test_midrolo",
+  "type": "payment.succeeded",
+  "timestamp": "2026-10-25T12:00:04.000000Z",
+  "data": {
+    "payload_type": "Payment",
+    "payment_id": "pay_test_sprint_001",
+    "business_id": "bus_test_midrolo",
+    "brand_id": "bnd_test_001",
+    "checkout_session_id": "cks_test_sprint_001",
+    "status": "succeeded",
+    "currency": "USD",
+    "total_amount": 4900,
+    "tax": 0,
+    "settlement_amount": 4900,
+    "settlement_currency": "USD",
+    "settlement_tax": 0,
+    "retry_attempt": 0,
+    "payment_provider": "stripe",
+    "payment_method": "card",
+    "payment_method_type": "credit",
+    "card_network": "VISA",
+    "card_type": "CREDIT",
+    "card_last_four": "4242",
+    "card_issuing_country": "US",
+    "digital_products_delivered": false,
+    "includes_usage": false,
+    "is_multi_subscription": false,
+    "is_update_payment_method": false,
+    "created_at": "2026-10-25T11:59:40.000000Z",
+    "updated_at": "2026-10-25T12:00:04.000000Z",
+    "subscription_id": null,
+    "subscription_ids": [],
+    "service_periods": [],
+    "discount_id": null,
+    "error_code": null,
+    "error_message": null,
+    "invoice_id": "inv_test_sprint_001",
+    "product_cart": [
+      {
+        "product_id": "pdt_test_sprint",
+        "quantity": 1
+      }
+    ],
+    "customer": {
+      "customer_id": "cus_test_002",
+      "email": "sprinter@example.com",
+      "name": "Test Sprinter",
+      "metadata": {},
+      "phone_number": null
+    },
+    "billing": {
+      "country": "US",
+      "state": "NY",
+      "city": "Testville",
+      "street": "2 Test Street",
+      "zipcode": "10000"
+    },
+    "metadata": {
+      "user_id": "0",
+      "price_key": "sprint"
+    },
+    "disputes": [],
+    "refunds": []
+  }
+}

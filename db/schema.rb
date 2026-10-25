@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_040100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_050200) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -54,6 +54,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_040100) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["report_id"], name: "index_agent_steps_on_report_id"
+  end
+
+  create_table "billing_events", force: :cascade do |t|
+    t.string "provider", null: false
+    t.string "event_id", null: false
+    t.string "event_type"
+    t.jsonb "payload", default: {}, null: false
+    t.datetime "processed_at"
+    t.string "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider", "event_id"], name: "index_billing_events_on_provider_and_event_id", unique: true
   end
 
   create_table "media_kits", force: :cascade do |t|
@@ -222,6 +234,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_040100) do
     t.boolean "cancel_at_period_end", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "last_event_at"
     t.index ["provider", "provider_subscription_id"], name: "index_subscriptions_on_provider_and_provider_subscription_id", unique: true, where: "(provider_subscription_id IS NOT NULL)"
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
   end
@@ -247,6 +260,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_040100) do
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
   end
 
+  create_table "waitlist_entries", force: :cascade do |t|
+    t.string "email", null: false
+    t.string "price_key", null: false
+    t.bigint "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email", "price_key"], name: "index_waitlist_entries_on_email_and_price_key", unique: true
+    t.index ["user_id"], name: "index_waitlist_entries_on_user_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "agent_steps", "reports"
@@ -260,4 +283,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_040100) do
   add_foreign_key "sponsor_matches", "reports"
   add_foreign_key "sponsor_matches", "shows"
   add_foreign_key "subscriptions", "users"
+  add_foreign_key "waitlist_entries", "users"
 end

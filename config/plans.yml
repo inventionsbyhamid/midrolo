@@ -74,11 +74,11 @@ shared:
     agent_reports: 1
     agent_reports_total: true
     pitches: 20
-
-# price_key => provider product id
-price_keys:
-  creator_monthly: <%= ENV["DODO_PRODUCT_CREATOR_MONTHLY"] %>
-  creator_yearly: <%= ENV["DODO_PRODUCT_CREATOR_YEARLY"] %>
-  pro_monthly: <%= ENV["DODO_PRODUCT_PRO_MONTHLY"] %>
-  pro_yearly: <%= ENV["DODO_PRODUCT_PRO_YEARLY"] %>
-  sprint: <%= ENV["DODO_PRODUCT_SPRINT"] %>
+  # price_key => the billing provider's product id, from ENV (blank until set). Billing reads it; it sits under shared
+  # because config_for loads nothing outside shared and the environment sections.
+  price_keys:
+    creator_monthly: <%= ENV["DODO_PRODUCT_CREATOR_MONTHLY"] %>
+    creator_yearly: <%= ENV["DODO_PRODUCT_CREATOR_YEARLY"] %>
+    pro_monthly: <%= ENV["DODO_PRODUCT_PRO_MONTHLY"] %>
+    pro_yearly: <%= ENV["DODO_PRODUCT_PRO_YEARLY"] %>
+    sprint: <%= ENV["DODO_PRODUCT_SPRINT"] %>
