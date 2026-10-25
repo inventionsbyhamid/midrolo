@@ -1,6 +1,6 @@
 <% content_for :title, "#{@show.title} media kit preview" %>
 <%# Private: no share tags, never indexed (the controller also sends X-Robots-Tag). %>
-<% content_for :meta, tag.meta(name: "robots", content: "noindex, nofollow") %>
+<% content_for :meta, private_page_meta %>
 <div class="kit-watermark" aria-hidden="true"><span>Preview</span></div>
 <div class="kit-page">
   <div class="kit-toolbar kit-toolbar-preview" role="region" aria-label="Preview">

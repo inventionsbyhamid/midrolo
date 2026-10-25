@@ -2,7 +2,7 @@
 <%# links is a list of [label, href] pairs; cta is one [label, href] pair or nil. %>
 <header class="site-header">
   <div class="wrap flex h-16 items-center justify-between gap-4">
-    <%= link_to ui_logo, "/", class: "logo", aria: { label: "#{APP_NAME} home" } %>
+    <%= link_to brand_logo, "/", class: "logo", aria: { label: "#{APP_NAME} home" } %>
 
     <nav aria-label="Main" class="hidden items-center gap-1 md:flex">
       <% links.each do |label, href| %>

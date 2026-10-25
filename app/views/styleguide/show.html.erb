@@ -1,14 +1,10 @@
 <% content_for :title, "Design system" %>
-<% content_for :meta do %>
-  <meta name="robots" content="noindex">
-  <%= social_meta_tags(description: "Tokens, type and components for Midrolo.") %>
-<% end %>
 
 <% swatches = [
      [ "bg-ink", "Ink", "#22132B", "Text, primary buttons" ],
      [ "bg-ink-soft", "Ink soft", "#5A4A63", "Secondary text (7.3:1 on paper)" ],
      [ "bg-plum", "Plum", "#4A2266", "Meter fill, links, accent badges" ],
-     [ "bg-tally", "Tally", "#F3A712", "The live lamp: logo peak, demo banner, focus halo" ],
+     [ "bg-tally", "Tally", "#F3A712", "The live lamp: the logo's mid-roll slot, demo banner, focus halo" ],
      [ "bg-paper", "Paper", "#F6F2F4", "Page background" ],
      [ "bg-surface", "Surface", "#FFFFFF", "Cards, dialogs, inputs" ],
      [ "bg-line", "Line", "#E3DAE3", "Card borders, empty meter segments" ],
@@ -35,13 +31,27 @@
   <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-brand">
     <div>
       <h2 id="sg-brand" class="type-h3">Brand</h2>
-      <p class="mt-1 text-sm text-ink-soft">An episode waveform with the mid-roll peak lit. The footer rule repeats it as a timeline marker.</p>
+      <p class="mt-1 text-sm text-ink-soft">
+        The mark is an episode's waveform with the mid-roll slot lit: thin bars, one amber block. Draw it with
+        <code>brand_logo</code>, never retyped: the wordmark is outlined Archivo Expanded ExtraBold. Keep clear space
+        of half the mark's height around it, and the mark at 16px or larger.
+      </p>
     </div>
-    <div class="flex flex-col gap-8">
-      <div class="flex flex-wrap items-center gap-8">
-        <span class="logo"><%= ui_logo %></span>
-        <span class="logo"><%= ui_logo(wordmark: false) %></span>
-        <span class="logo rounded-card bg-ink px-4 py-3 text-white"><%= ui_logo %></span>
+    <div id="sg-brand-panel" class="flex flex-col gap-8">
+      <div class="flex flex-wrap items-end gap-8">
+        <%= brand_logo(size: :lg) %>
+        <%= brand_logo %>
+        <%= brand_logo(size: :sm) %>
+      </div>
+      <div class="flex flex-wrap items-end gap-6">
+        <% %i[lg md sm].each do |size| %><%= brand_logo(variant: :mark, size: size) %><% end %>
+        <span class="text-sm text-ink-soft">The app icon:</span>
+        <% [ 64, 32, 16 ].each do |px| %><%= image_tag "/icon.svg", width: px, height: px, alt: "Midrolo app icon, #{px}px" %><% end %>
+      </div>
+      <div class="flex flex-wrap items-end gap-8 rounded-card bg-ink px-6 py-5">
+        <%= brand_logo(tone: :dark, size: :lg) %>
+        <%= brand_logo(tone: :dark) %>
+        <%= brand_logo(variant: :mark, tone: :dark) %>
       </div>
       <div class="midroll-rule max-w-md"></div>
     </div>

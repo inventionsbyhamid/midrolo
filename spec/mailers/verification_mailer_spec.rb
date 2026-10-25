@@ -19,6 +19,15 @@ RSpec.describe VerificationMailer do
     expect(verification.reload.check_code(code)).to be(true)
   end
 
+  it "heads the HTML part with the PNG logo at an absolute URL, since many mail clients block SVG" do
+    html = Nokogiri::HTML(described_class.with(verification: verification).code.html_part.body.to_s)
+    logo = html.at_css("img[alt='Midrolo']")
+
+    expect(logo["src"]).to match(%r{\Ahttp://example\.com/assets/brand/logo-email-\h+\.png\z})
+    expect([ logo["width"], logo["height"] ]).to eq(%w[136 28])
+    expect(html.css("img[src$='.svg']")).to be_empty
+  end
+
   it "cuts a long feed title to 60 characters in the subject and the body" do
     show.update!(title: "A" * 50 + " and an attacker's very long sales pitch goes here")
     mail = described_class.with(verification: verification).code

@@ -1,25 +1,11 @@
-# The public pages (Task 19): their search and share tags, where the landing page's calls to action go, and the hero's
-# episode waveform.
+# The public pages (Task 19): where the landing page's calls to action go, and the hero's episode waveform. Their search
+# and share tags come from SocialMetaHelper.
 module PagesHelper
-  OG_IMAGE_SIZE = { width: 1200, height: 630 }.freeze
   CONTACT_EMAIL = "hello@midrolo.com".freeze
   # The waveform's bars, the lit mid-roll slot (in the SVG's 0..1000 x range) and how tall the bars may grow.
   WAVEFORM_BARS = 100
   MIDROLL_SLOT = (600..680)
   WAVEFORM_HEIGHT = 80
-
-  # Title, description, canonical URL (no query string) and the share image, for content_for :meta. Every public page
-  # gives its own title (content_for :title) and description.
-  def public_page_meta(description:)
-    image = image_url("og.png")
-    safe_join([
-      social_meta_tags(title: page_title, description: description, image: image),
-      tag.meta(property: "og:image:width", content: OG_IMAGE_SIZE[:width]),
-      tag.meta(property: "og:image:height", content: OG_IMAGE_SIZE[:height]),
-      tag.meta(property: "og:image:alt", content: "#{APP_NAME}: find sponsors who already love your listeners"),
-      tag.link(rel: "canonical", href: request.base_url + request.path)
-    ], "\n")
-  end
 
   # "Get my free Snapshot": sign in first, or straight to adding a show.
   def snapshot_start_path = user_signed_in? ? new_show_path : new_user_session_path

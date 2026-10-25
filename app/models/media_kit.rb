@@ -27,7 +27,6 @@ class MediaKit < ApplicationRecord
   # resize_to_limit keeps the whole picture; libvips does the work (production needs it in the image).
   has_one_attached :cover do |attachable|
     attachable.variant :hero, resize_to_limit: [ 2400, 1200 ]
-    attachable.variant :share, resize_to_limit: [ 1200, 630 ]
   end
   has_one_attached :host_photo do |attachable|
     attachable.variant :portrait, resize_to_limit: [ 640, 640 ]

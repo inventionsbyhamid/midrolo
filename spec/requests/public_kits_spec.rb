@@ -62,22 +62,18 @@ RSpec.describe "Public media kits" do
       expect(response.body).not_to include("Secret Sponsor Co")
     end
 
-    it "carries Open Graph and Twitter tags and stays indexable" do
+    it "carries every share tag once, points them at the kit's own share image and stays indexable" do
       visit_kit
+      doc = Nokogiri::HTML(response.body)
 
-      expect(response.body).to include('property="og:title" content="The Founder&#39;s Ledger media kit"',
-                                       'property="og:description" content="Plain-English money lessons for first-time founders"',
-                                       'property="og:image" content="https://cdn.example.com/art.jpg"',
-                                       'name="twitter:card"', "rel=\"canonical\" href=\"http://www.example.com/k/the-founder-s-ledger\"")
+      expect_share_tags(doc, url: "http://www.example.com/k/the-founder-s-ledger",
+                             image: %r{\Ahttp://www\.example\.com/k/the-founder-s-ledger/og\.png\z})
+      tags = share_tags(doc)
+      expect(tags["og:title"]).to eq([ "The Founder's Ledger media kit" ])
+      expect(tags["og:description"]).to eq([ "Plain-English money lessons for first-time founders" ])
+      expect(tags["og:image:alt"]).to eq([ "Media kit for The Founder's Ledger" ])
       expect(response.body).not_to include("noindex")
       expect(response.headers["X-Robots-Tag"]).to be_nil
-    end
-
-    it "uses the uploaded cover for the share image" do
-      kit.cover.attach(io: Rails.root.join("spec/fixtures/files/cover.png").open, filename: "cover.png")
-      visit_kit
-
-      expect(response.body).to match(%r{property="og:image" content="http://www\.example\.com/rails/active_storage/representations/[^"]+/cover\.png"})
     end
 
     it "counts views from visitors but not from the owner or bots" do
@@ -144,6 +140,9 @@ RSpec.describe "Public media kits" do
     it "shows the Made with Midrolo badge only when the plan has one" do
       visit_kit
       expect(response.body).to include("Made with Midrolo")
+      badge = Nokogiri::HTML(response.body).at_css(".kit-badge-link img.brand-logo")
+      expect(badge["src"]).to match(%r{/assets/brand/mark-\h+\.svg\z})
+      expect(badge["alt"]).to eq("")
 
       stub_plan(kit_badge: false)
       visit_kit

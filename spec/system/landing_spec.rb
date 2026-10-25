@@ -72,11 +72,11 @@ RSpec.describe "Landing and public pages" do
     visit "/about"
     execute_script(<<~JS)
       document.querySelector("main").insertAdjacentHTML("beforeend",
-        '<p style="color: #b9aec0; background: #fff">Faint text</p><img src="/icon.png"><h4>Skipped</h4>')
+        '<p style="color: #b9aec0; background: #fff">Faint text</p><img src="/icon-192.png"><h4>Skipped</h4>')
     JS
 
     expect(contrast_failures).to include(a_string_including("Faint text"))
-    expect(unlabelled_images).to include(a_string_including("icon.png"))
+    expect(unlabelled_images).to include(a_string_including("icon-192.png"))
     expect(skipped_heading_levels).to include("h2 → h4")
   end
 

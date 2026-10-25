@@ -1,0 +1,14 @@
+{
+  "name": "Midrolo",
+  "short_name": "Midrolo",
+  "description": "Find sponsors who already love your podcast's listeners.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "browser",
+  "theme_color": "#22132b",
+  "background_color": "#f6f2f4",
+  "icons": [
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ]
+}

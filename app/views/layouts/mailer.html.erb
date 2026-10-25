@@ -12,8 +12,9 @@
         <td align="center" style="padding:32px 16px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
             <tr>
-              <td style="padding:0 4px 16px;font-size:20px;font-weight:800;letter-spacing:-0.5px;">
-                <span style="display:inline-block;width:10px;height:10px;border-radius:5px;background:#f3a712;margin-right:8px;vertical-align:middle;"></span><%= APP_NAME %>
+              <td style="padding:0 4px 16px;">
+                <%# A PNG at an absolute URL: many mail clients block SVG. Its alt text stands in when images are off. %>
+                <%= link_to brand_logo(email: true), root_url, style: "display:inline-block;color:#22132b;font-size:20px;font-weight:800;text-decoration:none;" %>
               </td>
             </tr>
             <tr>

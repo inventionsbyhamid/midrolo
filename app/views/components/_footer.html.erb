@@ -5,7 +5,7 @@
   <div class="wrap flex flex-col gap-6 py-8 text-sm text-ink-soft md:flex-row md:items-start md:justify-between">
     <% unless compact %>
       <div class="flex flex-col gap-1">
-        <%= link_to ui_logo, "/", class: "logo", aria: { label: "#{APP_NAME} home" } %>
+        <%= link_to brand_logo(size: :sm), "/", class: "logo", aria: { label: "#{APP_NAME} home" } %>
         <p class="mt-1">Sponsor research for independent podcasts.</p>
         <p>Built for the Qloo Agentic Hackathon.</p>
       </div>

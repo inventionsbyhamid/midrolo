@@ -23,6 +23,9 @@ Rails.application.routes.draw do
   get "sitemap.xml", to: "pages#sitemap", as: :sitemap, format: false, defaults: { format: "xml" }
   get "robots.txt", to: "pages#robots", as: :robots, format: false, defaults: { format: "text" }
   resources :samples, only: %i[index show], param: :slug, format: false
+  # Share images (og:image) for the sample reports and the public media kits: 1200x630 PNGs drawn by ShareImages.
+  get "samples/:slug/og.png", to: "share_images#sample", as: :sample_share_image, format: false
+  get "k/:slug/og.png", to: "share_images#kit", as: :kit_share_image, format: false
 
   resource :account, only: %i[show destroy] do
     post :judge_code

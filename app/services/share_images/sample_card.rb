@@ -1,0 +1,34 @@
+module ShareImages
+  # A sample report's share image: the show's title labelled as a sample (not affiliated with the show), how many brand
+  # matches the report found and the audience's top taste tags. No artwork: the show isn't the podcaster's own.
+  class SampleCard < Card
+    # report comes from Samples.find!, which loads its show and matches.
+    def initialize(report)
+      @report = report
+      @show = report.show
+    end
+
+    private
+
+    def key_parts = [ "sample", version_of(@report), version_of(@show), "matches-#{match_count}" ]
+
+    def fields
+      { label: "Sample report", title: @show.title, subline: "Sample — not affiliated with the show.",
+        stat: match_stat, tags: taste_tags, seed: @show.id }
+    end
+
+    def match_count = @report.sponsor_matches.size
+
+    def match_stat
+      count = match_count
+      return unless count.positive?
+
+      [ count.to_s, count == 1 ? "brand match, with its reason" : "brand matches, each with its reason" ]
+    end
+
+    def taste_tags
+      tags = @report.audience.is_a?(Hash) ? Array(@report.audience["tags"]) : []
+      tags.filter_map { |tag| tag["name"].presence if tag.is_a?(Hash) }
+    end
+  end
+end

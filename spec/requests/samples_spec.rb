@@ -64,12 +64,13 @@ RSpec.describe "Sample reports" do
       expect(page.css("turbo-cable-stream-source")).to be_empty
     end
 
-    it "gives the sample its own title and share tags" do
+    it "gives the sample its own title and share tags, with its own share image" do
       get "/samples/sample-one"
 
       expect(page.at_css("title").text).to eq("The Founder's Ledger sample sponsor report | Midrolo")
-      expect(page.at_css("link[rel='canonical']")["href"]).to eq("http://www.example.com/samples/sample-one")
-      expect(page.at_css("meta[property='og:image']")["content"]).to start_with("http://www.example.com/assets/og-")
+      expect_share_tags(page, url: "http://www.example.com/samples/sample-one",
+                              image: %r{\Ahttp://www\.example\.com/samples/sample-one/og\.png\z})
+      expect(share_tags(page)["og:image:alt"]).to eq([ "Sample sponsor report for The Founder's Ledger" ])
     end
 
     it "is a 404, not a 500, for an unknown slug" do

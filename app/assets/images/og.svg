@@ -1,25 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <!--
-    Midrolo share image (og:image), 1200x630: the source of og.png. Type is Archivo, the app's only family: its
-    normal width (400, 600, 700) and, for display, its 125% width (700, 800) renamed to the family "ArchivoWide" so
-    Pango doesn't read "Expanded" in a family name as a stretch. With those static instances from Google Fonts in a
-    fontconfig directory, render with:
-      PANGOCAIRO_BACKEND=fc FONTCONFIG_FILE=path/to/fonts.conf vips copy og.svg og.png
-    The match card is an illustration: brands appear as category labels with a blank logo tile, never as invented
-    brand names (R89).
+    Midrolo share image (og:image), 1200x630: the source of og.png, which bin/rails brand:build draws from it with
+    libvips. The logo is the outlined lockup from brand/logo.svg; the text is Archivo from vendor/fonts (ArchivoWide is
+    its 125% width cut), found through config/initializers/fonts.rb. The match card is an illustration, captioned as
+    one: brands appear as category labels with a blank logo tile, never as invented brand names (R89), and it shows no
+    scores.
   -->
   <rect width="1200" height="630" fill="#f6f2f4"/>
 
-  <g transform="translate(72 66) scale(1.6)">
-    <rect x="0.75" y="11.0" width="2.5" height="6" rx="1.25" fill="#22132b"/>
-    <rect x="4.75" y="9.0" width="2.5" height="10" rx="1.25" fill="#22132b"/>
-    <rect x="8.75" y="6.0" width="2.5" height="16" rx="1.25" fill="#22132b"/>
-    <rect x="12.75" y="2.0" width="2.5" height="24" rx="1.25" fill="#f3a712"/>
-    <rect x="16.75" y="6.0" width="2.5" height="16" rx="1.25" fill="#22132b"/>
-    <rect x="20.75" y="9.0" width="2.5" height="10" rx="1.25" fill="#22132b"/>
-    <rect x="24.75" y="11.0" width="2.5" height="6" rx="1.25" fill="#22132b"/>
-  </g>
-  <text x="128" y="101" font-family="ArchivoWide, Archivo" font-stretch="expanded" font-weight="800" font-size="34" letter-spacing="-1" fill="#22132b">Midrolo</text>
+  <svg x="72" y="62" width="174.81" height="36" viewBox="0 0 116.54 24">
+    <g fill="#22132b">
+      <rect x="0" y="8" width="2" height="8" rx="1"/>
+      <rect x="4" y="2" width="2" height="20" rx="1"/>
+      <rect x="18" y="2" width="2" height="20" rx="1"/>
+      <rect x="22" y="8" width="2" height="8" rx="1"/>
+    </g>
+    <rect x="8" y="6" width="8" height="12" rx="2.5" fill="#f3a712"/>
+    <path fill="#22132b" d="M31 18.86V5.1H37.36L39.72 11.08Q39.88 11.44 40.07 12Q40.26 12.56 40.45 13.15Q40.64 13.74 40.8 14.2H40.94Q41.06 13.78 41.25 13.22Q41.44 12.66 41.65 12.09Q41.86 11.52 42.02 11.08L44.38 5.1H50.56V18.86H46.5V11.76Q46.5 11.34 46.51 10.82Q46.52 10.3 46.54 9.8Q46.56 9.3 46.56 8.94H46.4Q46.28 9.32 46.1 9.84Q45.92 10.36 45.75 10.87Q45.58 11.38 45.42 11.76L42.54 18.86H38.82L35.92 11.76Q35.72 11.24 35.53 10.7Q35.34 10.16 35.19 9.69Q35.04 9.22 34.94 8.94H34.78Q34.8 9.22 34.81 9.68Q34.82 10.14 34.83 10.68Q34.84 11.22 34.84 11.76V18.86ZM52.96 6.84V4.36H56.66V6.84ZM52.96 18.86V8.3H56.66V18.86ZM63.74 19.1Q62.14 19.1 60.89 18.51Q59.64 17.92 58.92 16.69Q58.2 15.46 58.2 13.58Q58.2 11.7 58.92 10.48Q59.64 9.26 60.87 8.66Q62.1 8.06 63.66 8.06Q64.36 8.06 65.08 8.22Q65.8 8.38 66.43 8.71Q67.06 9.04 67.5 9.56H67.66V4.36H71.36V18.86H68.36L68.08 17.22H67.9Q67.12 18.26 66.04 18.68Q64.96 19.1 63.74 19.1ZM64.82 16.34Q65.78 16.34 66.41 16Q67.04 15.66 67.36 15.06Q67.68 14.46 67.68 13.66V13.52Q67.68 12.92 67.5 12.42Q67.32 11.92 66.96 11.57Q66.6 11.22 66.06 11.02Q65.52 10.82 64.8 10.82Q63.86 10.82 63.23 11.15Q62.6 11.48 62.28 12.06Q61.96 12.64 61.96 13.42V13.76Q61.96 14.52 62.29 15.11Q62.62 15.7 63.25 16.02Q63.88 16.34 64.82 16.34ZM73.36 18.86V8.3H76.36L76.6 10.1H76.78Q77.08 9.46 77.57 9Q78.06 8.54 78.68 8.3Q79.3 8.06 80 8.06Q80.4 8.06 80.77 8.11Q81.14 8.16 81.46 8.3V11.2H79.7Q79 11.2 78.5 11.43Q78 11.66 77.68 12.05Q77.36 12.44 77.21 12.93Q77.06 13.42 77.06 13.98V18.86ZM88.86 19.1Q86.76 19.1 85.2 18.49Q83.64 17.88 82.77 16.65Q81.9 15.42 81.9 13.58Q81.9 11.72 82.77 10.5Q83.64 9.28 85.2 8.67Q86.76 8.06 88.86 8.06Q90.98 8.06 92.54 8.67Q94.1 9.28 94.96 10.5Q95.82 11.72 95.82 13.58Q95.82 15.42 94.96 16.65Q94.1 17.88 92.54 18.49Q90.98 19.1 88.86 19.1ZM88.86 16.6Q89.92 16.6 90.62 16.24Q91.32 15.88 91.67 15.25Q92.02 14.62 92.02 13.78V13.38Q92.02 12.54 91.67 11.91Q91.32 11.28 90.62 10.93Q89.92 10.58 88.86 10.58Q87.82 10.58 87.12 10.93Q86.42 11.28 86.07 11.91Q85.72 12.54 85.72 13.38V13.78Q85.72 14.62 86.07 15.25Q86.42 15.88 87.12 16.24Q87.82 16.6 88.86 16.6ZM97.38 18.86V4.36H101.08V18.86ZM109.58 19.1Q107.48 19.1 105.92 18.49Q104.36 17.88 103.49 16.65Q102.62 15.42 102.62 13.58Q102.62 11.72 103.49 10.5Q104.36 9.28 105.92 8.67Q107.48 8.06 109.58 8.06Q111.7 8.06 113.26 8.67Q114.82 9.28 115.68 10.5Q116.54 11.72 116.54 13.58Q116.54 15.42 115.68 16.65Q114.82 17.88 113.26 18.49Q111.7 19.1 109.58 19.1ZM109.58 16.6Q110.64 16.6 111.34 16.24Q112.04 15.88 112.39 15.25Q112.74 14.62 112.74 13.78V13.38Q112.74 12.54 112.39 11.91Q112.04 11.28 111.34 10.93Q110.64 10.58 109.58 10.58Q108.54 10.58 107.84 10.93Q107.14 11.28 106.79 11.91Q106.44 12.54 106.44 13.38V13.78Q106.44 14.62 106.79 15.25Q107.14 15.88 107.84 16.24Q108.54 16.6 109.58 16.6Z"/>
+  </svg>
 
   <g font-family="ArchivoWide, Archivo" font-stretch="expanded" font-weight="800" font-size="60" letter-spacing="-1.8" fill="#22132b">
     <text x="70" y="236">Find sponsors</text>
@@ -110,7 +108,6 @@
       <rect x="1022.5" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
       <rect x="1033.0" y="312" width="8.5" height="8" rx="1" fill="#e3dae3"/>
       <rect x="1043.5" y="312" width="8.5" height="8" rx="1" fill="#e3dae3"/>
-      <text x="1104" y="320" text-anchor="end" font-family="ArchivoWide, Archivo" font-stretch="expanded" font-weight="700" font-size="15" fill="#22132b">91</text>
     </g>
     <rect x="784" y="341" width="320" height="1" fill="#e3dae3"/>
     <g>
@@ -139,7 +136,6 @@
       <rect x="1022.5" y="392" width="8.5" height="8" rx="1" fill="#e3dae3"/>
       <rect x="1033.0" y="392" width="8.5" height="8" rx="1" fill="#e3dae3"/>
       <rect x="1043.5" y="392" width="8.5" height="8" rx="1" fill="#e3dae3"/>
-      <text x="1104" y="400" text-anchor="end" font-family="ArchivoWide, Archivo" font-stretch="expanded" font-weight="700" font-size="15" fill="#22132b">84</text>
     </g>
     <rect x="784" y="421" width="320" height="1" fill="#e3dae3"/>
     <g>
@@ -168,8 +164,7 @@
       <rect x="1022.5" y="472" width="8.5" height="8" rx="1" fill="#e3dae3"/>
       <rect x="1033.0" y="472" width="8.5" height="8" rx="1" fill="#e3dae3"/>
       <rect x="1043.5" y="472" width="8.5" height="8" rx="1" fill="#e3dae3"/>
-      <text x="1104" y="480" text-anchor="end" font-family="ArchivoWide, Archivo" font-stretch="expanded" font-weight="700" font-size="15" fill="#22132b">78</text>
     </g>
-    
 
+  <text x="760" y="552" font-family="Archivo" font-weight="400" font-size="16" fill="#5a4a63">An illustration of a match list</text>
 </svg>

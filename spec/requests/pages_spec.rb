@@ -21,17 +21,24 @@ RSpec.describe "Public pages" do
               "/samples" => "Sample sponsor reports | Midrolo", "/users/sign_in" => "Sign in | Midrolo" }
 
     pages.each do |path, title|
-      it "gives #{path} its title, description, canonical URL, absolute og:image and twitter card" do
-        get path
+      it "gives #{path} its title and every share tag once, with absolute URLs" do
+        get path, params: { utm_source: "newsletter" }
 
         expect(response).to have_http_status(:ok)
         expect(page.at_css("title").text).to eq(title)
         expect(meta("name", "description")).to be_present
-        expect(page.at_css("link[rel='canonical']")["href"]).to eq("http://www.example.com#{path}")
-        expect(meta("property", "og:title")).to be_present
-        expect(meta("property", "og:description")).to eq(meta("name", "description"))
-        expect(meta("property", "og:image")).to match(%r{\Ahttp://www\.example\.com/assets/og-\h+\.png\z})
-        expect(meta("name", "twitter:card")).to eq("summary_large_image")
+        expect_share_tags(page, url: "http://www.example.com#{path}", image: %r{\Ahttp://www\.example\.com/assets/og-\h+\.png\z})
+        expect(meta("property", "og:title")).to eq(title.delete_suffix(" | Midrolo"))
+      end
+    end
+
+    it "keeps signed-in pages out of search results and gives them no share image" do
+      sign_in create(:user, :subscribed) # the pipeline is on paid plans
+
+      [ "/shows/new", "/account", "/pipeline" ].each do |path|
+        get path
+        expect(response).to have_http_status(:ok)
+        expect_private_tags(page)
       end
     end
 
@@ -41,6 +48,29 @@ RSpec.describe "Public pages" do
 
       expect(titles.uniq.size).to eq(pages.size)
       expect(descriptions.uniq.size).to eq(pages.size)
+    end
+  end
+
+  describe "brand" do
+    it "shows the logo in the header and footer, linked home" do
+      get "/"
+
+      [ "header.site-header", "footer" ].each do |region|
+        link = page.at_css("#{region} a[aria-label='Midrolo home']")
+        expect(link["href"]).to eq("/")
+        expect(link.at_css("img.brand-logo")["src"]).to match(%r{/assets/brand/logo-\h+\.svg\z})
+      end
+    end
+
+    it "links the favicon set, the web manifest and a theme color for light and dark" do
+      get "/"
+
+      expect(page.at_css("link[rel='icon'][type='image/svg+xml']")["href"]).to eq("/icon.svg")
+      expect(page.at_css("link[rel='icon'][sizes='32x32']")["href"]).to eq("/favicon.ico")
+      expect(page.at_css("link[rel='apple-touch-icon']")["href"]).to eq("/apple-touch-icon.png")
+      expect(page.at_css("link[rel='manifest']")["href"]).to eq("/site.webmanifest")
+      themes = page.css("meta[name='theme-color']").to_h { |meta| [ meta["media"], meta["content"] ] }
+      expect(themes).to eq("(prefers-color-scheme: light)" => "#f6f2f4", "(prefers-color-scheme: dark)" => "#22132b")
     end
   end
 

@@ -9,7 +9,7 @@
     <a href="#main" class="skip-link">Skip to content</a>
     <%= render "components/demo_banner" if demo_mode? %>
     <header class="wrap flex h-16 items-center">
-      <%= link_to ui_logo, "/", class: "logo", aria: { label: "#{APP_NAME} home" } %>
+      <%= link_to brand_logo, "/", class: "logo", aria: { label: "#{APP_NAME} home" } %>
     </header>
     <%= render "components/flash" %>
     <main id="main" tabindex="-1" class="wrap flex-1 py-10">

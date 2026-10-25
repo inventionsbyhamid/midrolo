@@ -28,13 +28,6 @@ module MediaKitsHelper
     url_for(attachment.variant(variant)) if attachment.attached? && attachment.blob.persisted?
   end
 
-  # Absolute, for link previews: the cover when there is one, else the show's artwork.
-  def kit_share_image_url(kit)
-    return rails_representation_url(kit.cover.variant(:share)) if kit.cover.attached? && kit.cover.blob.persisted?
-
-    Show.http_url(kit.show.artwork_url)
-  end
-
   # "Run a mid-roll in 4 episodes for $415, 10% off."
   def kit_bundle_line(rates)
     config = Rails.application.config_for(:rate_card)

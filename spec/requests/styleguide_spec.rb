@@ -33,6 +33,16 @@ RSpec.describe "Styleguide" do
       )
     end
 
+    it "shows the logo, the mark and their dark variants, and the app icon" do
+      get "/styleguide"
+
+      sources = Nokogiri::HTML(response.body).css("#sg-brand-panel img").map { |img| img["src"] }
+      %w[logo logo-dark mark mark-dark].each do |name|
+        expect(sources).to include(a_string_matching(%r{/assets/brand/#{name}-\h+\.svg\z}))
+      end
+      expect(sources).to include("/icon.svg")
+    end
+
     it "wraps every layout in the shared head, skip link and Podcast Index credit" do
       layouts.each do |layout|
         get "/styleguide", params: { layout: layout }
@@ -62,11 +72,10 @@ RSpec.describe "Styleguide" do
       Rails.configuration.x.demo_mode = original
     end
 
-    it "puts the page's content_for(:meta) in the head instead of the default meta" do
+    it "keeps the styleguide out of search results, with no share tags" do
       get "/styleguide"
 
-      expect(response.body).to include('<meta property="og:description" content="Tokens, type and components for Midrolo.">')
-      expect(response.body).not_to include(UiHelper::DEFAULT_DESCRIPTION)
+      expect_private_tags(Nokogiri::HTML(response.body))
     end
   end
 

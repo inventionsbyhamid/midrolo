@@ -1,9 +1,7 @@
 <% content_for :title, "#{@show.title} media kit" %>
-<% content_for :meta do %>
-  <%= social_meta_tags(title: "#{@show.title} media kit", description: @content.share_description || "Media kit for #{@show.title}",
-                       image: kit_share_image_url(@kit)) %>
-  <%= tag.link(rel: "canonical", href: public_kit_url(@show.slug)) %>
-<% end %>
+<% content_for :meta, social_meta(description: @content.share_description || "Media kit for #{@show.title}",
+                                   url: public_kit_url(@show.slug), image: kit_share_image_url(@show.slug),
+                                   image_alt: "Media kit for #{@show.title}") %>
 <div class="kit-page">
   <div class="kit-toolbar"><%= render "media_kits/print_button" %></div>
   <%= render "media_kits/kit", kit: @kit, content: @content %>

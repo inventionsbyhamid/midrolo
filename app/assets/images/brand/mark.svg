@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img">
+  <title>Midrolo</title>
+  <!-- Midrolo mark: an episode waveform with the mid-roll slot lit. 24-unit grid; bars 2 wide, 2 apart. -->
+  <g fill="#22132b">
+    <rect x="0" y="8" width="2" height="8" rx="1"/>
+    <rect x="4" y="2" width="2" height="20" rx="1"/>
+    <rect x="18" y="2" width="2" height="20" rx="1"/>
+    <rect x="22" y="8" width="2" height="8" rx="1"/>
+  </g>
+  <rect x="8" y="6" width="8" height="12" rx="2.5" fill="#f3a712"/>
+</svg>

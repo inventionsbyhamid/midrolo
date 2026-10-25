@@ -2,18 +2,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><%= page_title %></title>
 <meta name="application-name" content="<%= APP_NAME %>">
-<meta name="theme-color" content="#f6f2f4">
+<meta name="theme-color" content="#f6f2f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#22132b" media="(prefers-color-scheme: dark)">
 <%# No Turbo hover prefetch (R80): each one spends the per-IP rate limit and runs the page's queries for a link that
     may never be clicked. %>
 <meta name="turbo-prefetch" content="false">
 <%= csrf_meta_tags %>
 <%= csp_meta_tag %>
-<%= content_for?(:meta) ? content_for(:meta) : social_meta_tags %>
+<%# Public pages give their share tags (social_meta); every other page stays out of search results. %>
+<%= content_for?(:meta) ? content_for(:meta) : private_page_meta %>
 <%= content_for(:head) %>
 
+<%# The favicon set, built from the brand mark by bin/rails brand:build. %>
+<link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="icon" href="/icon.png" type="image/png" sizes="512x512">
-<link rel="apple-touch-icon" href="/icon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
 
 <%# Fonts load through <link> tags (no inline styles), so a CSP only needs fonts.googleapis.com and fonts.gstatic.com. %>
 <link rel="preconnect" href="https://fonts.googleapis.com">
