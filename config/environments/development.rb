@@ -41,7 +41,8 @@ Rails.application.configure do
   # Make template changes take effect immediately.
   config.action_mailer.perform_caching = false
 
-  # Links in mail (and the email logo) point at APP_URL, else localhost on PORT (3100 by default; lib/dev_url_options.rb).
+  # Links in mail (and the email logo) point at APP_URL, else localhost on the web server's port: WEB_PORT from bin/dev,
+  # else PORT, 3100 by default (lib/dev_url_options.rb).
   config.action_mailer.default_url_options = DevUrlOptions.call
 
   # Print deprecation notices to the Rails logger.

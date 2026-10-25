@@ -7,6 +7,9 @@ fi
 
 # Default to port 3100 if not specified: 3000 belongs to another project on the dev machine (lib/dev_url_options.rb)
 export PORT="${PORT:-3100}"
+# foreman gives each Procfile.dev process its own PORT: web (first) gets this one, the others 100 more each. Mail sent
+# from the job worker links to the web server, so it reads WEB_PORT (lib/dev_url_options.rb).
+export WEB_PORT="$PORT"
 
 # Let the debug gem allow remote connections,
 # but avoid loading until `debugger` is called

@@ -15,6 +15,23 @@ RSpec.describe DevUrlOptions do
     expect(described_class.call("APP_URL" => " ", "PORT" => "")).to eq(host: "localhost", port: 3100)
   end
 
+  # foreman gives each Procfile.dev process a PORT of its own: the web server the base port, the others 100 more each.
+  # The job worker sends most mail, so on its own PORT every link and the logo pointed where nothing listens (Task 23).
+  it "prefers WEB_PORT, the web server's port that bin/dev sets, over a process's own PORT" do
+    expect(described_class.call("WEB_PORT" => "3200", "PORT" => "3400")).to eq(host: "localhost", port: 3200)
+    expect(described_class.call("WEB_PORT" => " ", "PORT" => "3400")).to eq(host: "localhost", port: 3400)
+    expect(described_class.call("APP_URL" => "https://midrolo.test", "WEB_PORT" => "3200"))
+      .to eq(host: "midrolo.test", protocol: "https")
+  end
+
+  it "gets WEB_PORT from bin/dev: the base PORT, which foreman gives the web server, first in Procfile.dev" do
+    bin_dev = Rails.root.join("bin/dev").read
+
+    expect(bin_dev).to match(/^export WEB_PORT="\$PORT"$/)
+    expect(bin_dev.index('export PORT="${PORT:-3100}"')).to be < bin_dev.index('export WEB_PORT="$PORT"')
+    expect(Rails.root.join("Procfile.dev").read.lines.first).to start_with("web: ")
+  end
+
   it "is what development mail uses, with no port 3000 left in the config" do
     config = Rails.root.join("config/environments/development.rb").read
 
