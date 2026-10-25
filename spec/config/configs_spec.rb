@@ -18,6 +18,12 @@ RSpec.describe "App configs" do
                                                sprint: "pdt_sprint")
   end
 
+  it "re-enqueues stranded billing events every 10 minutes in production" do
+    recurring = ActiveSupport::ConfigurationFile.parse(Rails.root.join("config/recurring.yml"))
+    expect(recurring.dig("production", "requeue_stranded_billing_events"))
+      .to eq("class" => "RequeueStrandedBillingEventsJob", "schedule" => "every 10 minutes")
+  end
+
   it "loads scoring weights" do
     expect(config(:scoring)[:weights]).to eq(affinity: 0.55, proven: 0.20, shared_tags: 0.15, category: 0.10)
   end
