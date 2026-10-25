@@ -1,0 +1,7 @@
+<% content_for :title, "Billing portal" %>
+<div class="mx-auto flex max-w-xl flex-col gap-6">
+  <%= render "components/card", title: "Fake billing portal (development)" do %>
+    <p class="text-ink-soft">With a payment provider configured, Manage billing opens its customer portal here: invoices, payment method and cancellation.</p>
+    <%= ui_button "Back to your account", account_path, variant: :secondary, class: "mt-4" %>
+  <% end %>
+</div>

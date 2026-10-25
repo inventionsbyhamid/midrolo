@@ -1,0 +1,11 @@
+<% content_for :title, "Test checkout" %>
+<div class="mx-auto flex max-w-xl flex-col gap-6">
+  <%= render "components/card", title: "Test checkout (development)" do %>
+    <p class="text-ink-soft">No payment provider is configured, so this page stands in for the hosted checkout. Nothing is charged.</p>
+    <p class="mt-4"><strong><%= price_plan_name(@price) %></strong> <span class="text-ink-soft"><%= price_label(@price) %></span></p>
+    <div class="mt-6 flex flex-wrap items-center gap-3">
+      <%= button_to "Complete test payment", fake_checkout_path, params: { price_key: @price.key }, class: "btn btn-primary btn-md" %>
+      <%= ui_button "Cancel", account_path, variant: :ghost %>
+    </div>
+  <% end %>
+</div>

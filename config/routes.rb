@@ -45,6 +45,12 @@ Rails.application.routes.draw do
   resource :billing_portal, only: :create
   resources :waitlist_entries, only: :create
   post "webhooks/:provider", to: "webhooks#create", as: :webhooks
+  # The Fake billing provider's checkout and portal pages (FakeBillingController): development and test only.
+  if Rails.env.local?
+    get "fake_checkout", to: "fake_billing#checkout", as: :fake_checkout
+    post "fake_checkout", to: "fake_billing#pay"
+    get "fake_portal", to: "fake_billing#portal", as: :fake_portal
+  end
 
   # Design system gallery and sent mail (letter_opener_web). Development only: production has no such routes.
   if Rails.env.development?
