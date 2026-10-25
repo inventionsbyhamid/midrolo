@@ -4,8 +4,8 @@ module Research
       TIERS = { easy_yes: "E", realistic: "R", long_shot: "L" }.freeze
 
       description "Finds and ranks sponsor candidates for a seed set (the saved seeds when no ids are given) and the " \
-                  "2–3 brand categories you pick for this show (e.g. Finance, Productivity, Food & Beverage). Adds brands " \
-                  "already sponsoring similar podcasts, scores fit 0–100 and tiers each brand. Returns refs (b1, b2…) " \
+                  "2 or 3 brand categories you pick for this show (e.g. Finance, Productivity, Food & Beverage). Adds brands " \
+                  "already sponsoring similar podcasts, scores fit 0 to 100 and tiers each brand. Returns refs (b1, b2…) " \
                   "to use in explain_matches and save_sponsor_matches."
       arguments({ categories: string_array("Brand categories to search, best first", max: SponsorCandidates::MAX_CATEGORIES),
                   entity_ids: string_array("Seed entity ids; leave empty to use the saved seeds"),
@@ -19,7 +19,7 @@ module Research
         scored = SponsorCandidates.find(toolkit, seed_entity_ids: entity_ids, seed_tag_ids: tag_ids,
                                                  categories: strings(categories), scan_limit: scan_limit)
         if scored.empty?
-          return "#{ignored_note(ignored)}No brands came back for those seeds — try different seeds or fewer category filters."
+          return "#{ignored_note(ignored)}No brands came back for those seeds: try different seeds or fewer category filters."
         end
 
         toolkit.add_candidates(scored)
@@ -44,7 +44,7 @@ module Research
       end
 
       def grouped(shown, hidden:)
-        lines = [ "Ranked #{shown.size + hidden} brands by category. Each: ref name fit(0–100)+tier " \
+        lines = [ "Ranked #{shown.size + hidden} brands by category. Each: ref name fit(0 to 100)+tier " \
                   "(E easy yes, R realistic, L long shot) [evidence]." ]
         shown.group_by { |s| brand_category(s.candidate.entity) || "Other" }
              .each { |category, list| lines << "#{category}: #{list.map { |s| entry(s, category) }.join(', ')}" }

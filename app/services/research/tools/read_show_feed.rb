@@ -45,7 +45,7 @@ module Research
         topics = Array(show.hints[:topics])
         return "Podcaster's hints: none" if shows.empty? && topics.empty?
 
-        "Podcaster's hints — comparable shows: #{shows.any? ? Untrusted.wrap(shows.join('; ')) : 'none'}; " \
+        "Podcaster's hints. Comparable shows: #{shows.any? ? Untrusted.wrap(shows.join('; ')) : 'none'}; " \
           "topics: #{topics.any? ? Untrusted.wrap(topics.join('; ')) : 'none'}"
       end
 

@@ -75,9 +75,10 @@ RSpec.describe "Copy has no dashes", type: :request do
       expect(locales + public_pages + manifest).to be_empty
     end
 
-    it "keeps dashes out of the strings the app's code shows people" do
-      # Only the agent reads the research tools' descriptions and results; the rake task's output is for whoever runs it.
-      agent_only = %w[app/services/research/tools.rb app/services/research/tools/ app/services/samples/generate.rb]
+    it "keeps dashes out of the strings the app's code shows people, and the ones the agent reads" do
+      # The research tools' descriptions and results are covered too: the prompt asks the agent for dash-free text,
+      # so the tools speak the same way (R100). The rake task's output is for whoever runs it.
+      agent_only = %w[app/services/samples/generate.rb]
       files = Dir[root.join("app/**/*.rb")].map { |path| Pathname(path).relative_path_from(root).to_s }
                                            .reject { |path| agent_only.any? { |exempt| path.start_with?(exempt) } }
 

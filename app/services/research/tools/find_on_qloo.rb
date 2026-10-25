@@ -31,9 +31,9 @@ module Research
         sources = result[:sources]
         lines = []
         lines << "Entities:" if result[:entities].any?
-        result[:entities].each { |e| lines << "- #{e.name} (#{e.id}) #{e.type.to_s.tr('_', ' ')} — #{sources[e.id]}" }
+        result[:entities].each { |e| lines << "- #{e.name} (#{e.id}) #{e.type.to_s.tr('_', ' ')}: #{sources[e.id]}" }
         lines << "Tags:" if result[:tags].any?
-        result[:tags].each { |t| lines << "- #{t.name} (#{t.id}) — #{sources[t.id]}" }
+        result[:tags].each { |t| lines << "- #{t.name} (#{t.id}): #{sources[t.id]}" }
         lines << "Not found: #{Untrusted.wrap(result[:unresolved].join(', '))}" if result[:unresolved].any?
         lines.join("\n")
       end

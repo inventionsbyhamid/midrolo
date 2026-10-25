@@ -276,6 +276,14 @@ RSpec.describe Research::Tools do
       expect(out).to include("Shortened 2 reasons to 25 words (b1, b2)")
     end
 
+    it "counts a reason as shortened only when its pick was saved" do
+      candidates!
+      long = "Your listeners love #{(1..30).map { |i| "t#{i}" }.join(' ')} and more."
+      out = run("save_sponsor_matches", matches: [ { brand_id: "b1", reason: long }, { brand_id: "not-a-brand", reason: long },
+                                                   { brand_id: "b2", reason: "40% of #{long}" } ])
+      expect(out).to include("Shortened 1 reason to 25 words (b1)")
+    end
+
     it "takes the dashes out of a reason before saving it (R100)" do
       candidates!
       run("save_sponsor_matches", matches: [ { brand_id: "b1", reason: "Your listeners love budgeting — and this brand sponsors shows like yours." } ])
@@ -313,7 +321,7 @@ RSpec.describe Research::Tools do
       candidates!
       out = run("save_sponsor_matches", matches: [ { brand_id: "b1", reason: "40% of your listeners buy this brand." },
                                                    { brand_id: "b2", reason: "Shares your audience's tastes." } ])
-      expect(out).to include("Saved 1 match; rejected 1: reason for b1 cites numbers not in the data (40%) — rephrase without them")
+      expect(out).to include("Saved 1 match; rejected 1: reason for b1 cites numbers not in the data (40%): rephrase without them")
       expect(report.sponsor_matches.reload.pluck(:brand_entity_id)).to eq([ toolkit.resolve_brand("b2") ])
     end
 
@@ -413,5 +421,8 @@ RSpec.describe Research::Tools do
 
     expect(outputs).to all(be_a(String))
     expect(outputs.map(&:length)).to all(be < 1500)
+    # The prompt asks the agent for dash-free text, so the tools speak the same way (R100).
+    expect(outputs.grep(/[\u2014\u2013]/)).to be_empty
+    expect(tools.values.map { |tool| [ tool.description, tool.parameters_schema.to_json ] }.flatten.grep(/[\u2014\u2013]/)).to be_empty
   end
 end

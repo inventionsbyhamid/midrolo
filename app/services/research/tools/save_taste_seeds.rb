@@ -5,7 +5,7 @@ module Research
       AGENT_SOURCE = "Picked by the research agent".freeze
 
       description "Saves the taste seeds the report is built on: #{Seeds::MAX_ENTITIES} entity ids at most and " \
-                  "#{Seeds::MAX_TAGS} tag ids at most (aim for 3–8 and 2–5), from find_on_qloo, each with where it came " \
+                  "#{Seeds::MAX_TAGS} tag ids at most (aim for 3 to 8 and 2 to 5), from find_on_qloo, each with where it came " \
                   "from. profile_kind is direct when this show itself is a seed, otherwise proxy. Ids no tool returned " \
                   "are rejected. Saving again replaces the seeds."
       arguments({ entity_ids: string_array("Qloo entity ids from find_on_qloo"),

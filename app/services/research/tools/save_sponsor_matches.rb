@@ -13,7 +13,7 @@ module Research
       REASON_WORDS = SponsorMatch::REASON_WORDS
       TARGET_MATCHES = 20
 
-      description "Saves the sponsor matches: 20–40 candidate refs from find_sponsor_candidates, each with a reason: " \
+      description "Saves the sponsor matches: 20 to 40 candidate refs from find_sponsor_candidates, each with a reason: " \
                   "one plain, specific sentence of #{REASON_WORDS} words or fewer citing shared taste tags or " \
                   "proven-sponsor evidence from the tools, with no numbers the tools didn't give. For a brand explain_matches " \
                   "didn't compare, an empty reason gets a short one from its shared tags. Brands not in the candidate " \
@@ -59,23 +59,25 @@ module Research
         picks.each do |pick|
           key = value(pick, :brand_id).to_s.strip
           id = toolkit.resolve_brand(key)
-          reason = fit_reason(key, value(pick, :reason)) || template_reason(id)
+          reason, shortened = fit_reason(value(pick, :reason))
+          reason ||= template_reason(id)
           problem = problem_with(id, key, reason)
           next rejected << problem if problem
 
+          # Counted only once the pick is saved, so a rejected pick is reported once, as rejected.
+          @shortened << key if shortened && !accepted.key?(id)
           accepted[id] ||= reason
         end
         [ accepted.first(MAX_MATCHES).to_h, rejected ]
       end
 
-      # The reason without dashes, cut to one sentence of REASON_WORDS when longer; nil when blank.
-      def fit_reason(key, text)
+      # [the reason without dashes, cut to one sentence of REASON_WORDS when longer, whether it was cut]; nil when blank.
+      def fit_reason(text)
         reason = Llm::PlainText.sanitize(text.to_s.squish).presence
-        return reason if reason.nil?
+        return [ nil, false ] if reason.nil?
 
         fitted = Llm::PlainText.clip_words(reason, REASON_WORDS, max_chars: REASON_LIMIT)
-        @shortened << (key.presence || "(no brand_id)") if fitted != reason
-        fitted
+        [ fitted, fitted != reason ]
       end
 
       # The template reason from shared tags, for a brand the compare cap left unexplained (R93); nil for the rest.
@@ -93,7 +95,7 @@ module Research
 
         unsupported = reason ? claims.unsupported(reason, claims.for_match(toolkit.scored.fetch(id))) : []
         if unsupported.any?
-          "reason for #{toolkit.brand_ref(id) || label} cites numbers not in the data (#{unsupported.join(', ')}) — rephrase without them"
+          "reason for #{toolkit.brand_ref(id) || label} cites numbers not in the data (#{unsupported.join(', ')}): rephrase without them"
         end
       end
 

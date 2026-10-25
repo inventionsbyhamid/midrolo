@@ -27,7 +27,7 @@ module Research
         claims = NumericClaims.new(toolkit)
         unsupported = claims.unsupported(points.join("\n"), claims.for_summary)
         if unsupported.any?
-          return "The summary cites numbers not in the data (#{unsupported.join(', ')}) — rephrase without them and save it again."
+          return "The summary cites numbers not in the data (#{unsupported.join(', ')}): rephrase without them and save it again."
         end
 
         log.step("save_summary", "Writing your summary…") do |step|
