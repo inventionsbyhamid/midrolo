@@ -35,8 +35,9 @@ What a run does:
    up to 10 minutes, then gives up with exit 75.
 2. Locks the lane and rsyncs the working tree to `/root/midrolo-ci/src/<lane>/`. The lane is this checkout's
    directory name, so worktrees each get their own copy and run side by side; two runs from one checkout wait for each
-   other. `--lane NAME` picks another. Git data, `tmp/`, `log/`, `storage/`, built assets, `.env*`, key files and
-   `spec/fixtures/private/` are never sent.
+   other. `--lane NAME` picks another. Git data, `tmp/`, `log/`, `storage/`, built assets, `.env*` files, key files
+   and `spec/fixtures/private/` are never sent. The one `.env` file that is sent is `.env.example`, which holds no
+   values and which a spec reads.
 3. Builds `midrolo-ci:test` from `ci/Dockerfile.test` if that file changed (Ruby 3.4.1, Chromium, fonts, libvips,
    libpq). The source isn't in the image, and gems live in the `midrolo-ci-bundle` volume, so a Gemfile change only
    costs a `bundle install`.
