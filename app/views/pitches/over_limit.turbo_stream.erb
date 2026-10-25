@@ -1,4 +1,4 @@
-<% locals = { sponsor_match: @sponsor_match, pitch: @pitch, limit_reason: @limit_reason } %>
+<% locals = { sponsor_match: @sponsor_match, pitch: @pitch, refusal: @refusal } %>
 <% if @regenerate %>
   <%= turbo_stream.replace dom_id(@sponsor_match, :pitch_pack), partial: "pitches/pack", locals: locals %>
 <% else %>

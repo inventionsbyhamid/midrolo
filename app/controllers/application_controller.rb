@@ -21,9 +21,10 @@ class ApplicationController < ActionController::Base
   # The signed-in user's plan (Entitlements), resolved once per request; the free plan when signed out.
   def current_plan = @current_plan ||= Entitlements.for(current_user)
 
-  # Back to path with the plan's refusal (Entitlements::NotAllowed), which the layout shows as an upgrade prompt.
-  def redirect_with_upgrade_prompt(path, error, kind:, **messages)
-    redirect_to path, flash: messages.merge(upgrade: { "reason" => error.reason.to_s, "kind" => kind.to_s })
+  # Back to path with the plan's refusal (Entitlements::NotAllowed#details, as JSON-safe values), which the layout
+  # shows as an upgrade prompt.
+  def redirect_with_upgrade_prompt(path, error, **messages)
+    redirect_to path, flash: messages.merge(upgrade: error.details.as_json)
   end
 
   def any_browser? = false

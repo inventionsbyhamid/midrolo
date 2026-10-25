@@ -1,24 +1,33 @@
 # Plan copy: the upgrade prompt (shared/_upgrade_prompt), which says why Entitlements refused and what to do next
-# (R63), and the plan and usage lines on the account page.
+# (R63, R63a), and the plan and usage lines on the account page. Both count done work, and name work in progress
+# apart from it, so they never contradict each other.
 module PlansHelper
   UpgradePrompt = Data.define(:message, :detail, :action)
 
   REASONS = %i[limit budget paused plan].freeze
-  NOUNS = { agent: "reports", snapshot: "Snapshots", pitch: "pitches" }.freeze
+  # Each kind's noun in a sentence, and its label on the account page.
+  KINDS = { agent: { noun: "report", label: "Full reports" },
+            snapshot: { noun: "Snapshot", label: "Snapshots" },
+            pitch: { noun: "pitch", label: "Pitches" } }.freeze
   PAUSED_MESSAGE = "New reports are paused for a little while. Please try again later.".freeze
   PITCH_PACK = "Each one is a ready-to-send email, three ad-read angles, an offer priced from your rate card and " \
                "a follow-up.".freeze
 
-  # The prompt for a refusal (Entitlements::NotAllowed#reason) of a kind (:agent, :snapshot or :pitch) on a plan.
-  def upgrade_prompt(reason, kind, plan)
-    kind = kind.to_sym
-    case reason.to_sym
+  # The copy for a refusal's details (Entitlements::NotAllowed#details): reason, kind and bucket, and for :limit the
+  # used, in_flight and limit counts and the period (nil when the plan counts in total).
+  def upgrade_prompt_copy(prompt)
+    kind = prompt.fetch(:kind)
+    work = kind == :pitch ? "pitch packs" : "full reports"
+    case prompt.fetch(:reason)
     when :limit
-      UpgradePrompt.new("You've used #{plan.in_use(kind)} of #{plan.limit(kind)} #{NOUNS.fetch(kind)}#{period_phrase(plan, kind)}",
-                        nil, "See plans")
+      UpgradePrompt.new(limit_message(prompt), nil, "See plans")
     when :budget
-      UpgradePrompt.new("#{kind == :pitch ? 'Pitch packs' : 'Full reports'} are paused for now — join the waitlist",
-                        nil, "Join the waitlist")
+      if prompt[:bucket].in?(%i[paid judge])
+        UpgradePrompt.new("We've hit today's capacity for #{work} — try again tomorrow. This didn't use any of your quota.",
+                          nil, nil)
+      else
+        UpgradePrompt.new("#{work.upcase_first} are paused for now — join the waitlist", nil, "Join the waitlist")
+      end
     when :paused
       UpgradePrompt.new(AppSettings.get(:runs_paused_reason).to_s.presence || PAUSED_MESSAGE, nil, nil)
     else
@@ -27,14 +36,20 @@ module PlansHelper
     end
   end
 
-  # The [reason, kind] a redirect carried in flash[:upgrade] (ApplicationController#redirect_with_upgrade_prompt),
-  # or nil.
+  # The refusal a redirect carried in flash[:upgrade] (ApplicationController#redirect_with_upgrade_prompt), back in the
+  # shape NotAllowed#details gives, or nil when it's missing or malformed.
   def flashed_upgrade
     upgrade = flash[:upgrade]
     return unless upgrade.is_a?(Hash)
 
     reason, kind = upgrade.values_at("reason", "kind").map { |value| value.to_s.to_sym }
-    [ reason, kind ] if REASONS.include?(reason) && NOUNS.key?(kind)
+    return unless REASONS.include?(reason) && KINDS.key?(kind)
+
+    counts = upgrade.values_at("used", "in_flight", "limit")
+    return if reason == :limit && !counts.all?(Integer)
+
+    { reason: reason, kind: kind, bucket: upgrade["bucket"].presence&.to_sym, used: counts[0], in_flight: counts[1],
+      limit: counts[2], period: upgrade["period"].presence }
   end
 
   # The account page's line about the plan.
@@ -42,19 +57,21 @@ module PlansHelper
     case plan.key
     when :judge then "Judge access is on: Pro features with #{pluralize(plan.limit(:agent), 'full report')} and unlimited pitches."
     when :promo then "#{promo_offer}, with #{pluralize(plan.limit(:agent), 'full report')}."
-    when :sprint then "You're on the Sponsor Sprint: Pro features for 30 days."
+    when :sprint then "You're on the Sponsor Sprint: Pro features for #{plan.duration_days} days."
     else "You're on the #{plan.name} plan."
     end
   end
 
-  # "Full reports: 1 of 4 used this billing period", "Unlimited pitches", "Pitches: not on the Free plan".
+  # "Full reports: 1 of 4 used this billing period, 1 in progress", "Unlimited pitches", "Pitches: not on the Free plan".
   def usage_line(plan, kind)
-    label = { agent: "Full reports", snapshot: "Snapshots", pitch: "Pitches" }.fetch(kind)
+    label = KINDS.fetch(kind).fetch(:label)
     limit = plan.limit(kind)
     return "Unlimited pitches" if kind == :pitch && limit.infinite?
     return "#{label}: not on the #{plan.name} plan" unless limit.positive?
 
-    "#{label}: #{plan.used(kind)} of #{limit} used#{period_phrase(plan, kind)}"
+    in_flight = plan.in_flight(kind)
+    period = plan.counted_in_total?(kind) ? nil : plan.period_name
+    "#{label}: #{plan.used(kind)} of #{limit} used#{" this #{period}" if period}#{", #{in_flight} in progress" if in_flight.positive?}"
   end
 
   # "Free Pro access during the Qloo hackathon judging — through Nov 6"
@@ -64,5 +81,13 @@ module PlansHelper
 
   private
 
-  def period_phrase(plan, kind) = plan.counted_in_total?(kind) ? "" : " this #{plan.period_name}"
+  # "You've used 3 of 4 reports this billing period, and 1 more is in progress": the noun follows the limit.
+  def limit_message(prompt)
+    used, in_flight, limit, period = prompt.values_at(:used, :in_flight, :limit, :period)
+    noun = KINDS.fetch(prompt.fetch(:kind)).fetch(:noun).pluralize(limit)
+    message = "You've used #{used} of #{limit} #{noun}"
+    message += " this #{period}" if period
+    message += ", and #{in_flight} more #{in_flight == 1 ? 'is' : 'are'} in progress" if in_flight.to_i.positive?
+    message
+  end
 end

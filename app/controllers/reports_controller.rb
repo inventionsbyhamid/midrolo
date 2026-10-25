@@ -10,7 +10,7 @@ class ReportsController < ApplicationController
     report = Report.start!(show: @show, kind: kind, user: current_user)
     redirect_to show_report_path(@show, report)
   rescue Entitlements::NotAllowed => e
-    redirect_with_upgrade_prompt(show_path(@show), e, kind: kind)
+    redirect_with_upgrade_prompt(show_path(@show), e)
   end
 
   def show

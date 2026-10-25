@@ -68,7 +68,7 @@ class ShowsController < ApplicationController
     report = Report.start!(show: @show, kind: kind, user: current_user)
     redirect_to show_report_path(@show, report)
   rescue Entitlements::NotAllowed => e
-    redirect_with_upgrade_prompt(show_path(@show), e, kind: kind, notice: "Details saved.")
+    redirect_with_upgrade_prompt(show_path(@show), e, notice: "Details saved.")
   end
 
   def submitted_comparable_shows

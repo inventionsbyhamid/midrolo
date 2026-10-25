@@ -15,7 +15,7 @@
     <%= render "components/flash" %>
     <% if (upgrade = flashed_upgrade) %>
       <div class="wrap mt-4">
-        <%= render "shared/upgrade_prompt", reason: upgrade.first, kind: upgrade.last, plan: current_plan %>
+        <%= render "shared/upgrade_prompt", prompt: upgrade %>
       </div>
     <% end %>
     <main id="main" tabindex="-1" class="wrap flex-1 py-8 sm:py-10">

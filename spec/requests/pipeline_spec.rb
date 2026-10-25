@@ -186,7 +186,7 @@ RSpec.describe "Pipeline" do
       end
 
       it "never shows a copy the plan locks; a visible older copy counts instead, on the page and in the CSV" do
-        stub_plan(visible_matches_limit: 1, csv_export?: true)
+        stub_plan(visible_matches: 1, csv_export: true)
 
         get pipeline_path
         expect(brands_in("pitched")).to eq([ "Fieldnote Coffee" ])
@@ -199,7 +199,7 @@ RSpec.describe "Pipeline" do
       end
 
       it "follows the plan: once the limit takes in the newer copy, it counts" do
-        stub_plan(visible_matches_limit: 50)
+        stub_plan(visible_matches: 50)
 
         get pipeline_path
         expect(brands_in("won")).to eq([ "Locked Copy Name" ])
@@ -224,7 +224,7 @@ RSpec.describe "Pipeline" do
     end
 
     context "without the pipeline on their plan (R45)" do
-      before { stub_plan(pipeline?: false, csv_export?: true) }
+      before { stub_plan(pipeline: false, csv_export: true) }
 
       it "redirects the page and the CSV to pricing with a notice" do
         get pipeline_path
@@ -239,7 +239,7 @@ RSpec.describe "Pipeline" do
 
     describe "CSV export" do
       it "redirects to pricing without CSV export on the plan" do
-        stub_plan(csv_export?: false)
+        stub_plan(csv_export: false)
         allow(Pipeline::Matches).to receive(:for).and_call_original
         create(:sponsor_match, report: report, status: "saved")
 
@@ -254,7 +254,7 @@ RSpec.describe "Pipeline" do
       end
 
       context "with CSV export on the plan" do
-        before { stub_plan(csv_export?: true) }
+        before { stub_plan(csv_export: true) }
 
         it "downloads the pipeline as CSV" do
           create(:sponsor_match, report: report, name: "Fieldnote Coffee", status: "pitched", fit_score: 91, tier: "easy_yes",

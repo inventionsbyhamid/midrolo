@@ -145,6 +145,70 @@ RSpec.describe Entitlements do
     end
   end
 
+  describe "a subscription's usage window (R60a)" do
+    it "counts a yearly plan month by month from its start, with month wording" do
+      travel_to(Time.zone.local(2026, 10, 25, 12)) do
+        subscribe("creator", price_key: "creator_yearly", current_period_start: Time.zone.local(2026, 5, 10, 9),
+                             current_period_end: Time.zone.local(2027, 5, 10, 9))
+        report("agent", bucket: "paid", at: Time.zone.local(2026, 10, 10, 8)) # the window before
+        2.times { report("agent", bucket: "paid", at: Time.zone.local(2026, 10, 10, 10)) }
+        plan = described_class.for(user)
+
+        expect(plan.period_start).to eq(Time.zone.local(2026, 10, 10, 9))
+        expect(plan.agent_reports_left).to eq(2)
+        expect(plan.period_name).to eq("month")
+      end
+    end
+
+    it "anchors a month-end start on the last day of shorter months" do
+      start = Time.zone.local(2027, 1, 31, 9)
+      subscribe("creator", current_period_start: start, current_period_end: start.advance(years: 1))
+      { Time.zone.local(2027, 2, 28, 8) => start,
+        Time.zone.local(2027, 2, 28, 10) => Time.zone.local(2027, 2, 28, 9),
+        Time.zone.local(2027, 3, 30, 12) => Time.zone.local(2027, 2, 28, 9),
+        Time.zone.local(2027, 3, 31, 10) => Time.zone.local(2027, 3, 31, 9) }.each do |now, window|
+        travel_to(now) { expect(described_class.for(user).period_start).to eq(window) }
+      end
+    end
+
+    it "anchors on Feb 29 in a leap year" do
+      start = Time.zone.local(2028, 1, 31, 9)
+      subscribe("pro", current_period_start: start, current_period_end: start.advance(years: 1))
+      travel_to(Time.zone.local(2028, 3, 1, 12)) do
+        expect(described_class.for(user).period_start).to eq(Time.zone.local(2028, 2, 29, 9))
+      end
+    end
+
+    it "never starts a window past the period's end while a late renewal is pending" do
+      subscribe("creator", current_period_start: Time.zone.local(2025, 10, 20), current_period_end: Time.zone.local(2026, 10, 18))
+      travel_to(Time.zone.local(2026, 10, 20, 12)) do
+        expect(described_class.for(user).period_start).to eq(Time.zone.local(2026, 10, 18))
+      end
+    end
+
+    it "keeps a monthly plan and the 30-day sprint as one window, even across a short month or in the grace" do
+      start = Time.zone.local(2027, 2, 1, 9)
+      sprint = subscribe("sprint", current_period_start: start, current_period_end: start + 30.days)
+      travel_to(Time.zone.local(2027, 3, 2, 12)) do
+        plan = described_class.for(user)
+        expect(plan).to have_attributes(key: :sprint, period_start: start, period_name: "billing period")
+      end
+
+      sprint.destroy!
+      subscribe("creator", current_period_start: Time.zone.local(2026, 9, 25, 9), current_period_end: Time.zone.local(2026, 10, 25, 9))
+      travel_to(Time.zone.local(2026, 10, 26, 12)) do
+        expect(described_class.for(user).period_start).to eq(Time.zone.local(2026, 9, 25, 9))
+      end
+    end
+
+    it "falls back to the calendar month, with month wording, without a period start" do
+      subscribe("creator", current_period_start: nil)
+      travel_to(Time.zone.local(2026, 10, 25, 12)) do
+        expect(described_class.for(user)).to have_attributes(period_start: Time.zone.local(2026, 10, 1), period_name: "month")
+      end
+    end
+  end
+
   describe "pro and sprint" do
     it "gives pro 3 shows, a deeper scan and CSV export" do
       subscribe("pro")
@@ -271,7 +335,59 @@ RSpec.describe Entitlements do
     end
   end
 
+  describe "a refusal's details" do
+    it "captures the counts the upgrade prompt shows, as they were when the plan refused (R63)" do
+      subscribe("creator")
+      3.times { report("agent", bucket: "paid") }
+      report("agent", status: "running", bucket: "paid", on: create(:show, user: user))
+      expect { described_class.for(user).authorize!(:agent) }.to raise_error(Entitlements::NotAllowed) { |error|
+        expect(error.details).to eq(reason: :limit, kind: :agent, bucket: :paid, used: 3, in_flight: 1, limit: 4,
+                                    period: "billing period")
+      }
+    end
+
+    it "leaves the counts out for other reasons, and the period out where the plan counts in total" do
+      expect { described_class.for(user).authorize!(:agent) }.to raise_error(Entitlements::NotAllowed) { |error|
+        expect(error.details).to eq(reason: :plan, kind: :agent, bucket: nil)
+      }
+
+      travel_to(Time.zone.local(2026, 10, 25, 12)) do
+        AppSettings.set(:promo_pro_until, "2026-11-06")
+        report("agent", bucket: "promo")
+        expect { described_class.for(user).authorize!(:agent) }.to raise_error(Entitlements::NotAllowed) { |error|
+          expect(error.details).to include(reason: :limit, used: 1, limit: 1, period: nil, bucket: :promo)
+        }
+      end
+    end
+  end
+
+  describe "stub_plan" do
+    it "changes plans.yml values, so the predicates and the gate agree" do
+      stub_plan(pitches: 0)
+      plan = described_class.for(user)
+      expect(plan.can_pitch?).to be false
+      expect(plan.can_run?(:pitch)).to be false
+      expect(reason(plan, :pitch)).to eq(:plan)
+
+      stub_plan(pitches: 1)
+      pitch
+      plan = described_class.for(user)
+      expect(plan.pitches_left).to eq(0)
+      expect(plan.can_run?(:pitch)).to be false
+      expect(reason(plan, :pitch)).to eq(:limit)
+    end
+
+    it "refuses a value plans.yml doesn't have" do
+      expect { stub_plan(can_pitch?: false) }.to raise_error(ArgumentError, /can_pitch\?/)
+    end
+  end
+
   describe ".lock_usage!" do
+    it "refuses to run outside a transaction, where the lock would end at once" do
+      allow(ActiveRecord::Base.connection).to receive(:transaction_open?).and_return(false)
+      expect { described_class.lock_usage!(user) }.to raise_error(/inside a transaction/)
+    end
+
     it "takes a transaction-scoped advisory lock on the user in its own namespace" do
       allow(ActiveRecord::Base.connection).to receive(:execute).and_call_original
       ActiveRecord::Base.transaction { described_class.lock_usage!(user) }

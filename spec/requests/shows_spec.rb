@@ -259,11 +259,13 @@ RSpec.describe "Shows" do
         end
 
         it "keeps the hints and explains with an upgrade prompt when the plan doesn't allow the run" do
-          allow(Report).to receive(:start!).and_raise(Entitlements::NotAllowed.new(:limit))
+          refusal = Entitlements::NotAllowed.new(:limit, kind: :agent, bucket: :paid, used: 4, in_flight: 0, limit: 4,
+                                                         period: "billing period")
+          allow(Report).to receive(:start!).and_raise(refusal)
           patch "/shows/#{show.id}", params: { show: { hints: hints }, rerun: "agent" }
           expect(response).to redirect_to(show_path(show))
           expect(flash[:notice]).to eq("Details saved.")
-          expect(flash[:upgrade]).to eq("reason" => "limit", "kind" => "agent")
+          expect(flash[:upgrade]).to include("reason" => "limit", "kind" => "agent", "used" => 4, "limit" => 4)
           expect(show.reload.hints[:topics]).to eq([ "saas" ])
         end
 

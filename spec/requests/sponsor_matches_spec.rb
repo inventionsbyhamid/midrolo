@@ -125,7 +125,7 @@ RSpec.describe "Sponsor matches" do
       snapshot = create(:report, show: show, kind: "snapshot", status: "done")
       visible = create(:sponsor_match, report: snapshot, position: 1, name: "Visible Brand")
       locked = create(:sponsor_match, report: snapshot, position: 2, name: "Locked Brand")
-      stub_plan(visible_matches_limit: 1)
+      stub_plan(visible_matches: 1)
 
       patch sponsor_match_path(visible), params: { sponsor_match: { status: "saved" } }, headers: turbo
       expect(response).to have_http_status(:ok)
@@ -141,7 +141,7 @@ RSpec.describe "Sponsor matches" do
     it "edits any match on an agent report, whatever the visible limit (R44)" do
       first = create(:sponsor_match, report: report, position: 1)
       later = create(:sponsor_match, report: report, position: 2)
-      stub_plan(visible_matches_limit: 1)
+      stub_plan(visible_matches: 1)
 
       [ first, later ].each do |m|
         patch sponsor_match_path(m), params: { sponsor_match: { status: "saved" } }, headers: turbo
@@ -150,7 +150,7 @@ RSpec.describe "Sponsor matches" do
     end
 
     context "without the pipeline on their plan (R45)" do
-      before { stub_plan(pipeline?: false) }
+      before { stub_plan(pipeline: false) }
 
       it "sends a Turbo submit to pricing with a notice and saves nothing" do
         patch sponsor_match_path(brand_match), params: { sponsor_match: { status: "pitched" } }, headers: turbo

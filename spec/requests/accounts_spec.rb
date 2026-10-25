@@ -56,6 +56,27 @@ RSpec.describe "Account" do
                  "Pitches: 0 of 40 used this billing period" ])
     end
 
+    it "counts work in progress apart from done work, as the upgrade prompt does" do
+      create(:subscription, user: user, plan: "creator")
+      create(:report, show: show, kind: "agent", status: "done", spend_bucket: "paid")
+      create(:report, show: create(:show, user: user), kind: "agent", status: "running", started_at: 1.minute.ago)
+      sign_in user
+      get "/account"
+
+      expect(card("Usage").css("li").first.text.squish).to eq("Full reports: 1 of 4 used this billing period, 1 in progress")
+    end
+
+    it "gives the sprint's length from plans.yml" do
+      create(:subscription, user: user, plan: "sprint", current_period_end: 29.days.from_now)
+      allow(Entitlements).to receive(:limits).and_wrap_original do |original, key|
+        key.to_sym == :sprint ? original.call(key).merge(duration_days: 14) : original.call(key)
+      end
+      sign_in user
+      get "/account"
+
+      expect(card("Plan").text.squish).to include("You're on the Sponsor Sprint: Pro features for 14 days.")
+    end
+
     it "shows judge access with its reports in total and unlimited pitches, never a huge number" do
       user.update!(judge: true)
       create(:report, show: show, kind: "agent", status: "done", spend_bucket: "judge", created_at: 2.months.ago)

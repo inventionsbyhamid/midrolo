@@ -1,4 +1,4 @@
-<%# locals: (sponsor_match:, pitch:, limit_reason: nil) -%>
+<%# locals: (sponsor_match:, pitch:, refusal: nil) -%>
 <%# The pitch pack as a page, for a browser without JavaScript (the dialog's content, under a heading). %>
 <% content_for :title, "Pitch for #{sponsor_match.name}" %>
 <div class="mx-auto flex max-w-2xl flex-col gap-6">
@@ -7,6 +7,6 @@
   </p>
   <h1 class="type-h2">Pitch for <%= sponsor_match.name %></h1>
   <div class="card p-5 sm:p-6">
-    <%= render "pitches/pack", sponsor_match: sponsor_match, pitch: pitch, limit_reason: limit_reason %>
+    <%= render "pitches/pack", sponsor_match: sponsor_match, pitch: pitch, refusal: refusal %>
   </div>
 </div>

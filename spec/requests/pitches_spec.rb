@@ -208,7 +208,7 @@ RSpec.describe "Pitches" do
       end
 
       it "is hidden without the pipeline on the plan (R45)" do
-        stub_plan(pipeline?: false)
+        stub_plan(pipeline: false)
         expect(mark_pitched_button).to be_nil
         expect(stream("update", "pitch_dialog").at_xpath(".//button[contains(., 'Regenerate')]")).to be_present
       end
@@ -262,7 +262,7 @@ RSpec.describe "Pitches" do
 
     describe "limits" do
       it "returns 402 with an upgrade dialog when the plan has no pitches" do
-        stub_plan(can_pitch?: false)
+        stub_plan(pitches: 0)
         expect { post sponsor_match_pitch_path(brand_match), headers: turbo }.not_to change(Pitch, :count)
 
         expect(response).to have_http_status(:payment_required)
@@ -290,18 +290,18 @@ RSpec.describe "Pitches" do
 
       it "returns 402 when the period's pitches are used up, in the open dialog on Regenerate" do
         write_pitch
-        stub_plan(pitches_left: 0)
+        stub_plan(pitches: 1)
         expect { post sponsor_match_pitch_path(brand_match), params: { regenerate: 1 }, headers: turbo }.not_to change(Pitch, :count)
 
         expect(response).to have_http_status(:payment_required)
         pack = stream("replace", dom_id(brand_match, :pitch_pack))
-        expect(pack.at_css(".upgrade-prompt").text.squish).to include("You've used 40 of 40 pitches this month")
+        expect(pack.at_css(".upgrade-prompt").text.squish).to include("You've used 1 of 1 pitch this month")
         expect(pack.at_css("a[href='#{pricing_path}']")).to be_present
       end
 
       it "reserves pitches still being written: with 1 left, a second card gets 402 (R53)" do
         other = create(:sponsor_match, report: report, name: "Ramp")
-        stub_plan(pitches_left: 1)
+        stub_plan(pitches: 1)
 
         post sponsor_match_pitch_path(brand_match), headers: turbo
         expect(response).to have_http_status(:ok)
@@ -309,24 +309,39 @@ RSpec.describe "Pitches" do
         expect(response).to have_http_status(:payment_required)
       end
 
+      it "shows the pitch a double-submit started while it waited for the lock, not a 402 (R61)" do
+        stub_plan(pitches: 1)
+        twin = nil
+        # The other request took the lock first and committed its pitch while this one waited.
+        allow(Entitlements).to receive(:lock_usage!).and_wrap_original do |original, locked_user|
+          twin ||= Pitch.create!(sponsor_match: brand_match)
+          original.call(locked_user)
+        end
+
+        expect { post sponsor_match_pitch_path(brand_match), headers: turbo }.not_to have_enqueued_job(GeneratePitchJob)
+        expect(response).to have_http_status(:ok)
+        expect(Pitch.pluck(:id)).to eq([ twin.id ])
+        expect(stream("update", "pitch_dialog").at_css("[data-stream-catchup-url-value*='pitch_id=#{twin.id}']")).to be_present
+      end
+
       it "doesn't reserve a pitch stuck in the queue" do
         other = create(:sponsor_match, report: report, name: "Ramp")
         Pitch.create!(sponsor_match: other, created_at: (Pitch::STALE_AFTER + 1.minute).ago)
-        stub_plan(pitches_left: 1)
+        stub_plan(pitches: 1)
 
         expect { post sponsor_match_pitch_path(brand_match), headers: turbo }.to change(Pitch, :count).by(1)
         expect(response).to have_http_status(:ok)
       end
 
       it "writes pitches on an unlimited plan" do
-        stub_plan(pitches_left: Float::INFINITY)
+        stub_plan(pitches: "unlimited")
         expect { post sponsor_match_pitch_path(brand_match), headers: turbo }.to change(Pitch, :count).by(1)
         expect(response).to have_http_status(:ok)
       end
 
       it "still shows a pitch already written when over the limit" do
         write_pitch
-        stub_plan(can_pitch?: false)
+        stub_plan(pitches: 0)
         get sponsor_match_pitch_path(brand_match), headers: turbo
         expect(response).to have_http_status(:ok)
         expect(stream("update", "pitch_dialog").at_css("[data-pitch-subject]")).to be_present
@@ -345,14 +360,15 @@ RSpec.describe "Pitches" do
           expect(prompt.text.squish).to eq("Back after a short maintenance break.")
         end
 
-        it "refuses with 402 and the waitlist when the judge reserve is spent" do
+        it "refuses with 402 and today's capacity, not a waitlist, when the judge reserve is spent (R63a)" do
           allow(Llm::Budget).to receive(:allow?).with(:judge).and_return(false)
           post sponsor_match_pitch_path(brand_match), headers: turbo
 
           expect(response).to have_http_status(:payment_required)
           prompt = stream("update", "pitch_dialog").at_css("[data-upgrade-reason='budget']")
-          expect(prompt.text.squish).to include("Pitch packs are paused for now — join the waitlist")
-          expect(prompt.at_css("a[href='#{pricing_path}']").text).to eq("Join the waitlist")
+          expect(prompt.text.squish)
+            .to eq("We've hit today's capacity for pitch packs — try again tomorrow. This didn't use any of your quota.")
+          expect(prompt.at_css("a")).to be_nil
         end
 
         it "shows that pitches are paused when the budget refuses after queueing, records no charge and counts nothing" do
@@ -388,7 +404,7 @@ RSpec.describe "Pitches" do
         visible = create(:sponsor_match, report: snapshot, position: 1, name: "Visible Brand")
         locked = create(:sponsor_match, report: snapshot, position: 2, name: "Locked Brand")
         Pitch.create!(sponsor_match: locked, status: "done", subject: "Locked subject", body: "Locked body")
-        stub_plan(visible_matches_limit: 1)
+        stub_plan(visible_matches: 1)
 
         with_production_errors do
           post sponsor_match_pitch_path(locked), headers: turbo

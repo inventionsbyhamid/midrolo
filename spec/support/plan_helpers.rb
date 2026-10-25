@@ -1,13 +1,16 @@
-# stub_plan(pipeline?: false, visible_matches_limit: 5): Entitlements.for returns a real plan (Creator by default;
-# stub_plan(:pro, ...) for another) for the user asked about, with those answers changed, so a spec states only what
-# differs. Usage and in-flight work still come from that user's records, and the gate (Plan#authorize!) reads the
-# changed answers.
+# stub_plan(pitches: 1, pipeline: false): Entitlements.for gives every user the real Creator plan (stub_plan(:pro, ...)
+# for another) with those config/plans.yml values changed. It changes the plan's numbers (Entitlements.limits), not
+# its methods, so every answer, the gate (Plan#authorize!) included, follows them; usage still comes from the user's
+# own records. A key plans.yml doesn't have raises, so a typo can't pass silently.
 module PlanHelpers
-  def stub_plan(key = :creator, **overrides)
-    plan_class = Class.new(Entitlements::Plan) do
-      overrides.each { |name, value| define_method(name) { |*| value } }
+  def stub_plan(key = :creator, **values)
+    unknown = values.keys - Entitlements::LIMIT_KEYS
+    raise ArgumentError, "stub_plan: not a plans.yml limit: #{unknown.join(', ')}" if unknown.any?
+
+    allow(Entitlements).to receive(:limits).and_wrap_original do |original, plan_key|
+      plan_key.to_sym == key ? original.call(plan_key).merge(values) : original.call(plan_key)
     end
-    allow(Entitlements).to receive(:for) { |user| plan_class.new(key, user: user) }
+    allow(Entitlements).to receive(:for) { |user| Entitlements::Plan.new(key, user: user) }
   end
 end
 

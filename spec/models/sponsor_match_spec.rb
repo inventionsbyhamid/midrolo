@@ -151,7 +151,7 @@ RSpec.describe SponsorMatch do
     end
 
     context "with a Snapshot the plan limits to 1 visible match (R43)" do
-      before { stub_plan(visible_matches_limit: 1) }
+      before { stub_plan(visible_matches: 1) }
 
       it "gives a locked match nothing, so its brand can't reach the pipeline" do
         copy(old_report, "b1", status: "pitched")

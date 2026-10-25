@@ -145,7 +145,7 @@ RSpec.describe "Public media kits" do
       visit_kit
       expect(response.body).to include("Made with Midrolo")
 
-      stub_plan(kit_badge?: false)
+      stub_plan(kit_badge: false)
       visit_kit
       expect(response.body).not_to include("Made with Midrolo")
     end

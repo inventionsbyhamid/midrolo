@@ -39,12 +39,33 @@ RSpec.describe "Reports" do
         4.times { create(:report, show: show, kind: "agent", status: "done", spend_bucket: "paid") }
         expect { post show_reports_path(show), params: { kind: "agent" } }.not_to change(Report, :count)
         expect(response).to redirect_to(show_path(show))
-        expect(flash[:upgrade]).to eq("reason" => "limit", "kind" => "agent")
+        expect(flash[:upgrade]).to eq("reason" => "limit", "kind" => "agent", "bucket" => "paid", "used" => 4,
+                                      "in_flight" => 0, "limit" => 4, "period" => "billing period")
 
         follow_redirect!
         prompt = Nokogiri::HTML(response.body).at_css(".upgrade-prompt")
         expect(prompt.text.squish).to include("You've used 4 of 4 reports this billing period")
         expect(prompt.at_css("a[href='#{pricing_path}']").text).to eq("See plans")
+      end
+
+      it "shows the numbers from when it refused, even if a report in progress fails before the page loads (R63)" do
+        3.times { create(:report, show: show, kind: "agent", status: "done", spend_bucket: "paid") }
+        running = create(:report, show: create(:show, user: user), kind: "agent", status: "running", started_at: 1.minute.ago)
+        post show_reports_path(show), params: { kind: "agent" }
+        running.mark_failed!
+
+        follow_redirect!
+        expect(Nokogiri::HTML(response.body).at_css(".upgrade-prompt").text.squish)
+          .to include("You've used 3 of 4 reports this billing period, and 1 more is in progress")
+      end
+
+      it "tells a subscriber at today's capacity to try tomorrow, not to join a waitlist (R63a)" do
+        allow(Llm::Budget).to receive(:allow?).with(:paid).and_return(false)
+        post show_reports_path(show), params: { kind: "agent" }
+        follow_redirect!
+        prompt = Nokogiri::HTML(response.body).at_css(".upgrade-prompt")
+        expect(prompt.text.squish).to include("We've hit today's capacity for full reports — try again tomorrow.")
+        expect(prompt.text).not_to include("waitlist")
       end
 
       it "tells a free user full reports are on Creator and up" do
