@@ -38,6 +38,9 @@ RSpec.describe "reports/sections/_matches" do
       expect(html.css("[data-locked-match]").size).to eq(10) # shapes only; the count is in the prompt
       unlock = html.at_css("a[href='/pricing']")
       expect(unlock.text.squish).to eq("Unlock 38 more matches")
+      # The page's one primary action is its next step, in At a glance (R111).
+      expect(unlock["class"].split).to include("btn-secondary")
+      expect(unlock["class"].split).not_to include("btn-primary")
     end
 
     it "puts no hidden brand's name, reason, image, website or evidence in the HTML (R43)" do
@@ -168,6 +171,9 @@ RSpec.describe "reports/sections/_matches" do
       expect(form["method"]).to eq("post")
       expect(form.at_css("button")["disabled"]).to be_nil
       expect(card.text).not_to include("coming soon")
+      # A quiet button: the report's one primary action is its next step (R111).
+      expect(form.at_css("button")["class"].split).to include("btn-secondary")
+      expect(form.at_css("button")["class"].split).not_to include("btn-primary")
     end
 
     it "offers a live pipeline form: a labelled status select that saves on change, notes and a follow-up date" do
@@ -268,6 +274,8 @@ RSpec.describe "reports/sections/_matches" do
     card = html.at_css("[data-filter-target='item']")
     link = card.at_css("a[href='/sponsor_matches/#{match.id}/pitch'][data-turbo-stream='true']")
     expect(link.text.squish).to eq("Open pitch")
+    expect(link["class"].split).to include("btn-secondary") # R111
+    expect(link["class"].split).not_to include("btn-primary")
     expect(card.at_xpath(".//button[contains(., 'Write my pitch')]")).to be_nil
   end
 

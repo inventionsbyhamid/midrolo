@@ -51,6 +51,7 @@ RSpec.describe "First run" do
   it "takes a new user from the landing page to a Snapshot, the upgrade prompt and pricing with no dead ends" do
     visit "/"
     expect(page).to have_css("h1")
+    within("#hero") { expect_primary_action("Get my free Snapshot") }
     screenshot("landing")
     within("#hero") { click_link "Get my free Snapshot" }
 
@@ -97,7 +98,19 @@ RSpec.describe "First run" do
       expect_primary_action("Run full report")
     end
     expect(page).to have_css("[data-locked-match]", minimum: 1) # the rest of the matches wait behind an upgrade
+    # One primary action on the page, the next step; a row's Write my pitch is a quiet button (R111).
+    expect(all("main .btn-primary", visible: true).map { |node| node.text.squish }).to eq([ "Run full report" ])
     screenshot("snapshot")
+
+    # The free plan writes no pitches: a row's Write my pitch opens the upgrade prompt instead.
+    first(".match-row button", text: "Write my pitch").click
+    within("dialog[open]") do
+      prompt = find(".upgrade-prompt", text: "Pitch packs are on Creator and up")
+      expect(prompt).to have_link("See plans", href: "/pricing")
+      find("button[aria-label='Close']").click
+    end
+    expect(page).to have_no_css("dialog[open]")
+
     within("#report_summary") { click_button "Run full report" }
 
     # A free plan has no full reports: the show page says why, with the way on.

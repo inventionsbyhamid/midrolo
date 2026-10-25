@@ -2,12 +2,13 @@
 <%#
   The card's way into its pitch pack: Write my pitch until the match has one, then Open pitch, so a second click never
   spends another pitch. Either answers with a Turbo Stream that opens the dialog (pitches/_dialog); a new pitch's
-  create response swaps this in for the Open pitch link.
+  create response swaps this in for the Open pitch link. A quiet button (R111): the report's one primary action is its
+  next step in At a glance. A plan that writes no pitches still sees it; the dialog then shows the upgrade prompt.
 %>
 <div id="<%= dom_id(sponsor_match, :pitch_button) %>" class="contents">
   <% if pitch_written?(sponsor_match) %>
-    <%= link_to "Open pitch", sponsor_match_pitch_path(sponsor_match), class: "btn btn-primary btn-sm", data: { turbo_stream: true } %>
+    <%= link_to "Open pitch", sponsor_match_pitch_path(sponsor_match), class: "btn btn-secondary btn-sm", data: { turbo_stream: true } %>
   <% else %>
-    <%= button_to "Write my pitch", sponsor_match_pitch_path(sponsor_match), class: "btn btn-primary btn-sm", form_class: "contents" %>
+    <%= button_to "Write my pitch", sponsor_match_pitch_path(sponsor_match), class: "btn btn-secondary btn-sm", form_class: "contents" %>
   <% end %>
 </div>
