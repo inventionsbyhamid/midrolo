@@ -1,6 +1,6 @@
 # The admin page's budget and promo settings (R68), kept as typed so a refused form shows what was entered. Saving
-# validates every value, then writes through AppSettings only the ones that changed, normalized; changed_settings
-# says what changed from what, for the log. Llm::Budget and Entitlements read the values back.
+# validates every value, then writes through AppSettings, in one transaction, only the ones that changed, normalized;
+# changed_settings says what changed from what, for the log. Llm::Budget and Entitlements read the values back.
 module Admin
   class SettingsForm
     include ActiveModel::Model
@@ -32,12 +32,14 @@ module Admin
       return false unless valid?
 
       before = self.class.current
-      normalized.each do |key, value|
-        was = before.public_send(key)
-        next if was == value
+      Setting.transaction do
+        normalized.each do |key, value|
+          was = before.public_send(key)
+          next if was == value
 
-        AppSettings.set(key, value)
-        @changed_settings << "#{key} from #{was || 'unset'} to #{value}"
+          AppSettings.set(key, value)
+          @changed_settings << "#{key} from #{was || 'unset'} to #{value}"
+        end
       end
       true
     end

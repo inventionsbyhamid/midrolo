@@ -1,12 +1,14 @@
 # The admin area's one guard (R68), for the dashboard and for Mission Control Jobs at /admin/jobs (its base controller,
 # config/application.rb). It takes both a signed-in admin and HTTP basic auth against ADMIN_USERNAME and
 # ADMIN_PASSWORD. Anyone who isn't a signed-in admin gets the ordinary 404, before any basic-auth challenge, so the
-# area's existence doesn't leak; with either variable unset, it is a 404 for everyone.
+# area's existence doesn't leak; with either variable unset, it is a 404 for everyone. Both checks run before every
+# other callback, CSRF verification included, so a token-less POST from anyone else is a 404, not a 422 (R83).
 module Admin
   class BaseController < ApplicationController
     layout "app"
-    before_action :require_admin
-    before_action :require_basic_auth
+    # Prepended in reverse: require_admin runs first, then require_basic_auth.
+    prepend_before_action :require_basic_auth
+    prepend_before_action :require_admin
 
     private
 

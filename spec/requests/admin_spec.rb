@@ -65,6 +65,60 @@ RSpec.describe "Admin" do
     end
   end
 
+  describe "access to what changes things (R68)" do
+    # A request answered with the 404 raises, so it never writes the session cookie: each one signs in afresh.
+    [ [ :patch, "/admin/settings" ], [ :post, "/admin/pause" ], [ :delete, "/admin/pause" ],
+      [ :post, "/admin/jobs/applications/midrolo/jobs/job-1/retry" ],
+      [ :post, "/admin/jobs/applications/midrolo/jobs/job-1/discard" ],
+      [ :post, "/admin/jobs/applications/midrolo/jobs/job-1/dispatch" ],
+      [ :post, "/admin/jobs/applications/midrolo/jobs/bulk_retries" ],
+      [ :post, "/admin/jobs/applications/midrolo/jobs/bulk_discards" ],
+      [ :post, "/admin/jobs/applications/midrolo/queues/default/pause" ],
+      [ :delete, "/admin/jobs/applications/midrolo/queues/default/pause" ],
+      [ :patch, "/admin/jobs/applications/midrolo/recurring_tasks/nightly" ] ].each do |method, path|
+      it "#{method.upcase} #{path}: 404 for a non-admin or with the env unset, 401 for an admin without basic auth" do
+        params = { reason: "x", settings: { promo_budget_usd: "1" } }
+
+        sign_in create(:user)
+        public_send(method, path, params: params, headers: basic_auth)
+        expect(response).to have_http_status(:not_found)
+
+        sign_in admin
+        with_admin_env(password: nil) { public_send(method, path, params: params, headers: basic_auth) }
+        expect(response).to have_http_status(:not_found)
+
+        sign_in admin
+        public_send(method, path, params: params)
+        expect(response).to have_http_status(:unauthorized)
+
+        expect(Setting.count).to eq(0)
+      end
+    end
+
+    context "with CSRF protection on" do
+      around do |example|
+        ActionController::Base.allow_forgery_protection = true
+        example.run
+      ensure
+        ActionController::Base.allow_forgery_protection = false
+      end
+
+      it "checks who is asking before the token, so a token-less POST doesn't reveal the area" do
+        sign_in create(:user)
+        post "/admin/pause", params: { reason: "x" }, headers: basic_auth
+        expect(response).to have_http_status(:not_found)
+
+        post "/admin/pause", params: { reason: "x" }, headers: basic_auth
+        expect(response).to have_http_status(:not_found)
+
+        sign_in admin
+        post "/admin/pause", params: { reason: "x" }
+        expect(response).to have_http_status(:unauthorized)
+        expect(AppSettings.runs_paused?).to be(false)
+      end
+    end
+  end
+
   context "as a signed-in admin with basic auth" do
     let(:owner) { create(:user) }
     let(:show) { create(:show, user: owner, title: "Money Talks") }

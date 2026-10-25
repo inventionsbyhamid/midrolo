@@ -69,6 +69,15 @@ RSpec.describe Admin::SettingsForm do
       expect(Setting.pluck(:key)).to eq([ "promo_pro_until" ])
     end
 
+    it "writes nothing when a write fails part way" do
+      AppSettings.set(:promo_pro_until, "2026-11-06")
+      allow(AppSettings).to receive(:set).and_call_original
+      allow(AppSettings).to receive(:set).with(:judge_reserve_usd, anything).and_raise(ActiveRecord::StatementInvalid)
+
+      expect { form(promo_budget_usd: "20", judge_reserve_usd: "6").save }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(Setting.pluck(:key)).to eq([ "promo_pro_until" ])
+    end
+
     it "saves nothing when anything is invalid" do
       record = form(promo_budget_usd: "20", promo_pro_until: "soon")
       expect(record.save).to be(false)
