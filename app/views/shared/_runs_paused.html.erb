@@ -1,0 +1,18 @@
+<%# The paused-runs note and notify-me box, beside run buttons that are disabled while AppSettings.runs_paused? (the
+    show page's run card, the report page; R82). The notify list (WaitlistEntry with Billing::NOTIFY_KEY) takes the
+    account's email. %>
+<div class="flex flex-col gap-3" data-runs-paused>
+  <p class="font-semibold" role="status">New reports are paused — we'll email you when they're back</p>
+  <% if WaitlistEntry.exists?(email: current_user.email, price_key: Billing::NOTIFY_KEY) %>
+    <p class="text-sm text-ink-soft">You're on the list — we'll email you when they're back.</p>
+  <% else %>
+    <%= form_with url: waitlist_entries_path, class: "flex flex-wrap items-center gap-3" do |f| %>
+      <%= hidden_field_tag :price_key, Billing::NOTIFY_KEY %>
+      <label class="flex items-center gap-2 text-sm">
+        <%= check_box_tag :notify, "1", true, required: true %>
+        Email me when new reports are back
+      </label>
+      <%= f.submit "Notify me", class: "btn btn-secondary btn-sm" %>
+    <% end %>
+  <% end %>
+</div>

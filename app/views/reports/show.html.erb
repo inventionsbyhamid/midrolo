@@ -2,6 +2,7 @@
 <% content_for :head, turbo_refreshes_with(method: :morph, scroll: :preserve) %>
 <%= turbo_stream_from @report %>
 <% tone = { "done" => :success, "failed" => :danger, "needs_input" => :warning }.fetch(@report.status, :accent) %>
+<% paused = AppSettings.runs_paused? %>
 <div class="flex flex-col gap-6">
   <%# Sticky under the site header on desktop only: on a phone it would eat a third of the screen. %>
   <header class="flex flex-wrap items-center gap-4 border-b border-line bg-paper py-3 lg:sticky lg:top-16 lg:z-10">
@@ -10,7 +11,7 @@
       <h1 class="type-h2 truncate"><%= link_to @show.title, show_path(@show) %></h1>
       <p id="report_status" class="text-sm"><%= ui_badge @report.status_copy, tone: tone %></p>
     </div>
-    <% if @report.active? %>
+    <% if @report.active? || paused %>
       <%= ui_button "Re-run", type: "button", variant: :secondary, disabled: true %>
     <% else %>
       <%= button_to "Re-run", show_reports_path(@show, kind: @report.kind), method: :post, class: "btn btn-secondary btn-md" %>
@@ -18,10 +19,18 @@
     <%= ui_button "Media kit", show_media_kit_path(@show), variant: :ghost %>
   </header>
 
+  <% if paused %>
+    <div class="upgrade-prompt"><%= render "shared/runs_paused" %></div>
+  <% end %>
+
   <% if @report.failed? %>
     <%= render "components/card", title: "Something went wrong" do %>
       <p><%= @report.error_message.presence || Report::FAILURE_MESSAGE %></p>
-      <%= button_to "Try again", show_reports_path(@show, kind: @report.kind), method: :post, class: "btn btn-primary btn-md mt-3" %>
+      <% if paused %>
+        <%= ui_button "Try again", type: "button", disabled: true, class: "mt-3" %>
+      <% else %>
+        <%= button_to "Try again", show_reports_path(@show, kind: @report.kind), method: :post, class: "btn btn-primary btn-md mt-3" %>
+      <% end %>
     <% end %>
   <% end %>
   <%# A needs_input report asks for comparable shows inside the taste profile section (reports/_needs_input_form). %>

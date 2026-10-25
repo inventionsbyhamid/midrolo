@@ -44,12 +44,20 @@ RSpec.describe "Waitlist entries" do
   end
 
   it "takes the notify key (Task 18) but no key outside plans.yml" do
-    post "/waitlist_entries", params: { email: "grace@example.com", price_key: "notify" }
+    sign_in create(:user, email: "grace@example.com")
+    post "/waitlist_entries", params: { price_key: "notify" }
     expect(WaitlistEntry.sole.price_key).to eq("notify")
 
     post "/waitlist_entries", params: { email: "grace@example.com", price_key: "enterprise" }
     expect(WaitlistEntry.count).to eq(1)
     expect(flash[:alert]).to eq("Pick a plan to join the waitlist for.")
+  end
+
+  it "sends a signed-out visitor to sign in for the notify key, whatever email they give" do
+    post "/waitlist_entries", params: { email: "someone-else@example.com", price_key: "notify" }
+
+    expect(response).to redirect_to("/users/sign_in")
+    expect(WaitlistEntry.count).to eq(0)
   end
 
   it "stays open whatever the billing mode" do

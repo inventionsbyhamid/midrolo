@@ -9,7 +9,11 @@
     <div class="upgrade-card">
       <p class="max-w-prose">This is your free Snapshot. Upgrade for the full agent report: reasons, proven sponsors, pitch emails.</p>
       <div class="mt-4 flex flex-wrap gap-3">
-        <%= button_to "Run full report", show_reports_path(report.show, kind: "agent"), method: :post, class: "btn btn-primary btn-md" %>
+        <% if AppSettings.runs_paused? %>
+          <%= ui_button "Run full report", type: "button", disabled: true %>
+        <% else %>
+          <%= button_to "Run full report", show_reports_path(report.show, kind: "agent"), method: :post, class: "btn btn-primary btn-md" %>
+        <% end %>
         <%= ui_button "See plans", "/pricing", variant: :secondary %>
       </div>
     </div>

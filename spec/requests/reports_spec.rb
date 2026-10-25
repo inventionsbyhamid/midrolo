@@ -169,6 +169,41 @@ RSpec.describe "Reports" do
         expect(response.body).not_to include("This is your free Snapshot")
       end
 
+      context "while new runs are paused (R82)" do
+        before { AppSettings.pause_runs!("Back after maintenance") }
+
+        def page = Nokogiri::HTML(response.body)
+        def disabled_buttons = page.css("button[disabled]").map { |button| button.text.squish }
+
+        it "disables Re-run and Try again and says why, with the notify-me box" do
+          report = create(:report, show: show, kind: "agent", status: "failed", error_message: Report::FAILURE_MESSAGE)
+          get show_report_path(show, report)
+
+          expect(page.css("form[action^='#{show_reports_path(show)}']")).to be_empty
+          expect(disabled_buttons).to include("Re-run", "Try again")
+          paused = page.at_css("[data-runs-paused]")
+          expect(paused.at_css("[role='status']").text.squish).to eq("New reports are paused — we'll email you when they're back")
+          expect(paused.at_css("form[action='#{waitlist_entries_path}'] input[name='price_key']")["value"]).to eq("notify")
+        end
+
+        it "disables a finished Snapshot's Run full report too" do
+          report = create(:report, show: show, kind: "snapshot", status: "done")
+          get show_report_path(show, report)
+
+          expect(page.css("form[action^='#{show_reports_path(show)}']")).to be_empty
+          expect(disabled_buttons).to include("Re-run", "Run full report")
+        end
+
+        it "shows them live again once runs resume" do
+          AppSettings.resume_runs!
+          report = create(:report, show: show, kind: "agent", status: "failed", error_message: Report::FAILURE_MESSAGE)
+          get show_report_path(show, report)
+
+          expect(page.css("form[action^='#{show_reports_path(show)}']").size).to eq(2)
+          expect(page.at_css("[data-runs-paused]")).to be_nil
+        end
+      end
+
       it "leaves the MapLibre stylesheet to the map controller instead of blocking first paint" do
         report = create(:report, show: show, kind: "agent", status: "done",
                                  heatmap: { "location" => "US", "country" => "US",
