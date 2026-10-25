@@ -23,7 +23,8 @@ class ApplicationController < ActionController::Base
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
   # Public media kits opt out (any_browser?): they are server-rendered and must open for any brand.
-  allow_browser versions: :modern, unless: :any_browser?
+  allow_browser versions: :modern, unless: :any_browser?,
+                block: -> { render_static_page("406-unsupported-browser", status: :not_acceptable) }
 
   # Changes to the importmap will invalidate the etag for HTML responses
   stale_when_importmap_changes
@@ -49,8 +50,17 @@ class ApplicationController < ActionController::Base
     redirect_to path, flash: messages.merge(upgrade: error.details.as_json)
   end
 
-  # The app's friendly 429 (ThrottledResponse), for throttle's limits.
+  # A page from public/. It carries its own inline <style> and nothing a visitor wrote, so it goes without the
+  # Content Security Policy, which would block that style.
+  def render_static_page(name, status:)
+    request.content_security_policy = nil
+    render file: Rails.public_path.join("#{name}.html"), layout: false, status: status
+  end
+
+  # The app's friendly 429 (ThrottledResponse), for throttle's limits. Its page is public/429.html, so like
+  # render_static_page it goes without the Content Security Policy.
   def render_throttled(retry_after:)
+    request.content_security_policy = nil
     status, headers, body = ThrottledResponse.new(request, retry_after: retry_after).to_rack
     self.status = status
     self.content_type = headers.fetch("content-type")

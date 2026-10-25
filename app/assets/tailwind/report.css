@@ -456,6 +456,19 @@
     right: 18%;
   }
 
+  /* A bar reaches up (or down) from the average line by its lean in tenths of the scale, at most half the track. Set
+     here rather than in a style attribute, which the Content Security Policy blocks. */
+  .age-bar-fill[data-segments="1"] { height: 5%; }
+  .age-bar-fill[data-segments="2"] { height: 10%; }
+  .age-bar-fill[data-segments="3"] { height: 15%; }
+  .age-bar-fill[data-segments="4"] { height: 20%; }
+  .age-bar-fill[data-segments="5"] { height: 25%; }
+  .age-bar-fill[data-segments="6"] { height: 30%; }
+  .age-bar-fill[data-segments="7"] { height: 35%; }
+  .age-bar-fill[data-segments="8"] { height: 40%; }
+  .age-bar-fill[data-segments="9"] { height: 45%; }
+  .age-bar-fill[data-segments="10"] { height: 50%; }
+
   .age-bar[data-lean="over"] .age-bar-fill {
     bottom: 50%;
     border-radius: 3px 3px 0 0;

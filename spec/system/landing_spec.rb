@@ -70,9 +70,11 @@ RSpec.describe "Landing and public pages" do
 
   it "has checks that catch what they look for" do
     visit "/about"
+    # The colors go on through the CSSOM: the Content Security Policy blocks style attributes.
     execute_script(<<~JS)
       document.querySelector("main").insertAdjacentHTML("beforeend",
-        '<p style="color: #b9aec0; background: #fff">Faint text</p><img src="/icon-192.png"><h4>Skipped</h4>')
+        '<p id="faint">Faint text</p><img src="/icon-192.png"><h4>Skipped</h4>')
+      Object.assign(document.getElementById("faint").style, { color: "#b9aec0", background: "#fff" })
     JS
 
     expect(contrast_failures).to include(a_string_including("Faint text"))
