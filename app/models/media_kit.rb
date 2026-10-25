@@ -4,6 +4,8 @@
 class MediaKit < ApplicationRecord
   IMAGE_TYPES = %w[image/jpeg image/png image/webp].freeze
   MAX_IMAGE_BYTES = 5.megabytes
+  # A small file can still decode to a huge bitmap; variants would then eat the server's memory.
+  MAX_IMAGE_SIDE = 8000
   RATE_SLOTS = { "midroll" => "Mid-roll", "preroll" => "Pre-roll", "postroll" => "Post-roll" }.freeze
   HEADLINE_LIMIT = 120
   ABOUT_LIMIT = 2000
@@ -99,7 +101,37 @@ class MediaKit < ApplicationRecord
 
       errors.add(name, "must be a JPEG, PNG or WebP image") unless IMAGE_TYPES.include?(image.blob.content_type)
       errors.add(name, "must be 5 MB or smaller") if image.blob.byte_size > MAX_IMAGE_BYTES
+      check_image_size(name) unless errors.key?(name)
     end
+  end
+
+  def check_image_size(name)
+    width, height = image_dimensions(name)
+    if width.nil?
+      errors.add(name, "couldn't be read as an image. Try a JPEG, PNG or WebP file.")
+    elsif [ width, height ].max > MAX_IMAGE_SIDE
+      errors.add(name, "must be at most #{MAX_IMAGE_SIDE} pixels on each side")
+    end
+  rescue LoadError => e # no libvips here: skip the check rather than refuse every upload
+    Rails.logger.warn("[MediaKit] image size check skipped: #{e.message}")
+  end
+
+  # [width, height] from the image header only (libvips opens lazily and decodes no pixels), or nil when the file
+  # isn't a readable image. The upload hasn't been stored yet, so this reads what was attached.
+  def image_dimensions(name)
+    require "vips"
+    attachable = attachment_changes[name.to_s]&.attachable
+    source = attachable.is_a?(Hash) ? attachable[:io] : attachable
+    image =
+      if source.respond_to?(:path) && source.path.present?
+        Vips::Image.new_from_file(source.path.to_s, access: :sequential)
+      elsif source.respond_to?(:read)
+        source.rewind
+        Vips::Image.new_from_buffer(source.read, "", access: :sequential).tap { source.rewind }
+      end
+    [ image.width, image.height ] if image
+  rescue Vips::Error
+    nil
   end
 
   def rates_are_whole_dollars

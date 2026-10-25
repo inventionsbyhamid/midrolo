@@ -32,6 +32,39 @@ RSpec.describe MediaKit do
       expect(kit.errors.full_messages).to include("Host photo must be 5 MB or smaller")
     end
 
+    describe "dimensions" do
+      # A few hundred bytes that would decode to a huge bitmap: only the header is read to reject it.
+      def png(width, height) = Vips::Image.black(width, height).pngsave_buffer
+
+      it "rejects an image over 8000 pixels on either side, however small the file" do
+        wide = png(8001, 1)
+        expect(wide.bytesize).to be < 2.kilobytes
+        kit.cover = { io: StringIO.new(wide), filename: "wide.png" }
+        expect(kit).not_to be_valid
+        expect(kit.errors.full_messages).to include("Cover must be at most 8000 pixels on each side")
+
+        kit.host_photo = { io: StringIO.new(png(1, 9000)), filename: "tall.png" }
+        kit.cover = nil
+        expect(kit).not_to be_valid
+        expect(kit.errors.full_messages).to eq([ "Host photo must be at most 8000 pixels on each side" ])
+      end
+
+      it "accepts exactly 8000 pixels, read from an uploaded file's path" do
+        Tempfile.create([ "edge", ".png" ], binmode: true) do |file|
+          file.write(png(8000, 1))
+          file.flush
+          kit.cover = Rack::Test::UploadedFile.new(file.path, "image/png")
+          expect(kit).to be_valid
+        end
+      end
+
+      it "rejects a file that claims to be an image but can't be read as one" do
+        kit.cover = { io: StringIO.new("\x89PNG\r\n\x1a\n".b + "garbage" * 20), filename: "broken.png" }
+        expect(kit).not_to be_valid
+        expect(kit.errors.full_messages).to include("Cover couldn't be read as an image. Try a JPEG, PNG or WebP file.")
+      end
+    end
+
     it "removes a photo when asked" do
       kit.host_photo.attach(io: fixture("host.jpg").open, filename: "host.jpg")
       kit.update!(remove_host_photo: "1")
