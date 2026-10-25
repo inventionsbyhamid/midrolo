@@ -20,11 +20,11 @@ RSpec.describe Billing::Margins do
     it "counts Qloo calls at caps for every full report and Snapshot, at the research cap per report" do
       AppSettings.set(:qloo_cost_per_call_usd, "0.001")
 
-      expect(row("creator_monthly")).to have_attributes(qloo_calls: (4 + 4) * 35, qloo_usd: BigDecimal("0.28"))
-      expect(row("pro_monthly").qloo_calls).to eq((12 + 12) * 35)
-      expect(row("pro_yearly").qloo_calls).to eq((12 + 12) * 35 * 12)
-      expect(row("sprint").qloo_calls).to eq((12 + 12) * 35)
-      expect(row("creator_monthly").margin).to eq((BigDecimal("17.46") - BigDecimal("3.6") - BigDecimal("0.28")) / BigDecimal("17.46"))
+      expect(row("creator_monthly")).to have_attributes(qloo_calls: (4 + 4) * 30, qloo_usd: BigDecimal("0.24"))
+      expect(row("pro_monthly").qloo_calls).to eq((12 + 12) * 30)
+      expect(row("pro_yearly").qloo_calls).to eq((12 + 12) * 30 * 12)
+      expect(row("sprint").qloo_calls).to eq((12 + 12) * 30)
+      expect(row("creator_monthly").margin).to eq((BigDecimal("17.46") - BigDecimal("3.6") - BigDecimal("0.24")) / BigDecimal("17.46"))
     end
 
     it "uses the measured averages when they are higher than the estimates, never when lower" do
@@ -37,7 +37,7 @@ RSpec.describe Billing::Margins do
       Pitch.create!(sponsor_match: match, status: "done", cost_usd: 0.02)
 
       inputs = described_class.check.inputs
-      expect(inputs).to have_attributes(agent_llm_usd: BigDecimal("0.8"), agent_calls: 45, snapshot_calls: 35,
+      expect(inputs).to have_attributes(agent_llm_usd: BigDecimal("0.8"), agent_calls: 45, snapshot_calls: 30,
                                         pitch_llm_usd: described_class::PITCH_ESTIMATE_USD)
     end
   end
@@ -61,10 +61,10 @@ RSpec.describe Billing::Margins do
 
       expect(check).not_to be_ready
       # Shown rounded down, so a margin just under the bar never reads as 60%.
-      expect(check.blockers).to contain_exactly("Creator yearly keeps 56% at its caps, under 60%",
-                                                "Pro monthly keeps 55% at its caps, under 60%",
-                                                "Pro yearly keeps 46% at its caps, under 60%",
-                                                "Sprint keeps 55% at its caps, under 60%")
+      expect(check.blockers).to contain_exactly("Creator yearly keeps 59% at its caps, under 60%",
+                                                "Pro monthly keeps 57% at its caps, under 60%",
+                                                "Pro yearly keeps 49% at its caps, under 60%",
+                                                "Sprint keeps 57% at its caps, under 60%")
     end
 
     it "reads the cost per call as typed in admin, blank meaning unset" do
