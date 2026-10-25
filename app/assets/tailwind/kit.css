@@ -1,5 +1,6 @@
 /*
- * Media kit pages (app/views/media_kits, public_kits) and the verification pages, imported from application.css.
+ * The media kit as brands and the owner's preview see it (app/views/media_kits/_kit and its parts, public_kits),
+ * imported from application.css. The editor and the verification pages are styled in kit_editor.css.
  *
  * The kit is a one-sheet: a single white sheet on the page with a banner (the owner's cover, or the show's own
  * waveform with its mid-roll bar lit), the show, its stats, the audience, the rate card on an episode timeline
@@ -602,127 +603,6 @@
   .kit-badge-link .logo-mark {
     width: 1.25rem;
     height: 1.25rem;
-  }
-
-  /* ---- Kit editor ---- */
-
-  /* A submit button that reads as a link (the one-click owner-address helper, "Send a new code"). */
-  .link-button {
-    display: inline;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--color-plum);
-    font: inherit;
-    font-weight: 600;
-    text-align: left;
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.2em;
-    cursor: pointer;
-  }
-
-  .link-button:hover {
-    text-decoration-thickness: 2px;
-  }
-
-  .kit-thumb {
-    display: block;
-    width: 6rem;
-    height: 6rem;
-    margin-bottom: 0.75rem;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-control);
-    object-fit: cover;
-  }
-
-  .kit-thumb-wide {
-    width: 100%;
-    max-width: 18rem;
-  }
-
-  .kit-file {
-    padding-block: 0.375rem;
-    font-size: 0.875rem;
-  }
-
-  .kit-file::file-selector-button {
-    margin-right: 0.75rem;
-    padding: 0.375rem 0.75rem;
-    border: 1px solid var(--color-line-strong);
-    border-radius: 0.5rem;
-    background: var(--color-paper);
-    color: var(--color-ink);
-    font: inherit;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .kit-hide-brand {
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    min-height: 2.75rem;
-    border-bottom: 1px solid var(--color-line);
-  }
-
-  .kit-hide-brand input {
-    width: 1.125rem;
-    height: 1.125rem;
-    flex: none;
-    accent-color: var(--color-ink);
-  }
-
-  .kit-hide-brand label {
-    min-width: 0;
-    overflow-wrap: anywhere;
-    cursor: pointer;
-  }
-
-  .kit-hide-brand:has(:checked) label {
-    color: var(--color-ink-soft);
-    text-decoration: line-through;
-  }
-
-  /* ---- Verification ---- */
-
-  .verify-token {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 0.75rem 0.75rem 1rem;
-    border: 1px dashed var(--color-line-strong);
-    border-radius: var(--radius-control);
-    background: var(--color-paper);
-  }
-
-  /* The exact text to paste, so it is set like code. */
-  .verify-token-line {
-    flex: 1 1 14rem;
-    min-width: 0;
-    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    font-size: 1rem;
-    font-weight: 600;
-    overflow-wrap: anywhere;
-  }
-
-  .verify-steps {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    margin-top: 1.25rem;
-    padding-left: 1.25rem;
-    list-style: decimal;
-  }
-
-  .input.verify-code {
-    width: 11rem;
-    font-size: 1.5rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.3em;
-    text-align: center;
   }
 }
 
