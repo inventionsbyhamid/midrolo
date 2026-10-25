@@ -37,7 +37,7 @@ RSpec.describe Billing do
         allow(Rails.logger).to receive(:warn)
         AppSettings.set(:qloo_cost_per_call_usd, "0.01")
         with_billing_env(live) { expect(described_class.mode).to eq(:waitlist) }
-        expect(Rails.logger).to have_received(:warn).with(/Pro yearly keeps 49% at its caps, under 60%/)
+        expect(Rails.logger).to have_received(:warn).with(/Pro yearly keeps 43% at its caps, under 60%/) # every report at the hard ceiling (R130)
       end
 
       it "goes live once the cost is set and every paid plan keeps 60% or more" do
