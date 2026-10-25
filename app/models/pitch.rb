@@ -37,6 +37,13 @@ class Pitch < ApplicationRecord
     update!(attributes.slice(*FIELDS).merge(status: "done", model: model, cost_usd: spent, error_message: nil))
   end
 
+  # Takes this queued pitch for the job run that writes it (R135): true for that one claim, so a job delivered twice
+  # (at-least-once) writes, and pays for, the pitch once.
+  def claim_start! = self.class.where(id: id, status: "queued", started_at: nil).update_all(started_at: Time.current) == 1
+
+  # Gives the claim back while the pitch is still queued: a transient error's retry claims it again.
+  def release_start! = self.class.where(id: id, status: "queued").update_all(started_at: nil)
+
   def mark_failed!(message = FAILURE_MESSAGE)
     update!(status: "failed", error_message: message, cost_usd: spent)
   end

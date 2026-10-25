@@ -5,10 +5,10 @@ class ReportJob < ApplicationJob
 
   def perform(report_id)
     report = Report.find_by(id: report_id)
-    return unless report&.queued?
+    # The start is claimed (R135): another delivery of this job that got there first leaves this one nothing to do.
+    return unless report&.claim_start!
 
     begin
-      report.mark_running!
       # A background job may wait out Qloo's minute cap instead of failing the report (R109); a web request never does.
       Taste::CallGuard.waiting { Research::Run.call(report) }
       # The engine may have finished the report itself (for example as needs_input).

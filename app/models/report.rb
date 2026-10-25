@@ -99,6 +99,18 @@ class Report < ApplicationRecord
     update!(status: "running", started_at: Time.current)
   end
 
+  # Moves a queued report to running for the job that claims it (R135): true for that one claim, so a job delivered
+  # twice (at-least-once) runs the research once. Open report pages refresh as for any status change.
+  def claim_start!
+    now = Time.current
+    claimed = self.class.where(id: id, status: "queued").update_all(status: "running", started_at: now, updated_at: now)
+    return false unless claimed == 1
+
+    reload
+    broadcast_status_refresh
+    true
+  end
+
   def mark_done!
     update!(status: "done", finished_at: Time.current)
   end

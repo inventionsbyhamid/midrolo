@@ -62,6 +62,27 @@ RSpec.describe "Report jobs" do
         expect { job.perform_now(report.id) }.not_to raise_error
       end
 
+      # R135: at-least-once delivery. A second delivery reads the report while it is still queued, before this one has
+      # started; its start is a conditional update, so only one of them runs the research.
+      it "runs the research once when the job is delivered twice at the same time" do
+        runs = 0
+        allow(Research::Run).to receive(:call) { runs += 1 }
+        duplicate = true
+        allow(Report).to receive(:find_by).and_wrap_original do |original, *args, **options|
+          found = original.call(*args, **options)
+          if duplicate
+            duplicate = false
+            job.perform_now(report.id) # the other delivery, while this one holds a queued copy
+          end
+          found
+        end
+
+        job.perform_now(report.id)
+
+        expect(runs).to eq(1)
+        expect(report.reload).to have_attributes(status: "done")
+      end
+
       it "ignores a report that is not queued" do
         report.update!(status: "done")
         expect(Research::Run).not_to receive(:call)

@@ -3,7 +3,8 @@
 #
 # Transient provider or network errors re-enqueue the job with a wait (retry_on), up to ATTEMPTS runs in all, so no
 # worker thread sleeps; the pitch stays queued, and reserved, for the next run. Every run first fails a pitch that
-# went stale meanwhile instead of writing it late. A refused budget is never retried.
+# went stale meanwhile instead of writing it late. A refused budget is never retried. Each run claims the pitch
+# before writing (R135), so a second delivery of the job writes nothing; a retry gives the claim back for the next run.
 class GeneratePitchJob < ApplicationJob
   queue_as :default
 
@@ -23,12 +24,14 @@ class GeneratePitchJob < ApplicationJob
     pitch = Pitch.find_by(id: pitch_id)
     return unless pitch&.queued?
     return pitch.mark_failed! if pitch.stale? # shown as failed already; don't write it late
+    return unless pitch.claim_start!
 
     retrying = false
     begin
       pitch.complete!(Pitches::Writer.call(pitch.sponsor_match, pitch: pitch), model: Llm.fake? ? "fake" : Llm.pitch_model)
     rescue *TRANSIENT
       retrying = executions < ATTEMPTS # retry_on enqueues the next run; the pitch stays queued for it
+      pitch.release_start! if retrying
       raise
     rescue Llm::BudgetExceeded
       pitch.mark_failed!(Pitch::PAUSED_MESSAGE)

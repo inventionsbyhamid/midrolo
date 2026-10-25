@@ -152,6 +152,55 @@ RSpec.describe GeneratePitchJob do
     end
   end
 
+  # R135: at-least-once delivery. A second delivery reads the pitch while it is still queued, before this one has
+  # started; its start is a conditional update, so only one of them writes (and pays for) the pitch.
+  it "writes the pitch once when the job is delivered twice at the same time" do
+    writes = 0
+    allow(Pitches::Writer).to receive(:call) { writes += 1; written }
+    duplicate = true
+    allow(Pitch).to receive(:find_by).and_wrap_original do |original, *args, **options|
+      found = original.call(*args, **options)
+      if duplicate
+        duplicate = false
+        described_class.perform_now(pitch.id) # the other delivery, while this one holds a queued copy
+      end
+      found
+    end
+
+    described_class.perform_now(pitch.id)
+
+    expect(writes).to eq(1)
+    expect(pitch.reload.status).to eq("done")
+  end
+
+  it "lets the next attempt start again after a transient error, and no other delivery meanwhile" do
+    writing = false
+    calls = []
+    allow(Pitches::Writer).to receive(:call) do
+      if writing
+        calls << :duplicate
+        next written
+      end
+
+      calls << :attempt
+      writing = true
+      begin
+        if calls.one?
+          described_class.perform_now(pitch.id) # a duplicate delivery while the first attempt writes
+          raise RubyLLM::OverloadedError
+        end
+        written
+      ensure
+        writing = false
+      end
+    end
+
+    perform_enqueued_jobs { described_class.perform_later(pitch.id) }
+
+    expect(calls).to eq(%i[attempt attempt]) # the first attempt and its retry, never the duplicate
+    expect(pitch.reload.status).to eq("done")
+  end
+
   it "ignores a pitch that is no longer queued or no longer exists" do
     pitch.update!(status: "done")
     expect(Pitches::Writer).not_to receive(:call)
