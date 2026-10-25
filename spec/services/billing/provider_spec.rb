@@ -4,10 +4,7 @@ RSpec.describe Billing::Provider do
   describe ".current" do
     it "is Dodo when DODO_API_KEY is set, otherwise the Fake" do
       with_billing_env("DODO_API_KEY" => "key") { expect(described_class.current).to be_a(Billing::Providers::Dodo) }
-      with_billing_env do
-        expect(described_class.current).to be_a(Billing::Providers::Fake)
-        expect(described_class).to be_fake
-      end
+      with_billing_env { expect(described_class.current).to be_a(Billing::Providers::Fake) }
     end
 
     it "refuses the Fake in production" do

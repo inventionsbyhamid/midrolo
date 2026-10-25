@@ -6,7 +6,8 @@ RSpec.describe ProcessBillingEventJob do
   let(:user) { create(:user) }
 
   around do |example|
-    travel_to(Time.utc(2026, 10, 25, 12, 0, 10)) { with_billing_env { example.run } }
+    env = { "BILLING_MODE" => "test", "DODO_PRODUCT_CREATOR_MONTHLY" => "pdt_test_creator_monthly" }
+    travel_to(Time.utc(2026, 10, 25, 12, 0, 10)) { with_billing_env(env) { example.run } }
   end
 
   def billing_event(fixture = "subscription_active", **options)
@@ -75,6 +76,14 @@ RSpec.describe ProcessBillingEventJob do
 
     expect(cancel.reload.processed_at).to be_present
     expect(user.subscriptions.sole.status).to eq("canceled")
+  end
+
+  it "settles an event from a provider this app doesn't have, rather than failing on every retry" do
+    row = BillingEvent.create!(provider: "stripe", event_id: "evt_1", payload: { "type" => "x" })
+
+    described_class.perform_now(row.id)
+
+    expect(row.reload).to have_attributes(processed_at: be_present, error_message: 'No billing provider "stripe" here')
   end
 
   it "ignores an id that no longer exists" do

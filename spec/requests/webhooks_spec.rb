@@ -5,10 +5,14 @@ RSpec.describe "Billing webhooks" do
 
   let(:user) { create(:user) }
 
+  # Test mode, so payments may grant plans; the fixtures' product ids configured as ours.
+  let(:env) do
+    { "BILLING_MODE" => "test", "DODO_WEBHOOK_SECRET" => BillingHelpers::DODO_TEST_WEBHOOK_SECRET,
+      "DODO_PRODUCT_CREATOR_MONTHLY" => "pdt_test_creator_monthly", "DODO_PRODUCT_SPRINT" => "pdt_test_sprint" }
+  end
+
   around do |example|
-    travel_to(Time.utc(2026, 10, 25, 12, 0, 10)) do
-      with_billing_env("DODO_WEBHOOK_SECRET" => BillingHelpers::DODO_TEST_WEBHOOK_SECRET) { example.run }
-    end
+    travel_to(Time.utc(2026, 10, 25, 12, 0, 10)) { with_billing_env(env) { example.run } }
   end
 
   def deliver(body, headers: signed_webhook_headers(body), provider: "dodo")
@@ -85,6 +89,58 @@ RSpec.describe "Billing webhooks" do
     deliver(body, headers: signed_webhook_headers(body, timestamp: 10.minutes.ago.to_i))
     expect(response).to have_http_status(:bad_request)
     expect(BillingEvent.count).to eq(0)
+  end
+
+  it "returns 400, not 500, for a malformed signature header" do
+    body = dodo_webhook("subscription_active", user: user)
+    [ "v1", "v1,", "garbage" ].each do |signature|
+      deliver(body, headers: signed_webhook_headers(body).merge("webhook-signature" => signature))
+      expect(response).to have_http_status(:bad_request)
+    end
+    expect(BillingEvent.count).to eq(0)
+  end
+
+  it "stores the payload without the customer's name, email or address (R77)" do
+    deliver(dodo_webhook("payment_succeeded_onetime", user: user))
+
+    stored = BillingEvent.sole.payload
+    expect(stored.to_json).not_to include("Test Sprinter", "sprinter@example.com", "2 Test Street", "Testville",
+                                          '"billing"', "phone_number", "card_last_four")
+    expect(stored.dig("data", "metadata")).to eq("user_id" => user.id.to_s, "price_key" => "sprint")
+    expect(stored.dig("data", "payment_id")).to eq("pay_test_sprint_001")
+  end
+
+  it "keeps the customer's details out of the request log" do
+    logged = nil
+    log = ->(*, payload) { logged = payload[:params] if payload[:controller] == "WebhooksController" }
+    ActiveSupport::Notifications.subscribed(log, "start_processing.action_controller") do
+      deliver(dodo_webhook("payment_succeeded_onetime", user: user))
+    end
+
+    expect(logged.to_s).to include("pay_test_sprint_001")
+    expect(logged.to_s).not_to include("Test Sprinter", "sprinter@example.com", "2 Test Street", "Testville", "4242")
+  end
+
+  it "grants nothing for another product's payment, even with sprint in its metadata (R75a)" do
+    allow(Rails.logger).to receive(:error)
+    deliver(dodo_webhook("payment_succeeded_onetime", user: user,
+                                                      product_cart: [ { product_id: "pdt_someone_elses_ebook", quantity: 1 } ]))
+
+    expect(Subscription.count).to eq(0)
+    expect(BillingEvent.sole).to have_attributes(processed_at: be_present, error_message: a_string_matching(/not the sprint/))
+  end
+
+  it "grants nothing on the waitlist to a test payment made out to a regular user, but grants a judge (R75b)" do
+    allow(Rails.logger).to receive(:error)
+    with_billing_env(env.except("BILLING_MODE")) do
+      deliver(dodo_webhook("payment_succeeded_onetime", user: user))
+      expect(Subscription.count).to eq(0)
+      expect(BillingEvent.sole.error_message).to match(/No plan granted/)
+
+      judge = create(:user, judge: true)
+      deliver(dodo_webhook("payment_succeeded_onetime", user: judge, payment_id: "pay_test_sprint_002"))
+      expect(judge.subscriptions.sole.plan).to eq("sprint")
+    end
   end
 
   it "returns 404 for a provider it doesn't know" do

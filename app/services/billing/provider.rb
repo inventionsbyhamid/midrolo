@@ -18,10 +18,6 @@ module Billing
         @current = nil
       end
 
-      def fake?
-        current.is_a?(Providers::Fake)
-      end
-
       # The adapter for /webhooks/:name, or nil for a name we don't know (and for the Fake in production). Dodo's
       # webhooks need only DODO_WEBHOOK_SECRET, not the API key.
       def for(name)

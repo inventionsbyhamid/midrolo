@@ -22,7 +22,7 @@ class ProcessBillingEventJob < ApplicationJob
       next if billing_event.processed?
 
       provider = Billing::Provider.for(billing_event.provider)
-      raise ArgumentError, "no billing provider #{billing_event.provider.inspect} here" unless provider
+      next billing_event.mark_processed!("No billing provider #{billing_event.provider.inspect} here") unless provider
 
       event = provider.parse(billing_event.payload.to_json, id: billing_event.event_id)
       billing_event.mark_processed!(Billing::Sync.apply(event))

@@ -17,14 +17,22 @@ module Billing
         "subscription.on_hold" => :payment_failed,
         "subscription.past_due" => :payment_failed
       }.freeze
-      # subscription.updated fires on any change (a cancellation scheduled in the portal, say): we map it by the status
-      # it reports. pending and paused change nothing.
+      # subscription.updated fires on any change (a cancellation scheduled in the portal, say), and plan_changed on an
+      # upgrade or downgrade: we map both by the status they report. pending and paused change nothing.
+      BY_STATUS = %w[subscription.updated subscription.plan_changed].freeze
       STATUS_TYPES = {
         "active" => :subscription_active, "cancelled" => :subscription_canceled, "expired" => :subscription_canceled,
         "failed" => :payment_failed, "on_hold" => :payment_failed, "past_due" => :payment_failed
       }.freeze
       # The buyer waits on checkout and the portal: fail fast instead of the gem's default minute.
       TIMEOUT = 15
+      # What a stored webhook keeps (R77): ids, product, status, amounts and dates, and only our own metadata. Never the
+      # customer's name, email, phone, address or card. #parse reads nothing else, so a stored payload parses as the
+      # delivered one did.
+      STORED_FIELDS = %w[payload_type subscription_id payment_id product_id status currency total_amount
+                         recurring_pre_tax_amount created_at previous_billing_date next_billing_date cancelled_at
+                         expires_at cancel_at_next_billing_date].freeze
+      STORED_METADATA = %w[user_id price_key].freeze
 
       def self.environment = ENV["DODO_ENVIRONMENT"] == "live_mode" ? :live_mode : :test_mode
 
@@ -62,8 +70,6 @@ module Billing
         end.link
       end
 
-      # The price key comes from the paid product when its id is configured (so a plan change shows), else from our
-      # checkout's metadata.
       def parse(raw_body, id: nil)
         payload = object(JSON.parse(raw_body.to_s))
         data = object(payload["data"])
@@ -72,10 +78,10 @@ module Billing
         Event.new(
           id: id, provider: NAME, type: type_for(name, data), name: name,
           customer_id: text(object(data["customer"])["customer_id"]), subscription_id: text(data["subscription_id"]),
-          price_key: price_key_for(data, metadata), user_id: text(metadata["user_id"]),
+          payment_id: text(data["payment_id"]), price_key: price_key_for(data, metadata), user_id: text(metadata["user_id"]),
           period_start: time(data["previous_billing_date"]), period_end: time(data["next_billing_date"]),
           cancel_at_period_end: flag(data["cancel_at_next_billing_date"]),
-          occurred_at: time(payload["timestamp"]), raw: payload
+          occurred_at: time(payload["timestamp"]), raw: stored(payload, data, metadata)
         )
       rescue JSON::ParserError
         Event.new(id: id, provider: NAME, type: nil, name: "")
@@ -98,15 +104,28 @@ module Billing
       # payment.succeeded is ours only for a one-time purchase: a subscription's payments come with its own events.
       def type_for(name, data)
         case name
-        when "subscription.updated" then STATUS_TYPES[text(data["status"])]
+        when *BY_STATUS then STATUS_TYPES[text(data["status"])]
         when "payment.succeeded" then :one_time_paid if text(data["subscription_id"]).nil?
         else EVENT_TYPES[name]
         end
       end
 
+      # The paid product's price key (R75a). Our checkout's metadata counts only when the payload names no product at
+      # all: a static payment link copies metadata_* query parameters into metadata, so another product of the business
+      # could otherwise claim to be the Sprint. A product that isn't ours gives nil, and Sync notes it.
       def price_key_for(data, metadata)
         product_id = text(data["product_id"]) || text(object(Array(data["product_cart"]).first)["product_id"])
-        Billing.price_key_for_product(product_id) || text(metadata["price_key"])
+        product_id ? Billing.price_key_for_product(product_id) : text(metadata["price_key"])
+      end
+
+      def stored(payload, data, metadata)
+        kept = data.slice(*STORED_FIELDS)
+        kept["customer"] = object(data["customer"]).slice("customer_id") if data.key?("customer")
+        kept["metadata"] = metadata.slice(*STORED_METADATA) if data.key?("metadata")
+        if data.key?("product_cart")
+          kept["product_cart"] = Array(data["product_cart"]).map { |item| object(item).slice("product_id", "quantity") }
+        end
+        payload.slice("business_id", "type", "timestamp").merge("data" => kept)
       end
 
       # Total readers for a payload of any shape: a JSON object ({} otherwise), a string id, a boolean.

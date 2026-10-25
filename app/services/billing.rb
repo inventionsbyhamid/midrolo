@@ -48,18 +48,30 @@ module Billing
     # The waitlist's exception: a judge or admin may also try checkout in test mode.
     def test_checkout?(user) = mode == :waitlist && checkout_open?(user)
 
-    # The subscription whose customer portal "Manage billing" opens, where checkout is open to the user: their latest
-    # one with a customer id at the current provider. nil otherwise.
-    def portal_subscription(user)
-      return unless checkout_open?(user)
+    # Whether a verified payment from provider (a provider name) may give user a plan (R75b): when the provider takes
+    # live payments, or when checkout is open to the user. So a test-mode payment link made out to any user id grants
+    # nothing on the waitlist, unless that user is a judge or admin.
+    def grant_allowed?(user, provider:)
+      return false unless user
 
-      user.subscriptions.where(provider: Provider.current.name).where.not(provider_customer_id: [ nil, "" ])
-          .order(:updated_at, :id).last
+      (Provider.live? && provider == Provider.current.name) || checkout_open?(user)
+    end
+
+    # The entitling subscription that stops user buying price, or nil: any one stops a recurring plan; only a recurring
+    # one stops the sprint, since a second sprint extends the first.
+    def blocking_subscription(user, price)
+      Subscription.best_for(user, plans: price.plan == "sprint" ? Subscription::PLANS - [ "sprint" ] : Subscription::PLANS)
+    end
+
+    # The subscription whose customer portal "Manage billing" opens, in any mode (R73): the user's latest one with a
+    # customer id, or nil.
+    def portal_subscription(user)
+      user.subscriptions.where.not(provider_customer_id: [ nil, "" ]).order(:updated_at, :id).last
     end
 
     # Every price in plans.yml, in its order.
     def prices
-      plans.flat_map do |plan, settings|
+      Entitlements.plans.flat_map do |plan, settings|
         next [] unless settings.is_a?(Hash) && settings[:price_keys].is_a?(Hash)
 
         settings[:price_keys].map do |interval, key|
@@ -76,7 +88,7 @@ module Billing
     # The keys a waitlist entry may name.
     def waitlist_keys = prices.map(&:key) << NOTIFY_KEY
 
-    # The provider's product id for a price key (plans.yml price_keys, from ENV), or nil when unset.
+    # The provider's product id for a price key (plans.yml product_ids, from ENV), or nil when unset.
     def product_id(price_key) = product_ids[price_key.to_s.to_sym].presence
 
     def price_key_for_product(product_id)
@@ -85,18 +97,16 @@ module Billing
       product_ids.find { |_key, id| id.to_s == product_id.to_s }&.first&.to_s
     end
 
-    # Forgets the memoized provider and the warnings given (after ENV changes, in specs).
+    # Forgets the memoized provider, plans.yml and the warnings given (after ENV changes, in specs).
     def reset!
       Provider.reset!
+      Entitlements.reset_plans!
       @warned = nil
     end
 
     private
 
-    # Read on every call: product ids come from ENV through ERB, and the file is small.
-    def plans = Rails.application.config_for(:plans)
-
-    def product_ids = plans[:price_keys] || {}
+    def product_ids = Entitlements.plans[:product_ids] || {}
 
     def fall_back(reason)
       @warned ||= Set.new

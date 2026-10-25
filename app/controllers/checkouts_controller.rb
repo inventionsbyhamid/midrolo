@@ -1,6 +1,7 @@
 # Starts a hosted checkout for one price key (spec §5.8, R66). Checkout exists in the test and live billing modes;
 # on the waitlist it is a 404, except for judges and admins against a provider in test mode. The redirect goes only
-# to the URL the provider returns, never to anything from params.
+# to the URL the provider returns, never to anything from params. A user with an entitling subscription changes plans
+# in the portal instead; only the sprint can be bought again, to extend it.
 class CheckoutsController < ApplicationController
   THANKS = "Thanks — your plan updates in a few seconds.".freeze
   NOT_CHARGED = "Checkout didn't go through, so nothing was charged.".freeze
@@ -13,6 +14,11 @@ class CheckoutsController < ApplicationController
   def create
     price = Billing.price(params[:price_key])
     return redirect_to(pricing_path, alert: "That plan isn't available.") unless price
+
+    if (subscription = Billing.blocking_subscription(current_user, price))
+      plan_name = Entitlements.limits(subscription.plan.to_sym).fetch(:name)
+      return redirect_to(account_path, alert: "You're already on #{plan_name} — use Manage billing to change plans.")
+    end
 
     url = Billing::Provider.current.checkout_url(user: current_user, price_key: price.key, return_url: billing_success_url)
     redirect_to url, allow_other_host: true

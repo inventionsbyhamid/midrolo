@@ -68,6 +68,37 @@ RSpec.describe "Checkouts" do
       expect(response).to redirect_to(pricing_path)
     end
 
+    it "sends a subscriber to Manage billing instead of a second subscription" do
+      create(:subscription, user: user, plan: "creator")
+      sign_in user
+
+      %w[creator_monthly pro_yearly sprint].each do |price_key|
+        post "/checkouts", params: { price_key: price_key }
+        expect(response).to redirect_to(account_path)
+        expect(flash[:alert]).to eq("You're already on Creator — use Manage billing to change plans.")
+      end
+    end
+
+    it "lets a sprint be bought again to extend it, but no recurring plan during it" do
+      create(:subscription, user: user, plan: "sprint", current_period_end: 10.days.from_now)
+      sign_in user
+
+      post "/checkouts", params: { price_key: "sprint" }
+      expect(response).to redirect_to(%r{/fake_checkout\?price_key=sprint})
+
+      post "/checkouts", params: { price_key: "pro_monthly" }
+      expect(response).to redirect_to(account_path)
+      expect(flash[:alert]).to eq("You're already on Sprint — use Manage billing to change plans.")
+    end
+
+    it "lets a lapsed subscriber buy again" do
+      create(:subscription, user: user, status: "canceled", current_period_end: 1.day.ago)
+      sign_in user
+
+      post "/checkouts", params: { price_key: "creator_monthly" }
+      expect(response).to redirect_to(%r{/fake_checkout\?price_key=creator_monthly})
+    end
+
     it "thanks the buyer on return, since the webhook may lag" do
       sign_in user
       get "/billing/success", params: { subscription_id: "sub_1", status: "active" }

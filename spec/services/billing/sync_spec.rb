@@ -4,7 +4,10 @@ RSpec.describe Billing::Sync do
   let(:user) { create(:user) }
   let(:t0) { Time.utc(2026, 10, 25, 12) }
 
-  around { |example| travel_to(Time.utc(2026, 10, 25, 12, 0, 10)) { example.run } }
+  # Test mode: checkout is open to every user, so payments may grant plans (R75b has its own examples below).
+  around do |example|
+    travel_to(Time.utc(2026, 10, 25, 12, 0, 10)) { with_billing_env("BILLING_MODE" => "test") { example.run } }
+  end
 
   def event(type, **attributes)
     Billing::Event.new(provider: "dodo", type: type, name: type.to_s, subscription_id: "sub_1", customer_id: "cus_1",
@@ -65,6 +68,16 @@ RSpec.describe Billing::Sync do
 
       described_class.apply(event(:subscription_renewed, period_end: t0 + 2.months, occurred_at: t0 + 1.month + 2.days))
       expect(subscription).to have_attributes(status: "active", current_period_end: t0 + 2.months)
+    end
+
+    it "never extends the period on a failed, on-hold, cancelled or expired event (R76)" do
+      described_class.apply(event(:subscription_active))
+      described_class.apply(event(:payment_failed, period_start: t0 + 1.month, period_end: t0 + 2.months,
+                                                   occurred_at: t0 + 1.month))
+      described_class.apply(event(:subscription_canceled, period_start: t0 + 1.month, period_end: t0 + 2.months,
+                                                          occurred_at: t0 + 1.month + 1.day))
+
+      expect(subscription).to have_attributes(status: "canceled", current_period_start: t0, current_period_end: t0 + 1.month)
     end
 
     it "only moves the period end forward" do
@@ -147,11 +160,70 @@ RSpec.describe Billing::Sync do
       expect(sprints.map(&:current_period_end)).to eq([ t0 - 10.days, t0 + 30.days ])
     end
 
+    it "applies a payment once, even delivered again under another webhook id" do
+      described_class.apply(paid(payment_id: "pay_1"))
+      allow(Rails.logger).to receive(:error)
+
+      expect(described_class.apply(paid(payment_id: "pay_1", id: "msg_again"))).to match(/applied already/)
+      described_class.apply(paid(at: t0 + 1.day, payment_id: "pay_2"))
+
+      expect(sprints.sole).to have_attributes(current_period_end: t0 + 60.days, payment_ids: %w[pay_1 pay_2])
+    end
+
     it "notes a one-time payment that isn't the sprint, or has no user" do
       allow(Rails.logger).to receive(:error)
       expect(described_class.apply(paid(price_key: "creator_monthly"))).to match(/not the sprint/)
       expect(described_class.apply(paid(user_id: nil))).to match(/No user/)
       expect(Subscription.count).to eq(0)
+    end
+  end
+
+  describe "who a payment may grant a plan to (R75b)" do
+    let(:sprint_payment) do
+      event(:one_time_paid, subscription_id: nil, price_key: "sprint", payment_id: "pay_1")
+    end
+
+    before { allow(Rails.logger).to receive(:error) }
+
+    it "grants nothing to a regular user on the waitlist, where a test-mode payment link could name anyone" do
+      with_billing_env do
+        expect(described_class.apply(event(:subscription_active))).to match(/No plan granted/)
+        expect(described_class.apply(sprint_payment)).to match(/No plan granted/)
+      end
+      expect(Subscription.count).to eq(0)
+    end
+
+    it "grants a judge or an admin on the waitlist their test checkout" do
+      user.update!(judge: true)
+      with_billing_env { described_class.apply(event(:subscription_active)) }
+      expect(subscription.plan).to eq("creator")
+
+      admin = create(:user, admin: true)
+      with_billing_env { described_class.apply(sprint_payment.with(user_id: admin.id.to_s)) }
+      expect(admin.subscriptions.sole.plan).to eq("sprint")
+    end
+
+    it "grants anyone when the provider takes live payments, whatever the mode" do
+      with_billing_env("DODO_API_KEY" => "live_key_not_real", "DODO_ENVIRONMENT" => "live_mode") do
+        described_class.apply(event(:subscription_active))
+      end
+      expect(subscription.status).to eq("active")
+    end
+
+    it "never extends a regular user's subscription on the waitlist either" do
+      described_class.apply(event(:subscription_active))
+      with_billing_env do
+        described_class.apply(event(:subscription_renewed, period_end: t0 + 2.months, occurred_at: t0 + 1.month))
+      end
+
+      expect(subscription).to have_attributes(current_period_end: t0 + 1.month, last_event_at: t0)
+    end
+
+    it "still lets a cancellation through, which grants nothing" do
+      described_class.apply(event(:subscription_active))
+      with_billing_env { described_class.apply(event(:subscription_canceled, occurred_at: t0 + 1.day)) }
+
+      expect(subscription.status).to eq("canceled")
     end
   end
 

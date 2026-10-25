@@ -164,13 +164,13 @@ RSpec.describe "Account" do
       expect(forms_to("/checkouts")).to be_empty
     end
 
-    it "hides Manage billing on the waitlist and without a customer id" do
+    it "shows Manage billing in any mode, the waitlist included, when there is a customer id (R73)" do
       create(:subscription, user: user, provider: "fake", provider_customer_id: "fake_cus_1")
       with_billing_env do
         sign_in user
         get "/account"
       end
-      expect(forms_to("/billing_portal")).to be_empty
+      expect(forms_to("/billing_portal").at_css("[type=submit]").text.squish).to eq("Manage billing")
 
       other = create(:user)
       create(:subscription, user: other, provider: "fake", provider_customer_id: nil)

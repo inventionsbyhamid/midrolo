@@ -11,6 +11,14 @@ RSpec.describe WaitlistEntry do
     expect(described_class.new(email: "ada@example.com", price_key: "notify")).to be_valid
   end
 
+  it "is unique on lower(email) and price key in the database too" do
+    described_class.create!(email: "ada@example.com", price_key: "sprint")
+    insert = "INSERT INTO waitlist_entries (email, price_key, created_at, updated_at) " \
+             "VALUES ('ADA@Example.com', 'sprint', now(), now())"
+
+    expect { described_class.connection.execute(insert) }.to raise_error(ActiveRecord::RecordNotUnique)
+  end
+
   describe ".join" do
     it "finds the entry already there, in any case, rather than adding another" do
       first = described_class.join(email: "ada@example.com", price_key: "sprint")

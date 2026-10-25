@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_050200) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_050300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -235,6 +235,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_050200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "last_event_at"
+    t.string "payment_ids", default: [], null: false, array: true
     t.index ["provider", "provider_subscription_id"], name: "index_subscriptions_on_provider_and_provider_subscription_id", unique: true, where: "(provider_subscription_id IS NOT NULL)"
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
   end
@@ -266,7 +267,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_050200) do
     t.bigint "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["email", "price_key"], name: "index_waitlist_entries_on_email_and_price_key", unique: true
+    t.index "lower((email)::text), price_key", name: "index_waitlist_entries_on_lower_email_and_price_key", unique: true
     t.index ["user_id"], name: "index_waitlist_entries_on_user_id"
   end
 

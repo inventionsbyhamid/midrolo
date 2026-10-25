@@ -41,6 +41,28 @@ RSpec.describe Billing::Providers::Fake do
       )
     end
 
+    it "parses a one-time payment's id" do
+      body = { type: "one_time_paid", payment_id: "fake_pay_1", price_key: "sprint", user_id: user.id }.to_json
+      expect(fake.parse(body, id: "msg_3")).to have_attributes(type: :one_time_paid, payment_id: "fake_pay_1")
+    end
+
+    it "builds a signed test payment: a subscription for a recurring price, a one-time payment for the sprint" do
+      travel_to(Time.utc(2026, 10, 25, 12)) do
+        monthly = fake.test_payment(user: user, price: Billing.price("pro_monthly"))
+        event = fake.parse(monthly, id: fake.verify!(monthly, fake.signed_headers(monthly)))
+        expect(event).to have_attributes(type: :subscription_active, price_key: "pro_monthly", user_id: user.id,
+                                         customer_id: "fake_cus_#{user.id}", subscription_id: start_with("fake_sub_"),
+                                         period_start: Time.utc(2026, 10, 25, 12), period_end: Time.utc(2026, 11, 25, 12))
+
+        yearly = fake.parse(fake.test_payment(user: user, price: Billing.price("creator_yearly")), id: "msg_y")
+        expect(yearly.period_end).to eq(Time.utc(2027, 10, 25, 12))
+
+        sprint = fake.parse(fake.test_payment(user: user, price: Billing.price("sprint")), id: "msg_s")
+        expect(sprint).to have_attributes(type: :one_time_paid, price_key: "sprint", subscription_id: nil,
+                                          payment_id: start_with("fake_pay_"), occurred_at: Time.utc(2026, 10, 25, 12))
+      end
+    end
+
     it "gives no type to anything else" do
       expect(fake.parse({ type: "something_else" }.to_json, id: "msg_2").type).to be_nil
       expect(fake.parse("[]", id: "msg_3").type).to be_nil

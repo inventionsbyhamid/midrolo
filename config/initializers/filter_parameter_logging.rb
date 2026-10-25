@@ -7,3 +7,8 @@
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc, :code
 ]
+# Billing webhook bodies (Dodo's data object) carry the customer's details: name, phone, address, card, tax id and
+# what they wrote when cancelling. Dotted keys match only under data, so params elsewhere keep their names.
+Rails.application.config.filter_parameters += %w[
+  data.customer data.billing data.card_ data.tax_id data.custom_field_responses data.cancellation_comment
+]

@@ -27,8 +27,9 @@ class Subscription < ApplicationRecord
       .or(where(status: "canceled").where(in_period))
   }
 
-  # The user's entitling subscription with the best plan (the newest of equals), or nil.
-  def self.best_for(user)
-    user.subscriptions.entitling.max_by { |subscription| [ PLAN_RANK.fetch(subscription.plan), subscription.id ] }
+  # The user's entitling subscription with the best plan (the newest of equals), or nil. plans narrows the plans looked at.
+  def self.best_for(user, plans: PLANS)
+    user.subscriptions.entitling.where(plan: plans)
+        .max_by { |subscription| [ PLAN_RANK.fetch(subscription.plan), subscription.id ] }
   end
 end

@@ -122,29 +122,61 @@ RSpec.describe Billing do
     end
   end
 
-  describe ".portal_subscription" do
+  describe ".grant_allowed? (R75b)" do
+    let(:user) { create(:user) }
+    let(:judge) { create(:user, judge: true) }
+
+    it "is true where checkout is open to the user" do
+      with_billing_env("BILLING_MODE" => "test") { expect(described_class.grant_allowed?(user, provider: "fake")).to be true }
+      with_billing_env do
+        expect(described_class.grant_allowed?(user, provider: "fake")).to be false
+        expect(described_class.grant_allowed?(judge, provider: "fake")).to be true
+        expect(described_class.grant_allowed?(nil, provider: "fake")).to be false
+      end
+    end
+
+    it "is true for anyone when the event's provider takes live payments" do
+      with_billing_env("DODO_API_KEY" => "key", "DODO_ENVIRONMENT" => "live_mode") do
+        expect(described_class.grant_allowed?(user, provider: "dodo")).to be true
+        expect(described_class.grant_allowed?(user, provider: "fake")).to be false
+      end
+    end
+  end
+
+  describe ".blocking_subscription" do
     let(:user) { create(:user) }
 
-    it "is the user's latest subscription with a customer id at the current provider, where checkout is open" do
-      with_billing_env("BILLING_MODE" => "test") do
+    it "is any entitling subscription for a recurring price, and only a recurring one for the sprint" do
+      sprint = create(:subscription, user: user, plan: "sprint", current_period_end: 5.days.from_now)
+      expect(described_class.blocking_subscription(user, described_class.price("pro_monthly"))).to eq(sprint)
+      expect(described_class.blocking_subscription(user, described_class.price("sprint"))).to be_nil
+
+      creator = create(:subscription, user: user, plan: "creator")
+      expect(described_class.blocking_subscription(user, described_class.price("sprint"))).to eq(creator)
+    end
+
+    it "ignores subscriptions that no longer entitle" do
+      create(:subscription, user: user, status: "canceled", current_period_end: 1.day.ago)
+      expect(described_class.blocking_subscription(user, described_class.price("creator_monthly"))).to be_nil
+    end
+  end
+
+  describe ".portal_subscription (R73)" do
+    let(:user) { create(:user) }
+
+    it "is the user's latest subscription with a customer id, from any provider, in any mode" do
+      with_billing_env do
         create(:subscription, user: user, provider: "fake", provider_customer_id: "cus_old", updated_at: 2.days.ago)
-        latest = create(:subscription, user: user, provider: "fake", provider_customer_id: "cus_new")
+        latest = create(:subscription, user: user, provider: "dodo", provider_customer_id: "cus_new")
         create(:subscription, user: user, provider: "fake", provider_customer_id: nil)
-        create(:subscription, user: user, provider: "dodo", provider_customer_id: "cus_elsewhere")
 
         expect(described_class.portal_subscription(user)).to eq(latest)
       end
     end
 
-    it "is nil without a customer id, or on the waitlist" do
-      with_billing_env("BILLING_MODE" => "test") do
-        create(:subscription, user: user, provider: "fake", provider_customer_id: nil)
-        expect(described_class.portal_subscription(user)).to be_nil
-      end
-      with_billing_env do
-        create(:subscription, user: user, provider: "fake", provider_customer_id: "cus_1")
-        expect(described_class.portal_subscription(user)).to be_nil
-      end
+    it "is nil without a customer id" do
+      create(:subscription, user: user, provider_customer_id: nil)
+      expect(described_class.portal_subscription(user)).to be_nil
     end
   end
 end

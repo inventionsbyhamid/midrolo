@@ -77,8 +77,10 @@ module Entitlements
       granted.merge(own.slice(*LIMIT_KEYS, :name, :duration_days))
     end
 
-    private
-
+    # config/plans.yml, read once. Billing reads its prices and product ids from it too.
     def plans = @plans ||= Rails.application.config_for(:plans)
+
+    # Forgets plans.yml as read (after ENV changes, in specs).
+    def reset_plans! = @plans = nil
   end
 end

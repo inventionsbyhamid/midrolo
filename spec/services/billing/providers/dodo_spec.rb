@@ -6,7 +6,10 @@ RSpec.describe Billing::Providers::Dodo do
   let(:secret) { BillingHelpers::DODO_TEST_WEBHOOK_SECRET }
   let(:user) { create(:user, email: "ada@example.com", name: "Ada Lovelace") }
 
-  around { |example| with_billing_env("DODO_PRODUCT_CREATOR_MONTHLY" => "pdt_test_creator_monthly") { example.run } }
+  around do |example|
+    env = { "DODO_PRODUCT_CREATOR_MONTHLY" => "pdt_test_creator_monthly", "DODO_PRODUCT_SPRINT" => "pdt_test_sprint" }
+    with_billing_env(env) { example.run }
+  end
 
   describe "#checkout_url" do
     let(:return_url) { "https://midrolo.test/billing/success" }
@@ -97,6 +100,20 @@ RSpec.describe Billing::Providers::Dodo do
       expect { dodo.verify!(body, {}) }.to raise_error(Billing::InvalidSignature)
     end
 
+    it "rejects a malformed webhook-signature header as invalid rather than crashing in the gem" do
+      headers = signed_webhook_headers(body)
+      [ "v1", "v1,", "garbage", "v1,!!!", "v1, v1,abc", ",abc" ].each do |signature|
+        expect { dodo.verify!(body, headers.merge("webhook-signature" => signature)) }
+          .to raise_error(Billing::InvalidSignature), "expected #{signature.inspect} to be refused"
+      end
+    end
+
+    it "accepts a header with several signatures when one of them matches" do
+      headers = signed_webhook_headers(body)
+      several = headers.merge("webhook-signature" => "v1,c29tZXRoaW5nIGVsc2U= #{headers['webhook-signature']}")
+      expect(dodo.verify!(body, several)).to eq(headers["webhook-id"])
+    end
+
     it "rejects a timestamp more than 5 minutes off, so a captured webhook can't be replayed later" do
       stale = signed_webhook_headers(body, timestamp: 6.minutes.ago.to_i)
       future = signed_webhook_headers(body, timestamp: 6.minutes.from_now.to_i)
@@ -145,12 +162,18 @@ RSpec.describe Billing::Providers::Dodo do
       expect(parse("subscription_active", type: "subscription.updated", status: "pending").type).to be_nil
     end
 
+    it "maps subscription.plan_changed by its status too" do
+      expect(parse("subscription_active", type: "subscription.plan_changed").type).to eq(:subscription_active)
+      expect(parse("subscription_active", type: "subscription.plan_changed", status: "on_hold").type).to eq(:payment_failed)
+    end
+
     it "normalizes a one-time payment as one_time_paid, at the event's time" do
       event = parse("payment_succeeded_onetime")
 
       expect(event).to have_attributes(
         type: :one_time_paid, name: "payment.succeeded", customer_id: "cus_test_002", subscription_id: nil,
-        price_key: "sprint", user_id: user.id.to_s, occurred_at: Time.utc(2026, 10, 25, 12, 0, 4)
+        payment_id: "pay_test_sprint_001", price_key: "sprint", user_id: user.id.to_s,
+        occurred_at: Time.utc(2026, 10, 25, 12, 0, 4)
       )
     end
 
@@ -162,12 +185,36 @@ RSpec.describe Billing::Providers::Dodo do
       expect(parse("subscription_active", type: "dispute.opened")).to have_attributes(type: nil, name: "dispute.opened")
     end
 
-    it "prefers the price key of the paid product to the metadata's" do
+    it "takes the price key from the paid product, whatever the metadata says (R75a)" do
       with_billing_env("DODO_PRODUCT_PRO_MONTHLY" => "pdt_test_creator_monthly") do
         expect(parse("subscription_active").price_key).to eq("pro_monthly")
       end
-      with_billing_env("DODO_PRODUCT_SPRINT" => "pdt_test_sprint") do
-        expect(parse("payment_succeeded_onetime", metadata: {}).price_key).to eq("sprint")
+      expect(parse("payment_succeeded_onetime", metadata: {}).price_key).to eq("sprint")
+    end
+
+    it "gives no price key for a product that isn't ours, even with sprint in its metadata (a payment link's)" do
+      event = parse("payment_succeeded_onetime", product_cart: [ { product_id: "pdt_someone_elses_ebook", quantity: 1 } ],
+                                                 metadata: { user_id: user.id.to_s, price_key: "sprint" })
+      expect(event).to have_attributes(type: :one_time_paid, price_key: nil)
+
+      expect(parse("subscription_active", product_id: "pdt_someone_elses_plan").price_key).to be_nil
+    end
+
+    it "uses the metadata's price key only when the payload names no product at all" do
+      expect(parse("payment_succeeded_onetime", product_cart: []).price_key).to eq("sprint")
+      expect(parse("subscription_active", product_id: nil).price_key).to eq("creator_monthly")
+    end
+
+    it "hands on a payload for storage without the customer's personal details (R77), which parses the same" do
+      %w[payment_succeeded_onetime subscription_cancelled].each do |fixture|
+        event = parse(fixture)
+        stored = event.raw.to_json
+
+        expect(stored).not_to include("Test S", "@example.com", "Test Street", "Testville", "zipcode", "phone_number",
+                                      "4242", "card_", '"billing"', "too_expensive")
+        expect(event.raw.dig("data", "customer")).to eq("customer_id" => event.customer_id)
+        expect(event.raw.dig("data", "metadata")).to eq("user_id" => user.id.to_s, "price_key" => event.price_key)
+        expect(dodo.parse(stored, id: "msg_1").to_h.except(:raw)).to eq(event.to_h.except(:raw))
       end
     end
 
