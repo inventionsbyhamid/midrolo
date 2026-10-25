@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# The ioflood half of bin/remote-rspec; it runs from the synced checkout. It makes sure the network, bundle volume and
+# images exist, starts a throwaway Postgres for this run, runs ci/run-tests in a capped runner next to it, and
+# removes both on the way out (Ctrl-C and a dropped ssh included).
+#
+#   bash ci/remote-run --lane NAME --run ID [--keep] [--rebuild] [--tty] [--timeout SECS] [--skip-network VAL]
+#                      -- [rspec args...]
+#
+# ioflood is a shared production host. This script creates and removes only objects named midrolo-ci* (containers
+# midrolo-ci-db-ID and midrolo-ci-runner-ID, network midrolo-ci-net, volume midrolo-ci-bundle, images midrolo-ci:*)
+# and files under /root/midrolo-ci. It publishes no ports and never uses the host network.
+set -euo pipefail
+
+LANE= RUN= KEEP=0 REBUILD=0 TTY=0 TIMEOUT=3600 SKIP_NETWORK=
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --lane) LANE=$2; shift 2 ;;
+    --run) RUN=$2; shift 2 ;;
+    --keep) KEEP=1; shift ;;
+    --rebuild) REBUILD=1; shift ;;
+    --tty) TTY=1; shift ;;
+    --timeout) TIMEOUT=$2; shift 2 ;;
+    --skip-network) SKIP_NETWORK=$2; shift 2 ;;
+    --) shift; break ;;
+    *) echo "remote-run: unknown option $1" >&2; exit 2 ;;
+  esac
+done
+[[ $LANE =~ ^[a-z0-9][a-z0-9-]{0,39}$ ]] || { echo "remote-run: bad lane: $LANE" >&2; exit 2; }
+[[ $RUN =~ ^[a-z0-9][a-z0-9-]{0,39}$ ]] || { echo "remote-run: bad run id: $RUN" >&2; exit 2; }
+[[ $TIMEOUT =~ ^[0-9]+$ ]] || { echo "remote-run: bad timeout: $TIMEOUT" >&2; exit 2; }
+
+BASE=/root/midrolo-ci
+SRC=$BASE/src/$LANE
+NET=midrolo-ci-net
+BUNDLE_VOLUME=midrolo-ci-bundle
+IMAGE=midrolo-ci:test
+PG_IMAGE=midrolo-ci:postgres16
+DB=midrolo-ci-db-$RUN
+RUNNER=midrolo-ci-runner-$RUN
+LABELS=(--label midrolo-ci=1 --label "midrolo-ci.lane=$LANE" --label "midrolo-ci.run=$RUN")
+
+cleanup() {
+  if (( KEEP )); then
+    echo "remote-run: --keep: left $RUNNER and $DB; remove them with: docker rm -f $RUNNER $DB" >&2
+  else
+    docker rm -f "$RUNNER" "$DB" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# 1. Network and bundle volume (create if missing; another lane may win the race to create the network).
+docker network inspect "$NET" >/dev/null 2>&1 ||
+  docker network create --driver bridge --label midrolo-ci=1 "$NET" >/dev/null 2>&1 ||
+  docker network inspect "$NET" >/dev/null
+docker volume inspect "$BUNDLE_VOLUME" >/dev/null 2>&1 ||
+  docker volume create --label midrolo-ci=1 "$BUNDLE_VOLUME" >/dev/null
+
+# 2. Images, one lane at a time. The runner is rebuilt when ci/Dockerfile.test changes; --rebuild starts from a fresh
+#    base image and package lists. Postgres runs from our own tag, so other apps' postgres tags are never pulled over.
+exec 9>"$BASE/build.lock"
+flock 9
+want=$(sha256sum "$SRC/ci/Dockerfile.test" | cut -c1-64)
+have=$(docker image inspect -f '{{index .Config.Labels "midrolo-ci.dockerfile-sha"}}' "$IMAGE" 2>/dev/null || true)
+if (( REBUILD )) || [[ $have != "$want" ]]; then
+  echo "==> building $IMAGE"
+  old=$(docker image inspect -f '{{.Id}}' "$IMAGE" 2>/dev/null || true)
+  fresh=()
+  (( REBUILD )) && fresh=(--pull --no-cache)
+  docker build "${fresh[@]}" --progress=plain \
+    --label midrolo-ci=1 --label "midrolo-ci.dockerfile-sha=$want" \
+    -t "$IMAGE" -f "$SRC/ci/Dockerfile.test" "$SRC/ci"
+  new=$(docker image inspect -f '{{.Id}}' "$IMAGE")
+  # The previous midrolo-ci:test is now untagged; drop it unless a running lane still uses it.
+  [[ -n $old && $old != "$new" ]] && { docker rmi "$old" >/dev/null 2>&1 || true; }
+fi
+if ! docker image inspect "$PG_IMAGE" >/dev/null 2>&1; then
+  echo "==> building $PG_IMAGE"
+  echo "FROM postgres:16-alpine" | docker build --progress=plain --label midrolo-ci=1 -t "$PG_IMAGE" -
+fi
+flock -u 9
+
+# 3. A throwaway Postgres on tmpfs, with a password made here for this run only. It stops itself after its TTL, so
+#    even a run whose ssh dropped mid-way leaves nothing running for long.
+mkdir -p "$SRC/log" "$SRC/tmp"
+pw=$(od -An -tx1 -N16 /dev/urandom | tr -d ' \n')
+rm_flag=(--rm)
+db_ttl=$((TIMEOUT + 600))
+if (( KEEP )); then rm_flag=(); db_ttl=21600; fi
+docker run -d --name "$DB" "${rm_flag[@]}" "${LABELS[@]}" --network "$NET" \
+  --cpus 2 --memory 2g --memory-swap 2g --pids-limit 512 --shm-size 256m \
+  --tmpfs /var/lib/postgresql/data:rw,size=1g \
+  -e POSTGRES_PASSWORD="$pw" \
+  "$PG_IMAGE" timeout -s INT "$db_ttl" docker-entrypoint.sh postgres \
+    -c fsync=off -c synchronous_commit=off -c full_page_writes=off >/dev/null
+
+# 4. The runner: capped, the checkout mounted, gems in the shared volume. rspec gets SIGINT at the timeout.
+tty=()
+(( TTY )) && tty=(-t)
+env=(-e RAILS_ENV=test -e CI=1 -e "DATABASE_URL=postgres://postgres:$pw@$DB:5432/midrolo_test")
+[[ -n $SKIP_NETWORK ]] && env+=(-e "SKIP_NETWORK=$SKIP_NETWORK")
+status=0
+docker run --name "$RUNNER" "${rm_flag[@]}" "${tty[@]}" --init "${LABELS[@]}" --network "$NET" \
+  --cpus 8 --memory 8g --memory-swap 8g --pids-limit 4096 --shm-size 1g \
+  -v "$SRC:/app" -v "$BUNDLE_VOLUME:/bundle" -w /app "${env[@]}" \
+  "$IMAGE" timeout -s INT -k 60 "$TIMEOUT" bash ci/run-tests "$@" || status=$?
+(( status == 124 )) && echo "remote-run: rspec timed out after ${TIMEOUT}s" >&2
+exit "$status"

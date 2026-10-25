@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+# Run the RSpec suite on ioflood, in capped containers, instead of on this Mac.
+#
+# Usage:
+#   bin/remote-rspec [--rebuild] [--keep] [--lane NAME] [--] [rspec args...]
+#   bin/remote-rspec --clean [--lane NAME]
+#
+#   (no rspec args)  the whole suite; otherwise the args go to rspec as given (spec/system/media_kit_spec.rb:12, ...)
+#   --rebuild        rebuild the midrolo-ci:test image from a fresh base image and package lists
+#   --keep           leave this run's containers behind for debugging (docs/testing.md says how to remove them)
+#   --lane NAME      remote checkout /root/midrolo-ci/src/NAME. Defaults to this checkout's directory name, so each
+#                    worktree gets its own lane and they run side by side; runs in one lane wait for each other.
+#   --clean          delete this lane's remote checkout and exit
+#
+# Environment: SKIP_NETWORK=1 leaves out the :network specs, as it does locally. MIDROLO_CI_HOST (default ioflood).
+# MIDROLO_CI_TIMEOUT: seconds rspec may run before it is stopped (default 3600).
+#
+# ioflood is a shared production host. This script and ci/remote-run create or remove only Docker objects named
+# midrolo-ci* and files under /root/midrolo-ci; the runner is capped at 8 CPUs / 8 GB, the database at 2 CPUs / 2 GB;
+# nothing publishes a port; and a run waits while the host is busy (1-min load > 30 or MemAvailable < 12 GiB).
+set -euo pipefail
+
+HOST=${MIDROLO_CI_HOST:-ioflood}
+TIMEOUT=${MIDROLO_CI_TIMEOUT:-3600}
+BASE=/root/midrolo-ci
+REPO=$(cd "$(dirname "$0")/.." && pwd -P)
+LANE=$(basename "$REPO" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-*//; s/-*$//' | cut -c1-40)
+KEEP=0 REBUILD=0 CLEAN=0
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --rebuild) REBUILD=1; shift ;;
+    --keep) KEEP=1; shift ;;
+    --clean) CLEAN=1; shift ;;
+    --lane) LANE=$2; shift 2 ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+[[ $LANE =~ ^[a-z0-9][a-z0-9-]{0,39}$ ]] || { echo "remote-rspec: bad lane name: $LANE" >&2; exit 2; }
+[[ $TIMEOUT =~ ^[0-9]+$ ]] || { echo "remote-rspec: MIDROLO_CI_TIMEOUT must be seconds: $TIMEOUT" >&2; exit 2; }
+
+REMOTE=$BASE/src/$LANE
+RUN=$(date +%m%d-%H%M%S)-$(od -An -tx1 -N2 /dev/urandom | tr -d ' \n')
+SSH=(ssh -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=4 "$HOST")
+say() { echo "remote-rspec: $*" >&2; }
+
+if (( CLEAN )); then
+  # Not while a run holds the lane.
+  "${SSH[@]}" "mkdir -p $BASE/locks && flock -n $BASE/locks/$LANE.lock rm -rf $REMOTE" || { say "lane $LANE is busy or $HOST unreachable"; exit 75; }
+  say "removed $HOST:$REMOTE"
+  exit
+fi
+
+# 1. Reach the host and wait while it's busy: up to 20 checks, 30 s apart.
+host_state() {
+  "${SSH[@]}" "mkdir -p $BASE/src $BASE/locks && awk '{print \$1, \$2, \$3}' /proc/loadavg | tr '\n' ' ' &&
+    awk '/MemAvailable/ {print \$2}' /proc/meminfo"
+}
+for attempt in $(seq 1 20); do
+  state=$(host_state) || { say "cannot reach $HOST over ssh (is the VPN on?)"; exit 69; }
+  read -r load1 load5 load15 avail_kb <<<"$state"
+  if awk -v l="$load1" -v m="$avail_kb" 'BEGIN { exit !(l <= 30 && m >= 12 * 1024 * 1024) }'; then
+    break
+  fi
+  if [[ $attempt -eq 20 ]]; then
+    say "$HOST still busy after 10 minutes (load $load1, MemAvailable $((avail_kb / 1024)) MiB); giving up"
+    exit 75
+  fi
+  say "$HOST busy (load $load1, MemAvailable $((avail_kb / 1024)) MiB); waiting 30 s ($attempt/20)"
+  sleep 30
+done
+LOAD_BEFORE="$load1 $load5 $load15"
+START=$SECONDS
+
+# 2. Take the lane's lock: a remote flock held by an ssh session that ends when this script does, however it ends.
+#    While it waits, the remote side writes a line every 5 s, so it dies of SIGPIPE soon after this end goes away.
+LOCK_STATE=$(mktemp "${TMPDIR:-/tmp}/remote-rspec-lock.XXXXXX")
+LOCK_PID= RUN_PID=
+cleanup() {
+  if [[ -n $RUN_PID ]]; then kill "$RUN_PID" 2>/dev/null || true; fi
+  if [[ -n ${RUN_STARTED:-} && $KEEP -eq 0 ]]; then
+    # Normally ci/remote-run has removed these already; this covers a Ctrl-C or a dropped connection.
+    "${SSH[@]}" "docker rm -f midrolo-ci-runner-$RUN midrolo-ci-db-$RUN" >/dev/null 2>&1 || true
+  fi
+  if [[ -n $LOCK_PID ]]; then kill "$LOCK_PID" 2>/dev/null || true; fi
+  rm -f "$LOCK_STATE"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+
+( while kill -0 $$ 2>/dev/null; do sleep 2; done ) |
+  "${SSH[@]}" "exec 9>$BASE/locks/$LANE.lock; flock -n 9 || { echo busy; until flock -w 5 9; do echo waiting; done; }
+    echo locked; exec cat >/dev/null" >"$LOCK_STATE" 2>/dev/null &
+LOCK_PID=$!
+waited=0 announced=0
+until grep -qx locked "$LOCK_STATE"; do
+  kill -0 "$LOCK_PID" 2>/dev/null || { say "could not lock lane $LANE on $HOST (ssh failed)"; exit 75; }
+  if [[ $announced -eq 0 ]] && grep -qx busy "$LOCK_STATE"; then
+    say "lane $LANE is busy with another run; waiting (use --lane NAME to run alongside it)"
+    announced=1
+  fi
+  if (( ++waited > TIMEOUT )); then say "lane $LANE still busy after ${TIMEOUT}s; giving up"; exit 75; fi
+  sleep 1
+done
+
+# 3. Sync the working tree. Git data, build output, local state and secrets stay on this Mac.
+rsync -az --delete \
+  --exclude=/.git --exclude=/.claude/ --exclude=/.superpowers/ --exclude=/.bundle/ --exclude=/.kamal/ \
+  --exclude=/tmp/ --exclude=/log/ --exclude=/storage/ --exclude=/coverage/ --exclude=/node_modules/ \
+  --exclude=/vendor/bundle/ --exclude=/public/assets/ --exclude='/app/assets/builds/*' \
+  --exclude='.env*' --exclude=/config/master.key --exclude='/config/credentials/*.key' \
+  --exclude=/spec/fixtures/private/ --exclude=.DS_Store \
+  -e "ssh -o BatchMode=yes -o ConnectTimeout=15" \
+  "$REPO/" "$HOST:$REMOTE/"
+
+# 4. Run. Paths given as absolute local paths are made relative to the checkout.
+args=()
+for arg in "$@"; do args+=("${arg#"$REPO"/}"); done
+remote_args=(--lane "$LANE" --run "$RUN" --timeout "$TIMEOUT")
+(( REBUILD )) && remote_args+=(--rebuild)
+(( KEEP )) && remote_args+=(--keep)
+[[ -t 1 ]] && remote_args+=(--tty)
+[[ -n ${SKIP_NETWORK:-} ]] && remote_args+=(--skip-network "$SKIP_NETWORK")
+say "lane $LANE, run $RUN on $HOST (load $LOAD_BEFORE)"
+RUN_STARTED=1
+status=0
+# In the background, because bash runs a trap only once its foreground command ends; `wait` is cut short by one.
+"${SSH[@]}" "bash $REMOTE/ci/remote-run $(printf '%q ' "${remote_args[@]}" -- ${args[@]+"${args[@]}"})" </dev/null &
+RUN_PID=$!
+wait "$RUN_PID" || status=$?
+RUN_PID=
+[[ $status -eq 255 ]] && say "ssh to $HOST failed or dropped mid-run"
+
+# 5. Failure screenshots come back to tmp/remote-rspec/.
+if [[ $status -ne 0 && $status -ne 255 ]]; then
+  for dir in screenshots capybara; do
+    "${SSH[@]}" "test -d $REMOTE/tmp/$dir" 2>/dev/null || continue
+    mkdir -p "$REPO/tmp/remote-rspec"
+    rsync -az --delete -e "ssh -o BatchMode=yes -o ConnectTimeout=15" \
+      "$HOST:$REMOTE/tmp/$dir" "$REPO/tmp/remote-rspec/" && say "failure screenshots copied to tmp/remote-rspec/$dir"
+  done
+fi
+
+load_after=$("${SSH[@]}" "awk '{print \$1, \$2, \$3}' /proc/loadavg" 2>/dev/null || echo "?")
+elapsed=$((SECONDS - START))
+say "rspec exit $status in $((elapsed / 60))m$((elapsed % 60))s; $HOST load before: $LOAD_BEFORE, after: $load_after"
+exit "$status"

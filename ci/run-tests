@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Runs inside a midrolo-ci-runner-* container (see bin/remote-rspec): gems, database, CSS, then RSpec with the
+# arguments given. No arguments runs the whole suite.
+set -euo pipefail
+cd /app
+
+step() { printf '\n==> %s\n' "$*"; }
+
+# Last run's log and failure screenshots go, so what's left after this run is this run's.
+rm -rf log/test.log tmp/capybara tmp/screenshots
+
+step "bundle install"
+# Lanes share the bundle volume; one install at a time.
+flock /bundle/.install.lock bash -c 'bundle check >/dev/null 2>&1 || bundle install --quiet'
+
+step "waiting for postgres"
+for _ in $(seq 1 60); do
+  pg_isready -q -d "$DATABASE_URL" && break
+  sleep 1
+done
+pg_isready -d "$DATABASE_URL"
+
+step "db:create db:schema:load"
+bin/rails db:create db:schema:load
+
+step "tailwindcss:build"
+bin/rails tailwindcss:build
+
+step "rspec $*"
+exec bundle exec rspec "$@"

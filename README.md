@@ -15,7 +15,7 @@ Things you may want to cover:
 
 * Database initialization
 
-* How to run the test suite
+* How to run the test suite: see [docs/testing.md](docs/testing.md) (`bin/remote-rspec` runs it on ioflood)
 
 * Services (job queues, cache servers, search engines, etc.)
 
