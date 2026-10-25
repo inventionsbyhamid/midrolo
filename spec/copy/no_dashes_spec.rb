@@ -54,6 +54,14 @@ RSpec.describe "Copy has no dashes", type: :request do
     end
   end
 
+  def yaml_keys(value)
+    case value
+    when Hash then value.keys.map(&:to_s) + value.values.flat_map { |item| yaml_keys(item) }
+    when Array then value.flat_map { |item| yaml_keys(item) }
+    else []
+    end
+  end
+
   describe "source" do
     it "keeps dashes out of the views and mailer views, outside ERB comments" do
       offenders = Dir[root.join("app/views/**/*")].select { |path| File.file?(path) }.flat_map do |path|
@@ -73,6 +81,19 @@ RSpec.describe "Copy has no dashes", type: :request do
       manifest = leaf_strings(JSON.parse(root.join("public/site.webmanifest").read)).grep(dash)
 
       expect(locales + public_pages + manifest).to be_empty
+    end
+
+    # Plan names and limits reach the pricing and account pages from plans.yml; the sample pages are built from
+    # samples.yml. Either file may use ERB, as config_for reads it.
+    it "keeps dashes out of the plans and the sample YAML" do
+      offenders = %w[config/plans.yml config/samples.yml].flat_map do |path|
+        yaml = YAML.safe_load(ERB.new(root.join(path).read).result, aliases: true)
+        (leaf_strings(yaml) + yaml_keys(yaml)).grep(dash).map { |text| "#{path}: #{text}" }
+      end
+
+      expect(offenders).to be_empty, "Dashes in config YAML:\n#{offenders.join("\n")}"
+      expect(leaf_strings(YAML.safe_load("a:\n  b: [Pro – yearly, 1]\n  c—d: x"))).to include("Pro – yearly")
+      expect(yaml_keys(YAML.safe_load("a:\n  c—d: x"))).to include("c—d")
     end
 
     it "keeps dashes out of the strings the app's code shows people, and the ones the agent reads" do
