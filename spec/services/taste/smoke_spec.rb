@@ -36,9 +36,6 @@ RSpec.describe Taste::Smoke do
     insights("filter.type" => "urn:demographics").to_return(fixture("demographics_two_blocks"))
     insights("filter.type" => "urn:heatmap").to_return(fixture("heatmap"))
     insights("filter.type" => "urn:tag").to_return(fixture("insights_tags"))
-    stub_request(:get, "#{base}/v2/analysis/compare")
-      .with(query: hash_including("a.signal.interests.entities" => "SYN-POD-001", "b.signal.interests.entities" => "SYN-BRAND-001"))
-      .to_return(fixture("compare"))
   end
 
   describe "refusing to run" do
@@ -57,14 +54,16 @@ RSpec.describe Taste::Smoke do
   describe "running the checklist" do
     before { stub_checklist }
 
-    it "makes 9 live calls, within the hard budget of 10, and passes each against its expectation" do
+    it "makes 8 live calls, within the hard budget of 10, and passes each against its expectation (R105: no compare)" do
       result = smoke.call
 
       expect(described_class::BUDGET).to eq(10)
-      expect(result.calls).to eq(9)
+      expect(result.calls).to eq(8)
+      expect(result.outcomes.keys).not_to include(:compare)
       expect(result.outcomes.values).to all(eq(:pass))
       expect(result).to be_passed
-      expect(io.string).to include("9 passed, 0 failed, 0 skipped", "9 live calls of 10")
+      expect(io.string).to include("8 passed, 0 failed, 0 skipped", "8 live calls of 10")
+      expect(a_request(:get, %r{/v2/analysis/compare})).not_to have_been_made
     end
 
     it "prints the endpoint, status, count, parsing paths and verdict of each call" do
@@ -78,7 +77,6 @@ RSpec.describe Taste::Smoke do
                              "website at official_site (flat)", "affinity at query.affinity", "affinity at affinity (flat)")
       expect(out).to include("2 demographics blocks", "6 age buckets")
       expect(out).to include("points at location.latitude/location.longitude")
-      expect(out).to match(%r{GET /v2/analysis/compare .*HTTP 200 .*2 results .*PASS})
     end
 
     it "prints at most 3 names a call and nothing else from the bodies" do
@@ -92,7 +90,7 @@ RSpec.describe Taste::Smoke do
 
     it "counts its calls toward the global call guard" do
       smoke.call
-      expect(Taste::CallGuard.new.usage.today).to eq(9)
+      expect(Taste::CallGuard.new.usage.today).to eq(8)
     end
 
     it "bypasses the response cache: a second run calls Qloo again" do
@@ -128,7 +126,7 @@ RSpec.describe Taste::Smoke do
       stub_request(:get, "#{base}/search").with(query: hash_including("query" => "SmartLess")).to_return(status: 200, body: '{"results":[]}')
       result = smoke.call
 
-      expect(result.outcomes.values_at(:brand_recs, :demographics, :heatmap, :taste_tags, :compare)).to all(eq(:skip))
+      expect(result.outcomes.values_at(:brand_recs, :demographics, :heatmap, :taste_tags)).to all(eq(:skip))
       expect(result.calls).to eq(4)
     end
   end

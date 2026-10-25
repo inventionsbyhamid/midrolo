@@ -193,13 +193,18 @@ RSpec.describe Research::Tools do
   end
 
   describe "explain_matches" do
-    it "explains up to 5 brands (R93) and keeps the shared tags on the toolkit" do
-      candidates!
+    it "explains every brand asked for from its shared tags, with no Qloo call, and keeps them on the toolkit (R105)" do
+      seed!
+      run("build_audience_profile") # the audience's taste tags, which the brands' own tags are matched against
+      run("find_sponsor_candidates", categories: [ "Finance", "Productivity" ])
+      allow(taste).to receive(:compare)
       out = run("explain_matches", brand_ids: Array.new(15) { |i| "b#{i + 1}" } + [ "bogus" ])
 
-      expect(toolkit.explanations.size).to eq(5)
-      expect(out).to include("b1 ", "Not compared")
-      expect(out).to include("bogus")
+      expect(taste).not_to have_received(:compare)
+      expect(toolkit.explanations.size).to eq(15)
+      expect(out).to include("Shared tastes:", "b1 ")
+      expect(out).to include("Unknown refs ignored: bogus")
+      expect(out).not_to include("Not compared")
       expect(out.length).to be < 1500
     end
   end
@@ -229,7 +234,7 @@ RSpec.describe Research::Tools do
       expect(top.evidence["proven"]).to include("items", "count")
     end
 
-    it "writes a template reason from shared tags for a brand past the compare cap whose reason is left empty (R93)" do
+    it "writes a template reason from shared tags for a brand Qloo didn't compare whose reason is left empty (R93, R105)" do
       candidates!
       run("explain_matches", brand_ids: %w[b1])
       uncompared = toolkit.resolve_brand("b8")
@@ -245,9 +250,11 @@ RSpec.describe Research::Tools do
       expect(out).to include("Wrote 1 short reason from shared tags (b8)")
     end
 
-    it "still asks for a reason for a brand explain_matches compared" do
+    it "still asks for a reason for a brand Qloo compared, when compares are on" do
+      stub_const("Research::MatchExplainer::MAX_COMPARES", 1)
       candidates!
       run("explain_matches", brand_ids: %w[b1])
+      expect(toolkit.compared?(toolkit.resolve_brand("b1"))).to be(true)
       out = run("save_sponsor_matches", matches: [ { brand_id: "b1", reason: "" }, { brand_id: "b2", reason: "Fits well." } ])
       expect(out).to include("rejected 1: b1 (no reason)")
     end

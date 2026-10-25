@@ -169,7 +169,7 @@ RSpec.describe Research::StepLogger do
 
     it "reads the default budget from config/research.yml (R93)" do
       expect(described_class.new(report).max_taste_calls).to eq(Rails.application.config_for(:research)[:max_taste_calls])
-      expect(described_class.new(report).max_taste_calls).to eq(35)
+      expect(described_class.new(report).max_taste_calls).to eq(30)
     end
 
     it "skips optional sub-calls once the run has spent its uncached calls, but never core calls" do

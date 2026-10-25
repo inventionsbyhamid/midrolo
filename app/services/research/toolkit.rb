@@ -36,6 +36,7 @@ module Research
       @brand_refs = {}
       @shown_brands = Set.new
       @explanations = {}
+      @compared = Set.new
       @lookup_sources = {}
       @unresolved = []
     end
@@ -128,6 +129,11 @@ module Research
       @explanations.merge!(explained)
       self
     end
+
+    # The brands Qloo's compare explained (MatchExplainer); the rest are explained from their shared tags (R105).
+    def mark_compared(brand_id) = @compared.add(brand_id.to_s) && self
+    def compared?(brand_id) = @compared.include?(brand_id.to_s)
+    def compared_count = @compared.size
 
     # R27: the brand's tags that the audience also has, by id or else by name. Uses the audience tags of
     # this run, or the ones already saved on the report.

@@ -16,7 +16,8 @@ module Taste
     BUSINESS_TAG = "urn:tag:genre:media:business".freeze
     COMEDY_TAG = "urn:tag:genre:media:comedy".freeze
     AGE_BUCKETS = 6
-    STEPS = %i[search_podcast search_miss brand_tags brand_recs union demographics heatmap taste_tags compare].freeze
+    # No compare (R105): Qloo's compare finds no shared tags between a podcast and a brand, so reports don't call it.
+    STEPS = %i[search_podcast search_miss brand_tags brand_recs union demographics heatmap taste_tags].freeze
 
     class Refused < StandardError; end
     class BudgetSpent < StandardError; end
@@ -123,7 +124,6 @@ module Taste
 
       check(number, :brand_recs, "/v2/insights", "HTTP 200 and brands with an affinity from 0 to 1") do
         brands = @qloo.recommend(type: :brand, entity_ids: [ @podcast.id ], popularity_max: 0.97, take: 5)
-        @brand = brands.first
         scored = brands.any? && brands.all? { |brand| brand.affinity&.between?(0, 1) }
         [ brands, ok? && scored, entity_shape ]
       end
@@ -168,14 +168,6 @@ module Taste
       end
     end
 
-    def compare(number)
-      return skip(number, :compare, "/v2/analysis/compare", "no podcast or brand was found") unless @podcast && @brand
-
-      check(number, :compare, "/v2/analysis/compare", "HTTP 200 and shared tags with a score") do
-        tags = @qloo.compare(a_entity_ids: [ @podcast.id ], b_entity_ids: [ @brand.id ], take: 10)
-        [ tags, ok? && tags.any? { |tag| tag.score }, tag_shape ]
-      end
-    end
 
     # ---- running and printing one check ----
 

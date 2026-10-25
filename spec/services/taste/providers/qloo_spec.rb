@@ -257,6 +257,14 @@ RSpec.describe Taste::Providers::Qloo do
       expect(tags.first.score).to eq(0.77)
     end
 
+    it "returns [] for a podcast against a brand: no shared tags, only each side's own (R105)" do
+      body = { results: { tags: [],
+                          a: { tags: [ { tag_id: "urn:tag:genre:media:comedy", name: "Comedy", query: { count: 3 } } ] },
+                          b: { tags: [ { tag_id: "urn:tag:genre:brand:finance", name: "Finance", query: { count: 2 } } ] } } }
+      stub_request(:get, "#{base}/v2/analysis/compare").with(query: hash_including({})).to_return(status: 200, body: body.to_json)
+      expect(adapter.compare(a_entity_ids: [ "SYN-POD-001" ], b_entity_ids: [ "SYN-BRAND-001" ])).to eq([])
+    end
+
     it "returns [] when Qloo answers 404 No results (M1)" do
       stub_request(:get, "#{base}/v2/analysis/compare").with(query: hash_including({}))
         .to_return(status: 404, body: '{"code":404,"reason":"Not Found","message":"No results"}')

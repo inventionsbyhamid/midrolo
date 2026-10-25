@@ -4,9 +4,9 @@ module Research
     # are saved, each with the scored data and evidence the tools produced. The model supplies just the pick
     # and its reason, and a reason may cite only numbers found in that data (R38, NumericClaims).
     # A reason is one plain sentence of 25 words or fewer (R99): dashes come out first (R100), and a longer reason is
-    # cut to its first sentence or at a word boundary (the last resort), and the result says which were cut. A brand
-    # explain_matches didn't compare (past the compare cap, R93) may come with an empty reason: it gets the simpler
-    # template reason from its shared tags (Research::Templates), and the result says which.
+    # cut to its first sentence or at a word boundary (the last resort), and the result says which were cut. A brand Qloo
+    # didn't compare (every brand by default, R93, R105) may come with an empty reason: it gets the simpler template
+    # reason from its shared tags (Research::Templates), and the result says which.
     class SaveSponsorMatches < Base
       MAX_MATCHES = SponsorCandidates::MAX_RESULTS
       REASON_LIMIT = SponsorMatch::REASON_LENGTH
@@ -15,8 +15,8 @@ module Research
 
       description "Saves the sponsor matches: 20 to 40 candidate refs from find_sponsor_candidates, each with a reason: " \
                   "one plain, specific sentence of #{REASON_WORDS} words or fewer citing shared taste tags or " \
-                  "proven-sponsor evidence from the tools, with no numbers the tools didn't give. For a brand explain_matches " \
-                  "didn't compare, an empty reason gets a short one from its shared tags. Brands not in the candidate " \
+                  "proven-sponsor evidence from the tools, with no numbers the tools didn't give. An empty reason gets a " \
+                  "short one written from the brand's shared tags. Brands not in the candidate " \
                   "list are rejected. Each call replaces the saved list, so resend the full list when fixing rejections."
       arguments({ matches: { type: "array", maxItems: MAX_MATCHES,
                              items: { type: "object", additionalProperties: false, required: %w[brand_id reason],
@@ -80,9 +80,9 @@ module Research
         [ fitted, fitted != reason ]
       end
 
-      # The template reason from shared tags, for a brand the compare cap left unexplained (R93); nil for the rest.
+      # The template reason from shared tags, for a brand Qloo didn't compare (R93, R105); nil for the rest.
       def template_reason(id)
-        return nil unless @require_reasons && id && toolkit.explanations[id].blank?
+        return nil unless @require_reasons && id && !toolkit.compared?(id)
 
         @templated << toolkit.brand_ref(id)
         Templates.reason(toolkit, toolkit.scored.fetch(id))
@@ -148,7 +148,7 @@ module Research
         if @templated.any?
           refs = @templated.uniq
           text += " Wrote #{refs.size} short #{'reason'.pluralize(refs.size)} from shared tags (#{refs.first(10).join(', ')}) " \
-                  "for brands explain_matches didn't compare."
+                  "for brands Qloo didn't compare."
         end
         if @shortened.any?
           text += " Shortened #{@shortened.size} #{'reason'.pluralize(@shortened.size)} to #{REASON_WORDS} words " \

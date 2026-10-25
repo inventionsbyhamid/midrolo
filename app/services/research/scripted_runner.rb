@@ -49,8 +49,9 @@ module Research
 
     def scan_limit = @with_reasons ? Entitlements.for(toolkit.user).scan_limit : 0
 
+    # Every match: Qloo compares the first MatchExplainer::MAX_COMPARES when allowed, the rest share tags (R105).
     def explain(scored)
-      ids = scored.first(MatchExplainer::MAX_COMPARES).map { |s| s.candidate.entity.id }
+      ids = scored.map { |s| s.candidate.entity.id }
       toolkit.add_explanations(MatchExplainer.call(toolkit, brand_ids: ids, seed_entity_ids: toolkit.seed_entity_ids))
     end
 
