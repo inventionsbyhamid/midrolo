@@ -9,7 +9,8 @@
 #   backup list                     the backups in R2, oldest first
 #   backup restore NAME [DATABASE]  load backup NAME (from list) into DATABASE (default PGDATABASE), which must exist
 #                                   and be empty: the download is checked whole first, then loaded in one transaction
-#   backup health                   fails, saying when, from a failed backup until a later one succeeds (the health check)
+#   backup health                   fails, saying when, from a failed backup until a later one succeeds
+#                                   (the container's health check)
 set -euo pipefail
 export TZ=UTC
 
