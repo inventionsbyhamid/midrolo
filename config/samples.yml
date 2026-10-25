@@ -1,4 +1,6 @@
-# Sample shows for public demo pages. The real Podcast Index ids are filled in later.
+# Sample shows for the public sample reports at /samples/:slug (R78). The real Podcast Index ids are filled in later.
+# bin/rails samples:generate runs a full agent report for each (spend bucket "sample"); it skips slugs that already
+# have a done report, and FORCE=1 runs them all again. With live keys each report costs real money (about $0.50).
 shared:
   samples:
     - slug: sample-one

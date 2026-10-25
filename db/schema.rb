@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_050300) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_060000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -244,8 +244,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_050300) do
     t.string "email"
     t.string "name"
     t.string "avatar_url"
-    t.string "provider", null: false
-    t.string "uid", null: false
+    t.string "provider"
+    t.string "uid"
     t.boolean "admin", default: false, null: false
     t.boolean "judge", default: false, null: false
     t.datetime "deleted_at"
@@ -259,6 +259,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_050300) do
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
+    t.check_constraint "(provider IS NULL) = (uid IS NULL)", name: "users_provider_and_uid_together"
   end
 
   create_table "waitlist_entries", force: :cascade do |t|

@@ -56,6 +56,27 @@ RSpec.describe "Authentication" do
     expect(flash[:alert]).to eq("We couldn't sign you in with that Google account. Please contact support.")
   end
 
+  describe "the samples owner (R78)" do
+    let!(:owner) { User.create!(email: User::SAMPLES_EMAIL) }
+
+    it "can't be signed into with Google, even by the same email" do
+      OmniAuth.config.mock_auth[:google_oauth2] = mock_google_auth(email: User::SAMPLES_EMAIL)
+
+      get "/users/auth/google_oauth2/callback"
+
+      expect(response).to redirect_to("/users/sign_in")
+      get "/shows"
+      expect(response).to redirect_to("/users/sign_in")
+    end
+
+    it "gets no session even when one is forced on it" do
+      sign_in owner
+      get "/shows"
+
+      expect(response).to redirect_to("/users/sign_in")
+    end
+  end
+
   it "shows Sign out in the signed-in app layout" do
     sign_in create(:user)
     get "/shows/new"
