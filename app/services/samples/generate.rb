@@ -55,7 +55,7 @@ module Samples
     end
 
     def run(show)
-      report = show.reports.create!(kind: "agent", status: "queued", spend_bucket: "sample")
+      report = show.reports.create!(kind: "agent", status: "queued", spend_bucket: Samples::SPEND_BUCKET)
       GenerateReportJob.perform_now(report.id)
       report.reload
     end

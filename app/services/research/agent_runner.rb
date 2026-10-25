@@ -21,6 +21,8 @@ module Research
     MAX_REQUEST_SECONDS = 360
     MAX_RETRY_INTERVAL = 5
     MAX_SEED_RETRIES = 2
+    SAMPLE_VOICE = "This report is a public sample: write the summary and reasons about the show in the third person " \
+                   '("this show", "its listeners"), never "you" or "your".'.freeze
     TIMEOUTS = [ Faraday::TimeoutError, Timeout::Error ].freeze
 
     def self.call(report) = new(report).call
@@ -63,8 +65,12 @@ module Research
       record_spend(chat, model) if chat
     end
 
+    # A sample (Samples::Generate runs it in Samples::SPEND_BUCKET) is read by strangers on a public page, so only its run is
+    # asked for the third person; an owner reads their own report as "your show" (R112). The system prompt stays the
+    # same for both, so its cache is shared.
     def kickoff
-      "Research sponsors for the podcast #{Untrusted.wrap(toolkit.show.title)}. Start with read_show_feed."
+      text = "Research sponsors for the podcast #{Untrusted.wrap(toolkit.show.title)}. Start with read_show_feed."
+      report.spend_bucket == Samples::SPEND_BUCKET ? "#{text} #{SAMPLE_VOICE}" : text
     end
 
     def enforce_limits(chat)

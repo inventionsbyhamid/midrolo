@@ -1,6 +1,9 @@
 # The public sample reports (spec §5.1, R78): config/samples.yml names them, Samples::Generate runs each one as a full
 # agent report under the samples owner (User::SAMPLES_EMAIL), and /samples shows the done ones to anyone, read-only.
 module Samples
+  # The spend bucket every sample run records its cost in, and how its run knows it's a sample (Research::AgentRunner).
+  SPEND_BUCKET = "sample".freeze
+
   # [{slug:, directory_id:}], in samples.yml order. Read once per process, except in development, where an edit to
   # samples.yml shows up without a restart.
   def self.entries
