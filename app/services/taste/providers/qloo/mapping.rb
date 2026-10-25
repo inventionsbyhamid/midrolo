@@ -15,7 +15,7 @@ module Taste
         # The heatmap answer cut to the keep entries with the most affinity (entries without one last), and nothing else.
         def top_heatmap(json, keep)
           entries = Array(dig_results(json, "heatmap")).select { |h| h.is_a?(Hash) }
-          top = entries.sort_by { |h| -(float(h.dig("query", "affinity") || h["affinity"]) || -1.0) }.first(keep)
+          top = entries.sort_by { |h| -(float(heat_query(h)["affinity"] || h["affinity"]) || -1.0) }.first(keep)
           { "results" => { "heatmap" => top } }
         end
 
@@ -77,7 +77,7 @@ module Taste
         # Latitude as latitude or lat, longitude as longitude, lon or lng, under location or flat (R87).
         def heat_point(h)
           loc = h["location"].is_a?(Hash) ? h["location"] : {}
-          query = h["query"].is_a?(Hash) ? h["query"] : {}
+          query = heat_query(h)
           lat = float(loc["latitude"] || loc["lat"] || h["latitude"] || h["lat"])
           lng = float(loc["longitude"] || loc["lon"] || loc["lng"] || h["longitude"] || h["lon"] || h["lng"])
           return nil unless lat && lng && lat.abs <= 90 && lng.abs <= 180
@@ -86,6 +86,9 @@ module Taste
                         affinity: float(query["affinity"] || h["affinity"]), popularity: float(query["popularity"] || h["popularity"]),
                         label: text(loc["name"] || h["name"] || loc["city"] || loc["locality"]))
         end
+
+        # A heatmap entry's query block; {} when it is missing or isn't a hash (Task 20: no TypeError after a spent call).
+        def heat_query(h) = h["query"].is_a?(Hash) ? h["query"] : {}
 
         # A shape we don't read would empty the map silently: say which keys came back instead.
         def warn_unparsed_heatmap(raw)

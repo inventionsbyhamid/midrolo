@@ -15,6 +15,19 @@ RSpec.describe Research::Places do
     expect(described_class.name_for(0.0, -30.0)).to be_nil
   end
 
+  it "prefers the report's own country, so a Detroit cell of a US report is never Windsor (Task 20)" do
+    cell = [ 42.31, -83.035 ] # across the river from Detroit, nearer Windsor's row
+    expect(described_class.name_for(*cell, country: "US")).to eq("Detroit")
+    expect(described_class.name_for(*cell, country: "CA")).to eq("Windsor")
+    expect(described_class.name_for(*cell)).to eq("Windsor")
+    expect(described_class.name_for(*cell, country: "us")).to eq("Detroit")
+  end
+
+  it "falls back to the nearest metro anywhere when none of the country's is within 75 km" do
+    expect(described_class.name_for(51.50, -0.10, country: "US")).to eq("London")
+    expect(described_class.name_for(51.50, -0.10, country: "ZZ")).to eq("London")
+  end
+
   it "keeps a small table of about 150 metros, covering every fallback metro and the Fake's" do
     metros = described_class.metros
     expect(metros.size).to be_between(140, 180)

@@ -127,7 +127,7 @@ Once these pass, the committed fixtures in `spec/fixtures/qloo/` stay synthetic.
 ## Results 2026-10-25
 
 Run by the controller with the real key, shapes, statuses, counts and timings only (no names, ids or bodies kept).
-21 live calls that day.
+24 live calls that day: 21 before the fixes, 3 in the rerun after them.
 
 **`rake qloo:smoke`, before the review:** 10 of 10 calls, 6 passed, 2 failed, aborted before compare.
 
@@ -160,3 +160,6 @@ Run by the controller with the real key, shapes, statuses, counts and timings on
 
 **Rerun to confirm:** `STEPS=search_podcast,search_miss,heatmap bin/rails qloo:smoke`, 3 live calls (4 at most, with
 one retry).
+
+**Rerun after the fixes:** `STEPS=search_podcast,search_miss,heatmap`: 3 passed, with 3 live calls. The heatmap's
+8,421 geohash points were cut to the 200 with the most affinity (R106). That made 24 live calls that day.

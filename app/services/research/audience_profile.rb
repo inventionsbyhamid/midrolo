@@ -111,10 +111,11 @@ module Research
       end
     end
 
-    # Each point named after its nearest metro (R106: Qloo's geohash cells have no names), so Top places can add up.
+    # Each point named after its nearest metro (R106: Qloo's geohash cells have no names), the report country's first,
+    # so Top places can add up.
     def heatmap(step, location)
       points = step.optional(location) { taste.heatmap(location: location, **signals, take: HEATMAP_TAKE) } || []
-      points.map { |point| point.with(label: Places.name_for(point.lat, point.lng)) }
+      points.map { |point| point.with(label: Places.name_for(point.lat, point.lng, country: @country)) }
     end
 
     def thin? = @entities ? @lists[:brand].size < THIN_BELOW : @tags.empty?

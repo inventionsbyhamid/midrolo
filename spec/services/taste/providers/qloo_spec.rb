@@ -250,6 +250,18 @@ RSpec.describe Taste::Providers::Qloo do
       ])
     end
 
+    it "ranks entries whose query isn't a hash without raising, so a spent call still maps (Task 20)" do
+      entries = [ { location: { latitude: 40.7, longitude: -74.0 }, query: 0.4 },
+                  { location: { latitude: 30.3, longitude: -97.7 }, query: { affinity: 0.9 } },
+                  { location: { latitude: 47.6, longitude: -122.3 }, query: "high", affinity: 0.5 } ]
+      stub_request(:get, "#{base}/v2/insights").with(query: hash_including("filter.type" => "urn:heatmap"))
+        .to_return(status: 200, body: { results: { heatmap: entries } }.to_json)
+
+      points = adapter.heatmap(location: "United States", entity_ids: [ "E1" ])
+
+      expect(points.map(&:affinity)).to eq([ 0.9, 0.5, nil ])
+    end
+
     it "warns, naming the keys it saw, when a non-empty heatmap parses to no points (M5)" do
       stub_request(:get, "#{base}/v2/insights").with(query: hash_including("filter.type" => "urn:heatmap")).to_return(json("heatmap_unknown"))
       allow(Rails.logger).to receive(:warn)

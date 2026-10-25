@@ -14,8 +14,9 @@ module Research
   # requests, Step#optional stops calling out. Core calls aren't wrapped in optional, so they always run.
   class StepLogger
     # Qloo trouble a non-essential sub-call may skip, as if it came back empty: an outage, a rate limit, a request Qloo
-    # couldn't use (400) or a type the key can't use (403, R87). AuthError is never soft: the runner pauses runs on it.
-    SOFT_ERRORS = [ Taste::Unavailable, Taste::RateLimited, Taste::BadRequest, Taste::Unsupported ].freeze
+    # couldn't use (400), a type the key can't use (403, R87) or nothing found (404). AuthError is never soft: the
+    # runner pauses runs on it.
+    SOFT_ERRORS = [ Taste::Unavailable, Taste::RateLimited, Taste::BadRequest, Taste::Unsupported, Taste::NotFound ].freeze
     BUDGET_WARNING = "Skipped to stay within research budget".freeze
     SUMMARY_LIMIT = 500
     INPUT_LIMIT = 300

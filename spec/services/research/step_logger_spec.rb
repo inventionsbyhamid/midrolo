@@ -159,6 +159,17 @@ RSpec.describe Research::StepLogger do
     )
   end
 
+  it "treats a 404 from a non-essential call like empty too (Task 20)" do
+    result = :unset
+    logger.step("audience", "Building…") do |step|
+      result = step.optional("Leans") { raise Taste::NotFound, "Qloo /v2/insights returned HTTP 404" }
+    end
+
+    expect(result).to be_nil
+    expect(report.agent_steps.last).to have_attributes(status: "warning",
+                                                       output_summary: "Leans skipped: Qloo has no results for that request.")
+  end
+
   it "says Qloo has nothing for a request that 404s (R110)" do
     expect(described_class.describe(Taste::NotFound.new("404"))).to eq("Qloo has no results for that request.")
   end

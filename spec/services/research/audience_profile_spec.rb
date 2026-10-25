@@ -118,6 +118,16 @@ RSpec.describe Research::AudienceProfile do
     expect(report.agent_steps.find_by(tool: "heatmap").output_summary).to include("strongest in Austin")
   end
 
+  it "names a border cell after the report country's metro (Task 20)" do
+    border = Taste::HeatPoint.new(lat: 42.31, lng: -83.035, geohash: "dpsc", affinity: 0.9, popularity: 0.2, label: nil)
+    allow(taste).to receive(:heatmap).and_return([ border ])
+
+    build(country: "US")
+    expect(report.reload.heatmap["points"].map { |p| p["label"] }).to eq([ "Detroit" ])
+    build(country: "CA")
+    expect(report.reload.heatmap["points"].map { |p| p["label"] }).to eq([ "Windsor" ])
+  end
+
   it "skips a failing metro with a warning" do
     allow(taste).to receive(:heatmap).and_wrap_original do |original, **kw|
       next [] if kw[:location] == "United States"
