@@ -125,6 +125,41 @@ RSpec.describe UserMailer do
       expect(needs_input.reload.needs_input_mailed_at).to be_present
     end
 
+    # R119: a delivery that raises gives its claim back and the job retries, so one Resend blip doesn't lose the mail.
+    # While the failing delivery holds the claim, a duplicate run still sends nothing.
+    it "sends the mail once when the first delivery fails and the retry succeeds" do
+      failures = 1
+      allow_any_instance_of(Mail::TestMailer).to receive(:deliver!).and_wrap_original do |original, mail|
+        if failures.positive?
+          failures -= 1
+          described_class.perform_now(report.id) # a duplicate run while this delivery holds the claim
+          raise Net::ReadTimeout
+        end
+        original.call(mail)
+      end
+
+      perform_enqueued_jobs { described_class.perform_later(report.id) }
+
+      expect(subjects).to eq([ "Your sponsor report for The Founder's Ledger is ready" ])
+      expect(report.reload.ready_mailed_at).to be_present
+    end
+
+    it "gives up after a few attempts, leaving the mail unclaimed and the error reported" do
+      tries = 0
+      allow_any_instance_of(Mail::TestMailer).to receive(:deliver!) do
+        tries += 1
+        raise Errno::ECONNRESET
+      end
+      allow(Rails.error).to receive(:report)
+
+      perform_enqueued_jobs { described_class.perform_later(report.id) }
+
+      expect(subjects).to be_empty
+      expect(tries).to eq(described_class::ATTEMPTS)
+      expect(Rails.error).to have_received(:report).with(an_instance_of(Errno::ECONNRESET), hash_including(handled: true))
+      expect(report.reload.ready_mailed_at).to be_nil
+    end
+
     it "isn't sent if the report was viewed after finishing, whatever its outcome" do
       report.update!(viewed_at: report.finished_at + 5.seconds)
       needs_input.update!(viewed_at: needs_input.finished_at + 5.seconds)

@@ -142,10 +142,19 @@ class Report < ApplicationRecord
     agent? && MAILED_OUTCOMES.key?(status) && !viewed_since_finish? && owner.email.present? && !owner.samples_owner?
   end
 
-  # Takes this outcome's mail for the caller: true once, for the first claim, so an at-least-once job sends it once.
+  # Takes this outcome's mail for the caller: the claim's time for the first claim and nil for any other, so an
+  # at-least-once job sends it once.
   def claim_outcome_mail!
     column = MAILED_OUTCOMES.fetch(status)
-    self.class.where(id: id, column => nil).update_all(column => Time.current) == 1
+    claimed_at = Time.current
+    claimed_at if self.class.where(id: id, column => nil).update_all(column => claimed_at) == 1
+  end
+
+  # Gives back the claim taken at claimed_at when its mail wasn't delivered (R119), so the job's retry can send it.
+  # Only that claim: while it holds, no other run could take the mail.
+  def release_outcome_mail!(claimed_at)
+    column = MAILED_OUTCOMES.fetch(status)
+    self.class.where(id: id, column => claimed_at).update_all(column => nil)
   end
 
   # Saves one section and pushes it to open report pages. Matches live in their own table, so
