@@ -14,7 +14,21 @@ RSpec.describe Llm::PlainText do
 
     it "turns an unspaced dash into a comma, whatever follows" do
       expect(described_class.sanitize("Founders—Operators love it.")).to eq("Founders, Operators love it.")
-      expect(described_class.sanitize("Ages 25–34")).to eq("Ages 25, 34")
+    end
+
+    it "reads a dash between two numbers as a range (R100a)" do
+      expect(described_class.sanitize("Ages 25–34")).to eq("Ages 25 to 34")
+      expect(described_class.sanitize("Ages 25 – 34 lean in.")).to eq("Ages 25 to 34 lean in.")
+      expect(described_class.sanitize("From 2020—2024, twice.")).to eq("From 2020 to 2024, twice.")
+    end
+
+    it "turns a pair of dashes inside one sentence into a pair of commas, never a full stop (R100a)" do
+      expect(described_class.sanitize("these — Notion, Linear — fit")).to eq("these, Notion, Linear, fit")
+      expect(described_class.sanitize("Two brands — Notion and Linear — fit well.")).to eq("Two brands, Notion and Linear, fit well.")
+    end
+
+    it "pairs dashes only within a sentence" do
+      expect(described_class.sanitize("A fit — Notion leads. Then — and only then — pitch.")).to eq("A fit. Notion leads. Then, and only then, pitch.")
     end
 
     it "treats a dash with space on one side as spaced, and a run of dashes as one" do
@@ -54,9 +68,32 @@ RSpec.describe Llm::PlainText do
       expect(described_class.clip_words(text, 5)).to eq("Your listeners love slow travel…")
     end
 
+    it "never takes an abbreviation for a first sentence: it cuts at a word boundary instead" do
+      squatch = "Dr. Squatch fans share this audience's love of #{(1..20).map { |i| "t#{i}" }.join(' ')} and more."
+      clipped = described_class.clip_words(squatch, 25)
+      expect(clipped).to start_with("Dr. Squatch fans share")
+      expect(clipped.split.size).to eq(25)
+
+      us = "U.S. founders love budgeting apps and side projects. #{'They also love long walks and cheap flights. ' * 3}"
+      expect(described_class.clip_words(us, 25)).to eq("U.S. founders love budgeting apps and side projects.")
+    end
+
+    it "keeps a first sentence only when it has a real length" do
+      text = "Yes. #{(1..30).map { |i| "w#{i}" }.join(' ')}."
+      expect(described_class.clip_words(text, 25)).to start_with("Yes. w1 w2")
+    end
+
     it "also holds a character limit" do
       expect(described_class.clip_words("x" * 30, 25, max_chars: 10)).to eq("#{'x' * 9}…")
       expect(described_class.clip_words("aaaa bbbb cccc dddd", 25, max_chars: 12)).to eq("aaaa bbbb…")
+    end
+  end
+
+  describe ".sentences" do
+    it "splits at sentence ends, but not after an abbreviation" do
+      expect(described_class.sentences("Dr. Squatch is a fit. U.S. founders love it! Mr. Beast too?"))
+        .to eq([ "Dr. Squatch is a fit.", "U.S. founders love it!", "Mr. Beast too?" ])
+      expect(described_class.sentences("")).to eq([])
     end
   end
 
