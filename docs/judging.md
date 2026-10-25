@@ -16,8 +16,8 @@ Work top to bottom. Deploy steps themselves are in [deploy.md](deploy.md).
 - [ ] `JUDGE_CODE` is set in the server's `.env`. Redeem it once on a throwaway account to prove it works.
 - [ ] `PROMO_PRO_UNTIL=2026-11-06` is set, so the promo covers judging.
 - [ ] Ask Qloo what daily allowance the hackathon key has. Then set `qloo_daily_call_limit` in `/admin` within it.
-      One judge's three full reports can use up to about 90 calls, and the default cap is 100 a day. How high to go
-      is your call.
+      One judge's three full reports make about 60 to 90 calls, 120 at most (40 a report), and the default cap is 100
+      a day. How high to go is your call.
 - [ ] The LLM budgets have room: `LLM_DAILY_BUDGET_USD`, `PROMO_BUDGET_USD` and `JUDGE_RESERVE_USD` (5, 10 and 5 at
       launch; editable in `/admin`).
 - [ ] The Google OAuth consent screen is published, so any Google account can sign in, not only test users.

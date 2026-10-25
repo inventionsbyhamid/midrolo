@@ -74,8 +74,9 @@ Production refuses to boot without `QLOO_API_KEY`, `PODCAST_INDEX_KEY`, `PODCAST
 ## 5. Before judging (Nov 2 to 5)
 
 - [ ] Ask Qloo for the key's daily allowance, then set `qloo_daily_call_limit` in `/admin` within it. How high to
-      go is your decision. For context: the default is 100 a day, and a judge's three agent reports use up to about
-      90 calls. Development counts its calls apart, against the same key (live-smoke.md).
+      go is your decision. For context: the default is 100 a day, and a judge's three agent reports make about 60 to
+      90 calls, 120 at most (40 a report, R130). Development counts its calls apart, against the same key
+      (live-smoke.md).
 - [ ] Billing stays on the founding member waitlist (`BILLING_MODE` unset or `waitlist`). Live billing stays refused
       until the go-live guard (R94) passes with a real Qloo price: an admin enters Qloo's cost per call, and every
       paid plan keeps a 60% margin with every cap used (`app/services/billing/margins.rb`).
