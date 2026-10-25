@@ -1,9 +1,10 @@
-<%# locals: (report:, read_only: false) -%>
+<%# locals: (report:, read_only:) -%>
 <%# A finished Snapshot gets the upgrade card. Any other Snapshot (running, needs_input, failed) falls through, so a
     needs-input ask or a failure leads the page instead of an upsell (Review Focus #1). %>
 <%# read_only (a public sample, R78) has no upgrade card: the run buttons belong to the show's owner. %>
+<% title = read_only ? "This show's audience at a glance" : "Your audience at a glance" %>
 <% if report.snapshot? && report.done? && !read_only %>
-  <%= render "reports/section", name: "summary", title: "Your audience at a glance" do %>
+  <%= render "reports/section", name: "summary", title: title do %>
     <% if report.summary.present? %>
       <p class="report-summary"><%= report.summary %></p>
     <% end %>
@@ -20,11 +21,11 @@
     </div>
   <% end %>
 <% elsif report.summary.present? %>
-  <%= render "reports/section", name: "summary", title: "Your audience at a glance" do %>
+  <%= render "reports/section", name: "summary", title: title do %>
     <p class="report-summary"><%= report.summary %></p>
   <% end %>
 <% elsif section_pending?(report) %>
-  <%= render "reports/section", name: "summary", title: "Your audience at a glance" do %>
+  <%= render "reports/section", name: "summary", title: title do %>
     <%= render "components/skeleton", lines: 3, label: "Writing your summary", title: false %>
   <% end %>
 <% else %>

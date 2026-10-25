@@ -13,7 +13,7 @@ RSpec.describe "reports/sections/_map" do
 
   def html = Nokogiri::HTML5.fragment(rendered)
 
-  def render_section = render(partial: "reports/sections/map", locals: { report: report })
+  def render_section = render(partial: "reports/sections/map", locals: { report: report, read_only: false })
 
   it "hands the points and the map style to the map controller" do
     render_section

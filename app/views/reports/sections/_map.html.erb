@@ -1,9 +1,10 @@
-<%# locals: (report:, read_only: false) -%>
+<%# locals: (report:, read_only:) -%>
 <% heatmap = report.heatmap.is_a?(Hash) ? report.heatmap : nil %>
+<% title = read_only ? "Where this show's kind of listener lives" : "Where your kind of listener lives" %>
 <% if heatmap.nil? %>
   <% if section_pending?(report) %>
-    <%= render "reports/section", name: "map", title: "Where your kind of listener lives" do %>
-      <%= render "components/skeleton", lines: 3, label: "Mapping your listeners", title: false %>
+    <%= render "reports/section", name: "map", title: title do %>
+      <%= render "components/skeleton", lines: 3, label: "Mapping #{report_listeners(read_only)}", title: false %>
     <% end %>
   <% else %>
     <%= render "reports/section", name: "map", hidden: true %>
@@ -11,7 +12,7 @@
 <% else %>
   <% points = heatmap_points(heatmap) %>
   <% place = heatmap_place(heatmap) %>
-  <%= render "reports/section", name: "map", title: "Where your kind of listener lives", aside: (ui_badge(place, tone: :accent) if place) do %>
+  <%= render "reports/section", name: "map", title: title, aside: (ui_badge(place, tone: :accent) if place) do %>
     <p class="report-section-note">Modeled from Qloo taste data. Handy for regional brands and local sponsors.</p>
     <% if points.empty? %>
       <p class="mt-4 rounded-control border border-dashed border-line-strong px-4 py-6 text-ink-soft">Not enough location data for this audience</p>

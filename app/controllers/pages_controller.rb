@@ -5,6 +5,7 @@ class PagesController < ApplicationController
 
   def home
     @samples = Samples.reports
+    @match_counts = Samples.match_counts(@samples)
     @hero_sample = @samples.first
     @hero_matches = @hero_sample ? @hero_sample.sponsor_matches.first(3) : []
   end
@@ -18,8 +19,7 @@ class PagesController < ApplicationController
 
   def sitemap
     @samples = Samples.reports
-    @kit_slugs = Show.where.not(verified_at: nil).where.not(slug: nil)
-                     .joins(:media_kit).where.not(media_kits: { published_at: nil }).order(:slug).pluck(:slug)
+    @kit_slugs = Show.with_public_kit.order(:slug).pluck(:slug)
   end
 
   private

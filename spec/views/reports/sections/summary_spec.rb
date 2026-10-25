@@ -5,7 +5,7 @@ RSpec.describe "reports/sections/_summary" do
 
   def html = Nokogiri::HTML5.fragment(rendered)
 
-  def render_section = render(partial: "reports/sections/summary", locals: { report: report })
+  def render_section = render(partial: "reports/sections/summary", locals: { report: report, read_only: false })
 
   it "leads with the summary" do
     render_section

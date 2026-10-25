@@ -5,6 +5,7 @@ class SamplesController < ApplicationController
 
   def index
     @samples = Samples.reports
+    @match_counts = Samples.match_counts(@samples)
   end
 
   def show

@@ -10,7 +10,7 @@ RSpec.describe "reports/sections/_leans" do
 
   def html = Nokogiri::HTML5.fragment(rendered)
 
-  def render_section = render(partial: "reports/sections/leans", locals: { report: report })
+  def render_section = render(partial: "reports/sections/leans", locals: { report: report, read_only: false })
 
   it "labels the leans as modeled from Qloo taste data, not a headcount" do
     render_section
@@ -39,7 +39,7 @@ RSpec.describe "reports/sections/_leans" do
 
   it "orders age buckets youngest first whatever order jsonb returns them in" do
     report.update!(demographics: demographics) # jsonb sorts keys by length: "24_and_younger" comes back last
-    render(partial: "reports/sections/leans", locals: { report: Report.find(report.id) })
+    render(partial: "reports/sections/leans", locals: { report: Report.find(report.id), read_only: false })
     labels = html.css("[data-lean-label]").map { |label| label.text.squish }
     expect(labels.first(6)).to eq([ "24 and under", "25–29", "30–34", "35–44", "45–54", "55+" ])
   end

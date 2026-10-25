@@ -1,5 +1,6 @@
-<%# locals: (report:, read_only: false) -%>
+<%# locals: (report:, read_only:) -%>
 <% seeds = report.seed_items %>
+<% whose_show = read_only ? "the show" : "your show" %>
 <% if report.seeds.nil? && !report.needs_input? %>
   <% if section_pending?(report) %>
     <%= render "reports/section", name: "seeds", title: "Taste profile" do %>
@@ -13,11 +14,11 @@
     <% if report.profile_kind && !report.needs_input? %>
       <div class="profile-banner">
         <% if report.direct? %>
-          <p class="font-semibold">Built from your show on Qloo</p>
-          <p class="text-[0.9375rem] text-ink-soft">Qloo knows your show, so this profile starts from its own audience.</p>
+          <p class="font-semibold">Built from <%= whose_show %> on Qloo</p>
+          <p class="text-[0.9375rem] text-ink-soft">Qloo knows <%= whose_show %>, so this profile starts from its own audience.</p>
         <% else %>
-          <p class="font-semibold">Built from shows and topics like yours</p>
-          <p class="text-[0.9375rem] text-ink-soft">These shows and topics stand in for your show itself. Each one says where it came from.</p>
+          <p class="font-semibold">Built from shows and topics like <%= read_only ? "this one" : "yours" %></p>
+          <p class="text-[0.9375rem] text-ink-soft">These shows and topics stand in for <%= whose_show %> itself. Each one says where it came from.</p>
         <% end %>
       </div>
     <% end %>

@@ -11,7 +11,7 @@ RSpec.describe "reports/sections/_seeds" do
 
   def html = Nokogiri::HTML5.fragment(rendered)
 
-  def render_section = render(partial: "reports/sections/seeds", locals: { report: report })
+  def render_section = render(partial: "reports/sections/seeds", locals: { report: report, read_only: false })
 
   it "says a proxy profile is built from shows and topics like yours, listing each seed and its source" do
     render_section

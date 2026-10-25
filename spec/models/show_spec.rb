@@ -98,6 +98,22 @@ RSpec.describe Show do
     end
   end
 
+  describe ".with_public_kit" do
+    it "matches #public_kit?: verified, slugged and published" do
+      public_show = create(:show, title: "Public")
+      create(:media_kit, :published, show: public_show)
+      unpublished = create(:show, title: "Unpublished").tap(&:verify!)
+      create(:media_kit, show: unpublished)
+      unverified = create(:show, title: "Unverified", slug: "unverified")
+      create(:media_kit, show: unverified, published_at: Time.current)
+      no_kit = create(:show, title: "No kit").tap(&:verify!)
+
+      expect(described_class.with_public_kit).to contain_exactly(public_show)
+      expect([ public_show, unpublished, unverified, no_kit ].map { |show| show.reload.public_kit? || false })
+        .to eq([ true, false, false, false ])
+    end
+  end
+
   describe ".http_url" do
     it "keeps http(s) URLs with a host and drops everything else" do
       expect(described_class.http_url(" https://show.example.com/ ")).to eq("https://show.example.com/")

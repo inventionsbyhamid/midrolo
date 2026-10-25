@@ -68,6 +68,11 @@ class Show < ApplicationRecord
 
   def public_kit? = verified? && slug.present? && media_kit&.published?
 
+  # The shows whose kit is public at /k/:slug: public_kit? as a query (the sitemap lists them).
+  scope :with_public_kit, lambda {
+    where.not(verified_at: nil).where.not(slug: nil).joins(:media_kit).where.not(media_kits: { published_at: nil })
+  }
+
   # A queued or running report (only one may be active per show).
   def active_report
     reports.live.order(created_at: :desc, id: :desc).first

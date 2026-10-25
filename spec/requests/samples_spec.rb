@@ -41,6 +41,29 @@ RSpec.describe "Sample reports" do
       expect(page.css("main a").map { |a| a["href"] }).not_to include(a_string_matching(%r{\A/(shows/\d+|sponsor_matches)}))
     end
 
+    it "speaks of the show in the third person, never to the reader as its owner" do
+      report.update!(audience: { "brands" => [ { "id" => "b1", "name" => "Fieldnote Coffee", "affinity" => 0.9 } ] },
+                     demographics: { "age" => { "25_to_29" => 0.4 }, "gender" => { "female" => 0.2 } },
+                     heatmap: { "location" => "US", "points" => [ { "lat" => 40.7, "lng" => -74.0, "affinity" => 0.9, "label" => "New York" } ] })
+      get "/samples/sample-one"
+
+      titles = page.css(".report-section-title").map { |title| title.text.squish }
+      expect(titles).to include("This show's audience at a glance", "What this show's listeners love",
+                                "Where this show's kind of listener lives")
+      # The page's own copy; agent-written text (the summary, step labels, reasons) stays as generated.
+      copy = page.css(".report-section-title, .report-section-note, .profile-banner, [role='tablist']")
+                 .map { |node| [ node.text, node["aria-label"] ].join(" ").squish }.join(" ")
+      expect(copy).to include("Built from the show on Qloo", "Qloo knows the show",
+                              "how people with this show's listeners' tastes lean", "This show's listeners' tastes")
+      expect(copy).not_to match(/\byour\b/i)
+    end
+
+    it "has no live stream: a sample never changes while it's open" do
+      get "/samples/sample-one"
+
+      expect(page.css("turbo-cable-stream-source")).to be_empty
+    end
+
     it "gives the sample its own title and share tags" do
       get "/samples/sample-one"
 
@@ -78,6 +101,18 @@ RSpec.describe "Sample reports" do
       links = page.css("main a[href^='/samples/']").map { |a| a["href"] }.uniq
       expect(links).to eq(%w[/samples/sample-one /samples/sample-three])
       expect(page.at_css("main").text).to include("The Founder's Ledger", "Code & Coffee Weekly")
+    end
+
+    it "counts every sample's matches in one query" do
+      other = create(:show, user: owner, title: "Code & Coffee Weekly")
+      create_list(:sponsor_match, 2, report: create(:report, show: other, kind: "agent", status: "done", sample_slug: "sample-three"))
+      queries = []
+      counter = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?('FROM "sponsor_matches"') }
+
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { get "/samples" }
+
+      expect(page.at_css("main").text.squish).to include("1 brand match", "2 brand matches")
+      expect(queries.size).to eq(1)
     end
 
     it "says the samples are on their way when none is done" do

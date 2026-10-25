@@ -7,7 +7,7 @@ RSpec.describe "reports/sections/_matches" do
 
   def html = Nokogiri::HTML5.fragment(rendered)
 
-  def render_section = render(partial: "reports/sections/matches", locals: { report: report })
+  def render_section = render(partial: "reports/sections/matches", locals: { report: report, read_only: false })
 
   def limit_visible_to(count, pipeline: true)
     allow(Entitlements).to receive(:for)
@@ -196,7 +196,7 @@ RSpec.describe "reports/sections/_matches" do
       create(:sponsor_match, report: report, brand_entity_id: "b1", status: "pitched")
       running = create(:report, show: report.show, kind: "agent", status: "running")
       create(:sponsor_match, report: running, brand_entity_id: "b1")
-      render(partial: "reports/sections/matches", locals: { report: running })
+      render(partial: "reports/sections/matches", locals: { report: running, read_only: false })
 
       expect(html.at_css("[data-filter-target='item'] form select")).to be_present
       expect(html.at_css("[data-superseded]")).to be_nil

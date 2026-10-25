@@ -1,18 +1,19 @@
-<%# locals: (report:, read_only: false) -%>
+<%# locals: (report:, read_only:) -%>
 <% tabs = audience_tabs(report.audience) %>
+<% listeners = report_listeners(read_only) %>
 <% if tabs.empty? %>
   <% if section_pending?(report) %>
-    <%= render "reports/section", name: "audience", title: "What your listeners love" do %>
-      <%= render "components/skeleton", lines: 4, label: "Reading your audience", title: false %>
+    <%= render "reports/section", name: "audience", title: "What #{listeners} love" do %>
+      <%= render "components/skeleton", lines: 4, label: "Reading #{read_only ? "the" : "your"} audience", title: false %>
     <% end %>
   <% else %>
     <%= render "reports/section", name: "audience", hidden: true %>
   <% end %>
 <% else %>
-  <%= render "reports/section", name: "audience", title: "What your listeners love" do %>
-    <p class="report-section-note">What people with your listeners' tastes over-index on, ranked by Qloo affinity (0 to 1).</p>
+  <%= render "reports/section", name: "audience", title: "What #{listeners} love" do %>
+    <p class="report-section-note">What people with <%= listeners %>' tastes love more than most people do, ranked by Qloo affinity (0 to 1).</p>
     <div data-controller="tabs">
-      <div class="tab-row" role="tablist" aria-label="Your listeners' tastes">
+      <div class="tab-row" role="tablist" aria-label="<%= listeners.upcase_first %>' tastes">
         <% tabs.each_with_index do |(key, label, _), i| %>
           <button type="button" role="tab" class="tab" id="<%= dom_id(report, "#{key}_tab") %>"
                   aria-selected="<%= i.zero? %>" aria-controls="<%= dom_id(report, "#{key}_panel") %>" tabindex="<%= i.zero? ? 0 : -1 %>"

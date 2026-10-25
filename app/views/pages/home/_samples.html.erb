@@ -1,10 +1,10 @@
-<%# locals: (samples:) -%>
+<%# locals: (samples:, match_counts:) -%>
 <section id="samples" class="page-section" aria-labelledby="samples-title">
   <div class="wrap">
     <h2 id="samples-title" class="type-h2">Sample reports</h2>
     <p class="section-lead">
       Full agent reports on public shows, open to anyone. Brand names are real; each audience is modeled from Qloo taste data.
     </p>
-    <%= render "samples/list", samples: samples, heading: :h3 %>
+    <%= render "samples/list", samples: samples, match_counts: match_counts, heading: :h3 %>
   </div>
 </section>

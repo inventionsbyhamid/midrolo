@@ -92,7 +92,7 @@ class Report < ApplicationRecord
     update!(SECTION_COLUMNS.fetch(name) => data) if SECTION_COLUMNS.key?(name)
     sponsor_matches.reset if name == "matches" # the partial reads the association; drop any stale copy
     broadcast_replace_to self, target: "report_#{name}", partial: "reports/sections/#{name}",
-                                locals: { report: self }
+                                locals: { report: self, read_only: false }
   end
 
   private

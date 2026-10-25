@@ -17,7 +17,7 @@ RSpec.describe "reports/sections/_audience" do
 
   def html = Nokogiri::HTML5.fragment(rendered)
 
-  def render_section = render(partial: "reports/sections/audience", locals: { report: report })
+  def render_section = render(partial: "reports/sections/audience", locals: { report: report, read_only: false })
 
   it "renders accessible tabs for brands, music, TV, podcasts and taste tags" do
     render_section

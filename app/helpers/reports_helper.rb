@@ -17,6 +17,10 @@ module ReportsHelper
   PROVEN_SHOWN = 2
   DEFAULT_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/positron".freeze
 
+  # Who a report's copy talks about: "your listeners" to the show's owner, "this show's listeners" on a public sample
+  # (read_only, R78), so a stranger never reads "your". Agent-written text (the summary, reasons) stays as written.
+  def report_listeners(read_only) = read_only ? "this show's listeners" : "your listeners"
+
   # True while the run may still fill a section in; finished reports hide sections that never came.
   def section_pending?(report) = report.active?
 
