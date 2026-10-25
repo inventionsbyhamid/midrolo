@@ -85,13 +85,32 @@ RSpec.describe MediaKit do
     let(:browser) { "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15" }
 
     it "counts a visitor's browser" do
-      expect(kit.record_view(viewer: nil, user_agent: browser)).to be(true)
-      expect(kit.record_view(viewer: create(:user), user_agent: browser)).to be(true)
+      expect(kit.record_view(viewer: nil, user_agent: browser, ip: "203.0.113.7")).to be(true)
+      expect(kit.record_view(viewer: create(:user), user_agent: browser, ip: "203.0.113.7")).to be(true)
       expect(kit.reload.views_count).to eq(2)
     end
 
+    it "counts a visitor once per 30 minutes per kit, keyed on a hash of IP and browser, never the raw IP" do
+      cache = ActiveSupport::Cache::MemoryStore.new
+      allow(Rails).to receive(:cache).and_return(cache)
+      other_kit = described_class.create!(show: create(:show))
+
+      expect(kit.record_view(viewer: nil, user_agent: browser, ip: "203.0.113.7")).to be(true)
+      expect(kit.record_view(viewer: nil, user_agent: browser, ip: "203.0.113.7")).to be(false)
+      expect(kit.record_view(viewer: nil, user_agent: browser, ip: "198.51.100.4")).to be(true) # another visitor
+      expect(kit.record_view(viewer: nil, user_agent: "#{browser} Edg/130", ip: "203.0.113.7")).to be(true) # another browser
+      expect(other_kit.record_view(viewer: nil, user_agent: browser, ip: "203.0.113.7")).to be(true) # another kit
+      travel 31.minutes
+      expect(kit.record_view(viewer: nil, user_agent: browser, ip: "203.0.113.7")).to be(true)
+
+      expect(kit.reload.views_count).to eq(4)
+      keys = cache.instance_variable_get(:@data).keys.join(" ")
+      expect(keys).to include("media_kit_view:#{kit.id}:")
+      expect(keys).not_to include("203.0.113.7")
+    end
+
     it "skips the owner" do
-      expect(kit.record_view(viewer: user, user_agent: browser)).to be(false)
+      expect(kit.record_view(viewer: user, user_agent: browser, ip: "203.0.113.7")).to be(false)
       expect(kit.reload.views_count).to eq(0)
     end
 
@@ -109,7 +128,7 @@ RSpec.describe MediaKit do
       ""
     ].each do |agent|
       it "skips #{agent.presence || 'a blank user agent'}" do
-        expect(kit.record_view(viewer: nil, user_agent: agent)).to be(false)
+        expect(kit.record_view(viewer: nil, user_agent: agent, ip: "203.0.113.7")).to be(false)
         expect(kit.reload.views_count).to eq(0)
       end
     end

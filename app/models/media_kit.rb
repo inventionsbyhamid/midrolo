@@ -9,6 +9,9 @@ class MediaKit < ApplicationRecord
   ABOUT_LIMIT = 2000
   HIDDEN_BRANDS_LIMIT = 100 # reports list 20 brands; this only bounds a crafted request
   VERIFY_TO_PUBLISH = "Verify you own this show to publish.".freeze
+  # A visitor counts once per kit in this window.
+  VIEW_WINDOW = 30.minutes
+  VIEW_DIGEST_SALT = "media_kit/view".freeze
   # Crawlers, link-preview fetchers, scripts and headless browsers. A blank user agent counts as a bot too.
   BOT_AGENT = /bot|crawl|spider|slurp|facebookexternalhit|facebookcatalog|slack|embedly|iframely|whatsapp|
                skypeuripreview|bingpreview|vkshare|quora\ link\ preview|outbrain|pinterest|mastodon|
@@ -69,16 +72,26 @@ class MediaKit < ApplicationRecord
 
   def unpublish! = update!(published_at: nil)
 
-  # Counts one view of the public page, atomically. The owner and bots don't count. True when counted.
-  def record_view(viewer:, user_agent:)
+  # Counts one view of the public page, atomically. The owner and bots don't count, and a visitor counts once per
+  # VIEW_WINDOW. True when counted.
+  def record_view(viewer:, user_agent:, ip:)
     return false if viewer && viewer.id == show.user_id
     return false if self.class.bot?(user_agent)
+    return false unless first_view_in_window?(ip, user_agent)
 
     self.class.update_counters(id, views_count: 1)
     true
   end
 
   private
+
+  # The cache remembers a visitor by a keyed SHA256 of their IP and user agent, never the IP itself. unless_exist
+  # makes the first write win, so parallel requests from one visitor count once.
+  def first_view_in_window?(ip, user_agent)
+    key = Rails.application.key_generator.generate_key(VIEW_DIGEST_SALT, 32)
+    visitor = OpenSSL::HMAC.hexdigest("SHA256", key, "#{ip}|#{user_agent}")
+    Rails.cache.write("media_kit_view:#{id}:#{visitor}", true, expires_in: VIEW_WINDOW, unless_exist: true)
+  end
 
   def images_are_small_web_images
     { cover: cover, host_photo: host_photo }.each do |name, image|

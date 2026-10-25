@@ -92,6 +92,17 @@ RSpec.describe "Public media kits" do
       expect(kit.reload.views_count).to eq(1)
     end
 
+    it "counts a returning visitor once per 30 minutes" do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      3.times { visit_kit }
+      get public_kit_path(show.slug), headers: { "User-Agent" => browser, "REMOTE_ADDR" => "198.51.100.4" }
+      expect(kit.reload.views_count).to eq(2)
+
+      travel 31.minutes
+      visit_kit
+      expect(kit.reload.views_count).to eq(3)
+    end
+
     it "opens in an older browser, since a brand may use whatever their company provides" do
       visit_kit(agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
       expect(response).to have_http_status(:ok)

@@ -8,7 +8,7 @@ class PublicKitsController < ApplicationController
     raise ActiveRecord::RecordNotFound unless @show.public_kit?
 
     @content = MediaKit::Content.new(@kit)
-    @kit.record_view(viewer: current_user, user_agent: request.user_agent)
+    @kit.record_view(viewer: current_user, user_agent: request.user_agent, ip: request.remote_ip)
   end
 
   private
