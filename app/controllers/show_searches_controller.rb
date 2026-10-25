@@ -2,8 +2,7 @@
 class ShowSearchesController < ApplicationController
   layout "app"
   # Search as you type. Before sign-in is required, so a signed-out client is counted by IP.
-  rate_limit to: 20, within: 1.minute, by: :user_or_ip, store: RATE_LIMIT_STORE,
-             with: -> { render_throttled(retry_after: 1.minute) }
+  throttle to: 20, within: 1.minute, by: :user_or_ip
   before_action :authenticate_user!
 
   UNAVAILABLE = "Search is unavailable right now. Try again in a minute, or paste your RSS feed URL.".freeze

@@ -209,6 +209,20 @@ RSpec.describe "Rate limits", :rate_limits do
       expect(response).to have_http_status(:ok)
     end
 
+    it "counts a signed-out client by IP" do
+      match
+      sign_out user
+      30.times do
+        post sponsor_match_pitch_path(match), env: from("198.51.100.40")
+        expect(response).to redirect_to("/users/sign_in")
+      end
+      post sponsor_match_pitch_path(match), env: from("198.51.100.40")
+      expect_friendly_page(retry_after: 3600)
+
+      post sponsor_match_pitch_path(match), env: from("198.51.100.41")
+      expect(response).to redirect_to("/users/sign_in")
+    end
+
     it "counts the path however it is spelled" do
       requests = [ [ :post, "/sponsor_matches/#{match.id}/pitch.html" ], [ :post, "/sponsor_matches//#{match.id}//pitch" ],
                    [ :post, "/sponsor_matches/#{match.id}/pitch/" ] ]
@@ -284,6 +298,24 @@ RSpec.describe "Rate limits", :rate_limits do
       expect(response).to have_http_status(:see_other)
     end
 
+    it "never counts another user's sends for the show, which find no show" do
+      show
+      sign_in create(:user)
+      get account_path # keeps the sign in: the session cookie isn't written on a response that raised
+      6.times do
+        post show_verification_path(show), params: { kind: "email" }
+        expect(response).to have_http_status(:not_found)
+      end
+
+      sign_in user
+      5.times do
+        post show_verification_path(show), params: { kind: "email" }
+        expect(response).to have_http_status(:see_other)
+      end
+      post show_verification_path(show), params: { kind: "email" }
+      expect_friendly_page(retry_after: 3600)
+    end
+
     it "counts the path however it is spelled, and however the show's id is spelled" do
       encoded_id = show.id.to_s.chars.map { |digit| format("%%%02X", digit.ord) }.join
       requests = [ [ :post, "/shows/#{show.id}/verification.html" ], [ :post, "/shows//#{show.id}/verification" ],
@@ -340,6 +372,17 @@ RSpec.describe "Rate limits", :rate_limits do
         post path, params: { code: "guess" }
         expect(response).to have_http_status(:too_many_requests), "expected POST #{path} to be throttled"
       end
+    end
+  end
+end
+
+# Every other spec: RATE_LIMIT_STORE counts nowhere (config/initializers/rate_limit_store.rb), so however many requests
+# an example makes from one IP, none is refused.
+RSpec.describe "Rate limits outside :rate_limits examples" do
+  it "never answers 429, even past the global limit of 60 a minute" do
+    61.times do
+      get "/pricing"
+      expect(response).to have_http_status(:ok)
     end
   end
 end

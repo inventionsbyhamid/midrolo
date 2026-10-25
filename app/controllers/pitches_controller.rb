@@ -5,8 +5,7 @@
 # dialog to catch up once it has subscribed. Another user's match and a locked Snapshot match (R43) are not found.
 class PitchesController < ApplicationController
   layout "app"
-  rate_limit to: 30, within: 1.hour, only: :create, by: :user_or_ip, store: RATE_LIMIT_STORE,
-             with: -> { render_throttled(retry_after: 1.hour) }
+  throttle to: 30, within: 1.hour, only: :create, by: :user_or_ip
   before_action :authenticate_user!
   before_action :set_sponsor_match
 

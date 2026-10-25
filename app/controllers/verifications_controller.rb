@@ -10,8 +10,8 @@ class VerificationsController < ApplicationController
              with: -> { redirect_to new_show_verification_path(params[:show_id]), alert: "Too many tries. Wait a minute, then try again." }
   # Emailed codes, per show, on top of ShowVerification's resend and daily limits. set_show found the show, so however
   # its id is spelled ("01", "%31") it is the same show, and only its owner's requests count.
-  rate_limit to: 5, within: 1.hour, only: :create, if: -> { params[:kind] == "email" }, by: -> { @show.id },
-             name: "code_sends", store: RATE_LIMIT_STORE, with: -> { render_throttled(retry_after: 1.hour) }
+  throttle to: 5, within: 1.hour, only: :create, if: -> { params[:kind] == "email" }, by: -> { @show.id },
+           name: "code_sends"
 
   VERIFIED = "You're verified. Publish your media kit when it's ready.".freeze
   ALREADY_VERIFIED = "You've already verified this show, so there's nothing to send.".freeze

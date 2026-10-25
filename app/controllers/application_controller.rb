@@ -1,23 +1,24 @@
 class ApplicationController < ActionController::Base
-  # Rate limits (spec §9a, §11; R69, R84) are Rails' rate_limit, counted in RATE_LIMIT_STORE
-  # (config/initializers/rate_limit_store.rb) and refused with the app's 429 (render_throttled):
-  # - every request, here: 60 a minute per IP, in one bucket across controllers. WebhooksController opts out
-  #   (providers retry). Rails::HealthController (/up) and Active Storage's controllers don't inherit this class, and
-  #   Action Cable isn't a controller, so none of them is ever counted.
-  # - starting a report (ReportsController#create, or a re-run in ShowsController#update): 10 an hour per user.
-  # - PitchesController#create: 30 an hour per user. ShowSearchesController: 20 a minute per user.
-  # - VerificationsController#create: 5 emailed codes an hour per show, besides 10 tries a minute per user.
-  # - AccountsController#judge_code: 5 an hour per user and 5 an hour per IP.
+  # Rate limits (spec §9a, §11; R69, R84) go through throttle: Rails' rate_limit, counted in RATE_LIMIT_STORE
+  # (config/initializers/rate_limit_store.rb) and refused with the app's 429 (render_throttled). The global one is
+  # here: every request, per IP, in one bucket across controllers. WebhooksController opts out (providers retry), and
+  # Rails::HealthController (/up), Active Storage's controllers and Action Cable never reach it. The rest sit on the
+  # controllers they guard: ReportsController and ShowsController (rate_limit_report_starts), PitchesController,
+  # ShowSearchesController, VerificationsController, AccountsController and WaitlistEntriesController.
   # Per-user limits count the IP when signed out (user_or_ip). The IP is request.remote_ip, which never trusts a
-  # Forwarded header the client sent (config/initializers/client_ip.rb). A limit binds to its action, so a format
-  # (.html), doubled slashes or HEAD for GET reach the same count.
-  rate_limit to: 60, within: 1.minute, by: -> { request.remote_ip }, scope: "global", store: RATE_LIMIT_STORE,
-             unless: :exempt_from_global_rate_limit?, with: -> { render_throttled(retry_after: 1.minute) }
+  # header the client could have written itself (config/initializers/client_ip.rb). A limit binds to its action, so a
+  # format (.html), doubled slashes or HEAD for GET reach the same count.
+  #
+  # Rails doesn't say how long a window has left, so the 429's Retry-After is always the whole window.
+  def self.throttle(to:, within:, **options)
+    rate_limit(to:, within:, store: RATE_LIMIT_STORE, with: -> { render_throttled(retry_after: within) }, **options)
+  end
+
+  throttle to: 60, within: 1.minute, by: -> { request.remote_ip }, scope: "global", unless: :exempt_from_global_rate_limit?
 
   # Starting a report, from ReportsController#create or a re-run in ShowsController#update: one bucket for both.
   def self.rate_limit_report_starts(**options)
-    rate_limit to: 10, within: 1.hour, by: :user_or_ip, scope: "report_starts", store: RATE_LIMIT_STORE,
-               with: -> { render_throttled(retry_after: 1.hour) }, **options
+    throttle to: 10, within: 1.hour, by: :user_or_ip, scope: "report_starts", **options
   end
 
   # Only allow modern browsers supporting webp images, web push, badges, import maps, CSS nesting, and CSS :has.
@@ -48,8 +49,7 @@ class ApplicationController < ActionController::Base
     redirect_to path, flash: messages.merge(upgrade: error.details.as_json)
   end
 
-  # The app's friendly 429 (ThrottledResponse) for a rate_limit's with:. Rails doesn't say how long its window has
-  # left, so Retry-After is the whole window.
+  # The app's friendly 429 (ThrottledResponse), for throttle's limits.
   def render_throttled(retry_after:)
     status, headers, body = ThrottledResponse.new(request, retry_after: retry_after).to_rack
     self.status = status

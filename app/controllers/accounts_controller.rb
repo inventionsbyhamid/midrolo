@@ -5,10 +5,8 @@ class AccountsController < ApplicationController
   layout "app"
   before_action :authenticate_user!
   # Guesses at JUDGE_CODE, per user and per IP (R83).
-  rate_limit to: JUDGE_CODE_TRIES, within: JUDGE_CODE_WINDOW, only: :judge_code, by: -> { current_user.id },
-             name: "per_user", store: RATE_LIMIT_STORE, with: -> { render_throttled(retry_after: JUDGE_CODE_WINDOW) }
-  rate_limit to: JUDGE_CODE_TRIES, within: JUDGE_CODE_WINDOW, only: :judge_code, by: -> { request.remote_ip },
-             name: "per_ip", store: RATE_LIMIT_STORE, with: -> { render_throttled(retry_after: JUDGE_CODE_WINDOW) }
+  throttle to: JUDGE_CODE_TRIES, within: JUDGE_CODE_WINDOW, only: :judge_code, by: -> { current_user.id }, name: "per_user"
+  throttle to: JUDGE_CODE_TRIES, within: JUDGE_CODE_WINDOW, only: :judge_code, by: -> { request.remote_ip }, name: "per_ip"
 
   def show; end
 

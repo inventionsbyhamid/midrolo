@@ -1,4 +1,4 @@
-# Where the controllers' rate_limit calls count (R69, R84; the limits are listed in ApplicationController):
+# Where the controllers' rate limits count (R69, R84; see ApplicationController.throttle):
 # Rails.cache, which is Solid Cache in production. In specs it's a NullStore, whose increment returns nil, so Rails
 # never refuses a request and a spec making many requests from 127.0.0.1 never meets a 429. Examples tagged
 # :rate_limits count in an empty MemoryStore instead (spec/support/rate_limits.rb). rate_limit keeps the store object
