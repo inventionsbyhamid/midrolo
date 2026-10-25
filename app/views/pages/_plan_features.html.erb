@@ -1,0 +1,6 @@
+<%# locals: (plan:) -%>
+<ul class="plan-features" aria-label="<%= Entitlements.limits(plan)[:name] %> includes">
+  <% plan_features(plan).each do |feature| %>
+    <li><%= feature %></li>
+  <% end %>
+</ul>

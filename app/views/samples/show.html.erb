@@ -1,0 +1,25 @@
+<% content_for :title, "#{@show.title} sample sponsor report" %>
+<% content_for :meta, public_page_meta(description: "A sample Midrolo sponsor report for #{@show.title}: who its listeners' tastes point to, and the brands that fit, with evidence.") %>
+<%# A public sample (R78): the report body read-only, so no pitch, pipeline or owner controls, and no live stream. %>
+<div class="wrap flex flex-col gap-6 py-8 sm:py-10">
+  <header class="flex flex-wrap items-center gap-4 border-b border-line pb-4">
+    <%= render "shows/artwork", show: @show, size: "size-14" %>
+    <div class="min-w-0 flex-1 basis-56">
+      <h1 class="type-h2"><%= @show.title %></h1>
+      <p class="text-sm text-ink-soft">
+        Sample sponsor report<% if @show.author.present? %>, a public show by <%= @show.author %><% end %>
+      </p>
+    </div>
+    <%= ui_button "Get my free Snapshot", snapshot_start_path %>
+  </header>
+
+  <div class="sample-banner" role="note">
+    <p class="font-semibold">Sample — not affiliated with the show.</p>
+    <p>
+      <%= APP_NAME %> ran this full agent report on a public podcast to show what you get. Brand names are real; the
+      audience is modeled from Qloo taste data, not measured.
+    </p>
+  </div>
+
+  <%= render "reports/body", report: @report, read_only: true %>
+</div>

@@ -1,4 +1,4 @@
-<%# locals: (report:) -%>
+<%# locals: (report:, read_only: false) -%>
 <%# Preloaded by ReportsController#show; Report#save_section! resets the association before a broadcast. %>
 <% matches = report.sponsor_matches.to_a %>
 <% if matches.empty? %>
@@ -8,9 +8,14 @@
     <% end %>
   <% elsif report.done? %>
     <%= render "reports/section", name: "matches", title: "Sponsor matches" do %>
-      <%= render "components/empty_state", title: "No matches yet.",
-            body: "None of the brands we checked fit this audience well enough to suggest. Add a few comparable shows and run the report again.",
-            action_label: "Add comparable shows", action_href: edit_show_path(report.show) %>
+      <% if read_only %>
+        <%= render "components/empty_state", title: "No matches yet.",
+              body: "None of the brands we checked fit this audience well enough to suggest." %>
+      <% else %>
+        <%= render "components/empty_state", title: "No matches yet.",
+              body: "None of the brands we checked fit this audience well enough to suggest. Add a few comparable shows and run the report again.",
+              action_label: "Add comparable shows", action_href: edit_show_path(report.show) %>
+      <% end %>
     <% end %>
   <% else %>
     <%= render "reports/section", name: "matches", hidden: true %>
@@ -67,7 +72,7 @@
           <li data-filter-target="item" data-category="<%= match.category %>" data-tier="<%= match.tier %>"
               data-tier-rank="<%= tier_rank(match.tier) %>" data-proven="<%= proven_sponsor?(match) %>"
               data-fit="<%= match.fit_score.to_i %>" data-position="<%= match.position.to_i %>">
-            <%= render "sponsor_matches/sponsor_match", sponsor_match: match %>
+            <%= render "sponsor_matches/sponsor_match", sponsor_match: match, read_only: read_only %>
           </li>
         <% end %>
       </ol>

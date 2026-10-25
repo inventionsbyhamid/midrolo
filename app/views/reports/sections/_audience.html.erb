@@ -1,4 +1,4 @@
-<%# locals: (report:) -%>
+<%# locals: (report:, read_only: false) -%>
 <% tabs = audience_tabs(report.audience) %>
 <% if tabs.empty? %>
   <% if section_pending?(report) %>

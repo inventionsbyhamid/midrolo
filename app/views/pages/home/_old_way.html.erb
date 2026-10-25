@@ -1,0 +1,38 @@
+<%# The old way of finding sponsors against Midrolo's, row by row. On a phone each row stacks into labelled pairs. %>
+<% creator = plan_price(:creator, :monthly) %>
+<% rows = [
+     [ "Choosing brands", "Guess from your topic, or copy the sponsors you hear on bigger shows.",
+       "Brands your listeners' tastes over-index on, ranked by fit." ],
+     [ "Proving fit", "A media kit with downloads and countries, and nothing about taste.",
+       "Shared taste tags, affinity scores and sponsors of similar shows, for every brand." ],
+     [ "Pricing a spot", "A mysterious formula.",
+       "A rate card built from published CPM benchmarks, which you can edit." ],
+     [ "Landing the deal", "Marketplaces that take a cut and keep closing. Podcorn shuts down on Nov 1, 2026.",
+       "You pitch brands directly. #{APP_NAME} takes no commission." ],
+     [ "What it costs", "Research tools built for agencies, from $99 a month.",
+       "A free Snapshot. Full reports from #{price_label(creator)}." ]
+   ] %>
+<section id="old-way" class="page-section" aria-labelledby="old-way-title">
+  <div class="wrap">
+    <h2 id="old-way-title" class="type-h2">The old way, and the <%= APP_NAME %> way</h2>
+    <%# Explicit roles keep it a table for screen readers when a phone's CSS stacks the cells (display: block). %>
+    <table class="compare" role="table">
+      <thead role="rowgroup">
+        <tr role="row">
+          <td role="cell"></td>
+          <th scope="col" role="columnheader">The old way</th>
+          <th scope="col" role="columnheader" class="compare-ours">With <%= APP_NAME %></th>
+        </tr>
+      </thead>
+      <tbody role="rowgroup">
+        <% rows.each do |topic, old, ours| %>
+          <tr role="row">
+            <th scope="row" role="rowheader"><%= topic %></th>
+            <td role="cell" data-label="The old way"><%= old %></td>
+            <td role="cell" data-label="With <%= APP_NAME %>" class="compare-ours"><%= ours %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</section>

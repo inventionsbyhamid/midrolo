@@ -31,6 +31,11 @@ RSpec.describe "reports/sections/_seeds" do
   context "when the report needs input" do
     before { report.update!(status: "needs_input") }
 
+    it "leaves the form off a read-only report (R78)" do
+      render(partial: "reports/sections/seeds", locals: { report: report, read_only: true })
+      expect(html.css("form")).to be_empty
+    end
+
     it "asks for comparable shows with an inline form that re-runs the same kind" do
       render_section
       expect(html.text.squish).to include("We need a little more to go on — tell us 2–3 shows your listeners also love.")

@@ -1,7 +1,8 @@
-<%# locals: (report:) -%>
+<%# locals: (report:, read_only: false) -%>
 <%# A finished Snapshot gets the upgrade card. Any other Snapshot (running, needs_input, failed) falls through, so a
     needs-input ask or a failure leads the page instead of an upsell (Review Focus #1). %>
-<% if report.snapshot? && report.done? %>
+<%# read_only (a public sample, R78) has no upgrade card: the run buttons belong to the show's owner. %>
+<% if report.snapshot? && report.done? && !read_only %>
   <%= render "reports/section", name: "summary", title: "Your audience at a glance" do %>
     <% if report.summary.present? %>
       <p class="report-summary"><%= report.summary %></p>

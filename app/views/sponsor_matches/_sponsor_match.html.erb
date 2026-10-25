@@ -1,4 +1,5 @@
-<%# locals: (sponsor_match:) -%>
+<%# locals: (sponsor_match:, read_only: false) -%>
+<%# read_only (a public sample, R78) leaves out the pitch and pipeline actions. %>
 <% match = sponsor_match %>
 <article id="<%= dom_id(match) %>" class="card match-card" aria-labelledby="<%= dom_id(match, :name) %>">
   <div class="flex items-start gap-3">
@@ -40,7 +41,9 @@
     </p>
   <% end %>
 
-  <div class="match-actions">
-    <%= render "sponsor_matches/actions", sponsor_match: match %>
-  </div>
+  <% unless read_only %>
+    <div class="match-actions">
+      <%= render "sponsor_matches/actions", sponsor_match: match %>
+    </div>
+  <% end %>
 </article>

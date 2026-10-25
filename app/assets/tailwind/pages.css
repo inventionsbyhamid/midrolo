@@ -1,0 +1,307 @@
+/*
+ * The public pages' shared parts (app/views/pages, app/views/samples), imported from application.css: page and
+ * section rhythm, the old-way table, sample reports, the FAQ and the legal pages' prose.
+ */
+@layer components {
+  .page-head {
+    padding-block: 2.5rem 2rem;
+
+    @media (width >= 40rem) {
+      padding-block: 4rem 2.5rem;
+    }
+  }
+
+  /* Sections pad both ends, so two in a row sit 5rem (phone) or 7rem (desktop) apart. */
+  .page-section {
+    padding-block: 2.5rem;
+
+    @media (width >= 48rem) {
+      padding-block: 3.5rem;
+    }
+  }
+
+  .section-lead {
+    max-width: 60ch;
+    margin-top: 0.75rem;
+    font-size: 1.125rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* ---------- The old way, and ours: a table whose own column is lit ---------- */
+
+  .compare {
+    width: 100%;
+    margin-top: 2rem;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .compare th,
+  .compare td {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--color-line);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .compare thead th,
+  .compare thead td {
+    padding-block: 1rem 0.75rem;
+    border-top: 0;
+    font-size: 0.9375rem;
+    font-weight: 700;
+  }
+
+  .compare tbody th {
+    width: 12rem;
+    font-weight: 700;
+  }
+
+  .compare td {
+    color: var(--color-ink-soft);
+  }
+
+  .compare .compare-ours {
+    background: var(--color-surface);
+    color: var(--color-ink);
+  }
+
+  .compare thead .compare-ours {
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    box-shadow: inset 0 3px 0 var(--color-tally);
+  }
+
+  .compare tbody tr:last-child .compare-ours {
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+  }
+
+  /* On a phone each row stacks: the topic, then each way under its own label. */
+  @media (width < 48rem) {
+    .compare thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    .compare,
+    .compare tbody,
+    .compare tr,
+    .compare th,
+    .compare td {
+      display: block;
+    }
+
+    .compare tbody tr {
+      padding-block: 1.25rem;
+      border-top: 1px solid var(--color-line);
+    }
+
+    .compare tbody th,
+    .compare td {
+      width: auto;
+      padding: 0;
+      border: 0;
+    }
+
+    .compare td {
+      margin-top: 0.75rem;
+    }
+
+    .compare tbody .compare-ours {
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-control);
+    }
+
+    .compare tbody tr:last-child .compare-ours {
+      border-radius: var(--radius-control);
+    }
+
+    .compare td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 650;
+      color: var(--color-ink-soft);
+    }
+  }
+
+  /* ---------- Sample reports ---------- */
+
+  .sample-list {
+    display: grid;
+    gap: 1rem;
+    margin-top: 2rem;
+
+    @media (width >= 48rem) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* The whole card is the link (the title's ::after covers it), so its focus ring is drawn on the card. */
+  .sample-item {
+    position: relative;
+    display: flex;
+    gap: 1rem;
+    padding: 1.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-edge);
+  }
+
+  .sample-item:hover {
+    border-color: var(--color-ink);
+  }
+
+  .sample-item:has(.sample-link:focus-visible) {
+    outline: 3px solid var(--color-tally);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--color-ink);
+  }
+
+  .sample-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    font-stretch: 106%;
+    line-height: 1.3;
+  }
+
+  .sample-link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .sample-link:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
+  .sample-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .sample-item:hover .sample-link {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  /* "Sample — not affiliated with the show." The tally lamp's edge, like the needs-input ask. */
+  .sample-banner {
+    padding: 0.875rem 1.125rem 0.875rem 1.375rem;
+    border-radius: var(--radius-control);
+    background: var(--color-tally-soft);
+    box-shadow: inset 4px 0 0 var(--color-tally);
+    font-size: 0.9375rem;
+  }
+
+  /* ---------- FAQ ---------- */
+
+  .faq {
+    display: grid;
+    gap: 1.5rem;
+
+    @media (width >= 64rem) {
+      grid-template-columns: 16rem minmax(0, 1fr);
+      gap: 4rem;
+    }
+  }
+
+  .faq-list {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .faq-item {
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .faq-question {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3.5rem;
+    padding-block: 0.875rem;
+    font-size: 1.125rem;
+    font-weight: 650;
+    line-height: 1.35;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .faq-question::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-question::after {
+    content: "+" / "";
+    flex: none;
+    font-size: 1.5rem;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--color-plum);
+  }
+
+  .faq-item[open] > .faq-question::after {
+    content: "\2212" / "";
+  }
+
+  .faq-question:hover {
+    color: var(--color-plum);
+  }
+
+  .faq-answer {
+    max-width: 65ch;
+    padding-bottom: 1.25rem;
+  }
+
+  .faq-answer p + p {
+    margin-top: 0.75rem;
+  }
+
+  /* ---------- Legal and about pages ---------- */
+
+  .prose-page {
+    max-width: 44rem;
+  }
+
+  .prose-date {
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+
+  .prose-page .type-lead {
+    margin-top: 1.25rem;
+  }
+
+  .prose-page h2 {
+    margin-top: 2.75rem;
+    font-size: 1.5rem;
+    font-stretch: 112.5%;
+    font-weight: 720;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  .prose-page p,
+  .prose-page ul {
+    margin-top: 0.875rem;
+  }
+
+  .prose-page ul {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+
+  .prose-page li::marker {
+    color: var(--color-plum);
+  }
+}

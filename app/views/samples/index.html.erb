@@ -1,0 +1,14 @@
+<% content_for :title, "Sample sponsor reports" %>
+<% content_for :meta, public_page_meta(description: "Full Midrolo sponsor reports on public podcasts: taste profile, audience leans, map and ranked brand matches with evidence. Open to anyone.") %>
+<div class="wrap page-head">
+  <h1 class="type-h1">Sample sponsor reports</h1>
+  <p class="type-lead mt-4 max-w-2xl">
+    Full agent reports on public shows, open to anyone. Brand names are real; each audience is modeled from Qloo taste
+    data. The shows aren't affiliated with <%= APP_NAME %>.
+  </p>
+</div>
+<section class="page-section pt-0" aria-label="Samples">
+  <div class="wrap">
+    <%= render "samples/list", samples: @samples %>
+  </div>
+</section>

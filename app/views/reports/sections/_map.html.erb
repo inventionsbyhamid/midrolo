@@ -1,4 +1,4 @@
-<%# locals: (report:) -%>
+<%# locals: (report:, read_only: false) -%>
 <% heatmap = report.heatmap.is_a?(Hash) ? report.heatmap : nil %>
 <% if heatmap.nil? %>
   <% if section_pending?(report) %>

@@ -229,7 +229,7 @@ RSpec.describe "Pipeline" do
       it "redirects the page and the CSV to pricing with a notice" do
         get pipeline_path
         expect(response).to redirect_to(pricing_path)
-        2.times { follow_redirect! } # the temporary /pricing goes on to /account (R47)
+        follow_redirect!
         expect(Nokogiri::HTML(response.body).at_css(".flash-notice").text.squish).to eq(PipelineGate::UPSELL)
 
         get pipeline_path(format: :csv)

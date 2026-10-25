@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!--
+    Midrolo share image (og:image), 1200x630: the source of og.png. Type is Archivo, the app's only family: its
+    normal width (400, 600, 700) and, for display, its 125% width (700, 800) renamed to the family "ArchivoWide" so
+    Pango doesn't read "Expanded" in a family name as a stretch. With those static instances from Google Fonts in a
+    fontconfig directory, render with:
+      PANGOCAIRO_BACKEND=fc FONTCONFIG_FILE=path/to/fonts.conf vips copy og.svg og.png
+    The match card is an illustration: the brand names are made up, shown with initials as the product shows logos.
+  -->
+  <rect width="1200" height="630" fill="#f6f2f4"/>
+
+  <g transform="translate(72 66) scale(1.6)">
+    <rect x="0.75" y="11.0" width="2.5" height="6" rx="1.25" fill="#22132b"/>
+    <rect x="4.75" y="9.0" width="2.5" height="10" rx="1.25" fill="#22132b"/>
+    <rect x="8.75" y="6.0" width="2.5" height="16" rx="1.25" fill="#22132b"/>
+    <rect x="12.75" y="2.0" width="2.5" height="24" rx="1.25" fill="#f3a712"/>
+    <rect x="16.75" y="6.0" width="2.5" height="16" rx="1.25" fill="#22132b"/>
+    <rect x="20.75" y="9.0" width="2.5" height="10" rx="1.25" fill="#22132b"/>
+    <rect x="24.75" y="11.0" width="2.5" height="6" rx="1.25" fill="#22132b"/>
+  </g>
+  <text x="128" y="101" font-family="ArchivoWide, Archivo" font-stretch="expanded" font-weight="800" font-size="34" letter-spacing="-1" fill="#22132b">Midrolo</text>
+
+  <g font-family="ArchivoWide, Archivo" font-stretch="expanded" font-weight="800" font-size="60" letter-spacing="-1.8" fill="#22132b">
+    <text x="70" y="236">Find sponsors</text>
+    <text x="70" y="300">who already</text>
+    <text x="70" y="364">love your</text>
+    <text x="70" y="428">listeners</text>
+  </g>
+  <g font-family="Archivo" font-weight="400" font-size="24" fill="#5a4a63">
+    <text x="72" y="492">Brand matches from Qloo taste data,</text>
+    <text x="72" y="524">each with its reason and evidence.</text>
+  </g>
+  <text x="72" y="584" font-family="Archivo" font-weight="700" font-size="22" fill="#4a2266">midrolo.com</text>
+
+  <g fill="#8e7f95" opacity="0.55">
+      <rect x="760.0" y="118.7" width="4.5" height="18.6" rx="1.5"/>
+      <rect x="768.0" y="106.9" width="4.5" height="42.3" rx="1.5"/>
+      <rect x="776.0" y="108.9" width="4.5" height="38.2" rx="1.5"/>
+      <rect x="784.0" y="100.1" width="4.5" height="55.9" rx="1.5"/>
+      <rect x="792.0" y="106.4" width="4.5" height="43.3" rx="1.5"/>
+      <rect x="800.0" y="108.3" width="4.5" height="39.5" rx="1.5"/>
+      <rect x="808.0" y="115.9" width="4.5" height="24.3" rx="1.5"/>
+      <rect x="816.0" y="113.5" width="4.5" height="29.0" rx="1.5"/>
+      <rect x="824.0" y="107.7" width="4.5" height="40.6" rx="1.5"/>
+      <rect x="832.0" y="110.2" width="4.5" height="35.7" rx="1.5"/>
+      <rect x="840.0" y="107.5" width="4.5" height="41.1" rx="1.5"/>
+      <rect x="848.0" y="117.2" width="4.5" height="21.7" rx="1.5"/>
+      <rect x="856.0" y="120.6" width="4.5" height="14.9" rx="1.5"/>
+      <rect x="864.0" y="120.3" width="4.5" height="15.5" rx="1.5"/>
+      <rect x="872.0" y="110.1" width="4.5" height="35.9" rx="1.5"/>
+      <rect x="880.0" y="110.3" width="4.5" height="35.4" rx="1.5"/>
+      <rect x="888.0" y="104.5" width="4.5" height="47.1" rx="1.5"/>
+      <rect x="896.0" y="109.2" width="4.5" height="37.7" rx="1.5"/>
+      <rect x="904.0" y="112.7" width="4.5" height="30.7" rx="1.5"/>
+      <rect x="912.0" y="113.4" width="4.5" height="29.3" rx="1.5"/>
+      <rect x="920.0" y="108.9" width="4.5" height="38.3" rx="1.5"/>
+      <rect x="928.0" y="101.1" width="4.5" height="53.9" rx="1.5"/>
+      <rect x="936.0" y="107.1" width="4.5" height="41.9" rx="1.5"/>
+      <rect x="944.0" y="102.3" width="4.5" height="51.4" rx="1.5"/>
+      <rect x="952.0" y="115.2" width="4.5" height="25.7" rx="1.5"/>
+      <rect x="960.0" y="114.0" width="4.5" height="28.1" rx="1.5"/>
+      <rect x="968.0" y="113.5" width="4.5" height="29.1" rx="1.5"/>
+      <rect x="1016.0" y="117.4" width="4.5" height="21.2" rx="1.5"/>
+      <rect x="1024.0" y="113.4" width="4.5" height="29.2" rx="1.5"/>
+      <rect x="1032.0" y="106.3" width="4.5" height="43.5" rx="1.5"/>
+      <rect x="1040.0" y="112.4" width="4.5" height="31.2" rx="1.5"/>
+      <rect x="1048.0" y="109.2" width="4.5" height="37.7" rx="1.5"/>
+      <rect x="1056.0" y="118.8" width="4.5" height="18.5" rx="1.5"/>
+      <rect x="1064.0" y="110.5" width="4.5" height="35.1" rx="1.5"/>
+      <rect x="1072.0" y="109.8" width="4.5" height="36.5" rx="1.5"/>
+      <rect x="1080.0" y="100.8" width="4.5" height="54.4" rx="1.5"/>
+      <rect x="1088.0" y="104.8" width="4.5" height="46.5" rx="1.5"/>
+      <rect x="1096.0" y="106.1" width="4.5" height="43.8" rx="1.5"/>
+      <rect x="1104.0" y="112.2" width="4.5" height="31.6" rx="1.5"/>
+      <rect x="1112.0" y="113.1" width="4.5" height="29.8" rx="1.5"/>
+      <rect x="1120.0" y="105.5" width="4.5" height="45.0" rx="1.5"/>
+  </g>
+  <rect x="977" y="106" width="36" height="44" rx="9" fill="#f3a712"/>
+  <rect x="994" y="150" width="2" height="46" rx="1" fill="#f3a712"/>
+
+  <rect x="760" y="204" width="368" height="320" rx="18" fill="#22132b" opacity="0.08"/>
+  <rect x="760.5" y="196.5" width="367" height="320" rx="18" fill="#ffffff" stroke="#e3dae3"/>
+  <text x="784" y="238" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Sponsor matches</text>
+  <text x="1104" y="238" text-anchor="end" font-family="Archivo" font-weight="400" font-size="15" fill="#5a4a63">best fit first</text>
+  <rect x="784" y="261" width="320" height="1" fill="#e3dae3"/>
+    <g>
+      <rect x="784" y="280" width="44" height="44" rx="10" fill="#eee5f3"/>
+      <text x="806" y="308" text-anchor="middle" font-family="Archivo" font-weight="700" font-size="15" fill="#4a2266">FC</text>
+      <text x="844" y="298" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Fieldnote Coffee</text>
+      <rect x="1016.4" y="282" width="87.6" height="22" rx="11" fill="#e2f1e8"/>
+      <text x="1060.2" y="298" text-anchor="middle" font-family="Archivo" font-weight="600" font-size="13" fill="#1d6b45">Easy yes</text>
+      <rect x="844.0" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="854.5" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="865.0" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="875.5" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="886.0" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="896.5" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="907.0" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="917.5" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="928.0" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="938.5" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="949.0" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="959.5" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="970.0" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="980.5" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="991.0" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="1001.5" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="1012.0" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="1022.5" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="1033.0" y="312" width="8.5" height="8" rx="1" fill="#e3dae3"/>
+      <rect x="1043.5" y="312" width="8.5" height="8" rx="1" fill="#e3dae3"/>
+      <text x="1104" y="320" text-anchor="end" font-family="ArchivoWide, Archivo" font-stretch="expanded" font-weight="700" font-size="15" fill="#22132b">91</text>
+    </g>
+    <rect x="784" y="341" width="320" height="1" fill="#e3dae3"/>
+    <g>
+      <rect x="784" y="360" width="44" height="44" rx="10" fill="#eee5f3"/>
+      <text x="806" y="388" text-anchor="middle" font-family="Archivo" font-weight="700" font-size="15" fill="#4a2266">LG</text>
+      <text x="844" y="378" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Ledgerly</text>
+      <rect x="1008.2" y="362" width="95.8" height="22" rx="11" fill="#eee5f3"/>
+      <text x="1056.1" y="378" text-anchor="middle" font-family="Archivo" font-weight="600" font-size="13" fill="#4a2266">Realistic</text>
+      <rect x="844.0" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="854.5" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="865.0" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="875.5" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="886.0" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="896.5" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="907.0" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="917.5" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="928.0" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="938.5" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="949.0" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="959.5" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="970.0" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="980.5" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="991.0" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="1001.5" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="1012.0" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="1022.5" y="392" width="8.5" height="8" rx="1" fill="#e3dae3"/>
+      <rect x="1033.0" y="392" width="8.5" height="8" rx="1" fill="#e3dae3"/>
+      <rect x="1043.5" y="392" width="8.5" height="8" rx="1" fill="#e3dae3"/>
+      <text x="1104" y="400" text-anchor="end" font-family="ArchivoWide, Archivo" font-stretch="expanded" font-weight="700" font-size="15" fill="#22132b">84</text>
+    </g>
+    <rect x="784" y="421" width="320" height="1" fill="#e3dae3"/>
+    <g>
+      <rect x="784" y="440" width="44" height="44" rx="10" fill="#eee5f3"/>
+      <text x="806" y="468" text-anchor="middle" font-family="Archivo" font-weight="700" font-size="15" fill="#4a2266">NB</text>
+      <text x="844" y="458" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Northwind Budget</text>
+      <rect x="1016.4" y="442" width="87.6" height="22" rx="11" fill="#e2f1e8"/>
+      <text x="1060.2" y="458" text-anchor="middle" font-family="Archivo" font-weight="600" font-size="13" fill="#1d6b45">Easy yes</text>
+      <rect x="844.0" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="854.5" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="865.0" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="875.5" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="886.0" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="896.5" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="907.0" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="917.5" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="928.0" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="938.5" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="949.0" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="959.5" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="970.0" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="980.5" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="991.0" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="1001.5" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>
+      <rect x="1012.0" y="472" width="8.5" height="8" rx="1" fill="#e3dae3"/>
+      <rect x="1022.5" y="472" width="8.5" height="8" rx="1" fill="#e3dae3"/>
+      <rect x="1033.0" y="472" width="8.5" height="8" rx="1" fill="#e3dae3"/>
+      <rect x="1043.5" y="472" width="8.5" height="8" rx="1" fill="#e3dae3"/>
+      <text x="1104" y="480" text-anchor="end" font-family="ArchivoWide, Archivo" font-stretch="expanded" font-weight="700" font-size="15" fill="#22132b">78</text>
+    </g>
+    
+
+</svg>

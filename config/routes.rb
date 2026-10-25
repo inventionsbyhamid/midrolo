@@ -13,10 +13,15 @@ Rails.application.routes.draw do
     delete "users/sign_out", to: "devise/sessions#destroy", as: :destroy_user_session
   end
 
-  # Temporary: Task 19 replaces this with pages#home.
-  root to: redirect("/shows")
-  # Temporary: Task 19 replaces this with pages#pricing.
-  get "pricing", to: redirect("/account"), as: :pricing
+  # Public pages (Task 19, R78): the landing page for everyone, signed in or not, pricing, about and the legal pages,
+  # the public sample reports and the sitemap. robots.txt is a static file in public/.
+  root "pages#home"
+  get "pricing", to: "pages#pricing", as: :pricing
+  get "about", to: "pages#about", as: :about
+  get "privacy", to: "pages#privacy", as: :privacy
+  get "terms", to: "pages#terms", as: :terms
+  get "sitemap.xml", to: "pages#sitemap", as: :sitemap, format: false, defaults: { format: "xml" }
+  resources :samples, only: %i[index show], param: :slug, format: false
 
   resource :account, only: %i[show destroy] do
     post :judge_code

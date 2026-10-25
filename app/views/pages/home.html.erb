@@ -1,0 +1,20 @@
+<% content_for :meta, public_page_meta(description: "Midrolo's AI agent uses Qloo taste data to find the brands your podcast's listeners already love, explains why each one fits, and writes the pitch. Start with a free Snapshot.") %>
+<%= render "pages/home/hero", samples: @samples, sample: @hero_sample, matches: @hero_matches %>
+<%= render "pages/home/quotes" %>
+<%= render "pages/home/how_it_works" %>
+<%= render "pages/home/different" %>
+<%= render "pages/home/old_way" %>
+<%= render "pages/home/samples", samples: @samples %>
+<section id="pricing" class="page-section" aria-labelledby="pricing-title">
+  <div class="wrap">
+    <h2 id="pricing-title" class="type-h2">Pricing</h2>
+    <p class="section-lead">Start free. Pay when you're ready to pitch. No commission on any deal you land.</p>
+    <%= render "pages/plans" %>
+  </div>
+</section>
+<section id="faq" class="page-section" aria-labelledby="faq-title">
+  <div class="wrap">
+    <%= render "pages/faq" %>
+  </div>
+</section>
+<%= render "pages/home/closing", samples: @samples %>

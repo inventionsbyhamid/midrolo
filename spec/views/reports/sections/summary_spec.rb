@@ -19,6 +19,15 @@ RSpec.describe "reports/sections/_summary" do
     expect(html.css(".skeleton")).to be_empty
   end
 
+  it "keeps the upsell and its run button off a read-only snapshot (R78)" do
+    report.update!(kind: "snapshot")
+    render(partial: "reports/sections/summary", locals: { report: report, read_only: true })
+
+    expect(html.text).to include("Money-minded listeners who love slow travel.")
+    expect(html.text).not_to include("This is your free Snapshot")
+    expect(html.css("form, button")).to be_empty
+  end
+
   it "keeps the upsell off a snapshot that needs input" do
     report.update!(kind: "snapshot", status: "needs_input", summary: nil)
     render_section

@@ -1,1 +1,15 @@
-# See https://www.robotstxt.org/robotstxt.html for documentation on how to use the robots.txt file
+# Public pages (the landing page, pricing, about, the legal pages, sample reports and published media kits at /k/:slug)
+# are open to crawlers. Signed-in pages are not; a kit's private preview lives under /shows and also sends noindex.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /shows
+Disallow: /pipeline
+Disallow: /sponsor_matches
+Disallow: /users
+Disallow: /checkouts
+Disallow: /billing
+Disallow: /waitlist_entries
+
+Sitemap: https://midrolo.com/sitemap.xml

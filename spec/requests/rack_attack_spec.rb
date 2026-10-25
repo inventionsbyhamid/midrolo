@@ -40,17 +40,17 @@ RSpec.describe "Rate limits", :rack_attack do
     it "answers the 61st with the friendly page, then lets the IP back in the next minute" do
       60.times do
         get "/pricing"
-        expect(response).to have_http_status(:redirect)
+        expect(response).to have_http_status(:ok)
       end
       get "/pricing"
       expect_friendly_page(retry_after: 30)
 
       get "/pricing", env: from("203.0.113.9")
-      expect(response).to have_http_status(:redirect)
+      expect(response).to have_http_status(:ok)
 
       travel 1.minute
       get "/pricing"
-      expect(response).to have_http_status(:redirect)
+      expect(response).to have_http_status(:ok)
     end
 
     it "counts a signed-in user's requests by IP too" do
@@ -64,13 +64,13 @@ RSpec.describe "Rate limits", :rack_attack do
       behind_proxy = from("172.18.0.5")
       60.times do |n|
         get "/pricing", headers: { "X-Forwarded-For" => "198.51.100.1", "Forwarded" => "for=203.0.113.#{n}" }, env: behind_proxy
-        expect(response).to have_http_status(:redirect)
+        expect(response).to have_http_status(:ok)
       end
       get "/pricing", headers: { "X-Forwarded-For" => "198.51.100.1", "Forwarded" => "for=203.0.113.250" }, env: behind_proxy
       expect(response).to have_http_status(:too_many_requests)
 
       get "/pricing", headers: { "X-Forwarded-For" => "198.51.100.2" }, env: behind_proxy
-      expect(response).to have_http_status(:redirect)
+      expect(response).to have_http_status(:ok)
     end
 
     it "never counts or blocks assets, the health check, Action Cable, Active Storage or webhooks" do

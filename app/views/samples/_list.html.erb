@@ -1,0 +1,30 @@
+<%# locals: (samples:, heading: :h2) -%>
+<%# The done sample reports, each linked by its show's title; an empty state until rake samples:generate has run. %>
+<% if samples.any? %>
+  <ul class="sample-list">
+    <% samples.each do |sample| %>
+      <% show = sample.show %>
+      <li class="sample-item">
+        <%= render "shows/artwork", show: show, size: "size-16" %>
+        <div class="min-w-0 flex-1">
+          <%= content_tag heading, class: "sample-title" do %>
+            <%= link_to show.title, sample_path(sample.sample_slug), class: "sample-link" %>
+          <% end %>
+          <% if show.author.present? %>
+            <p class="text-sm text-ink-soft">By <%= show.author %></p>
+          <% end %>
+          <p class="mt-2 flex flex-wrap gap-1.5">
+            <span class="chip"><span><%= pluralize(sample.sponsor_matches.size, "brand match") %></span></span>
+            <% if sample.profile_kind %>
+              <span class="chip"><span><%= sample.direct? ? "Built from the show on Qloo" : "Built from shows like it" %></span></span>
+            <% end %>
+          </p>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <%= render "components/empty_state", title: "Sample reports are on their way.",
+        body: "Check back soon, or see your own show's top matches with a free Snapshot.",
+        action_label: "Get my free Snapshot", action_href: snapshot_start_path %>
+<% end %>

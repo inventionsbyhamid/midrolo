@@ -168,11 +168,4 @@ RSpec.describe "Sponsor matches" do
       end
     end
   end
-
-  describe "GET /pricing (temporary, R47)" do
-    it "redirects to the account page for now" do
-      get "/pricing"
-      expect(response).to redirect_to("/account")
-    end
-  end
 end

@@ -1,0 +1,63 @@
+<%# locals: (sample:, matches:) -%>
+<%# Up to three top matches from the first done sample, with the evidence that sells each one: a proven sponsorship
+    when there is one, else the first chip. Without a sample, an illustration says it's one. %>
+<% if sample && matches.any? %>
+  <figure class="hero-card">
+    <figcaption class="hero-card-head">
+      <%= render "shows/artwork", show: sample.show, size: "size-11" %>
+      <span class="min-w-0">
+        <span class="block truncate font-semibold"><%= sample.show.title %></span>
+        <span class="block text-sm text-ink-soft">Top matches from a sample report</span>
+      </span>
+    </figcaption>
+    <ol class="hero-matches">
+      <% matches.each do |match| %>
+        <% chips = evidence_chips(match) %>
+        <% chip = chips.find { |c| c.to_s.start_with?("Sponsored") } || chips.first %>
+        <li class="hero-match">
+          <%= render "sponsor_matches/logo", sponsor_match: match, size: "size-10 text-sm" %>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-start justify-between gap-2">
+              <p class="hero-match-name"><%= match.name %></p>
+              <%= tier_badge(match.tier) %>
+            </div>
+            <% if match.fit_score %>
+              <%= ui_meter match.fit_score / 100.0, label: "Fit", value_text: match.fit_score.to_s %>
+            <% end %>
+            <% if chip %>
+              <p class="chip mt-2"><span><%= chip %></span></p>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+    <%= link_to "Open the full sample report", sample_path(sample.sample_slug), class: "hero-card-link" %>
+  </figure>
+<% else %>
+  <figure class="hero-card">
+    <figcaption class="hero-card-head">
+      <span class="size-11 flex flex-none items-center justify-center rounded-lg bg-plum-soft font-bold text-plum" aria-hidden="true">YS</span>
+      <span class="min-w-0">
+        <span class="block font-semibold">Your show</span>
+        <span class="block text-sm text-ink-soft">An illustration of a match list</span>
+      </span>
+    </figcaption>
+    <ol class="hero-matches">
+      <% [ [ "Fieldnote Coffee", 91, "easy_yes", "Shares 6 taste tags" ],
+           [ "Ledgerly", 84, "realistic", "Affinity 0.82" ],
+           [ "Northwind Budget", 78, "easy_yes", "Shares 4 taste tags" ] ].each do |name, fit, tier, chip| %>
+        <li class="hero-match">
+          <span class="avatar size-10 text-sm" aria-hidden="true"><%= initials_for(name) %></span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-start justify-between gap-2">
+              <p class="hero-match-name"><%= name %></p>
+              <%= tier_badge(tier) %>
+            </div>
+            <%= ui_meter fit / 100.0, label: "Fit", value_text: fit.to_s %>
+            <p class="chip mt-2"><span><%= chip %></span></p>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+  </figure>
+<% end %>

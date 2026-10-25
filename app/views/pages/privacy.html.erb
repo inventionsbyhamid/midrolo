@@ -1,0 +1,72 @@
+<% content_for :title, "Privacy" %>
+<% content_for :meta, public_page_meta(description: "What Midrolo collects, why, who helps run it, and how to delete it. Plain language, no selling of data.") %>
+<div class="wrap page-head">
+  <article class="prose-page">
+    <h1 class="type-h1">Privacy</h1>
+    <p class="prose-date">Last updated: October 2026</p>
+    <p class="type-lead">
+      <%= APP_NAME %> helps podcasters find sponsors. This page says what we collect, why, who helps us run the service, and
+      how to delete it. Questions go to <%= contact_mail_to class: "link" %>.
+    </p>
+
+    <h2>What we collect</h2>
+    <ul>
+      <li><strong>Your Google account basics.</strong> When you sign in with Google we get your name, email address and profile picture. We never see your password, and we never post anything to your account.</li>
+      <li><strong>What you add.</strong> Your shows and the optional details you give them (downloads, country, comparable shows, topics, a contact email), your media kit's text and images, and the statuses, notes and follow-up dates in your pipeline.</li>
+      <li><strong>What we make for you.</strong> Reports, sponsor matches and pitch packs.</li>
+      <li><strong>Public podcast data.</strong> Show details from Podcast Index and your show's public RSS feed. We use the owner email in your feed only to send a code that proves you own the show.</li>
+      <li><strong>Sign-in records.</strong> When you last signed in, how many times, and the IP address used, to spot misuse.</li>
+      <li><strong>The waitlist.</strong> If you join the founding-member waitlist, your email and the plan you picked.</li>
+      <li><strong>Payments.</strong> Card details go to Dodo Payments, never to us. We keep your plan, its status and the ids Dodo gives us for your subscription.</li>
+    </ul>
+    <p>
+      Media kit views are counted without storing who viewed them: we keep a scrambled fingerprint of the visitor for 30
+      minutes so a refresh doesn't count twice.
+    </p>
+
+    <h2>How we use it</h2>
+    <p>
+      To run <%= APP_NAME %>: research your show, show you the results, send the emails you ask for (like verification
+      codes), take payments when paid plans open, and keep the service safe from abuse. We don't sell your data, we don't
+      use it for advertising, and nobody else sees your shows, reports or notes unless you publish a media kit.
+    </p>
+
+    <h2>Who helps us run it</h2>
+    <p>These companies process data for us, each only for the job listed:</p>
+    <ul>
+      <li><strong>Google</strong> signs you in.</li>
+      <li><strong>Qloo</strong> provides the taste data. We send it show names, comparable shows, topics and the brands or places we look up, never your personal details.</li>
+      <li><strong>Podcast Index</strong> provides podcast search and show details.</li>
+      <li><strong>Anthropic</strong> runs Claude, the AI model that researches your show and writes reasons and pitches. It receives your show's public details, your optional hints, episode notes from public feeds and the research results.</li>
+      <li><strong>Cloudflare</strong> carries traffic to the site, and Cloudflare R2 stores the images you upload.</li>
+      <li><strong>Resend</strong> sends our emails, such as verification codes.</li>
+      <li><strong>Dodo Payments</strong> is the merchant of record for paid plans: it takes the payment and handles tax and invoices.</li>
+    </ul>
+    <p>
+      Your browser also loads fonts from Google Fonts and, on reports, map tiles from OpenFreeMap. Like any website you
+      visit, they see your IP address.
+    </p>
+
+    <h2>Cookies</h2>
+    <p>
+      One session cookie keeps you signed in and protects forms from forgery. It's deleted when you close your browser.
+      There are no analytics or advertising cookies.
+    </p>
+
+    <h2>What's public</h2>
+    <p>
+      Only what you publish: a media kit you choose to make public, at its own address. Sample reports are about public
+      podcasts and contain no one's account data.
+    </p>
+
+    <h2>Deleting your data</h2>
+    <p>
+      Delete your account from your account page and we delete your account and everything in it right away: shows,
+      reports, matches, pitches, notes, media kits and uploaded images. To ask for a copy of your data, or anything else
+      about it, email <%= contact_mail_to class: "link" %>.
+    </p>
+
+    <h2>Changes</h2>
+    <p>If this page changes in a way that matters, we'll update the date at the top and tell account holders by email.</p>
+  </article>
+</div>

@@ -289,6 +289,26 @@ RSpec.describe "reports/sections/_matches" do
     expect(html.css(".skeleton")).to be_empty
   end
 
+  describe "read-only, as on a public sample (R78)" do
+    def render_read_only = render(partial: "reports/sections/matches", locals: { report: report, read_only: true })
+
+    it "shows each match without its pitch and pipeline actions" do
+      create(:sponsor_match, report: report, name: "Fieldnote Coffee")
+      render_read_only
+
+      expect(html.text).to include("Fieldnote Coffee")
+      expect(html.css(".match-actions, form, button[type='submit']")).to be_empty
+      expect(html.text).not_to include("Write my pitch", "Pipeline")
+    end
+
+    it "says there are no matches without pointing to the show's settings" do
+      render_read_only
+
+      expect(html.text).to include("No matches yet.")
+      expect(html.css("a")).to be_empty
+    end
+  end
+
   it "shows a skeleton while matches are still coming" do
     report.update!(status: "running")
     render_section

@@ -1,0 +1,42 @@
+<% content_for :title, "About" %>
+<% content_for :meta, public_page_meta(description: "Why Midrolo exists, where its data comes from, and what it is built on: Qloo taste data, Podcast Index and Claude.") %>
+<div class="wrap page-head">
+  <article class="prose-page">
+    <h1 class="type-h1">About <%= APP_NAME %></h1>
+    <p class="type-lead">
+      <%= APP_NAME %> does a sponsorship team's research for one independent podcast at a time. The name comes from the
+      mid-roll, the best-paid ad slot in an episode.
+    </p>
+
+    <h2>Why it exists</h2>
+    <p>
+      Small shows want sponsors but can't show brands who their listeners are: hosting stats count downloads and countries,
+      not taste. The tools that could help are priced for agencies, and the marketplaces built for small shows keep closing.
+      <%= APP_NAME %> gives a podcaster the evidence a brand wants to see, for the price of one sponsor spot.
+    </p>
+
+    <h2>Where the data comes from</h2>
+    <ul>
+      <li><strong>Qloo</strong>'s taste graph: what people with your listeners' tastes over-index on, how they lean by age and gender, and where they live.</li>
+      <li><strong>Podcast Index</strong>: podcast search and show details. Podcast data from <a class="link" href="https://podcastindex.org">Podcast Index</a>, the open podcast directory.</li>
+      <li><strong>Public RSS feeds</strong>: your episodes, and the sponsors mentioned on similar shows.</li>
+      <li><strong>Claude</strong>, Anthropic's AI model: plans the research and writes the reasons and pitches from those results.</li>
+    </ul>
+    <p>Audiences are modeled from Qloo taste data, not measured, and every report says so.</p>
+
+    <h2>Where it's at</h2>
+    <p>
+      <%= APP_NAME %> was built for the Qloo Agentic Hackathon in October 2026.
+      <% if Billing.mode == :live %>
+        Paid plans are open.
+      <% else %>
+        Paid plans aren't on sale yet: billing is built and tested in test mode, and you can join the founding-member
+        waitlist from the <%= link_to "pricing page", pricing_path, class: "link" %>.
+      <% end %>
+      Its code is open source under the AGPL-3.0 license.
+    </p>
+
+    <h2>Contact</h2>
+    <p>Questions, feedback or a show we got wrong: <%= contact_mail_to class: "link" %>.</p>
+  </article>
+</div>

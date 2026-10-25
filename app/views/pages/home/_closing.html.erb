@@ -1,0 +1,16 @@
+<%# locals: (samples:) -%>
+<section class="closing" aria-labelledby="closing-title">
+  <div class="wrap">
+    <div class="closing-inner">
+      <h2 id="closing-title" class="closing-title">See which brands already fit your show</h2>
+      <p class="closing-lead">
+        A free Snapshot shows your taste profile, the map and your top
+        <%= Entitlements.limits(:free)[:visible_matches] %> brand matches. No card needed.
+      </p>
+      <div class="hero-actions">
+        <%= ui_button "Get my free Snapshot", snapshot_start_path, size: :lg %>
+        <%= ui_button "See a sample report", sample_start_path(samples), variant: :secondary, size: :lg %>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,4 +1,4 @@
-<%# locals: (report:) -%>
+<%# locals: (report:, read_only: false) -%>
 <% seeds = report.seed_items %>
 <% if report.seeds.nil? && !report.needs_input? %>
   <% if section_pending?(report) %>
@@ -40,7 +40,7 @@
       <% end %>
     <% end %>
 
-    <% if report.needs_input? %>
+    <% if report.needs_input? && !read_only %>
       <%= render "reports/needs_input_form", report: report %>
     <% elsif report.unresolved_seeds.any? %>
       <p class="mt-3 text-sm text-ink-soft">Not found on Qloo: <%= report.unresolved_seeds.to_sentence %></p>

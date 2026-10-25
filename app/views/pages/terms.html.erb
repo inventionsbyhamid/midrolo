@@ -1,0 +1,71 @@
+<% content_for :title, "Terms" %>
+<% content_for :meta, public_page_meta(description: "The terms for using Midrolo, in plain language: what the service is, what you may do with it, paid plans and cancelling.") %>
+<div class="wrap page-head">
+  <article class="prose-page">
+    <h1 class="type-h1">Terms</h1>
+    <p class="prose-date">Last updated: October 2026</p>
+    <p class="type-lead">
+      These terms cover using <%= APP_NAME %> at midrolo.com. By signing in, you agree to them. They're written to be read;
+      if anything is unclear, ask at <%= contact_mail_to class: "link" %>.
+    </p>
+
+    <h2>What <%= APP_NAME %> is</h2>
+    <p>
+      A research tool for podcasters. It models who your listeners are likely to be from Qloo taste data, suggests brands
+      that fit, and helps you pitch them. Reports are informed estimates, not measurements, and nothing in them guarantees a
+      sponsorship, a reply or any income.
+    </p>
+
+    <h2>Your account</h2>
+    <ul>
+      <li>You sign in with Google, and you're responsible for what happens under your account.</li>
+      <li>You need to be an adult where you live to use <%= APP_NAME %>.</li>
+      <li>You can delete your account at any time from your account page.</li>
+    </ul>
+
+    <h2>Using it fairly</h2>
+    <ul>
+      <li>Publish a media kit only for a show you own. Verification exists to stop kits that pretend to sell someone else's ad spots.</li>
+      <li>Pitch packs are for one-to-one emails you send yourself. Don't use them for bulk or unsolicited mass email.</li>
+      <li>Check every pitch before you send it. AI writes the drafts, and you're responsible for what goes out under your name.</li>
+      <li>Don't scrape the service, overload it, or work around plan limits.</li>
+      <li>Use reports, pitches and kits to find sponsors for your shows. Don't resell the underlying taste data.</li>
+    </ul>
+    <p>We may suspend accounts that break these rules.</p>
+
+    <h2>Your content</h2>
+    <p>
+      What you add stays yours. You let us store and process it to run <%= APP_NAME %>, including with the companies listed
+      on the <%= link_to "privacy page", privacy_path, class: "link" %>. A media kit you publish is public until you
+      unpublish it.
+    </p>
+
+    <h2>Paid plans</h2>
+    <ul>
+      <li>Prices are on the <%= link_to "pricing page", pricing_path, class: "link" %>. There's no commission on any deal you land.</li>
+      <li>Dodo Payments is the merchant of record: it takes the payment and handles tax, receipts and invoices.</li>
+      <li>Monthly and yearly plans renew until you cancel. Cancel from your account page and the plan runs to the end of the period you paid for.</li>
+      <li>The Sponsor Sprint is a single payment and never renews.</li>
+      <li>For a refund request, email <%= contact_mail_to class: "link" %>.</li>
+    </ul>
+    <% unless Billing.mode == :live %>
+      <p>Paid plans aren't on sale yet: buttons join the founding-member waitlist, and any checkout runs in test mode, so nothing is charged.</p>
+    <% end %>
+
+    <h2>The service</h2>
+    <p>
+      <%= APP_NAME %> is provided as it is. Features may change, and new reports may pause now and then, for example when a
+      data source is unavailable. As far as the law allows, we aren't liable for indirect losses such as lost sponsorships
+      or income, and our total liability is limited to what you paid us in the 12 months before a claim.
+    </p>
+
+    <h2>Open source</h2>
+    <p>
+      <%= APP_NAME %>'s code is open source under the AGPL-3.0 license. These terms cover the hosted service at
+      midrolo.com, not your own copy of the code.
+    </p>
+
+    <h2>Changes</h2>
+    <p>If these terms change in a way that matters, we'll update the date at the top and tell account holders by email.</p>
+  </article>
+</div>

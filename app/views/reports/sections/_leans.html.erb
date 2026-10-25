@@ -1,4 +1,4 @@
-<%# locals: (report:) -%>
+<%# locals: (report:, read_only: false) -%>
 <%# Age and gender as relative leans, never percentages (global constraint). A snapshot never reads them. %>
 <% demographics = report.demographics.is_a?(Hash) ? report.demographics : nil %>
 <% if demographics.nil? %>

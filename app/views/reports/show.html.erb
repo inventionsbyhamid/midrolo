@@ -35,20 +35,7 @@
   <% end %>
   <%# A needs_input report asks for comparable shows inside the taste profile section (reports/_needs_input_form). %>
 
-  <div class="grid gap-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-10">
-    <aside aria-label="Agent steps" class="lg:sticky lg:top-40 lg:max-h-[calc(100dvh-11rem)] lg:self-start lg:overflow-y-auto lg:pb-4">
-      <%# One rail: open on desktop, collapsed on mobile (responsive-details controller). %>
-      <details id="<%= dom_id(@report, :agent_rail) %>" class="rail" open data-turbo-permanent data-controller="responsive-details">
-        <summary class="cursor-pointer font-semibold">Show agent steps</summary>
-        <div class="mt-2"><%= render "reports/progress_rail", report: @report %></div>
-      </details>
-    </aside>
-    <div class="report-sections">
-      <% Report::SECTIONS.each do |name| %>
-        <%= render "reports/sections/#{name}", report: @report %>
-      <% end %>
-    </div>
-  </div>
+  <%= render "reports/body", report: @report %>
 </div>
 <%# A match card's pitch dialog lands here (pitches/_dialog). Permanent, so a status refresh's morph leaves it open. %>
 <div id="pitch_dialog" data-turbo-permanent></div>
