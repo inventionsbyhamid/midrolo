@@ -147,6 +147,38 @@ RSpec.describe "Admin" do
         expect(failures.text.squish).to include("Money Talks", "Qloo returned 401")
       end
 
+      it "shows Qloo calls and Qloo cost per done report, and each paid plan's margin at its caps (R94)" do
+        AppSettings.set(:qloo_cost_per_call_usd, "0.002")
+        create(:report, show: show, kind: "agent", status: "done", taste_calls: 30)
+        create(:report, show: show, kind: "agent", status: "done", taste_calls: 20)
+        create(:report, show: show, kind: "snapshot", status: "done", taste_calls: 8)
+
+        get "/admin", headers: basic_auth
+
+        totals = section("Totals").css("tr").to_h { |tr| [ tr.at_css("th")&.text&.squish, tr.css("td").map { |td| td.text.squish } ] }
+        expect(totals["Qloo calls per done full report"]).to eq(%w[25.0 25.0])
+        expect(totals["Qloo calls per done Snapshot"]).to eq(%w[8.0 8.0])
+        expect(totals["Qloo cost per done full report"]).to eq(%w[$0.05 $0.05])
+        expect(totals["Qloo cost per done Snapshot"]).to eq(%w[$0.02 $0.02])
+
+        margins = section("Go live check")
+        rows = margins.css("tbody tr").to_h { |tr| [ tr.at_css("th").text.squish, tr.css("td").map { |td| td.text.squish } ] }
+        expect(rows.keys).to eq([ "Creator monthly", "Creator yearly", "Pro monthly", "Pro yearly", "Sprint" ])
+        expect(rows["Creator monthly"]).to eq([ "$19.00", "$17.46", "$3.60", "280", "$0.56", "76%" ])
+        expect(margins.text.squish).to include("$0.04 a pitch", "an estimate")
+        expect(margins.at_css("[role='alert']")).to be_nil
+      end
+
+      it "warns when BILLING_MODE asks for live but the go live check keeps the waitlist (R94)" do
+        with_billing_env("BILLING_MODE" => "live", "DODO_API_KEY" => "key", "DODO_ENVIRONMENT" => "live_mode") do
+          get "/admin", headers: basic_auth
+        end
+
+        alert = section("Go live check").at_css("[role='alert']").text.squish
+        expect(alert).to include("BILLING_MODE is live, but paid plans show the waitlist", "The Qloo cost per call isn't set")
+        expect(section("Go live check").text.squish).to include("Not set")
+      end
+
       it "shows Qloo calls today and this minute against their caps (R92)" do
         allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
         2.times { Taste::CallGuard.new.acquire! }
@@ -204,7 +236,7 @@ RSpec.describe "Admin" do
     describe "PATCH /admin/settings" do
       let(:valid) do
         { promo_budget_usd: "20", judge_reserve_usd: "7.5", llm_daily_budget_usd: "8.25", promo_pro_until: "2026-11-20",
-          qloo_daily_call_limit: "100" }
+          qloo_daily_call_limit: "100", qloo_cost_per_call_usd: "" }
       end
 
       it "saves the budgets and the promo date, and logs who changed what" do
@@ -226,11 +258,13 @@ RSpec.describe "Admin" do
         ))
       end
 
-      it "saves the Qloo daily call limit (R92)" do
-        patch "/admin/settings", params: { settings: valid.merge(qloo_daily_call_limit: "500") }, headers: basic_auth
+      it "saves the Qloo daily call limit (R92) and the Qloo cost per call (R94)" do
+        patch "/admin/settings", params: { settings: valid.merge(qloo_daily_call_limit: "500", qloo_cost_per_call_usd: "0.003") },
+                                 headers: basic_auth
 
         expect(response).to redirect_to("/admin")
         expect(Taste::CallGuard.daily_limit).to eq(500)
+        expect(Billing::Margins.cost_per_call).to eq(BigDecimal("0.003"))
       end
 
       it "re-renders with every error and saves nothing when a value is invalid" do

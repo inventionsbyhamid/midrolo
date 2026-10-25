@@ -8,7 +8,9 @@ RSpec.describe AdminHelper do
       waitlist: { today: { notify: 2, plans: 0 }, month: { notify: 5, plans: 1 } },
       average_agent_cost: { today: nil, month: BigDecimal("0.456") },
       reports: { today: { %w[agent done] => 1 }, month: { %w[agent done] => 2, %w[snapshot needs_input] => 1 } },
-      spend: { today: { "promo" => BigDecimal("0.4") }, month: { "promo" => BigDecimal("0.5"), "paid" => BigDecimal("1.25") } }
+      spend: { today: { "promo" => BigDecimal("0.4") }, month: { "promo" => BigDecimal("0.5"), "paid" => BigDecimal("1.25") } },
+      taste_calls_per_report: { today: {}, month: { "agent" => BigDecimal("31.25"), "snapshot" => BigDecimal("9") } },
+      qloo_cost_per_call: BigDecimal("0.002")
     )
   end
 
@@ -21,8 +23,17 @@ RSpec.describe AdminHelper do
         [ "Pitches", { today: 0, month: 3 } ],
         [ "Waitlist: notify me", { today: 2, month: 5 } ],
         [ "Waitlist: plans", { today: 0, month: 1 } ],
-        [ "Average cost per done full report", { today: "None", month: "$0.46" } ]
+        [ "Average cost per done full report", { today: "None", month: "$0.46" } ],
+        [ "Qloo calls per done full report", { today: "None", month: "31.3" } ],
+        [ "Qloo cost per done full report", { today: "None", month: "$0.06" } ],
+        [ "Qloo calls per done Snapshot", { today: "None", month: "9.0" } ],
+        [ "Qloo cost per done Snapshot", { today: "None", month: "$0.02" } ]
       ])
+    end
+
+    it "says the Qloo cost per report waits for the price per call (R94)" do
+      allow(stats).to receive(:qloo_cost_per_call).and_return(nil)
+      expect(groups[nil].to_h["Qloo cost per done full report"]).to eq(today: "None", month: "Cost not set")
     end
 
     it "has a row for each kind and status seen this month, in the model's order" do

@@ -53,6 +53,16 @@ RSpec.describe Admin::Stats do
     expect(described_class.new(now: Time.utc(2026, 8, 1)).average_agent_cost).to eq(today: nil, month: nil)
   end
 
+  it "averages uncached Qloo calls per done report, by kind (R94)" do
+    report("agent", "done", at: today, taste_calls: 30)
+    report("agent", "done", at: this_month, taste_calls: 20)
+    report("agent", "failed", at: today, taste_calls: 90)
+    report("snapshot", "done", at: today, taste_calls: 8)
+    report("snapshot", "done", at: last_month, taste_calls: 40)
+
+    expect(stats.taste_calls_per_report).to eq(today: { "agent" => 30, "snapshot" => 8 }, month: { "agent" => 25, "snapshot" => 8 })
+  end
+
   it "counts pitches" do
     match = create(:sponsor_match, show: show, report: report("agent", "done", at: last_month))
     Pitch.create!(sponsor_match: match, status: "done", created_at: today)

@@ -5,8 +5,9 @@
 #   :waitlist (the default): paid buttons join the founding-member waitlist and checkout is shut, except that judges
 #             and admins may try it against a provider in test mode (spec §15).
 #   :test     checkout is open to every signed-in user against a provider in test mode. For staging.
-#   :live     real payments. Needs DODO_API_KEY and DODO_ENVIRONMENT=live_mode.
-# A mode its provider can't back falls back to :waitlist, with a warning.
+#   :live     real payments. Needs DODO_API_KEY and DODO_ENVIRONMENT=live_mode, and the go-live check (R94,
+#             Billing::Margins): the Qloo cost per call set and every paid plan keeping 60% or more at its caps.
+# A mode its provider can't back, or live before the go-live check passes, falls back to :waitlist, with a warning.
 module Billing
   class Error < StandardError; end
   # A webhook whose signature, or signature headers, don't check out.
@@ -28,11 +29,23 @@ module Billing
       case requested
       when "waitlist" then :waitlist
       when "live"
-        Provider.live? ? :live : fall_back("BILLING_MODE=live needs DODO_API_KEY and DODO_ENVIRONMENT=live_mode")
+        return fall_back("BILLING_MODE=live needs DODO_API_KEY and DODO_ENVIRONMENT=live_mode") unless Provider.live?
+
+        blockers = Margins.check.blockers
+        blockers.empty? ? :live : fall_back("BILLING_MODE=live waits for the go live check: #{blockers.join('; ')}")
       when "test"
         Provider.test_mode? ? :test : fall_back("BILLING_MODE=test needs a payment provider in test mode")
       else fall_back("unknown BILLING_MODE #{requested.inspect}")
       end
+    end
+
+    # What keeps BILLING_MODE=live from going live, for the admin page (R94): [] unless live is asked for. check: a
+    # Margins.check already made.
+    def go_live_blockers(check = nil)
+      return [] unless ENV["BILLING_MODE"].to_s.strip.downcase == "live"
+
+      setup = "payments aren't set up for live mode (DODO_API_KEY and DODO_ENVIRONMENT=live_mode)" unless Provider.live?
+      [ setup, *(check || Margins.check).blockers ].compact
     end
 
     # Whether user may start a checkout now (R66). Never raises, whatever is configured.

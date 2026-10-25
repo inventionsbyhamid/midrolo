@@ -15,8 +15,49 @@ RSpec.describe Billing do
     end
 
     it "is live only with DODO_API_KEY and DODO_ENVIRONMENT=live_mode" do
+      AppSettings.set(:qloo_cost_per_call_usd, "0.001") # the go-live check passes (R94)
       with_billing_env("BILLING_MODE" => "live", "DODO_API_KEY" => "key", "DODO_ENVIRONMENT" => "live_mode") do
         expect(described_class.mode).to eq(:live)
+      end
+    end
+
+    describe "the go-live check (R94)" do
+      let(:live) { { "BILLING_MODE" => "live", "DODO_API_KEY" => "key", "DODO_ENVIRONMENT" => "live_mode" } }
+
+      it "refuses live, with a warning, while the Qloo cost per call is blank" do
+        allow(Rails.logger).to receive(:warn)
+        with_billing_env(live) do
+          expect(described_class.mode).to eq(:waitlist)
+          expect(described_class.go_live_blockers).to eq([ "the Qloo cost per call isn't set" ])
+        end
+        expect(Rails.logger).to have_received(:warn).with(/BILLING_MODE=live.*the Qloo cost per call isn't set/)
+      end
+
+      it "refuses live while any paid plan keeps under 60% at its caps" do
+        allow(Rails.logger).to receive(:warn)
+        AppSettings.set(:qloo_cost_per_call_usd, "0.01")
+        with_billing_env(live) { expect(described_class.mode).to eq(:waitlist) }
+        expect(Rails.logger).to have_received(:warn).with(/Pro yearly keeps 46% at its caps, under 60%/)
+      end
+
+      it "goes live once the cost is set and every paid plan keeps 60% or more" do
+        AppSettings.set(:qloo_cost_per_call_usd, "0.001")
+        with_billing_env(live) do
+          expect(described_class.mode).to eq(:live)
+          expect(described_class.go_live_blockers).to eq([])
+        end
+      end
+
+      it "lists nothing to fix unless BILLING_MODE asks for live" do
+        with_billing_env("BILLING_MODE" => "test") { expect(described_class.go_live_blockers).to eq([]) }
+        with_billing_env { expect(described_class.go_live_blockers).to eq([]) }
+      end
+
+      it "lists the payment setup too when live is asked for without it" do
+        with_billing_env("BILLING_MODE" => "live") do
+          expect(described_class.go_live_blockers).to eq([ "payments aren't set up for live mode (DODO_API_KEY and DODO_ENVIRONMENT=live_mode)",
+                                                           "the Qloo cost per call isn't set" ])
+        end
       end
     end
 
@@ -88,6 +129,7 @@ RSpec.describe Billing do
     let(:admin) { create(:user, admin: true) }
 
     it "is open to every signed-in user in test and live modes" do
+      AppSettings.set(:qloo_cost_per_call_usd, "0.001") # the go-live check passes (R94)
       with_billing_env("BILLING_MODE" => "test") do
         expect(described_class.checkout_open?(user)).to be true
         expect(described_class.checkout_open?(nil)).to be false

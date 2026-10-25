@@ -125,6 +125,8 @@ RSpec.describe "Checkouts" do
 
     around { |example| with_billing_env(live_env) { example.run } }
 
+    before { AppSettings.set(:qloo_cost_per_call_usd, "0.001") } # the go-live check passes (R94)
+
     it "redirects to Dodo's hosted checkout, returning to the thanks page" do
       stub = stub_request(:post, "https://live.dodopayments.com/checkouts")
         .with { |request| JSON.parse(request.body)["return_url"] == "http://www.example.com/billing/success" }

@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe Admin::SettingsForm do
   let(:valid) do
     { promo_budget_usd: "10", judge_reserve_usd: "5", llm_daily_budget_usd: "5", promo_pro_until: "2026-11-06",
-      qloo_daily_call_limit: "100" }
+      qloo_daily_call_limit: "100", qloo_cost_per_call_usd: "" }
   end
 
   def form(**changes) = described_class.new(**valid, **changes)
@@ -18,6 +18,12 @@ RSpec.describe Admin::SettingsForm do
       expect(described_class.current.qloo_daily_call_limit).to eq("100")
       AppSettings.set(:qloo_daily_call_limit, "250")
       expect(described_class.current.qloo_daily_call_limit).to eq("250")
+    end
+
+    it "shows the Qloo cost per call, blank until it is set (R94)" do
+      expect(described_class.current.qloo_cost_per_call_usd).to eq("")
+      AppSettings.set(:qloo_cost_per_call_usd, "0.0025")
+      expect(described_class.current.qloo_cost_per_call_usd).to eq("0.0025")
     end
 
     it "shows what is set" do
@@ -58,6 +64,15 @@ RSpec.describe Admin::SettingsForm do
       end
     end
 
+    it "takes a Qloo cost per call in dollars, 0 or more, or blank for unset (R94)" do
+      [ "", " ", "0", "0.0015", ".002" ].each { |value| expect(form(qloo_cost_per_call_usd: value)).to be_valid, "expected #{value.inspect}" }
+      [ "-1", "lots", "1e-3", "$0.01" ].each do |value|
+        record = form(qloo_cost_per_call_usd: value)
+        expect(record).not_to be_valid, "expected #{value.inspect} to be refused"
+        expect(record.errors.full_messages).to eq([ "Qloo cost per call must be a dollar amount, 0 or more, or blank." ])
+      end
+    end
+
     it "needs a real date for the promo" do
       [ "", "2026-13-40", "next week" ].each do |value|
         record = form(promo_pro_until: value)
@@ -86,6 +101,19 @@ RSpec.describe Admin::SettingsForm do
       expect(record.save).to be(true)
       expect(record.changed_settings).to eq([ "qloo_daily_call_limit from 100 to 250" ])
       expect(Taste::CallGuard.daily_limit).to eq(250)
+    end
+
+    it "sets the Qloo cost per call, and clears it again when blanked (R94)" do
+      AppSettings.set(:promo_pro_until, "2026-11-06")
+      record = form(qloo_cost_per_call_usd: " 0.0020 ")
+      expect(record.save).to be(true)
+      expect(record.changed_settings).to eq([ "qloo_cost_per_call_usd from unset to 0.002" ])
+      expect(Billing::Margins.cost_per_call).to eq(BigDecimal("0.002"))
+
+      record = form(qloo_cost_per_call_usd: "")
+      expect(record.save).to be(true)
+      expect(record.changed_settings).to eq([ "qloo_cost_per_call_usd from 0.002 to unset" ])
+      expect(Billing::Margins.cost_per_call).to be_nil
     end
 
     it "changes nothing when every value is as it was" do
