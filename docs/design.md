@@ -174,7 +174,7 @@ The user's call is to build it **production-ready, not as a demo**: Google login
 | `find_on_qloo` | Batch lookup: up to 10 names (the show, comparable shows, guests, artists, brands) → Qloo entities, and up to 5 topic phrases → Qloo tags | Qloo `/search` + `/v2/tags` |
 | `build_audience_profile` | For a seed set: top brands, artists, TV shows and podcasts, taste tags, age and gender leans, and the heatmap (country, falling back to top metros). Saves the profile sections and returns a compact digest, including a "thin profile" warning when results are sparse. | Qloo `/v2/insights` (entity types, `urn:tag`, `urn:demographics`, `urn:heatmap`) |
 | `find_sponsor_candidates` | For a seed set and the brand categories the agent picks: broad and per-category brand recommendations with a popularity cap, merged with the proven-sponsor scan of similar shows (§7.3), then scored and tiered deterministically (§7.2). Returns the ranked list with evidence. | Qloo insights (`filter.results.entities` for scoring) + Podcast Index + RSS |
-| `explain_matches` | For the top ~30 brands: shared taste tags between the show's seeds and each brand, returned compactly | Qloo `/v2/analysis/compare` |
+| `explain_matches` | For the top ~30 brands: the taste tags each brand shares with the audience, returned compactly | The overlap of each brand's own Qloo tags with the audience's taste tags, so no Qloo call. Qloo `/v2/analysis/compare` is built but off by default (R105: a podcast and a brand share no compare tags) |
 | `save_taste_seeds` / `save_sponsor_matches` / `save_summary` | Persist structured results; each section appears on the page when saved | Our DB |
 
 **Playbook given to the agent.** The order is a guide, not hard-coded, and the agent adapts when data is missing:
@@ -190,7 +190,7 @@ The user's call is to build it **production-ready, not as a demo**: Google login
 - If Qloo returns an empty result, the tool says so explicitly ("no results — try different seeds") so the agent can adapt instead of inventing.
 - **Provenance check on the server:** `save_sponsor_matches` rejects any brand ID that didn't appear in a tool result during this run, and any numeric claim that isn't in the stored data.
 - **Failure handling:** a failed run marks the report failed, keeps whatever sections were saved, doesn't count against the plan, and the user can retry. Retries are idempotent per section.
-- **Caching:** Qloo, Podcast Index and RSS responses go into Solid Cache, which lives in our private DB (Qloo allows private caching). TTL is 7 days for Qloo and 24 hours for feeds.
+- **Caching:** Qloo, Podcast Index and RSS responses go into Solid Cache, which lives in our private DB (Qloo allows private caching). TTL is 7 days for Qloo (30 days for `/search` and `/v2/tags` lookups, 1 day for a 400 or 404 miss: R93, R110) and 24 hours for feeds.
 - **Paused mode for new runs** (Claude's call), for when the Qloo key is switched off or we're over budget:
   - **Triggers:** a `RUNS_PAUSED` flag in the env or admin, or an automatic switch after repeated Qloo 401/403 errors.
   - **Behaviour:** new reports, Snapshots and pitches show a clear "new reports are paused, we'll email you" message and add the user to a notify list. Existing reports, pipelines and kits stay available.
@@ -209,7 +209,7 @@ The user's call is to build it **production-ready, not as a demo**: Google login
 Computed in Ruby so it's explainable and stable:
 - **Taste affinity:** 55%. The brand's affinity to the seed set, normalized within the run.
 - **Proven podcast sponsor:** 20%. Seen sponsoring similar shows, weighted by recency.
-- **Shared-tag overlap:** 15%. From compare.
+- **Shared-tag overlap:** 15%. The brand's own Qloo tags that the audience's taste tags share (R27; compare is off, R105).
 - **Category relevance to the show's genre:** 10%.
 - **Popularity:** sets the tier. Popularity ≥ 0.9 is a *long shot*, 0.6–0.9 is *realistic*, under 0.6 is an *easy yes*. It also applies a mild penalty for small shows, which keeps Nike-scale brands from taking over the list.
 - The weights live in one config, and the builder may tune them against test shows.
@@ -223,7 +223,7 @@ Computed in Ruby so it's explainable and stable:
 
 ## 8. Data sources and accounts
 
-- **Qloo API:** the hackathon environment, `X-Api-Key`. Request shapes are in `research/qloo-api.md`. The client sits behind a small adapter (`Qloo::Client`) so it can be swapped for the `qloo api` command-line tool if Qloo requires it. *Action: confirm in Discord #api-help.*
+- **Qloo API:** the hackathon environment, `X-Api-Key`. Request shapes are in `research/qloo-api.md`. The client sits behind a small adapter (`Taste::Provider`, with `Taste::Providers::Qloo` and a Fake) so it can be swapped for the `qloo api` command-line tool if Qloo requires it. *Action: confirm in Discord #api-help.*
 - **Podcast Index API:** primary source for podcast search and metadata. Free key, attribution required in the footer and on the about page.
 - **RSS feeds:** episodes and show notes, read with a feed parser.
 - **Apple iTunes Search/Lookup:** fallback only (artwork, Apple ID, URL pasting), cached and rate-limited to under 20 calls a minute.
@@ -252,7 +252,7 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 | Rate limiting / security | Rails 8 `rate_limit`, CSP, Brakeman, bundler-audit |
 | Pagination | pagy |
 | Tests | RSpec, FactoryBot, shoulda-matchers, WebMock. **Synthetic** fixtures go in the repo; fixtures recorded from Qloo stay private (gitignored). |
-| Deploy | Rails 8 Dockerfile + Thruster → **Docker Compose on ioflood** behind a **Cloudflare tunnel** |
+| Deploy | Rails 8 Dockerfile + Thruster → **Docker Compose on ioflood** behind Coolify's **Traefik** proxy, with Cloudflare DNS in front (R37, R79; no tunnel, no host ports) |
 | License | **AGPL-3.0** *(Claude's call, see §16)* |
 
 ## 9a. Engineering practices (the user's call: "modular so we can switch, follow best practices")
@@ -307,7 +307,7 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 
 **Security**
 - CSRF protection and a CSP.
-- Rack::Attack.
+- Rate limits through Rails' built in `rate_limit` (R84): per user on reports, pitches, show search and the judge code, per show on verification mail, and a global per IP guard.
 - Signed webhook verification.
 - Authorization checks so users only see their own shows, reports and kits. Public kits and samples are read-only.
 - Secrets never reach the browser.
@@ -362,8 +362,8 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 
 **Billing launch** (the user's call, 2026-10-24): **Dodo test mode plus a waitlist.**
 - **What's built:** billing in full (checkout, webhooks, portal, plan limits), tested end to end in **Dodo test mode**.
-- **What visitors see:** the pricing page shows the real prices. Paid buttons say **"Join the founding-member waitlist"**, which records the email and the chosen plan.
-- **Going live:** we switch to live payments only once we have a **commercial Qloo agreement**. A hackathon key likely doesn't cover charging customers, and it switches off after the event. Charging before then would risk the entry and mean refunds.
+- **What visitors see:** the pricing page shows the real prices. Paid buttons say **"Join the founding member waitlist"**, which records the email and the chosen plan.
+- **Going live:** we switch to live payments only once we have a **commercial Qloo agreement**. A hackathon key likely doesn't cover charging customers, and it switches off after the event. Charging before then would risk the entry and mean refunds. The code enforces it (R94): `Billing.mode` refuses `live` until an admin sets `qloo_cost_per_call_usd` and every paid plan keeps at least 60% margin at its caps (`Billing::Margins`: LLM, Qloo and worst case Dodo fees).
 - **When "day 1" is:** day 1 of revenue is the day billing goes live. Every plan is profitable from that first sale (the tables below). Until then, spend is limited to the hackathon budget.
 
 | Plan | Price | What you get | Hard caps per period |
@@ -400,14 +400,26 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 - **Domain:** about $15–90 a year, depending on the TLD.
 - **Break-even is the first paying customer.**
 
-**The one unknown is Qloo's commercial price after the hackathon** (free during it). Our protections:
-- At most about 25 Qloo calls per report.
-- Responses cached privately and **shared across users** (the same seeds hit the cache).
-- If Qloo's price per call becomes known, the caps and prices get rechecked before charging customers.
+**The one unknown is Qloo's commercial price after the hackathon** (free during it, with a limited allowance). Our
+protections, as built (R92, R93, R105, R108 to R110; these replace R31's numbers):
+- **Calls per report:** a soft cap of 30 uncached Qloo calls per full agent report (`max_taste_calls`, `config/research.yml`).
+  Past it, optional sub calls are skipped; the calls a report can't do without always run. A Snapshot makes about 10.
+  Compare is off (`match_explainer_compares: 0`, R105), so explaining matches costs no call.
+- **A shared cache:** responses are cached privately in Solid Cache and **shared across users**: `/search` and `/v2/tags`
+  for 30 days, everything else for 7, and a 400 or 404 miss for 1 day (R110). Heatmaps keep only their top 200 cells.
+- **A call guard** (`Taste::CallGuard`, R92): at most 30 live calls a minute (`QLOO_MAX_PER_MINUTE`) and a daily cap the
+  admin sets (`qloo_daily_call_limit`, 100 by default), checked before every request and every retry, failing closed.
+- **A capped lane** (R108): runs by free and promo users may use at most 40% of the daily cap (`qloo_free_share`), so
+  judges, paying users and sample generation keep the rest. The run form checks the lane before queuing.
+- **Minute waits** (R109): a report in a background job waits out the minute cap, at most twice per call. The daily cap
+  and the lane refuse at once.
+- **The go live guard** (R94): live billing is refused until `qloo_cost_per_call_usd` is set and every paid plan keeps
+  at least 60% margin at its caps. The admin page shows Qloo calls and cost per report, and the margin per plan.
 
 **Spend safety**
 - A monthly spend limit set in the Anthropic console.
-- An app-level **daily Claude budget** (env). Over it, new runs wait in the queue, with paying users first.
+- An app level **daily LLM budget** (`LLM_DAILY_BUDGET_USD`, 5 by default). Over it, new promo and paid full reports
+  stop with a "paused, nothing was charged" message; judges and samples draw on their own budgets.
 - The cost of every report and pitch is logged, and the admin page shows margin per user.
 - A kill switch.
 - Google sign-in is required for everything except sample reports.
@@ -423,21 +435,35 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 
 ## 12. Hosting and operations (ioflood)
 
-The same pattern as storyquest, written up in memory as `ioflood-hosting`:
-- **`compose.yml`** in the repo with these services:
-  - `web`: Rails + Thruster, on a host port that's only reachable through the tunnel
-  - `jobs`: `bin/jobs`, the Solid Queue worker
-  - `db`: `postgres:16`, with a named volume and no public port
-  - `backup`: a nightly `pg_dump` to an **R2 bucket**, keeping 14 days
-- Every service has **CPU and memory caps** (e.g. web 2 CPU / 2 GB, jobs 2 CPU / 2 GB, db 2 CPU / 2 GB), a health check and `restart: unless-stopped`.
-- **Cloudflare tunnel** route: **`midrolo.com`**. Register it on Cloudflare Registrar so the tunnel can use it directly. Fallback: `midrolo.dijmo.com` if the domain isn't ready in time. Cloudflare handles TLS, and `cloudflare-rails` handles real client IPs.
-- **Secrets** live in `.env` on the server only. `.env.example` goes in the repo.
-- **Deploying:** `git pull && docker compose up -d --build` on the server, building from the Dockerfile on the server as storyquest does. Other apps' containers and tunnels are never touched.
-- **Logs:** Docker logs. Errors go to the Rails error reporter, logged plus an email to the admin through Resend. A hosted error tracker is a later item.
+As built (R37, R79, R115, R117). The operator's guide is `docs/deploy.md`; this is the summary.
+- **`compose.yml`** in the repo, every service named `midrolo-*`:
+  - `midrolo-web`: Rails behind Thruster (port 80 inside the container). The only service that also joins the shared
+    `coolify` network.
+  - `midrolo-jobs`: `bin/jobs`, the Solid Queue worker.
+  - `midrolo-db`: `postgres:16` with the `midrolo-db` volume, on the stack's own `midrolo-net` network only.
+  - `midrolo-backup`: a nightly `pg_dump` at 03:00 UTC to an **R2 bucket**, keeping 14 days. It has its own R2 token
+    (`BACKUP_R2_ACCESS_KEY_ID`, `BACKUP_R2_SECRET_ACCESS_KEY`), scoped to the backup bucket, and a
+    `midrolo-backup-state` volume that keeps a failed run flagged (and the container unhealthy) until a later one
+    succeeds.
+- Every service has **CPU and memory caps** (2 CPUs and 2 GB each), a health check and `restart: unless-stopped`.
+- **No tunnel and no host ports.** Coolify's **Traefik** proxy finds `midrolo-web` by its labels: `Host(midrolo.com)` on
+  the `https` entrypoint with a Let's Encrypt certificate, `http` redirected to `https`, and `www` redirected to the apex.
+  TLS ends at Traefik, so Rails runs with `assume_ssl` and `force_ssl`.
+- **DNS** at Cloudflare: A records for midrolo.com and www to the server, DNS only to start. Cloudflare's proxy works too
+  (SSL Full strict); the client IP then comes from CF-Connecting-IP, believed only from Cloudflare's own addresses
+  (`cloudflare-rails`, `config/initializers/client_ip.rb`).
+- **Secrets** live in `.env` on the server only. `.env.example` in the repo lists every variable. Production refuses to
+  boot without the required set (`lib/required_env.rb`), including `QLOO_API_KEY`, `PODCAST_INDEX_KEY`,
+  `PODCAST_INDEX_SECRET` and an absolute http(s) `APP_URL`.
+- **Deploying:** rsync the code from the Mac (of the `.env*` files, only `.env.example`), then `docker compose up -d
+  --build` on the server, building there. Other stacks' containers, networks and volumes, and Traefik's and Coolify's
+  own configuration, are never touched.
+- **Logs:** Docker logs. Errors go to the Rails error reporter, logged plus an email to the admin through Resend. A
+  hosted error tracker is a later item.
 
 ## 13. Hackathon submission plan
 
-**Stage 1 (pass/fail).** It's clearly an agent, and Qloo is used in 6 different ways: search, tags, insights, demographics, heatmap and compare.
+**Stage 1 (pass/fail).** It's clearly an agent, and Qloo is used in 6 different ways: search, tags, brand and podcast insights, taste tags, demographics and the heatmap. Compare is built but off by default (R105), which the write up says plainly.
 
 **Stage 2, mapped to the criteria:**
 - **Technical implementation (also the tie-breaker):**
@@ -520,7 +546,7 @@ The same pattern as storyquest, written up in memory as `ioflood-hosting`:
 2. **Default model: Claude Opus 5.5** for the agent and the pitches (about $0.40–0.50 per report and $0.04 per pitch with coarse tools). That's already profitable at the caps. With RubyLLM it's one env change to Sonnet 5.5 (about half the cost) or to another provider. Check the eval set first.
 2a. **Free tier is an AI-free Snapshot.** The full agent report is paid, so free users cost nothing in Claude spend.
 3. **Resend** for email, as in `reelmoney`. *(Dodo Payments for now is the user's call, behind a swappable billing interface.)*
-4. **Docker Compose plus a Cloudflare tunnel**, not Kamal. kamal-proxy would clash with the existing setup.
+4. **Docker Compose**, not Kamal. kamal-proxy would clash with the existing setup. (The Cloudflare tunnel planned here was replaced by Coolify's Traefik proxy: R37, R79, §12.)
 5. **AGPL-3.0.** The rules require an OSI license. AGPL stops someone hosting a closed clone, while MIT would allow it.
 6. **Podcast Index** as the primary podcast data source, with Apple as a fallback.
 7. **Pricing:** Free Snapshot / Creator $19 / Pro $49 / Sprint $49, no commission. The caps are in §11.
@@ -543,7 +569,7 @@ The same pattern as storyquest, written up in memory as `ioflood-hosting`:
 5. **Cloudflare R2:** two buckets (app files, DB backups) and an S3 API token.
 6. **Dodo Payments:** an account (check that onboarding works as an individual) with products **in test mode** (Creator monthly/yearly, Pro monthly/yearly, Sprint one-time) and a webhook secret.
 7. **Resend:** API key and a verified sending domain.
-8. **Cloudflare tunnel** route for the subdomain on ioflood, plus the server path for the compose stack.
+8. **DNS A records** for midrolo.com and www at Cloudflare (no tunnel: §12), plus the server path for the compose stack.
 9. **GitHub:** a public repo `inventionsbyhamid/midrolo`.
 
 ## 18. Left to the builder
