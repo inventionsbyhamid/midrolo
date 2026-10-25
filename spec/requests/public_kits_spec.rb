@@ -47,6 +47,15 @@ RSpec.describe "Public media kits" do
       expect(response.body).not_to include("kit-watermark")
     end
 
+    it "names the host of the verified RSS feed, and nothing else from its URL" do
+      show.update!(feed_url: "https://Feeds.Example.com/shows/ledger.xml?key=s3cret")
+      visit_kit
+
+      expect(response.body).to include("Verified owner of the RSS feed at feeds.example.com")
+      expect(response.body).not_to include("ledger.xml")
+      expect(response.body).not_to include("s3cret")
+    end
+
     it "never lists sponsor matches" do
       create(:sponsor_match, report: report, name: "Secret Sponsor Co")
       visit_kit
@@ -113,9 +122,10 @@ RSpec.describe "Public media kits" do
         expect(response.body).not_to include("mailto:")
       end
 
-      it "is left out when there is neither" do
+      it "is left out when there is neither, with no prompt for the owner on the public page" do
         visit_kit
         expect(response.body).not_to include("Work with us")
+        expect(response.body).not_to include("Add a contact email")
         expect(response.body).not_to include("owner@example.com")
       end
     end

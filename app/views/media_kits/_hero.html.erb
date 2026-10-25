@@ -14,6 +14,13 @@
     <h1 id="kit-title" class="kit-title"><%= show.title %></h1>
     <% if show.author.present? %><p class="kit-byline">Hosted by <%= show.author %></p><% end %>
     <% if show.categories.any? %><p class="kit-categories"><%= show.categories.to_sentence %></p><% end %>
+    <% if show.verified? %>
+      <% host = kit_feed_host(show) %>
+      <p class="kit-verified">
+        <svg viewBox="0 0 20 20" class="kit-verified-mark" aria-hidden="true"><path d="M10 1.5l2.2 1.6 2.7-.1.9 2.6 2.2 1.6-.8 2.6.8 2.6-2.2 1.6-.9 2.6-2.7-.1L10 18.5l-2.2-1.6-2.7.1-.9-2.6L2 12.8l.8-2.6L2 7.6l2.2-1.6.9-2.6 2.7.1L10 1.5z" class="fill-current"/><path d="M6.6 10.2l2.3 2.3 4.6-4.8" fill="none" class="stroke-white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="kit-verified-text"><%= host ? "Verified owner of the RSS feed at #{host}" : "Verified owner of the RSS feed" %></span>
+      </p>
+    <% end %>
   </div>
 </header>
 <% if kit.headline.present? %>

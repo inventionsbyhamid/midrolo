@@ -15,6 +15,14 @@ module MediaKitsHelper
     ].compact
   end
 
+  # The feed's host for the verified-owner line (R58): only the host, lowercased, never the path or query.
+  def kit_feed_host(show)
+    uri = URI.parse(show.feed_url.to_s.strip)
+    uri.host&.downcase.presence if uri.is_a?(URI::HTTP)
+  rescue URI::InvalidURIError
+    nil
+  end
+
   # The URL of a saved image's variant, or nil. An upload that failed validation is still in memory, unsaved.
   def kit_image_url(attachment, variant)
     url_for(attachment.variant(variant)) if attachment.attached? && attachment.blob.persisted?

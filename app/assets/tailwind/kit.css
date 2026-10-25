@@ -169,6 +169,29 @@
     color: var(--color-ink-soft);
   }
 
+  /* The verified mark beside the feed host it was proven against (R58). */
+  .kit-verified {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.375rem;
+    margin-top: 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-success);
+  }
+
+  .kit-verified-mark {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex: none;
+    margin-top: 0.0625rem;
+  }
+
+  .kit-verified-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
   .kit-headline {
     max-width: 48rem;
     padding: 1.5rem 1.25rem 0;
@@ -543,6 +566,15 @@
 
   .kit-contact-button:focus-visible {
     outline-color: var(--color-surface);
+  }
+
+  /* The owner's preview, when brands would have no way to get in touch: the tally lamp says it's their turn. */
+  .kit-contact-missing {
+    padding: 1rem 1.25rem;
+    border: 1px dashed var(--color-line-strong);
+    border-radius: var(--radius-card);
+    box-shadow: inset 4px 0 0 var(--color-tally);
+    font-weight: 600;
   }
 
   /* ---- Badge ---- */

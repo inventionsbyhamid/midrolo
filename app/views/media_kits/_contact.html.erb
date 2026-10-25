@@ -1,6 +1,7 @@
-<%# locals: (content:) -%>
-<%# "Work with us": the contact email the owner chose, else the show's website, else nothing. Never the feed's
-    owner address. The address shows as text too, for print and for brands who copy it rather than click. %>
+<%# locals: (content:, preview: false) -%>
+<%# "Work with us": the contact email the owner chose, else the show's website. Never the feed's owner address.
+    The address shows as text too, for print and for brands who copy it rather than click. With neither, the public
+    kit leaves the section out and the owner's preview asks for a contact email instead (R54a). %>
 <% email = content.contact_email %>
 <% website = content.website %>
 <% if email || website %>
@@ -15,5 +16,12 @@
     <% else %>
       <%= link_to "Visit our website", website, class: "btn btn-lg kit-contact-button", rel: "noopener" %>
     <% end %>
+  </section>
+<% elsif preview %>
+  <section class="kit-section kit-screen-only" aria-label="Contact">
+    <p class="kit-contact-missing">
+      <%= link_to "Add a contact email so brands can reach you",
+            edit_show_media_kit_path(content.show, anchor: "media_kit_show_attributes_contact_email"), class: "link" %>
+    </p>
   </section>
 <% end %>

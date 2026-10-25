@@ -36,11 +36,40 @@ RSpec.describe "Media kits (owner)" do
         expect(MediaKit.count).to eq(0) # looking doesn't create anything
       end
 
+      it "claims a verified owner only once the show is verified" do
+        get show_media_kit_path(show)
+        expect(response.body).not_to include("Verified owner")
+
+        show.verify!
+        get show_media_kit_path(show)
+        expect(response.body).to include("Verified owner of the RSS feed at example.com")
+      end
+
       it "asks for a Snapshot when there is no audience data yet" do
         get show_media_kit_path(show)
 
         expect(response.body).to include("Run a Snapshot to add audience data")
         expect(response.body).to include(%(href="#{show_path(show)}"))
+      end
+
+      it "asks for a contact email, linking to the field, when brands would have no way to reach the show" do
+        get show_media_kit_path(show)
+
+        expect(response.body).to include("Add a contact email so brands can reach you")
+        expect(response.body).to include(%(href="#{edit_show_media_kit_path(show, anchor: 'media_kit_show_attributes_contact_email')}"))
+        expect(response.body).not_to include("Work with us")
+      end
+
+      it "drops the contact prompt once there is a contact email or a website" do
+        show.update!(website: "https://foundersledger.example.com")
+        get show_media_kit_path(show)
+        expect(response.body).not_to include("Add a contact email so brands can reach you")
+        expect(response.body).to include("Work with us", "Visit our website")
+
+        show.update!(contact_email: "sponsors@example.com")
+        get show_media_kit_path(show)
+        expect(response.body).not_to include("Add a contact email so brands can reach you")
+        expect(response.body).to include("mailto:sponsors@example.com")
       end
 
       it "shows audience data from the latest done report" do
