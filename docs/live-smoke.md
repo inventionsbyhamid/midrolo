@@ -5,6 +5,24 @@ Run this once a real Qloo key is in hand, before trusting live reports. It check
 2026-10-25 (`.superpowers/sdd/2026-10-24-midrolo-implementation-plan/qloo-params-check.md`), whose mismatches M1 to M7
 the client now handles.
 
+## The quick way: `rake qloo:smoke`
+
+With `QLOO_API_KEY` in the environment (loaded from wherever the key is kept, never typed on the command line or
+echoed):
+
+```bash
+bin/rails qloo:smoke    # development; in production, run it in the app container, where QLOO_API_KEY is set
+```
+
+`Taste::Smoke` runs checks 1 to 8 below (search plus the miss variant, brand tags, brand recommendations, union,
+demographics, heatmap, taste tags, compare) through `Taste::Providers::Qloo`: 9 live calls, a hard budget of 10
+counting retries, and every call counts toward the admin's daily cap. It reads past the response cache and saves
+nothing. Per call it prints the endpoint, HTTP status, result count, which parsing paths matched (flat or
+`properties`, the heatmap's lat/lon keys, the demographics block count), at most 3 names, and PASS or FAIL. It
+refuses to run without `QLOO_API_KEY`, or outside development and production.
+
+The curl commands below are the same checks by hand, with the variants the rake task leaves out.
+
 Rules: the key stays in an environment variable and is never printed, logged or committed. Save no raw responses in
 the repo; real responses may only go in the git-ignored `spec/fixtures/private/`, and Qloo's guide doesn't allow its
 data in public repositories.

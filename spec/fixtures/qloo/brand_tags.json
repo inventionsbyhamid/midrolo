@@ -1,0 +1,4 @@
+{"success":true,"results":{"tags":[
+ {"id":"urn:tag:genre:brand:food_and_beverage","name":"Food and Beverage","type":"urn:tag:genre:brand","popularity":0.9},
+ {"id":"urn:tag:genre:brand:food_and_beverage:snacks","name":"Snacks","type":"urn:tag:genre:brand","popularity":0.4}
+]}}

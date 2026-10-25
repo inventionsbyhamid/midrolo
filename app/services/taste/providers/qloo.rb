@@ -17,15 +17,17 @@ module Taste
       AGE_BUCKETS = %w[24_and_younger 25_to_29 30_to_34 35_to_44 45_to_54 55_and_older].freeze
 
       # cache: where answers are kept (a NullStore reads live every time); guard: what each live attempt asks first;
-      # sleeper: how a retry waits (specs record the waits instead).
+      # sleeper: how a retry waits (specs record the waits instead); on_response: called with path:, status: and body:
+      # after every live HTTP answer, for the smoke test (Taste::Smoke) to read shapes in memory.
       def initialize(api_key:, base_url: ENV.fetch("QLOO_BASE_URL", DEFAULT_BASE_URL), cache: Rails.cache,
-                     guard: CallGuard.new, retry_interval: 0.5, sleeper: ->(seconds) { sleep(seconds) })
+                     guard: CallGuard.new, retry_interval: 0.5, sleeper: ->(seconds) { sleep(seconds) }, on_response: nil)
         @api_key = api_key
         @base_url = base_url.to_s.chomp("/")
         @cache = cache
         @guard = guard
         @retry_interval = retry_interval
         @sleeper = sleeper
+        @on_response = on_response
       end
 
       # A 404 here is Qloo's "No results" (R87).
@@ -139,6 +141,7 @@ module Taste
         started = monotonic
         response = connection.get(path, params)
         notify(path, false, response.status, started)
+        @on_response&.call(path: path, status: response.status, body: response.body)
         response
       rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
         notify(path, false, nil, started)
