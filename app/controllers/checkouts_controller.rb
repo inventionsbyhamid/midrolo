@@ -1,7 +1,8 @@
 # Starts a hosted checkout for one price key (spec §5.8, R66). Checkout exists in the test and live billing modes;
 # on the waitlist it is a 404, except for judges and admins against a provider in test mode. The redirect goes only
 # to the URL the provider returns, never to anything from params. A user with an entitling subscription changes plans
-# in the portal instead; only the sprint can be bought again, to extend it.
+# in the portal instead; only the sprint can be bought again, to extend it. A Sprint holder can't switch to a recurring
+# plan in the portal either (a one-time payment has no subscription to change), so they hear when the Sprint ends.
 class CheckoutsController < ApplicationController
   THANKS = "Thanks. Your plan updates in a few seconds.".freeze
   NOT_CHARGED = "Checkout didn't go through, so nothing was charged.".freeze
@@ -16,8 +17,7 @@ class CheckoutsController < ApplicationController
     return redirect_to(pricing_path, alert: "That plan isn't available.") unless price
 
     if (subscription = Billing.blocking_subscription(current_user, price))
-      plan_name = Entitlements.limits(subscription.plan.to_sym).fetch(:name)
-      return redirect_to(account_path, alert: "You're already on #{plan_name}. Use Manage billing to change plans.")
+      return redirect_to(account_path, alert: already_on(subscription))
     end
 
     url = Billing::Provider.current.checkout_url(user: current_user, price_key: price.key, return_url: billing_success_url)
@@ -38,6 +38,13 @@ class CheckoutsController < ApplicationController
   end
 
   private
+
+  def already_on(subscription)
+    plan_name = Entitlements.limits(subscription.plan.to_sym).fetch(:name)
+    return "You're already on #{plan_name}. Use Manage billing to change plans." unless subscription.sprint?
+
+    "Your #{plan_name} runs until #{subscription.current_period_end.strftime('%b %-d, %Y')}."
+  end
 
   def not_found_unless_checkout_open
     head :not_found if Billing.mode == :waitlist && !Billing.checkout_open?(current_user)

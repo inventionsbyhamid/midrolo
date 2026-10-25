@@ -69,6 +69,45 @@ RSpec.describe "Fake billing (development)" do
     expect(BillingEvent.count).to eq(0)
   end
 
+  it "is a 404 outside development and test even if its routes were drawn: the controller checks too" do
+    sign_in user
+    allow(Rails).to receive(:env).and_return(ActiveSupport::EnvironmentInquirer.new("production"))
+
+    get "/fake_checkout", params: { price_key: "pro_monthly" }
+    expect(response).to have_http_status(:not_found)
+    post "/fake_checkout", params: { price_key: "pro_monthly" }
+    expect(response).to have_http_status(:not_found)
+    get "/fake_portal"
+    expect(response).to have_http_status(:not_found)
+    expect(BillingEvent.count).to eq(0)
+  end
+
+  context "while paid plans are on the waitlist" do
+    around { |example| with_billing_env { example.run } }
+
+    it "never thanks a regular user for a test payment that grants nothing, and sends no webhook" do
+      sign_in user
+
+      perform_enqueued_jobs { post "/fake_checkout", params: { price_key: "pro_monthly" } }
+
+      expect(response).to redirect_to(pricing_path)
+      expect(flash[:alert]).to eq("Paid plans are on the waitlist for now, so this test payment can't change your plan. Nothing was charged.")
+      expect(flash[:notice]).to be_nil
+      expect(BillingEvent.count).to eq(0)
+      expect(user.subscriptions).to be_empty
+    end
+
+    it "still completes a judge's test checkout" do
+      judge = create(:user, judge: true)
+      sign_in judge
+
+      perform_enqueued_jobs { post "/fake_checkout", params: { price_key: "pro_monthly" } }
+
+      expect(response).to redirect_to("/billing/success?status=active")
+      expect(judge.subscriptions.sole.plan).to eq("pro")
+    end
+  end
+
   it "shows a stand-in portal with a way back" do
     sign_in user
     get "/fake_portal", params: { customer_id: "fake_cus_1" }

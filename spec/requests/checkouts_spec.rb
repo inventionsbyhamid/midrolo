@@ -79,16 +79,19 @@ RSpec.describe "Checkouts" do
       end
     end
 
-    it "lets a sprint be bought again to extend it, but no recurring plan during it" do
-      create(:subscription, user: user, plan: "sprint", current_period_end: 10.days.from_now)
+    it "lets a sprint be bought again to extend it, but no recurring plan during it, saying when it ends" do
+      create(:subscription, user: user, plan: "sprint", current_period_end: Time.utc(2026, 11, 4, 12))
       sign_in user
 
-      post "/checkouts", params: { price_key: "sprint" }
-      expect(response).to redirect_to(%r{/fake_checkout\?price_key=sprint})
+      travel_to(Time.utc(2026, 10, 25, 12)) do
+        post "/checkouts", params: { price_key: "sprint" }
+        expect(response).to redirect_to(%r{/fake_checkout\?price_key=sprint})
 
-      post "/checkouts", params: { price_key: "pro_monthly" }
-      expect(response).to redirect_to(account_path)
-      expect(flash[:alert]).to eq("You're already on Sprint. Use Manage billing to change plans.")
+        # The portal can't turn a one-time Sprint into a subscription, so Manage billing would be a dead end.
+        post "/checkouts", params: { price_key: "pro_monthly" }
+        expect(response).to redirect_to(account_path)
+        expect(flash[:alert]).to eq("Your Sprint runs until Nov 4, 2026.")
+      end
     end
 
     it "lets a lapsed subscriber buy again" do

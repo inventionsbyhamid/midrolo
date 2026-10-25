@@ -216,7 +216,39 @@ RSpec.describe Billing::Sync do
         described_class.apply(event(:subscription_renewed, period_end: t0 + 2.months, occurred_at: t0 + 1.month))
       end
 
-      expect(subscription).to have_attributes(current_period_end: t0 + 1.month, last_event_at: t0)
+      expect(subscription).to have_attributes(current_period_end: t0 + 1.month, status: "active", plan: "creator")
+    end
+
+    it "keeps what grants nothing from a refused event, such as a cancellation at period end, after a mode switch" do
+      described_class.apply(event(:subscription_active))
+
+      note = with_billing_env do
+        described_class.apply(event(:subscription_active, price_key: "pro_monthly", cancel_at_period_end: true,
+                                                          customer_id: "cus_2", period_end: t0 + 2.months,
+                                                          occurred_at: t0 + 1.day))
+      end
+
+      expect(note).to match(/No plan granted/)
+      expect(subscription).to have_attributes(cancel_at_period_end: true, provider_customer_id: "cus_2",
+                                              last_event_at: t0 + 1.day, plan: "creator", status: "active",
+                                              current_period_end: t0 + 1.month)
+    end
+
+    it "keeps a refused event's fields only when it is the newest" do
+      described_class.apply(event(:subscription_active, cancel_at_period_end: true, occurred_at: t0 + 2.days))
+
+      with_billing_env { described_class.apply(event(:subscription_active, occurred_at: t0 + 1.day)) }
+
+      expect(subscription).to have_attributes(cancel_at_period_end: true, last_event_at: t0 + 2.days)
+    end
+
+    it "lets a refused event reactivate nothing" do
+      described_class.apply(event(:subscription_active))
+      described_class.apply(event(:subscription_canceled, occurred_at: t0 + 1.day))
+
+      with_billing_env { described_class.apply(event(:subscription_active, occurred_at: t0 + 2.days)) }
+
+      expect(subscription.status).to eq("canceled")
     end
 
     it "still lets a cancellation through, which grants nothing" do

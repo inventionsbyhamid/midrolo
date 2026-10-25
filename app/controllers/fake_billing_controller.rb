@@ -1,11 +1,18 @@
 # The Fake billing provider's pages (Billing::Providers::Fake), in development and test only: the routes exist only
-# when Rails.env.local?, and production never offers the Fake. Its checkout completes a test payment the way a real
-# one does: a Standard-Webhooks-signed event goes through the real /webhooks/fake route, WebhooksController checks it
-# and enqueues ProcessBillingEventJob, and the buyer lands on the success page. Its portal is a stand-in page.
+# when Rails.env.local?, the controller checks again, and production never offers the Fake. Its checkout completes a
+# test payment the way a real one does: a Standard-Webhooks-signed event goes through the real /webhooks/fake route,
+# WebhooksController checks it and enqueues ProcessBillingEventJob, and the buyer lands on the success page. A payment
+# Billing::Sync would refuse (a regular user while paid plans are on the waitlist, R75b) isn't sent, so it never ends
+# on the thanks page. Its portal is a stand-in page.
 class FakeBillingController < ApplicationController
+  WAITLIST_REFUSAL = "Paid plans are on the waitlist for now, so this test payment can't change your plan. " \
+                     "Nothing was charged.".freeze
+
   layout "app"
+  prepend_before_action :not_found_outside_local
   before_action :authenticate_user!
   before_action :set_price, only: %i[checkout pay]
+  before_action :refuse_ungranted_payment, only: :pay
 
   def checkout; end
 
@@ -23,6 +30,18 @@ class FakeBillingController < ApplicationController
   def portal; end
 
   private
+
+  def not_found_outside_local
+    head :not_found unless Rails.env.local?
+  end
+
+  # The same rule Billing::Sync applies to the webhook (Billing.grant_allowed?), asked before sending it: the webhook
+  # route answers 200 whatever the job later decides.
+  def refuse_ungranted_payment
+    return if Billing.grant_allowed?(current_user, provider: Billing::Providers::Fake::NAME)
+
+    redirect_to pricing_path, alert: WAITLIST_REFUSAL
+  end
 
   def set_price
     @price = Billing.price(params[:price_key])

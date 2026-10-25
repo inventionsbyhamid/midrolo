@@ -4,7 +4,9 @@ module Billing
   #   - a subscription is found by (provider, provider_subscription_id) first; only a new one takes its user from the
   #     event (our checkout's metadata, trusted because the webhook's signature checked out);
   #   - only an activating event (active, renewed, the sprint's payment) creates, extends or reactivates, and only
-  #     when Billing.grant_allowed? (R75b): live payments, or a user checkout is open to;
+  #     when Billing.grant_allowed? (R75b): live payments, or a user checkout is open to. A refused one still brings
+  #     what grants nothing to a subscription we have (cancel_at_period_end, the customer id), so a mode switch never
+  #     loses a scheduled cancellation, and its note says nothing was granted;
   #   - current_period_end only moves forward, and only on an activating event (R76): a failed renewal never carries
   #     a row through a period nobody paid for. current_period_start moves with it;
   #   - status, plan and cancel_at_period_end come only from an event at least as new as the last one applied
@@ -37,13 +39,17 @@ module Billing
       when :one_time_paid then apply_one_time_payment
       when *STATUSES.keys then apply_subscription_event
       end
-      nil
+      @note&.then { |note| log_skip(note) }
     rescue Skipped => e
-      Rails.logger.error("[Billing::Sync] #{e.message} (#{@event.provider} #{@event.name} #{@event.id})")
-      e.message
+      log_skip(e.message)
     end
 
     private
+
+    def log_skip(message)
+      Rails.logger.error("[Billing::Sync] #{message} (#{@event.provider} #{@event.name} #{@event.id})")
+      message
+    end
 
     def apply_subscription_event
       raise Skipped, "The event has no subscription id" if @event.subscription_id.blank?
@@ -65,22 +71,29 @@ module Billing
                              price_key: @event.price_key, status: "active")
     end
 
+    # A refused activating event (R75b) creates nothing, and on a subscription we have it changes only what grants
+    # nothing: no longer period, no status and no plan.
     def update_subscription(subscription)
-      if activating?
-        ensure_grant_allowed!(subscription.user)
-        extend_period(subscription)
+      refused = activating? && !grant_allowed?(subscription.user)
+      if refused
+        raise Skipped, refusal(subscription.user) if subscription.new_record?
+
+        @note = refusal(subscription.user)
       end
+      extend_period(subscription) if activating? && !refused
       subscription.provider_customer_id = @event.customer_id if @event.customer_id.present?
-      apply_newest(subscription) if newest?(subscription)
+      apply_newest(subscription, refused: refused) if newest?(subscription)
       subscription.save!
     end
 
-    def apply_newest(subscription)
-      subscription.status = STATUSES.fetch(@event.type)
+    def apply_newest(subscription, refused:)
       subscription.cancel_at_period_end = @event.cancel_at_period_end unless @event.cancel_at_period_end.nil?
+      subscription.last_event_at = @event.occurred_at if @event.occurred_at
+      return if refused
+
+      subscription.status = STATUSES.fetch(@event.type)
       plan = Billing.plan_for(@event.price_key)
       subscription.assign_attributes(plan: plan, price_key: @event.price_key) if SUBSCRIPTION_PLANS.include?(plan)
-      subscription.last_event_at = @event.occurred_at if @event.occurred_at
     end
 
     def extend_period(subscription)
@@ -94,10 +107,14 @@ module Billing
     def activating? = ACTIVATING.include?(@event.type)
 
     def ensure_grant_allowed!(user)
-      return if Billing.grant_allowed?(user, provider: @event.provider)
+      raise Skipped, refusal(user) unless grant_allowed?(user)
+    end
 
-      raise Skipped, "No plan granted to user #{user.id}: #{@event.provider} isn't taking live payments and checkout " \
-                     "isn't open to this user (billing mode #{Billing.mode})"
+    def grant_allowed?(user) = Billing.grant_allowed?(user, provider: @event.provider)
+
+    def refusal(user)
+      "No plan granted to user #{user.id}: #{@event.provider} isn't taking live payments and checkout isn't open to " \
+        "this user (billing mode #{Billing.mode})"
     end
 
     # An event with no time of its own can't be placed, so it changes no status a timed event has set.
