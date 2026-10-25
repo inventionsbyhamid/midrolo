@@ -18,11 +18,18 @@ RSpec.describe Report do
     end
 
     it "enqueues the agent job and records the spend bucket for agent reports" do
-      allow(Llm::Budget).to receive(:bucket_for).with(user).and_return(:promo)
+      AppSettings.set(:promo_pro_until, 1.week.from_now.to_date.to_s)
       report = nil
       expect { report = described_class.start!(show: show, kind: "agent", user: user) }
         .to have_enqueued_job(GenerateReportJob)
       expect(report.spend_bucket).to eq("promo")
+    end
+
+    it "records the paid bucket for a subscriber and the judge bucket for a judge (R62)" do
+      create(:subscription, user: user, plan: "creator")
+      expect(described_class.start!(show: show, kind: "agent", user: user).spend_bucket).to eq("paid")
+      judge = create(:user, judge: true)
+      expect(described_class.start!(show: create(:show, user: judge), kind: "agent", user: judge).spend_bucket).to eq("judge")
     end
 
     it "returns the active report instead of creating another" do
@@ -33,15 +40,39 @@ RSpec.describe Report do
     end
 
     it "starts a new report once the previous one is finished" do
-      create(:report, show: show, status: "done")
+      create(:report, show: show, kind: "agent", status: "done")
       expect { described_class.start!(show: show, kind: "snapshot", user: user) }.to change(described_class, :count).by(1)
     end
 
-    it "raises NotAllowed when the plan does not allow the kind" do
-      plan = instance_double(Entitlements::Plan, can_run?: false)
-      allow(Entitlements).to receive(:for).with(user).and_return(plan)
-      expect { described_class.start!(show: show, kind: "agent", user: user) }.to raise_error(Entitlements::NotAllowed)
+    it "raises NotAllowed with the plan's reason when the plan does not allow the kind" do
+      expect { described_class.start!(show: show, kind: "agent", user: user) }
+        .to raise_error(Entitlements::NotAllowed) { |error| expect(error.reason).to eq(:plan) }
       expect(described_class.count).to eq(0)
+    end
+
+    it "raises NotAllowed with reason :limit once the period's Snapshot is used" do
+      create(:report, show: show, kind: "snapshot", status: "done")
+      expect { described_class.start!(show: show, kind: "snapshot", user: user) }
+        .to raise_error(Entitlements::NotAllowed) { |error| expect(error.reason).to eq(:limit) }
+    end
+
+    it "checks the plan and inserts under the user's advisory lock (R61)" do
+      allow(described_class.connection).to receive(:execute).and_call_original
+      described_class.start!(show: show, kind: "snapshot", user: user)
+
+      expect(described_class.connection).to have_received(:execute)
+        .with("SELECT pg_advisory_xact_lock(#{Entitlements::USAGE_LOCK_NAMESPACE}, #{user.id})")
+    end
+
+    it "reserves the user's fresh agent reports still running on other shows against the plan (R61)" do
+      user = create(:user)
+      create(:subscription, user: user, plan: "pro")
+      shows = create_list(:show, 3, user: user)
+      11.times { create(:report, show: shows[0], kind: "agent", status: "done") }
+
+      described_class.start!(show: shows[1], kind: "agent", user: user)
+      expect { described_class.start!(show: shows[2], kind: "agent", user: user) }
+        .to raise_error(Entitlements::NotAllowed) { |error| expect(error.reason).to eq(:limit) }
     end
 
     it "returns the active report without an entitlement check or raise" do
@@ -67,11 +98,21 @@ RSpec.describe Report do
       expect(stale.reload.status).to eq("failed")
     end
 
-    it "returns the existing active report when a concurrent insert hits the unique index" do
-      winner = create(:report, show: show, status: "running")
-      # Simulate the race: the pre-check saw nothing, then the insert collided.
+    it "returns the report a concurrent start for the show made while it waited for the lock" do
+      winner = create(:report, show: show, kind: "agent", status: "queued")
+      # Simulate the race: the pre-check saw nothing; by the time the lock was held the other start had committed.
       calls = 0
       allow(show).to receive(:active_report) { (calls += 1) == 1 ? nil : winner }
+      expect { expect(described_class.start!(show: show, kind: "agent", user: user)).to eq(winner) }
+        .not_to have_enqueued_job
+    end
+
+    it "returns the existing active report when a concurrent insert hits the unique index" do
+      create(:subscription, user: user, plan: "pro")
+      winner = create(:report, show: show, status: "running")
+      # Simulate the race: both checks saw nothing, then the insert collided.
+      calls = 0
+      allow(show).to receive(:active_report) { (calls += 1) <= 2 ? nil : winner }
       expect(described_class.start!(show: show, kind: "snapshot", user: user)).to eq(winner)
     end
 

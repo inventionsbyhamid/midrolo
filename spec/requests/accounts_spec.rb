@@ -24,6 +24,61 @@ RSpec.describe "Account" do
     expect(response.body).to include("Free", "Usage", "Judge code", "Billing", "Delete account", "Sign out", user.email, "AL")
   end
 
+  describe "plan and usage" do
+    def card(title)
+      Nokogiri::HTML(response.body).css(".card").find { |node| node.at_css("h2")&.text&.squish == title }
+    end
+
+    let(:show) { create(:show, user: user) }
+
+    it "shows the free plan and this month's usage" do
+      create(:report, show: show, kind: "snapshot", status: "done")
+      sign_in user
+      get "/account"
+
+      expect(card("Plan").text.squish).to include("Free", "You're on the Free plan.")
+      expect(card("Plan").at_css("a[href='#{pricing_path}']").text).to eq("See plans")
+      expect(card("Usage").css("li").map { |li| li.text.squish })
+        .to eq([ "Full reports: not on the Free plan", "Snapshots: 1 of 1 used this month", "Pitches: not on the Free plan" ])
+    end
+
+    it "shows a subscriber's plan and this billing period's done work only" do
+      create(:subscription, user: user, plan: "creator", current_period_start: 3.days.ago)
+      create(:report, show: show, kind: "agent", status: "done", spend_bucket: "paid", created_at: 1.day.ago)
+      create(:report, show: show, kind: "agent", status: "done", spend_bucket: "paid", created_at: 5.days.ago)
+      create(:report, show: show, kind: "agent", status: "failed", spend_bucket: "paid")
+      sign_in user
+      get "/account"
+
+      expect(card("Plan").text.squish).to include("Creator", "You're on the Creator plan.")
+      expect(card("Usage").css("li").map { |li| li.text.squish })
+        .to eq([ "Full reports: 1 of 4 used this billing period", "Snapshots: 0 of 4 used this billing period",
+                 "Pitches: 0 of 40 used this billing period" ])
+    end
+
+    it "shows judge access with its reports in total and unlimited pitches, never a huge number" do
+      user.update!(judge: true)
+      create(:report, show: show, kind: "agent", status: "done", spend_bucket: "judge", created_at: 2.months.ago)
+      sign_in user
+      get "/account"
+
+      expect(card("Plan").text.squish)
+        .to include("Judge access", "Judge access is on: Pro features with 3 full reports and unlimited pitches.")
+      expect(card("Usage").css("li").map { |li| li.text.squish })
+        .to eq([ "Full reports: 1 of 3 used", "Snapshots: 0 of 12 used this month", "Unlimited pitches" ])
+      expect(response.body).not_to include("Infinity", "∞")
+    end
+
+    it "shows the promo" do
+      AppSettings.set(:promo_pro_until, 1.week.from_now.to_date.to_s)
+      sign_in user
+      get "/account"
+
+      expect(card("Plan").text.squish).to include("Hackathon promo", "Free Pro access during the Qloo hackathon judging")
+      expect(card("Usage").css("li").first.text.squish).to eq("Full reports: 0 of 1 used")
+    end
+  end
+
   it "renders the avatar when there is one" do
     sign_in create(:user, avatar_url: "https://example.com/a.png")
     get "/account"

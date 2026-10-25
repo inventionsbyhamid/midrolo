@@ -1,4 +1,10 @@
-# Plan limits and pricing. price_keys map to provider product ids (set via ENV).
+# Plan limits and pricing: the single source of plan numbers (spec §11, R59). Entitlements reads the limits; price_keys
+# map to provider product ids (set via ENV).
+# - snapshots_per_month, agent_reports and pitches count per usage period: the subscription's, else the calendar month.
+#   With agent_reports_total, agent reports count all time instead, in the plan's own spend bucket (judge, promo).
+# - pitches: unlimited is bounded by the LLM budget only.
+# - visible_matches caps the matches a Snapshot shows; 50 is the agent report's own match cap, so it means all of them.
+# - grants_plan: the plan starts from that plan's limits and features; its own keys win.
 shared:
   free:
     name: Free
@@ -11,17 +17,20 @@ shared:
     kit_badge: true
     deep_scan_similar: 8
     csv_export: false
+    pipeline: false
   creator:
     name: Creator
     price_monthly_usd: 19
     price_yearly_usd: 190
     shows: 1
+    snapshots_per_month: 4
     agent_reports: 4
     pitches: 40
-    visible_matches: all
+    visible_matches: 50
     kit_badge: false
     deep_scan_similar: 8
     csv_export: false
+    pipeline: true
     price_keys:
       monthly: creator_monthly
       yearly: creator_yearly
@@ -30,12 +39,14 @@ shared:
     price_monthly_usd: 49
     price_yearly_usd: 490
     shows: 3
+    snapshots_per_month: 12
     agent_reports: 12
     pitches: 150
-    visible_matches: all
+    visible_matches: 50
     kit_badge: false
     deep_scan_similar: 12
     csv_export: true
+    pipeline: true
     price_keys:
       monthly: pro_monthly
       yearly: pro_yearly
@@ -46,6 +57,23 @@ shared:
     duration_days: 30
     price_keys:
       once: sprint
+  # Derived plans, never sold (R59): judge access (JUDGE_CODE) and the hackathon promo (promo_pro_until).
+  judge:
+    name: Judge access
+    grants_plan: pro
+    shows: 3
+    snapshots_per_month: 12
+    agent_reports: 3
+    agent_reports_total: true
+    pitches: unlimited
+  promo:
+    name: Hackathon promo
+    grants_plan: pro
+    shows: 1
+    snapshots_per_month: 1
+    agent_reports: 1
+    agent_reports_total: true
+    pitches: 20
 
 # price_key => provider product id
 price_keys:

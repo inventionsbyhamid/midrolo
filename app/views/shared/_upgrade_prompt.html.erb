@@ -1,0 +1,8 @@
+<%# locals: (reason:, kind:, plan:) -%>
+<%# Why the plan said no (Entitlements::NotAllowed#reason) for a kind (:agent, :snapshot or :pitch), and what next (R63). %>
+<% prompt = upgrade_prompt(reason, kind, plan) %>
+<div class="upgrade-prompt" role="status" data-upgrade-reason="<%= reason %>">
+  <p class="font-semibold"><%= prompt.message %></p>
+  <% if prompt.detail %><p class="text-[0.9375rem] text-ink-soft"><%= prompt.detail %></p><% end %>
+  <% if prompt.action %><%= link_to prompt.action, pricing_path, class: "btn btn-primary btn-md self-start" %><% end %>
+</div>

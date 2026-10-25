@@ -15,14 +15,13 @@ class PitchesController < ApplicationController
 
   def create
     @regenerate = params[:regenerate].present?
-    @pitch = reusable_pitch
-    return over_limit if @pitch.nil? && !pitch_allowed?
-
-    @pitch ||= start_pitch
+    @pitch = reusable_pitch || start_pitch
     respond_to do |format|
       format.turbo_stream
       format.html { redirect_to sponsor_match_pitch_path(@sponsor_match), status: :see_other }
     end
+  rescue Entitlements::NotAllowed => e
+    over_limit(e.reason)
   end
 
   private
@@ -32,14 +31,7 @@ class PitchesController < ApplicationController
     raise ActiveRecord::RecordNotFound if @sponsor_match.locked?(plan)
   end
 
-  def plan = @plan ||= Entitlements.for(current_user)
-
-  # pitches_left counts done pitches only (Task 16); the user's pitches still being written are reserved against it,
-  # so several cards can't start pitches the plan has no room for (R53). pitches_left may be Float::INFINITY
-  # (unlimited); nil counts as none.
-  def pitch_allowed?
-    plan.can_pitch? && plan.pitches_left.to_f - current_user.pitches.in_flight.count > 0
-  end
+  def plan = current_plan
 
   # A pitch still being written is never started twice (a second tab, Regenerate mid-write); without regenerate, a
   # written pitch opens again rather than spending another.
@@ -50,20 +42,27 @@ class PitchesController < ApplicationController
     latest if latest&.done? && !@regenerate
   end
 
-  # The database allows one queued pitch per match (R53). One stuck in the queue already shows as failed, so it's
-  # failed first; a concurrent request that inserted first wins, and its pitch is shown.
+  # The plan's gate (Plan#authorize!: pitches_left counts done pitches, and the user's pitches still being written are
+  # reserved against it, R53) and the insert run under the user's usage lock, so parallel requests can't start
+  # pitches the plan has no room for (R61). The database allows one queued pitch per match (R53). One stuck in the
+  # queue already shows as failed, so it's failed first; a concurrent request that inserted first wins, and its
+  # pitch is shown.
   def start_pitch
-    @sponsor_match.pitches.queued.each { |stuck| stuck.mark_failed! if stuck.stale? }
-    pitch = @sponsor_match.pitches.create!
+    pitch = Pitch.transaction do
+      Entitlements.lock_usage!(current_user)
+      plan.authorize!(:pitch)
+      @sponsor_match.pitches.queued.each { |stuck| stuck.mark_failed! if stuck.stale? }
+      @sponsor_match.pitches.create!
+    end
     GeneratePitchJob.perform_later(pitch.id)
     pitch
   rescue ActiveRecord::RecordNotUnique
     @sponsor_match.pitches.queued.newest_first.first || raise
   end
 
-  # 402 with the reason and the way to more pitches; a pitch already on screen stays there.
-  def over_limit
-    @limit_reason = plan.can_pitch? ? :used_up : :plan
+  # 402 with the plan's reason (Entitlements::NotAllowed) and the way forward; a pitch already on screen stays there.
+  def over_limit(reason)
+    @limit_reason = reason
     @pitch = @sponsor_match.latest_pitch
     respond_to do |format|
       format.turbo_stream { render :over_limit, status: :payment_required }

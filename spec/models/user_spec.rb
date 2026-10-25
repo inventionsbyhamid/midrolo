@@ -8,7 +8,7 @@ RSpec.describe User do
       expect(user).to be_persisted
       expect(user).to have_attributes(
         email: "ada@example.com", name: "Ada Lovelace", avatar_url: "https://example.com/ada.png",
-        provider: "google_oauth2", uid: "g-123", admin: false, judge: false, promo_reports_used: 0
+        provider: "google_oauth2", uid: "g-123", admin: false, judge: false
       )
     end
 

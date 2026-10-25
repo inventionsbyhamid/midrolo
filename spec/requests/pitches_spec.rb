@@ -269,7 +269,23 @@ RSpec.describe "Pitches" do
         expect(enqueued_jobs).to be_empty
         dialog = stream("update", "pitch_dialog")
         expect(dialog.at_css("dialog")).to be_present
+        expect(dialog.at_css(".upgrade-prompt").text.squish).to include("Pitch packs are on Creator and up")
         expect(dialog.at_css("a[href='#{pricing_path}']")).to be_present
+      end
+
+      it "refuses a free user's pitch with 402 (R63)" do
+        user.update!(judge: false)
+        expect { post sponsor_match_pitch_path(brand_match), headers: turbo }.not_to change(Pitch, :count)
+        expect(response).to have_http_status(:payment_required)
+        expect(stream("update", "pitch_dialog").at_css("[data-upgrade-reason='plan']")).to be_present
+      end
+
+      it "checks the plan and inserts under the user's advisory lock (R61)" do
+        allow(Pitch.connection).to receive(:execute).and_call_original
+        post sponsor_match_pitch_path(brand_match), headers: turbo
+
+        expect(Pitch.connection).to have_received(:execute)
+          .with("SELECT pg_advisory_xact_lock(#{Entitlements::USAGE_LOCK_NAMESPACE}, #{user.id})")
       end
 
       it "returns 402 when the period's pitches are used up, in the open dialog on Regenerate" do
@@ -278,7 +294,9 @@ RSpec.describe "Pitches" do
         expect { post sponsor_match_pitch_path(brand_match), params: { regenerate: 1 }, headers: turbo }.not_to change(Pitch, :count)
 
         expect(response).to have_http_status(:payment_required)
-        expect(stream("replace", dom_id(brand_match, :pitch_pack)).at_css("a[href='#{pricing_path}']")).to be_present
+        pack = stream("replace", dom_id(brand_match, :pitch_pack))
+        expect(pack.at_css(".upgrade-prompt").text.squish).to include("You've used 40 of 40 pitches this month")
+        expect(pack.at_css("a[href='#{pricing_path}']")).to be_present
       end
 
       it "reserves pitches still being written: with 1 left, a second card gets 402 (R53)" do
@@ -315,13 +333,32 @@ RSpec.describe "Pitches" do
       end
 
       context "when the LLM budget refuses" do
-        before do
-          allow(Llm).to receive(:mode).and_return(:live)
+        before { allow(Llm).to receive(:mode).and_return(:live) }
+
+        it "refuses with 402 and the pause's reason before queueing anything (R62)" do
           AppSettings.set(:runs_paused, true)
+          AppSettings.set(:runs_paused_reason, "Back after a short maintenance break.")
+          expect { post sponsor_match_pitch_path(brand_match), headers: turbo }.not_to change(Pitch, :count)
+
+          expect(response).to have_http_status(:payment_required)
+          prompt = stream("update", "pitch_dialog").at_css("[data-upgrade-reason='paused']")
+          expect(prompt.text.squish).to eq("Back after a short maintenance break.")
         end
 
-        it "shows that pitches are paused, records no charge and counts nothing" do
-          write_pitch
+        it "refuses with 402 and the waitlist when the judge reserve is spent" do
+          allow(Llm::Budget).to receive(:allow?).with(:judge).and_return(false)
+          post sponsor_match_pitch_path(brand_match), headers: turbo
+
+          expect(response).to have_http_status(:payment_required)
+          prompt = stream("update", "pitch_dialog").at_css("[data-upgrade-reason='budget']")
+          expect(prompt.text.squish).to include("Pitch packs are paused for now — join the waitlist")
+          expect(prompt.at_css("a[href='#{pricing_path}']").text).to eq("Join the waitlist")
+        end
+
+        it "shows that pitches are paused when the budget refuses after queueing, records no charge and counts nothing" do
+          post sponsor_match_pitch_path(brand_match), headers: turbo
+          AppSettings.set(:runs_paused, true)
+          perform_enqueued_jobs
           get sponsor_match_pitch_path(brand_match), headers: turbo
 
           expect(stream("update", "pitch_dialog").at_css("[role='alert']").text.squish).to include(paused)

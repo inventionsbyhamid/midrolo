@@ -5,12 +5,8 @@ module Llm
     DAILY_CAPPED = %i[promo paid].freeze
 
     class << self
-      def bucket_for(user)
-        return :judge if user.judge
-        return :promo if promo_active?
-
-        nil
-      end
+      # The bucket the user's LLM work draws on: their plan's (Entitlements::Plan#spend_bucket, R62).
+      def bucket_for(user) = Entitlements.for(user).spend_bucket
 
       def allow?(bucket, estimate_usd: 0.5)
         return false if bucket.nil?
@@ -53,13 +49,6 @@ module Llm
       def judge_ceiling
         reserve = setting(:judge_reserve_usd, 5)
         reserve + [ promo_ceiling - spent(:promo), 0 ].max
-      end
-
-      def promo_active?
-        until_date = Date.parse(AppSettings.get(:promo_pro_until).to_s)
-        until_date >= Date.current
-      rescue Date::Error
-        false
       end
 
       def spent(bucket) = SpendEntry.where(bucket: bucket.to_s).sum(:cost_usd)

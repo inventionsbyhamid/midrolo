@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_040100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -209,6 +209,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_030000) do
     t.index ["show_id"], name: "index_sponsor_matches_on_show_id"
   end
 
+  create_table "subscriptions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "provider", null: false
+    t.string "provider_customer_id"
+    t.string "provider_subscription_id"
+    t.string "price_key"
+    t.string "plan", null: false
+    t.string "status", null: false
+    t.datetime "current_period_start"
+    t.datetime "current_period_end"
+    t.boolean "cancel_at_period_end", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["provider", "provider_subscription_id"], name: "index_subscriptions_on_provider_and_provider_subscription_id", unique: true, where: "(provider_subscription_id IS NOT NULL)"
+    t.index ["user_id"], name: "index_subscriptions_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email"
     t.string "name"
@@ -217,7 +234,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_030000) do
     t.string "uid", null: false
     t.boolean "admin", default: false, null: false
     t.boolean "judge", default: false, null: false
-    t.integer "promo_reports_used", default: 0, null: false
     t.datetime "deleted_at"
     t.datetime "remember_created_at"
     t.integer "sign_in_count", default: 0, null: false
@@ -243,4 +259,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_030000) do
   add_foreign_key "spend_entries", "users"
   add_foreign_key "sponsor_matches", "reports"
   add_foreign_key "sponsor_matches", "shows"
+  add_foreign_key "subscriptions", "users"
 end

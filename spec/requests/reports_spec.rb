@@ -3,7 +3,8 @@ require "rails_helper"
 RSpec.describe "Reports" do
   include ActiveJob::TestHelper
 
-  let(:user) { create(:user) }
+  # Creator: full reports and the pipeline.
+  let(:user) { create(:user, :subscribed) }
   let(:show) { create(:show, user: user) }
 
   it "requires sign in" do
@@ -34,11 +35,24 @@ RSpec.describe "Reports" do
         expect(Report.count).to eq(0)
       end
 
-      it "redirects back with a friendly flash when not allowed" do
-        allow(Report).to receive(:start!).and_raise(Entitlements::NotAllowed.new(:limit))
-        post show_reports_path(show), params: { kind: "agent" }
+      it "redirects back to the show with the plan's reason as an upgrade prompt (R63)" do
+        4.times { create(:report, show: show, kind: "agent", status: "done", spend_bucket: "paid") }
+        expect { post show_reports_path(show), params: { kind: "agent" } }.not_to change(Report, :count)
         expect(response).to redirect_to(show_path(show))
-        expect(flash[:alert]).to be_present
+        expect(flash[:upgrade]).to eq("reason" => "limit", "kind" => "agent")
+
+        follow_redirect!
+        prompt = Nokogiri::HTML(response.body).at_css(".upgrade-prompt")
+        expect(prompt.text.squish).to include("You've used 4 of 4 reports this billing period")
+        expect(prompt.at_css("a[href='#{pricing_path}']").text).to eq("See plans")
+      end
+
+      it "tells a free user full reports are on Creator and up" do
+        sign_in(free_user = create(:user))
+        post show_reports_path(create(:show, user: free_user)), params: { kind: "agent" }
+        follow_redirect!
+        expect(Nokogiri::HTML(response.body).at_css(".upgrade-prompt").text.squish)
+          .to include("Full agent reports are on Creator and up", "See plans")
       end
 
       it "404s for another user's show" do

@@ -511,6 +511,25 @@
     color: var(--color-danger);
   }
 
+  /* Why the plan said no, and what to do next (shared/_upgrade_prompt). */
+  .upgrade-prompt {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
+  }
+
+  /* Hackathon promo banner (shared/_promo_banner): plum, full width, under the demo banner. */
+  .promo-banner {
+    background: var(--color-plum);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
   /* Demo banner: the amber tally light, full width, above everything. */
   .demo-banner {
     background: var(--color-tally);

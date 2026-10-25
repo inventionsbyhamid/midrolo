@@ -62,20 +62,36 @@ RSpec.describe Llm::Budget do
   end
 
   describe ".bucket_for" do
+    it "returns paid for creator, pro and sprint subscribers" do
+      %w[creator pro sprint].each do |plan|
+        user = create(:user)
+        create(:subscription, user: user, plan: plan)
+        expect(described_class.bucket_for(user)).to eq(:paid)
+      end
+    end
+
     it "returns judge for judges" do
-      expect(described_class.bucket_for(build(:user, judge: true))).to eq(:judge)
+      expect(described_class.bucket_for(create(:user, judge: true))).to eq(:judge)
+    end
+
+    it "returns judge for a judge with a Pro subscription, whose plan is still Pro (R62a)" do
+      judge = create(:user, judge: true)
+      create(:subscription, user: judge, plan: "pro")
+      expect(Entitlements.for(judge).key).to eq(:pro)
+      expect(described_class.bucket_for(judge)).to eq(:judge)
     end
 
     it "returns promo while the promo is active" do
       AppSettings.set(:promo_pro_until, Date.current.to_s)
-      expect(described_class.bucket_for(build(:user))).to eq(:promo)
+      expect(described_class.bucket_for(create(:user))).to eq(:promo)
     end
 
-    it "returns nil after the promo ends or when unset" do
+    it "returns nil on the free plan: after the promo ends, when unset, and for no user" do
       AppSettings.set(:promo_pro_until, 1.day.ago.to_date.to_s)
-      expect(described_class.bucket_for(build(:user))).to be_nil
+      expect(described_class.bucket_for(create(:user))).to be_nil
       AppSettings.set(:promo_pro_until, "garbage")
-      expect(described_class.bucket_for(build(:user))).to be_nil
+      expect(described_class.bucket_for(create(:user))).to be_nil
+      expect(described_class.bucket_for(nil)).to be_nil
     end
   end
 

@@ -8,12 +8,19 @@
     </div>
   </header>
 
-  <%= render "components/card", title: "Plan", aside: ui_badge("Free", tone: :neutral) do %>
-    <p class="text-ink-soft">You're on the Free plan.<%= " Judge access is on." if current_user.judge? %></p>
+  <%= render "components/card", title: "Plan", aside: ui_badge(current_plan.name, tone: current_plan.key == :free ? :neutral : :accent) do %>
+    <p class="text-ink-soft"><%= plan_summary(current_plan) %></p>
+    <% if current_plan.key == :free %>
+      <%= ui_button "See plans", pricing_path, variant: :secondary, class: "mt-4" %>
+    <% end %>
   <% end %>
 
   <%= render "components/card", title: "Usage" do %>
-    <p class="text-ink-soft">Your report and pitch usage will show here.</p>
+    <ul class="flex flex-col gap-2" aria-label="Usage">
+      <% %i[agent snapshot pitch].each do |kind| %>
+        <li><%= usage_line(current_plan, kind) %></li>
+      <% end %>
+    </ul>
   <% end %>
 
   <%= render "components/card", title: "Judge code" do %>

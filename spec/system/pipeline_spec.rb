@@ -5,7 +5,7 @@ require "rails_helper"
 RSpec.describe "Sponsor pipeline" do
   include Warden::Test::Helpers
 
-  let(:user) { create(:user) }
+  let(:user) { create(:user, :subscribed) } # the pipeline is a Creator feature (R45)
   let(:podcast) { create(:show, user: user, title: "The Founder's Ledger") } # not :show, which the failure screenshot helper calls
   let(:report) { create(:report, show: podcast, kind: "agent", status: "done") }
   let!(:brand_match) { create(:sponsor_match, report: report, name: "Fieldnote Coffee") }

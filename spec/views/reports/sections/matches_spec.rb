@@ -1,7 +1,9 @@
 require "rails_helper"
 
 RSpec.describe "reports/sections/_matches" do
-  let(:report) { create(:report, kind: "agent", status: "done") }
+  # A judge owner has Pro features, the pipeline among them.
+  let(:owner) { create(:user, judge: true) }
+  let(:report) { create(:report, show: create(:show, user: owner), kind: "agent", status: "done") }
 
   def html = Nokogiri::HTML5.fragment(rendered)
 
@@ -17,8 +19,9 @@ RSpec.describe "reports/sections/_matches" do
     { "shared_tags" => [ "Investing" ], "proven" => { "items" => items, "count" => count } }
   end
 
-  context "with 50 matches and a plan that shows 5" do
+  context "with 50 matches on a Snapshot and a plan that shows 5" do
     before do
+      report.update!(kind: "snapshot")
       (1..50).each do |i|
         create(:sponsor_match, report: report, position: i, name: "Brand #{format('%02d', i)}", reason: "Reason for brand #{i}.",
                                website: "https://brand#{i}.example.com", image_url: "https://img.example.com/#{i}.png",
@@ -56,6 +59,17 @@ RSpec.describe "reports/sections/_matches" do
       expect(card.css("img, a, form, select")).to be_empty
       expect(html.css("[data-locked-match]").last.text.squish).to eq("•• Long shot Good fit") # match 50: fit 50
     end
+  end
+
+  it "shows every match of an agent report, whatever its owner's plan now is (R64)" do
+    owner.update!(judge: false)
+    expect(Entitlements.for(owner).visible_matches_limit).to eq(5)
+    (1..8).each { |i| create(:sponsor_match, report: report, position: i, name: "Brand #{i}") }
+    render_section
+
+    expect(html.css("[data-filter-target='item']").size).to eq(8)
+    expect(html.css("[data-locked-match]")).to be_empty
+    expect(rendered).to include("Brand 8")
   end
 
   context "with a fully evidenced match" do
@@ -210,6 +224,7 @@ RSpec.describe "reports/sections/_matches" do
   end
 
   it "leaves the tier line out of the unlock prompt when no locked tier is known" do
+    report.update!(kind: "snapshot")
     create(:sponsor_match, report: report, position: 1)
     create(:sponsor_match, report: report, position: 2, tier: nil)
     create(:sponsor_match, report: report, position: 3, tier: "mystery")
@@ -221,6 +236,7 @@ RSpec.describe "reports/sections/_matches" do
   end
 
   it "names only the known tiers in the unlock prompt" do
+    report.update!(kind: "snapshot")
     create(:sponsor_match, report: report, position: 1)
     create(:sponsor_match, report: report, position: 2, tier: "long_shot")
     create(:sponsor_match, report: report, position: 3, tier: nil)

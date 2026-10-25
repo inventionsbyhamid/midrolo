@@ -32,23 +32,32 @@ class Report < ApplicationRecord
   after_update_commit :broadcast_status_refresh, if: :saved_change_to_status?
 
   # Idempotent per show: a second call (double-click, re-run while running) returns the running report,
-  # before any entitlement check. Stale active reports are failed first so they can't block the show.
+  # before any entitlement check. Otherwise the plan's gate and the insert run under the user's usage lock, so
+  # parallel starts on the user's shows can't overshoot the plan (R61). Raises Entitlements::NotAllowed with the
+  # plan's reason.
   def self.start!(show:, kind:, user:)
     existing = show.active_report
     return existing if existing
 
-    raise Entitlements::NotAllowed, :plan unless Entitlements.for(user).can_run?(kind)
-
+    created = nil
     report = transaction do
-      show.reports.stale.find_each { |stale| stale.mark_failed! }
-      create!(show: show, kind: kind, status: "queued",
-              spend_bucket: (Llm::Budget.bucket_for(user)&.to_s if kind.to_s == "agent"))
+      Entitlements.lock_usage!(user)
+      # A start for this show that held the lock first (a double-click) already made the report: return that one.
+      show.active_report || (created = create_queued!(show: show, kind: kind, plan: Entitlements.for(user)))
     end
-    (kind.to_s == "agent" ? GenerateReportJob : BuildSnapshotJob).perform_later(report.id)
+    (kind.to_s == "agent" ? GenerateReportJob : BuildSnapshotJob).perform_later(created.id) if created
     report
   rescue ActiveRecord::RecordNotUnique
     show.active_report || raise
   end
+
+  # Stale active reports are failed first so they can't block the show.
+  def self.create_queued!(show:, kind:, plan:)
+    plan.authorize!(kind)
+    show.reports.stale.find_each { |stale| stale.mark_failed! }
+    create!(show: show, kind: kind, status: "queued", spend_bucket: (plan.spend_bucket&.to_s if kind.to_s == "agent"))
+  end
+  private_class_method :create_queued!
 
   def active? = status.in?(ACTIVE)
 

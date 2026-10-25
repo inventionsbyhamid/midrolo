@@ -11,10 +11,20 @@ class ApplicationController < ActionController::Base
 
   layout :layout_for_devise
 
+  helper_method :current_plan
+
   def after_sign_in_path_for(_resource) = shows_path
   def after_sign_out_path_for(_scope) = "/"
 
   private
+
+  # The signed-in user's plan (Entitlements), resolved once per request; the free plan when signed out.
+  def current_plan = @current_plan ||= Entitlements.for(current_user)
+
+  # Back to path with the plan's refusal (Entitlements::NotAllowed), which the layout shows as an upgrade prompt.
+  def redirect_with_upgrade_prompt(path, error, kind:, **messages)
+    redirect_to path, flash: messages.merge(upgrade: { "reason" => error.reason.to_s, "kind" => kind.to_s })
+  end
 
   def any_browser? = false
 

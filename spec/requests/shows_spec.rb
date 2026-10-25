@@ -48,6 +48,27 @@ RSpec.describe "Shows" do
         get "/shows/new"
         expect(response.body).to include("Upgrade", "1 show")
         expect(response.body).not_to include("search_results")
+        page = Nokogiri::HTML(response.body)
+        expect(page.at_css("main .badge").text).to eq("Free")
+        expect(page.at_xpath("//main//a[normalize-space()='Upgrade']")["href"]).to eq(pricing_path)
+      end
+
+      it "lets a Pro user add up to 3 shows, and a downgraded user keep every show they have" do
+        create(:subscription, user: user, plan: "pro")
+        create_list(:show, 2, user: user)
+        get "/shows/new"
+        expect(response.body).to include("search_results")
+
+        create(:show, user: user)
+        get "/shows/new"
+        expect(response.body).to include("3 shows")
+        expect(response.body).not_to include("search_results")
+
+        user.subscriptions.update_all(status: "canceled", current_period_end: 1.day.ago)
+        get "/shows"
+        expect(Nokogiri::HTML(response.body).css("main li.card").size).to eq(3)
+        get "/shows/new"
+        expect(response.body).to include("1 show")
       end
     end
 
@@ -228,6 +249,7 @@ RSpec.describe "Shows" do
         let(:hints) { { comparable_shows: [ "Acquired", "", "Planet Money" ], topics: [ "saas" ] } }
 
         it "saves the hints, starts the same kind of report and opens it" do
+          create(:subscription, user: user)
           expect { patch "/shows/#{show.id}", params: { show: { hints: hints }, rerun: "agent" } }
             .to change(show.reports, :count).by(1).and have_enqueued_job(GenerateReportJob)
           report = show.reports.last
@@ -236,11 +258,12 @@ RSpec.describe "Shows" do
           expect(show.reload.hints[:comparable_shows]).to eq([ "Acquired", "Planet Money" ])
         end
 
-        it "keeps the hints and explains when the plan doesn't allow the run" do
+        it "keeps the hints and explains with an upgrade prompt when the plan doesn't allow the run" do
           allow(Report).to receive(:start!).and_raise(Entitlements::NotAllowed.new(:limit))
           patch "/shows/#{show.id}", params: { show: { hints: hints }, rerun: "agent" }
           expect(response).to redirect_to(show_path(show))
-          expect(flash[:alert]).to include("current plan")
+          expect(flash[:notice]).to eq("Details saved.")
+          expect(flash[:upgrade]).to eq("reason" => "limit", "kind" => "agent")
           expect(show.reload.hints[:topics]).to eq([ "saas" ])
         end
 

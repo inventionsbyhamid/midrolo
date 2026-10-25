@@ -1,7 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Sponsor matches" do
-  let(:user) { create(:user) }
+  # The pipeline is a Creator feature (R45).
+  let(:user) { create(:user, :subscribed) }
   let(:show) { create(:show, user: user) }
   let(:report) { create(:report, show: show, kind: "agent", status: "done") }
   let(:brand_match) { create(:sponsor_match, report: report, name: "Fieldnote Coffee") }

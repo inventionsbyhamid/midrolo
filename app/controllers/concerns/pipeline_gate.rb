@@ -8,7 +8,7 @@ module PipelineGate
 
   private
 
-  def plan = @plan ||= Entitlements.for(current_user)
+  def plan = current_plan
 
   def require_pipeline
     redirect_to pricing_path, notice: UPSELL, status: :see_other unless plan.pipeline?

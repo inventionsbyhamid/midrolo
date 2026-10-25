@@ -9,8 +9,8 @@ class ReportsController < ApplicationController
 
     report = Report.start!(show: @show, kind: kind, user: current_user)
     redirect_to show_report_path(@show, report)
-  rescue Entitlements::NotAllowed
-    redirect_to show_path(@show), alert: "You can't start that report on your current plan. See your account for options."
+  rescue Entitlements::NotAllowed => e
+    redirect_with_upgrade_prompt(show_path(@show), e, kind: kind)
   end
 
   def show

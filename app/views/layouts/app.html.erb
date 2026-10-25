@@ -8,10 +8,16 @@
   <body class="flex min-h-dvh flex-col">
     <a href="#main" class="skip-link">Skip to content</a>
     <%= render "components/demo_banner" if demo_mode? %>
+    <%= render "shared/promo_banner" %>
     <%= render "components/nav",
           links: [ [ "Shows", shows_path ], [ "Pipeline", pipeline_path ], [ "Account", account_path ] ],
           sign_out: true %>
     <%= render "components/flash" %>
+    <% if (upgrade = flashed_upgrade) %>
+      <div class="wrap mt-4">
+        <%= render "shared/upgrade_prompt", reason: upgrade.first, kind: upgrade.last, plan: current_plan %>
+      </div>
+    <% end %>
     <main id="main" tabindex="-1" class="wrap flex-1 py-8 sm:py-10">
       <%= yield %>
     </main>

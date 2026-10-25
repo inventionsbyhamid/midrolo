@@ -172,18 +172,10 @@
     color: var(--color-success);
   }
 
-  .pitch-empty,
-  .pitch-upgrade {
+  .pitch-empty {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-  }
-
-  .pitch-upgrade {
-    padding: 1rem 1.25rem;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-control);
-    background: var(--color-paper);
   }
 
   .pitch-failed {

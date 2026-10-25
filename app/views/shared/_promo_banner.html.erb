@@ -1,0 +1,6 @@
+<%# The hackathon promo's banner (R63): only for a signed-in user whose plan is the promo. %>
+<% if user_signed_in? && current_plan.key == :promo %>
+  <div class="promo-banner" role="note">
+    <p class="wrap py-2"><%= promo_offer %>.</p>
+  </div>
+<% end %>

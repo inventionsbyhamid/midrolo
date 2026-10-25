@@ -67,8 +67,8 @@ class ShowsController < ApplicationController
   def rerun_report(kind)
     report = Report.start!(show: @show, kind: kind, user: current_user)
     redirect_to show_report_path(@show, report)
-  rescue Entitlements::NotAllowed
-    redirect_to show_path(@show), alert: "Details saved, but you can't start that report on your current plan. See your account for options."
+  rescue Entitlements::NotAllowed => e
+    redirect_with_upgrade_prompt(show_path(@show), e, kind: kind, notice: "Details saved.")
   end
 
   def submitted_comparable_shows
@@ -90,8 +90,9 @@ class ShowsController < ApplicationController
                           { hints: { comparable_shows: [], topics: [] } } ])
   end
 
+  # A downgraded user keeps every show they have; they just can't add more.
   def at_limit?
-    current_user.shows.count >= Entitlements.for(current_user).max_shows
+    current_user.shows.count >= current_plan.max_shows
   end
 
   # A show this user already added, matched by what they sent (or by the looked-up attributes).

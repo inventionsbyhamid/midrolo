@@ -4,7 +4,8 @@ require "csv"
 RSpec.describe "Pipeline" do
   include ActionView::RecordIdentifier
 
-  let(:user) { create(:user) }
+  # The pipeline is a Creator feature (R45).
+  let(:user) { create(:user, :subscribed) }
   let(:show) { create(:show, user: user, title: "The Founder's Ledger") }
   let(:report) { create(:report, show: show, kind: "agent", status: "done") }
 

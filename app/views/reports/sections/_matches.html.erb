@@ -16,7 +16,8 @@
     <%= render "reports/section", name: "matches", hidden: true %>
   <% end %>
 <% else %>
-  <% limit = Entitlements.for(report.show.user).visible_matches_limit %>
+  <%# The plan's visible limit locks Snapshot matches only: an agent report stays whole for its owner (R44, R64). %>
+  <% limit = report.snapshot? ? Entitlements.for(report.show.user).visible_matches_limit : matches.size %>
   <% visible = matches.first(limit) %>
   <% locked = matches.drop(limit) %>
   <% categories = visible.filter_map { |m| m.category.presence }.tally.sort_by { |name, count| [ -count, name ] }.map(&:first) %>

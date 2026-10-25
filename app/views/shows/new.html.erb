@@ -6,11 +6,11 @@
   </header>
 
   <% if @at_limit %>
-    <%= render "components/card", title: "Your plan includes #{pluralize(Entitlements.for(current_user).max_shows, 'show')}",
-          aside: ui_badge("Free", tone: :neutral) do %>
-      <p class="text-ink-soft">Upgrade to add more shows and unlock full reports.</p>
+    <%= render "components/card", title: "Your plan includes #{pluralize(current_plan.max_shows, 'show')}",
+          aside: ui_badge(current_plan.name, tone: :neutral) do %>
+      <p class="text-ink-soft">Upgrade to add more shows<%= " and unlock full reports" if current_plan.key == :free %>.</p>
       <div class="mt-4 flex flex-wrap gap-3">
-        <%= ui_button "Upgrade", account_path %>
+        <%= ui_button "Upgrade", pricing_path %>
         <%= ui_button "Back to my shows", shows_path, variant: :secondary %>
       </div>
     <% end %>
