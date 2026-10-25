@@ -179,14 +179,15 @@ RSpec.describe "Admin" do
         expect(section("Go live check").text.squish).to include("Not set")
       end
 
-      it "shows Qloo calls today and this minute against their caps (R92)" do
+      it "shows Qloo calls today, this minute and free Snapshots' calls against their caps (R92, R95)" do
         allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
         2.times { Taste::CallGuard.new.acquire! }
+        Taste::CallGuard.lane(:free) { Taste::CallGuard.new.acquire! }
 
         get "/admin", headers: basic_auth
 
         meters = section("Qloo calls").css("[role='meter']").to_h { |meter| [ meter["aria-label"], meter.at_css(".meter-value").text ] }
-        expect(meters).to include("Qloo calls today" => "2 / 100", "This minute" => "2 / 30")
+        expect(meters).to include("Qloo calls today" => "3 / 100", "This minute" => "3 / 30", "Free Snapshots today" => "1 / 40")
         expect(section("Settings").at_css("input[name='settings[qloo_daily_call_limit]']")["value"]).to eq("100")
       end
     end
@@ -236,7 +237,7 @@ RSpec.describe "Admin" do
     describe "PATCH /admin/settings" do
       let(:valid) do
         { promo_budget_usd: "20", judge_reserve_usd: "7.5", llm_daily_budget_usd: "8.25", promo_pro_until: "2026-11-20",
-          qloo_daily_call_limit: "100", qloo_cost_per_call_usd: "" }
+          qloo_daily_call_limit: "100", qloo_cost_per_call_usd: "", qloo_free_share: "0.4" }
       end
 
       it "saves the budgets and the promo date, and logs who changed what" do

@@ -11,7 +11,8 @@ module Admin
     BUDGET_KEYS = Llm::Budget::DEFAULTS.keys.freeze
     LABELS = { promo_budget_usd: "Promo budget", judge_reserve_usd: "Judge reserve",
                llm_daily_budget_usd: "Daily LLM budget", promo_pro_until: "Promo Pro until",
-               qloo_daily_call_limit: "Qloo calls a day", qloo_cost_per_call_usd: "Qloo cost per call" }.freeze
+               qloo_daily_call_limit: "Qloo calls a day", qloo_cost_per_call_usd: "Qloo cost per call",
+               qloo_free_share: "Free Snapshot share of Qloo calls" }.freeze
     # Whole dollars or dollars and cents, never negative: "10", "0.5", ".5".
     DOLLARS = /\A(?:\d+(?:\.\d+)?|\.\d+)\z/
     WHOLE_NUMBER = /\A\d+\z/
@@ -20,16 +21,18 @@ module Admin
     attribute :promo_pro_until, :string
     attribute :qloo_daily_call_limit, :string
     attribute :qloo_cost_per_call_usd, :string
+    attribute :qloo_free_share, :string
 
     validate :budgets_are_dollars, :reserve_fits_budget, :promo_date_is_a_date, :call_limit_is_a_whole_number,
-             :cost_per_call_is_dollars_or_blank
+             :cost_per_call_is_dollars_or_blank, :free_share_is_a_share
 
     # The values in force now.
     def self.current
       new(**BUDGET_KEYS.index_with { |key| Llm::Budget.setting(key).to_s("F") },
           promo_pro_until: Entitlements.promo_until&.iso8601,
           qloo_daily_call_limit: Taste::CallGuard.daily_limit.to_s,
-          qloo_cost_per_call_usd: Billing::Margins.cost_per_call&.to_s("F").to_s)
+          qloo_cost_per_call_usd: Billing::Margins.cost_per_call&.to_s("F").to_s,
+          qloo_free_share: Taste::CallGuard.free_share.to_s("F"))
     end
 
     def self.human_attribute_name(attribute, options = {}) = LABELS.fetch(attribute.to_sym) { super }
@@ -58,7 +61,7 @@ module Admin
     def normalized
       BUDGET_KEYS.index_with { |key| dollars(key).to_s("F") }
                  .merge(promo_pro_until: promo_date.iso8601, qloo_daily_call_limit: call_limit.to_s,
-                        qloo_cost_per_call_usd: cost_per_call&.to_s("F"))
+                        qloo_cost_per_call_usd: cost_per_call&.to_s("F"), qloo_free_share: free_share.to_s("F"))
     end
 
     def dollars(key)
@@ -75,6 +78,13 @@ module Admin
     def call_limit
       value = qloo_daily_call_limit.to_s.strip
       Integer(value, 10) if WHOLE_NUMBER.match?(value)
+    end
+
+    # A number from 0 to 1, else nil.
+    def free_share
+      value = qloo_free_share.to_s.strip
+      share = BigDecimal(value) if DOLLARS.match?(value)
+      share if share && share <= 1
     end
 
     # nil when blank (unset) or not a dollar amount.
@@ -100,6 +110,10 @@ module Admin
 
     def call_limit_is_a_whole_number
       errors.add(:qloo_daily_call_limit, "must be a whole number, 0 or more.") unless call_limit
+    end
+
+    def free_share_is_a_share
+      errors.add(:qloo_free_share, "must be from 0 to 1, like 0.4.") unless free_share
     end
 
     def cost_per_call_is_dollars_or_blank

@@ -201,6 +201,30 @@ RSpec.describe Research::Run do
       expect(Entitlements.for(show.user).used(:snapshot)).to eq(0)
     end
 
+    it "runs a free user's Snapshot in the free lane, and a paid user's in the shared one (R95)" do
+      lanes = {}
+      allow_any_instance_of(Taste::Providers::Fake).to receive(:search).and_wrap_original do |original, **kw|
+        lanes[kw[:query]] ||= Taste::CallGuard.current_lane
+        original.call(**kw)
+      end
+
+      run(create(:report, show: show, kind: "snapshot"))
+      paid = create(:show, user: create(:user, :subscribed), title: "Paid Pod", feed_url: "fake://fake-1", categories: [ "Business" ])
+      run(create(:report, show: paid, kind: "snapshot"))
+
+      expect(lanes).to include(show.title => :free, "Paid Pod" => nil)
+      expect(Taste::CallGuard.current_lane).to be_nil
+    end
+
+    it "tells a free user that free Snapshots are busy today when the free share is spent (R95)" do
+      report = create(:report, show: show, kind: "snapshot")
+      allow_any_instance_of(Taste::Providers::Fake).to receive(:search).and_raise(Taste::FreeShareSpent, "free share")
+
+      BuildSnapshotJob.perform_now(report.id)
+
+      expect(report.reload).to have_attributes(status: "failed", error_message: "Free Snapshots are busy today. Try again tomorrow.")
+    end
+
     it "fails as busy when Qloo itself rate limits a required call, and never counts it as an auth failure" do
       report = create(:report, show: show, kind: "snapshot")
       allow(AppSettings).to receive(:record_taste_auth_failure!)

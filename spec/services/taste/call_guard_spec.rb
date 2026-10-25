@@ -63,6 +63,55 @@ RSpec.describe Taste::CallGuard do
     expect { null.acquire! }.to raise_error(Taste::CallCapReached, /counter/)
   end
 
+  describe "the free share (R95)" do
+    before { AppSettings.set(:qloo_daily_call_limit, 10) }
+
+    it "defaults to 40% of the daily limit, as set in admin" do
+      expect(described_class.free_share).to eq(BigDecimal("0.4"))
+      expect(guard.usage).to have_attributes(free_today: 0, free_limit: 4)
+      AppSettings.set(:qloo_free_share, "0.25")
+      expect(described_class.free_share).to eq(BigDecimal("0.25"))
+      expect(guard.usage.free_limit).to eq(2)
+    end
+
+    it "lets free Snapshot runs use at most their share, while other runs use the rest of the day" do
+      described_class.lane(:free) do
+        4.times { guard.acquire! }
+        expect { guard.acquire! }.to raise_error(Taste::FreeShareSpent) { |error| expect(error).to be_a(Taste::CallCapReached) }
+      end
+      expect(guard.usage).to have_attributes(today: 4, free_today: 4)
+
+      6.times { guard.acquire! }
+      expect { guard.acquire! }.to raise_error(Taste::CallCapReached)
+      expect(guard.usage).to have_attributes(today: 10, free_today: 4)
+    end
+
+    it "still holds free runs to the daily limit when other runs used it up" do
+      10.times { guard.acquire! }
+      described_class.lane(:free) { expect { guard.acquire! }.to raise_error(Taste::CallCapReached) }
+      expect(guard.usage).to have_attributes(today: 10, free_today: 0)
+    end
+
+    it "gives no free calls at a share of 0, and reads a bad share as the default" do
+      AppSettings.set(:qloo_free_share, "0")
+      described_class.lane(:free) { expect { guard.acquire! }.to raise_error(Taste::FreeShareSpent) }
+      AppSettings.set(:qloo_free_share, "1.5")
+      expect(described_class.free_share).to eq(BigDecimal("0.4"))
+    end
+
+    it "sets the lane for the block only, on this thread, even when the block raises" do
+      expect(described_class.current_lane).to be_nil
+      expect { described_class.lane(:free) { raise ArgumentError } }.to raise_error(ArgumentError)
+      expect(described_class.current_lane).to be_nil
+      described_class.lane(:free) do
+        expect(described_class.current_lane).to eq(:free)
+        expect(Thread.new { described_class.current_lane }.value).to be_nil
+        described_class.lane(nil) { expect(described_class.current_lane).to be_nil }
+        expect(described_class.current_lane).to eq(:free)
+      end
+    end
+  end
+
   it "logs each refusal" do
     AppSettings.set(:qloo_daily_call_limit, 0)
     allow(Rails.logger).to receive(:warn)

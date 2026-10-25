@@ -6,11 +6,14 @@ module Research
   #   agent                → AgentRunner
   # Fewer than 2 seeds ends needs_input (Review Focus #1). A Qloo auth error fails the report and counts
   # toward pausing runs (Review Focus #4). A required taste call refused by the call guard, or rate limited by Qloo,
-  # fails it as busy (R92). A failed report is never charged. A finished run picks up the podcaster's pipeline work
-  # from the show's earlier reports (R46). Returns the run's toolkit, or nil when the run didn't finish.
+  # fails it as busy (R92). A free plan Snapshot runs in the guard's free lane, held to its share of the day's Qloo
+  # calls, and fails as "free Snapshots are busy" once that share is spent (R95). A failed report is never charged. A
+  # finished run picks up the podcaster's pipeline work from the show's earlier reports (R46). Returns the run's
+  # toolkit, or nil when the run didn't finish.
   class Run
     PAUSED_MESSAGE = "Full reports are paused right now. Nothing was charged. Try again later.".freeze
     BUSY_MESSAGE = "Taste data is busy right now. Try again later.".freeze
+    FREE_BUSY_MESSAGE = "Free Snapshots are busy today. Try again tomorrow.".freeze
     LIMIT_MESSAGES = {
       tool_calls: "The research needed more steps than one report allows, so we stopped it. Nothing was charged. Try again.",
       time: "The research took too long, so we stopped it. Nothing was charged. Try again."
@@ -23,7 +26,7 @@ module Research
     end
 
     def call
-      toolkit = runner
+      toolkit = Taste::CallGuard.lane(free_snapshot? ? :free : nil) { runner }
       AppSettings.reset_taste_auth_failures!
       carry_pipeline_forward
       toolkit
@@ -34,6 +37,8 @@ module Research
     rescue Taste::AuthError => e
       AppSettings.record_taste_auth_failure!
       fail_with(e)
+    rescue Taste::FreeShareSpent
+      fail_with(nil, FREE_BUSY_MESSAGE)
     rescue Taste::RateLimited => e
       # Our own cap is expected on a busy day; only Qloo's 429 is worth an error report.
       fail_with(e.is_a?(Taste::CallCapReached) ? nil : e, BUSY_MESSAGE)
@@ -46,6 +51,9 @@ module Research
     end
 
     private
+
+    # A Snapshot for a user on the free plan (R95); judges, promo and paid plans share the rest of the day.
+    def free_snapshot? = @report.snapshot? && Entitlements.for(@report.show.user).key == :free
 
     def runner
       return ScriptedRunner.call(@report, with_reasons: false) if @report.snapshot?

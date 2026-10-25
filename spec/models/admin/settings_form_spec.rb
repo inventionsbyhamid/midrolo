@@ -3,7 +3,7 @@ require "rails_helper"
 RSpec.describe Admin::SettingsForm do
   let(:valid) do
     { promo_budget_usd: "10", judge_reserve_usd: "5", llm_daily_budget_usd: "5", promo_pro_until: "2026-11-06",
-      qloo_daily_call_limit: "100", qloo_cost_per_call_usd: "" }
+      qloo_daily_call_limit: "100", qloo_cost_per_call_usd: "", qloo_free_share: "0.4" }
   end
 
   def form(**changes) = described_class.new(**valid, **changes)
@@ -24,6 +24,12 @@ RSpec.describe Admin::SettingsForm do
       expect(described_class.current.qloo_cost_per_call_usd).to eq("")
       AppSettings.set(:qloo_cost_per_call_usd, "0.0025")
       expect(described_class.current.qloo_cost_per_call_usd).to eq("0.0025")
+    end
+
+    it "shows the free Snapshots' share of the daily Qloo calls, 0.4 by default (R95)" do
+      expect(described_class.current.qloo_free_share).to eq("0.4")
+      AppSettings.set(:qloo_free_share, "0.25")
+      expect(described_class.current.qloo_free_share).to eq("0.25")
     end
 
     it "shows what is set" do
@@ -73,6 +79,15 @@ RSpec.describe Admin::SettingsForm do
       end
     end
 
+    it "takes a free share from 0 to 1 (R95)" do
+      [ "0", "0.4", "1", ".5", "1.0" ].each { |value| expect(form(qloo_free_share: value)).to be_valid, "expected #{value.inspect}" }
+      [ "", "-0.1", "1.01", "40%", "lots" ].each do |value|
+        record = form(qloo_free_share: value)
+        expect(record).not_to be_valid, "expected #{value.inspect} to be refused"
+        expect(record.errors.full_messages).to eq([ "Free Snapshot share of Qloo calls must be from 0 to 1, like 0.4." ])
+      end
+    end
+
     it "needs a real date for the promo" do
       [ "", "2026-13-40", "next week" ].each do |value|
         record = form(promo_pro_until: value)
@@ -114,6 +129,14 @@ RSpec.describe Admin::SettingsForm do
       expect(record.save).to be(true)
       expect(record.changed_settings).to eq([ "qloo_cost_per_call_usd from 0.002 to unset" ])
       expect(Billing::Margins.cost_per_call).to be_nil
+    end
+
+    it "saves the free share the call guard reads (R95)" do
+      AppSettings.set(:promo_pro_until, "2026-11-06")
+      record = form(qloo_free_share: "0.30")
+      expect(record.save).to be(true)
+      expect(record.changed_settings).to eq([ "qloo_free_share from 0.4 to 0.3" ])
+      expect(Taste::CallGuard.free_share).to eq(BigDecimal("0.3"))
     end
 
     it "changes nothing when every value is as it was" do

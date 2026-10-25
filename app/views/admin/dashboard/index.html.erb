@@ -43,10 +43,12 @@
     <div class="flex flex-col gap-3">
       <%= admin_call_meter("Qloo calls today", calls.today, calls.daily_limit) %>
       <%= admin_call_meter("This minute", calls.minute, calls.per_minute) %>
+      <%= admin_call_meter("Free Snapshots today", calls.free_today, calls.free_limit) %>
     </div>
     <p class="mt-3 text-sm text-ink-soft">
       Every live call to Qloo counts, retries included. Cached answers are free. Over a cap, new calls are refused until the
-      next minute or the next UTC day; optional steps skip and reports that need the data fail without charge.
+      next minute or the next UTC day; optional steps skip and reports that need the data fail without charge. Free plan
+      Snapshots may use their share of the day; judges, promo and paid runs use the rest.
     </p>
   <% end %>
 
@@ -159,6 +161,11 @@
           <%= f.label :qloo_daily_call_limit, Admin::SettingsForm.human_attribute_name(:qloo_daily_call_limit), class: "label" %>
           <%= f.number_field :qloo_daily_call_limit, class: "input", min: 0, step: 1, required: true,
                 aria: { invalid: @settings.errors.include?(:qloo_daily_call_limit) } %>
+        </div>
+        <div class="flex flex-col gap-1">
+          <%= f.label :qloo_free_share, "#{Admin::SettingsForm.human_attribute_name(:qloo_free_share)} (0 to 1)", class: "label" %>
+          <%= f.number_field :qloo_free_share, class: "input", min: 0, max: 1, step: "any", required: true,
+                aria: { invalid: @settings.errors.include?(:qloo_free_share) } %>
         </div>
         <div class="flex flex-col gap-1">
           <%= f.label :qloo_cost_per_call_usd, "#{Admin::SettingsForm.human_attribute_name(:qloo_cost_per_call_usd)} (USD, blank until Qloo quotes)",
