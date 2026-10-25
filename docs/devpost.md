@@ -24,7 +24,7 @@ In their own words, on r/podcasting:
 - "Sponsorship pricing seems like a mysterious formula."
 
 The tools that help are built for big shows and start around $99 a month. The marketplaces built for small shows keep
-closing: Podcorn closed on November 1, 2026.
+closing: Podcorn's November 1, 2026 shutdown is the latest.
 
 What small shows lack is evidence of fit. Qloo has it.
 

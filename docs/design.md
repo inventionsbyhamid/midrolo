@@ -9,7 +9,7 @@
 
 ## 1. Intent: what this is and why
 
-Independent podcasters want sponsors, but they can't prove who their listeners are. Hosting stats show downloads and countries, nothing about taste. So they guess which brands to pitch and send generic media kits. Most get ignored, or get told they're "not big enough." The tools that would help are built for big shows: SponsorUnited is enterprise-only, and Rephonic and Podchaser start at $99–300 a month. The marketplaces built for small shows keep dying. **Podcorn shuts down on Nov 1, 2026**, and Station, an AI sponsor matcher, has paused.
+Independent podcasters want sponsors, but they can't prove who their listeners are. Hosting stats show downloads and countries, nothing about taste. So they guess which brands to pitch and send generic media kits. Most get ignored, or get told they're "not big enough." The tools that would help are built for big shows: Rephonic and Podchaser start at $99 to $300 a month. The marketplaces built for small shows keep dying. **Podcorn shuts down on Nov 1, 2026**, and Station, an AI sponsor matcher, has paused.
 
 The app is an **AI agent that does a sponsorship sales team's research for one show, in about two minutes**:
 - It works out what people who like the show also love, across brands, music, TV and other podcasts, using Qloo's taste graph.
@@ -486,7 +486,6 @@ As built (R37, R79, R115, R117). The operator's guide is `docs/deploy.md`; this 
   - taste data as the evidence small shows never had
   - "proven sponsors of similar shows"
   - honest proxy profiles
-  - framed as "SponsorUnited for the long tail"
 
 **Deliverables**
 - Live URL.

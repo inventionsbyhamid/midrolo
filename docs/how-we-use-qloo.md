@@ -71,7 +71,8 @@ Qloo's hackathon key has a limited allowance, so every live call is counted and 
   the counter can't count, it refuses.
 - **Reports wait out the minute cap.** In a background job, a refused minute waits for the next one, at most twice per
   call. The daily cap refuses at once.
-- **Free and promo runs share 40% of the day** (`qloo_free_share`), so judges and paying users always keep the rest.
+- **Free and promo runs share 40% of the day** (`qloo_free_share`), so judges and paying users keep most of each day's
+  calls.
 - **A soft cap per report** of 30 uncached calls (`max_taste_calls` in `config/research.yml`). Past it, optional calls
   are skipped.
 - **A hard ceiling per report** of 40 uncached calls (`hard_taste_calls`). Past it, no Qloo call is made at all: the
