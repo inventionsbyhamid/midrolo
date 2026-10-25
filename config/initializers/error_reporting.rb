@@ -16,7 +16,7 @@ module ErrorReporting
     STRING_LIMIT = 80
     # Context strings the app writes itself (Rails.error.report calls), safe to show as they are.
     SAFE_STRING_KEYS = %w[while job share_image].freeze
-    SECRET_ENV_NAME = /KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL/
+    SECRET_ENV_NAME = /KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL|CODE/ # CODE: JUDGE_CODE
     SECRET_MIN_LENGTH = 8
     EMAIL = /[^\s@<>"'(),;:]+@[^\s@<>"'(),;:]+\.[a-z]{2,}/i
     URL_CREDENTIALS = %r{(\w+://)[^/\s:@]+:[^/\s@]+@}

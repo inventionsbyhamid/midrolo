@@ -78,17 +78,18 @@ RSpec.describe ErrorReporting::AdminMailSubscriber do
     let(:user) { create(:user, email: "ada@example.com", name: "Ada Lovelace") }
 
     around do |example|
-      saved = ENV["DODO_API_KEY"]
+      saved = ENV.values_at("DODO_API_KEY", "JUDGE_CODE")
       ENV["DODO_API_KEY"] = "sk_test_not_a_real_key_1234567890"
+      ENV["JUDGE_CODE"] = "judge-door-0451"
       example.run
     ensure
-      saved.nil? ? ENV.delete("DODO_API_KEY") : ENV["DODO_API_KEY"] = saved
+      { "DODO_API_KEY" => saved[0], "JUDGE_CODE" => saved[1] }.each { |name, value| value.nil? ? ENV.delete(name) : ENV[name] = value }
     end
 
     before { admin }
 
     it "carries the class, ids and app code lines, never an email address, a name or a secret" do
-      error = RuntimeError.new("Dodo said no for ada@example.com with sk_test_not_a_real_key_1234567890")
+      error = RuntimeError.new("Dodo said no for ada@example.com with sk_test_not_a_real_key_1234567890, code judge-door-0451")
       error.set_backtrace([ "/usr/local/bundle/gems/dodo-1.0/lib/dodo.rb:9:in 'call'",
                             Rails.root.join("app/services/billing/sync.rb:42:in 'apply'").to_s ])
       controller = ReportsController.new.tap { |c| c.action_name = "show" }
@@ -103,7 +104,7 @@ RSpec.describe ErrorReporting::AdminMailSubscriber do
       expect(mail.subject).to eq("[Midrolo] RuntimeError")
       expect(body).to include("RuntimeError", "report_id: 42", "while: marking failed", "user: User #{user.id}",
                               "controller: ReportsController#show", "unhandled", "app/services/billing/sync.rb:42")
-      expect(body).not_to include("ada@example.com", "Ada", "sk_test_not_a_real_key_1234567890", "gems/dodo")
+      expect(body).not_to include("ada@example.com", "Ada", "sk_test_not_a_real_key_1234567890", "gems/dodo", "judge-door-0451")
       expect(body).to include("[email]", "[secret]")
     end
 

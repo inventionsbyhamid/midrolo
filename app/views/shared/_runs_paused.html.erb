@@ -2,7 +2,8 @@
     show page's run card, the report page; R82). The notify list (WaitlistEntry with Billing::NOTIFY_KEY) takes the
     account's email; once RunsResumedMailJob has told an entry, a later pause offers the box again (R81). %>
 <div class="flex flex-col gap-3" data-runs-paused>
-  <p class="font-semibold" role="status">New reports are paused. We'll email you when they're back.</p>
+  <%# A plain statement: only someone who asks below is promised an email. %>
+  <p class="font-semibold" role="status">New reports are paused for now.</p>
   <% if WaitlistEntry.awaiting_notice.exists?(email: current_user.email) %>
     <p class="text-sm text-ink-soft">You're on the list. We'll email you when they're back.</p>
   <% else %>

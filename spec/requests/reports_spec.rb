@@ -212,7 +212,7 @@ RSpec.describe "Reports" do
           expect(page.css("form[action^='#{show_reports_path(show)}']")).to be_empty
           expect(disabled_buttons).to include("Run again", "Try again")
           paused = page.at_css("[data-runs-paused]")
-          expect(paused.at_css("[role='status']").text.squish).to eq("New reports are paused. We'll email you when they're back.")
+          expect(paused.at_css("[role='status']").text.squish).to eq("New reports are paused for now.")
           expect(paused.at_css("form[action='#{waitlist_entries_path}'] input[name='price_key']")["value"]).to eq("notify")
         end
 

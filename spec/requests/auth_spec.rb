@@ -50,6 +50,19 @@ RSpec.describe "Authentication" do
       expect(response.body).not_to include("/users/auth/developer")
     end
 
+    it "has no developer callback to post to when the strategy isn't configured: a 404, and nobody signed in" do
+      OmniAuth.config.test_mode = false
+      expect do
+        post ApplicationHelper::DEV_SIGN_IN_PATH, params: { name: "Mallory", email: "mallory@example.com" }
+      end.not_to change(User, :count)
+
+      expect(response).to have_http_status(:not_found)
+      get "/shows"
+      expect(response).to redirect_to("/users/sign_in")
+    ensure
+      OmniAuth.config.test_mode = true
+    end
+
     it "sends what OmniAuth's developer strategy reads: its callback takes name and email as the auth hash" do
       auth = nil
       app = lambda do |env|

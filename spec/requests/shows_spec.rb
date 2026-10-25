@@ -248,8 +248,8 @@ RSpec.describe "Shows" do
         it "says so, disables the run buttons and offers a notify-me checkbox" do
           get show_path(show)
 
-          expect(actions.at_css("[role='status']").text.squish)
-            .to eq("New reports are paused. We'll email you when they're back.")
+          # A plain statement: only someone on the notify list is promised an email.
+          expect(actions.at_css("[role='status']").text.squish).to eq("New reports are paused for now.")
           expect(actions.css("form[action^='#{show_reports_path(show)}']")).to be_empty
           expect(actions.css("button[disabled]").map { |button| button.text.squish })
             .to eq([ "Get my free Snapshot", "Run full report" ])
