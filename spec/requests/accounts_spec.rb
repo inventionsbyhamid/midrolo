@@ -74,7 +74,7 @@ RSpec.describe "Account" do
       sign_in user
       get "/account"
 
-      expect(card("Plan").text.squish).to include("You're on the Sponsor Sprint: Pro features for 14 days.")
+      expect(card("Plan").text.squish).to include("You're on the Sprint plan: Pro features for 14 days.")
     end
 
     it "shows judge access with its reports in total and unlimited pitches, never a huge number" do

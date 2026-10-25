@@ -57,7 +57,7 @@ module PlansHelper
     case plan.key
     when :judge then "Judge access is on: Pro features with #{pluralize(plan.limit(:agent), 'full report')} and unlimited pitches."
     when :promo then "#{promo_offer}, with #{pluralize(plan.limit(:agent), 'full report')}."
-    when :sprint then "You're on the Sponsor Sprint: Pro features for #{plan.duration_days} days."
+    when :sprint then "You're on the #{plan.name} plan: Pro features for #{plan.duration_days} days."
     else "You're on the #{plan.name} plan."
     end
   end

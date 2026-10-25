@@ -6,13 +6,13 @@
       <summary class="faq-question">Where does the data come from?</summary>
       <div class="faq-answer">
         <p>
-          Qloo's taste graph tells us what people with your listeners' tastes over-index on (brands, music, TV, podcasts and
-          places) and how they lean by age and gender. Podcast Index gives us your show's details. Your RSS feed, and the
+          Qloo's taste graph tells us what people with your listeners' tastes love more than most people do (brands,
+          music, TV, podcasts and places) and how they lean by age and gender. Podcast Index gives us your show's details. Your RSS feed, and the
           feeds of similar shows, give us episode notes and the sponsors those shows mention.
         </p>
         <p>
           Claude, Anthropic's AI model, plans the research and writes the reasons and pitches from those results. Every brand
-          in a report came back from Qloo during that run.
+          in a report comes from Qloo's data (results are cached for up to a week).
         </p>
       </div>
     </details>
@@ -76,7 +76,7 @@
       <div class="faq-answer">
         <p>
           Yes. Monthly and yearly plans cancel from your account page and run to the end of the period you paid for. The
-          Sponsor Sprint is a single payment and never renews.
+          <%= Entitlements.limits(:sprint)[:name] %> plan is a single payment and never renews.
         </p>
       </div>
     </details>

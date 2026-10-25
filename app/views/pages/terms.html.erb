@@ -45,7 +45,7 @@
       <li>Prices are on the <%= link_to "pricing page", pricing_path, class: "link" %>. There's no commission on any deal you land.</li>
       <li>Dodo Payments is the merchant of record: it takes the payment and handles tax, receipts and invoices.</li>
       <li>Monthly and yearly plans renew until you cancel. Cancel from your account page and the plan runs to the end of the period you paid for.</li>
-      <li>The Sponsor Sprint is a single payment and never renews.</li>
+      <li>The <%= Entitlements.limits(:sprint)[:name] %> plan is a single payment and never renews.</li>
       <li>For a refund request, email <%= contact_mail_to class: "link" %>.</li>
     </ul>
     <% unless Billing.mode == :live %>

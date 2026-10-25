@@ -61,7 +61,21 @@ RSpec.describe Samples::Generate do
     generate(force: true)
 
     expect(Report.find_by!(sample_slug: "sample-one")).to eq(old)
-    expect(io.string).to include("sample-one: failed — the report ended failed")
+    expect(io.string).to include("sample-one: failed — the report ended failed: #{Report::FAILURE_MESSAGE}")
+  end
+
+  it "says which step failed and where the log is" do
+    allow(Research::Run).to receive(:call) do |report|
+      report.agent_steps.create!(position: 1, tool: "search_taste", label: "Finding comparable shows on Qloo…",
+                                 status: "error", output_summary: "Qloo answered 429")
+      raise "boom"
+    end
+
+    generate(entries: Samples.entries.first(1))
+
+    expect(io.string).to include("sample-one: failed — the report ended failed",
+                                 "last failed step: Finding comparable shows on Qloo… (Qloo answered 429)",
+                                 "see log/test.log")
   end
 
   it "prints why a sample failed and goes on to the next one" do

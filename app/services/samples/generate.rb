@@ -27,7 +27,7 @@ module Samples
 
       show = show_for(entry.fetch(:directory_id))
       report = run(show)
-      return finish(slug, :failed, "the report ended #{report.status}: #{report.error_message}") unless report.done?
+      return finish(slug, :failed, failure_detail(report)) unless report.done?
 
       publish(report, slug, replacing: current)
       finish(slug, :done, "#{show.title}, #{report.sponsor_matches.count} matches, $#{format('%.2f', report.cost_usd)}")
@@ -68,6 +68,14 @@ module Samples
         report.update!(sample_slug: slug)
         replacing&.destroy!
       end
+    end
+
+    # Why a run didn't finish: its status and error message, the last agent step that errored, and where the log is.
+    def failure_detail(report)
+      step = report.agent_steps.where(status: "error").last
+      [ "the report ended #{report.status}: #{report.error_message.presence || 'no error message'}",
+        ("last failed step: #{step.label}#{" (#{step.output_summary})" if step.output_summary.present?}" if step),
+        "see log/#{Rails.env}.log" ].compact.join("; ")
     end
 
     def finish(slug, outcome, message)

@@ -110,6 +110,16 @@ RSpec.describe "Public pages" do
       expect(faq).to include("Where does the data come from?", "Is this my real audience?", "What's a proxy profile?")
       expect(faq).to include("modeled from Qloo taste data, not measured")
     end
+
+    it "says it in plain words" do
+      get "/"
+
+      expect(page.at_css(".hero-lead").text.squish).to include("brands your listeners love more than most people do")
+      expect(page.at_css("main").text).not_to include("over-index")
+      expect(page.at_css("#how-it-works").text.squish).to include("In a few minutes")
+      expect(page.at_css("#old-way").text.squish)
+        .to include("Podcorn, a marketplace for small shows, is shutting down (Nov 1, 2026).")
+    end
   end
 
   describe "pricing" do
@@ -168,6 +178,26 @@ RSpec.describe "Public pages" do
       text = page.at_css("main").text.squish
       expect(text).to include("Google", "Qloo", "Podcast Index", "Anthropic", "Cloudflare R2", "Resend", "Dodo")
       expect(text).to include("We don't sell your data")
+      expect(text).to include("the map library from jsDelivr", "Cloudflare provides our DNS")
+    end
+
+    it "names the plans as plans.yml does" do
+      sprint = Entitlements.limits(:sprint)[:name]
+
+      [ "/terms", "/" ].each do |path|
+        get path
+        expect(page.at_css("main").text.squish).to include("The #{sprint} plan is a single payment and never renews.")
+        expect(response.body).not_to include("Sponsor Sprint")
+      end
+    end
+
+    it "links them from the sign-in card" do
+      get "/users/sign_in"
+
+      card = page.at_css("main .card").text.squish
+      expect(card).to include("By signing in you agree to our Terms and Privacy policy.")
+      expect(page.at_css("main .card a[href='/terms']")).to be_present
+      expect(page.at_css("main .card a[href='/privacy']")).to be_present
     end
   end
 
@@ -224,6 +254,8 @@ RSpec.describe "Public pages" do
       unpublished = create(:show, title: "Unpublished Show")
       create(:media_kit, show: unpublished)
       unpublished.verify!
+      unverified = create(:show, title: "Unverified Show", slug: "unverified-show")
+      create(:media_kit, show: unverified, published_at: Time.current)
 
       get "/sitemap.xml"
 
