@@ -1,6 +1,7 @@
 module Taste
   module Providers
-    # Qloo REST adapter. All calls are GET; array params are joined with commas.
+    # Qloo REST adapter. All calls are GET; array params are joined with commas. Reading the answers into value objects
+    # is Qloo::Mapping's job.
     #
     # Call discipline (R92): answers are cached and shared by every report; an uncached request takes a slot from the
     # call guard (Taste::CallGuard) before each attempt, and is tried at most twice. A 429 is retried once only when
@@ -36,21 +37,21 @@ module Taste
       # A 404 here is Qloo's "No results" (R87).
       def search(query:, types:, take: 5)
         params = { "query" => query, "types" => Array(types).map { |t| Provider.urn_for(t) }, "take" => take }
-        entities(get("/search", params))
+        Mapping.entities(get("/search", params))
       rescue NotFound
         []
       end
 
       # types: tag type URNs to keep to, each an exact match ("urn:tag:genre:brand"); none means every type.
       def find_tags(query:, take: 10, types: [])
-        tags(get("/v2/tags", { "filter.query" => query, "feature.semantic_search" => true, "take" => take,
+        Mapping.tags(get("/v2/tags", { "filter.query" => query, "feature.semantic_search" => true, "take" => take,
                                "filter.tag.types" => types }))
       end
 
       def recommend(type:, entity_ids: [], tag_ids: [], filter_tags: [], popularity_max: nil, take: 20)
         params = { "filter.type" => Provider.urn_for(type), "filter.tags" => filter_tags,
                    "filter.popularity.max" => popularity_max, "take" => take }.merge(signals(entity_ids, tag_ids))
-        entities(get("/v2/insights", params))
+        Mapping.entities(get("/v2/insights", params))
       end
 
       # Qloo has no batch-affinity endpoint: scope insights to the candidates with filter.results.entities,
@@ -61,21 +62,19 @@ module Taste
         ids.each_slice(AFFINITY_CHUNK) do |chunk|
           params = { "filter.type" => Provider.urn_for(type), "filter.results.entities" => chunk,
                      "take" => chunk.size }.merge(signals(entity_ids, tag_ids))
-          entities(get("/v2/insights", params)).each { |e| result[e.id] = e.affinity if chunk.include?(e.id) }
+          Mapping.entities(get("/v2/insights", params)).each { |e| result[e.id] = e.affinity if chunk.include?(e.id) }
         end
         result
       end
 
       def taste_tags(entity_ids: [], tag_ids: [], take: 20)
-        tags(get("/v2/insights", { "filter.type" => "urn:tag", "take" => take }.merge(signals(entity_ids, tag_ids))))
+        Mapping.tags(get("/v2/insights", { "filter.type" => "urn:tag", "take" => take }.merge(signals(entity_ids, tag_ids))))
       end
 
       # Qloo answers one block per signal (each seed entity and tag): every bucket is the mean over the blocks that
       # have it (R87).
       def demographics(entity_ids: [], tag_ids: [])
-        json = get("/v2/insights", { "filter.type" => "urn:demographics" }.merge(signals(entity_ids, tag_ids)))
-        queries = Array(dig_results(json, "demographics")).filter_map { |block| block["query"] if block.is_a?(Hash) && block["query"].is_a?(Hash) }
-        Demographics.new(age: mean_leans(queries.map { |q| q["age"] }), gender: mean_leans(queries.map { |q| q["gender"] }))
+        Mapping.demographics(get("/v2/insights", { "filter.type" => "urn:demographics" }.merge(signals(entity_ids, tag_ids))))
       end
 
       # A location Qloo can't place is a 400 (or a 404): that location yields no points, so the caller's metro fallback
@@ -83,10 +82,7 @@ module Taste
       def heatmap(location:, entity_ids: [], tag_ids: [], take: 50)
         params = { "filter.type" => "urn:heatmap", "filter.location.query" => location,
                    "output.heatmap.boundary" => "urn:entity:locality", "take" => take }.merge(signals(entity_ids, tag_ids))
-        raw = Array(dig_results(get("/v2/insights", params), "heatmap")).select { |h| h.is_a?(Hash) }
-        points = raw.filter_map { |h| heat_point(h) }
-        warn_unparsed_heatmap(raw) if raw.any? && points.empty?
-        points
+        Mapping.heat_points(get("/v2/insights", params))
       rescue BadRequest, NotFound
         []
       end
@@ -94,7 +90,7 @@ module Taste
       # A 404 here is Qloo's "No results" (R87).
       def compare(a_entity_ids:, b_entity_ids:, take: 10)
         params = { "a.signal.interests.entities" => a_entity_ids, "b.signal.interests.entities" => b_entity_ids, "take" => take }
-        tags(get("/v2/analysis/compare", params))
+        Mapping.tags(get("/v2/analysis/compare", params))
       rescue NotFound
         []
       end
@@ -242,95 +238,6 @@ module Taste
           f.options.open_timeout = OPEN_TIMEOUT
           f.adapter Faraday.default_adapter
         end
-      end
-
-      # ---- mapping (docs are inconsistent, so every rule is tolerant and lives here once) ----
-
-      def dig_results(json, key)
-        results = json["results"]
-        results.is_a?(Hash) ? results[key] : nil
-      end
-
-      def entities(json)
-        results = json["results"]
-        list = results.is_a?(Hash) ? results["entities"] : results
-        Array(list).filter_map { |e| entity(e) if e.is_a?(Hash) }
-      end
-
-      # Image, description, website and tags may sit flat on the entity or under properties (R87).
-      def entity(e)
-        props = e["properties"].is_a?(Hash) ? e["properties"] : {}
-        urn = e["subtype"] || Array(e["types"]).first
-        Entity.new(
-          id: (e["entity_id"] || e["id"]).to_s, name: e["name"].to_s, type: Provider.type_for(urn) || urn,
-          popularity: float(e["popularity"]), affinity: float(e.dig("query", "affinity") || e["affinity"]),
-          image_url: image_url(props, e), description: text(props["description"]) || text(e["description"]),
-          website: text(props["official_site"]) || text(e["official_site"]) ||
-                   text(Array(props["websites"]).first) || text(Array(e["websites"]).first),
-          tags: (Array(e["tags"]).presence || Array(props["tags"])).filter_map { |t| tag(t) if t.is_a?(Hash) }, properties: props
-        )
-      end
-
-      # properties.image.url, properties.image, image.url, image, then the flat url Qloo's taxonomy shows for brands.
-      def image_url(props, e)
-        [ props["image"], e["image"] ].each do |image|
-          url = text(image.is_a?(Hash) ? image["url"] : image)
-          return url if url
-        end
-        text(e["url"])
-      end
-
-      def text(value) = value.is_a?(String) && value.present? ? value : nil
-
-      def tags(json)
-        results = json["results"]
-        list = results.is_a?(Hash) ? results["tags"] : results
-        Array(list).filter_map { |t| tag(t) if t.is_a?(Hash) }
-      end
-
-      def tag(t)
-        Tag.new(id: (t["id"] || t["tag_id"]).to_s, name: t["name"].to_s, type: t["type"] || t["subtype"],
-                score: float(t.dig("query", "score") || t.dig("query", "affinity") || t["score"]))
-      end
-
-      # Latitude as latitude or lat, longitude as longitude, lon or lng, under location or flat (R87).
-      def heat_point(h)
-        loc = h["location"].is_a?(Hash) ? h["location"] : {}
-        query = h["query"].is_a?(Hash) ? h["query"] : {}
-        lat = float(loc["latitude"] || loc["lat"] || h["latitude"] || h["lat"])
-        lng = float(loc["longitude"] || loc["lon"] || loc["lng"] || h["longitude"] || h["lon"] || h["lng"])
-        return nil unless lat && lng && lat.abs <= 90 && lng.abs <= 180
-
-        HeatPoint.new(lat: lat, lng: lng, geohash: loc["geohash"] || h["geohash"],
-                      affinity: float(query["affinity"] || h["affinity"]), popularity: float(query["popularity"] || h["popularity"]),
-                      label: text(loc["name"] || h["name"] || loc["city"] || loc["locality"]))
-      end
-
-      # A shape we don't read would empty the map silently: say which keys came back instead.
-      def warn_unparsed_heatmap(raw)
-        keys = raw.flat_map do |h|
-          h.flat_map { |key, value| value.is_a?(Hash) ? value.keys.map { |inner| "#{key}.#{inner}" } : [ key ] }
-        end
-        Rails.logger.warn("[Qloo] /v2/insights: #{raw.size} heatmap entries parsed to no points; keys seen: #{keys.uniq.sort.join(', ')}")
-      end
-
-      def leans(hash)
-        (hash.is_a?(Hash) ? hash : {}).transform_values { |v| float(v) }
-      end
-
-      # Each bucket's mean over the hashes that have a number for it, to 3 places.
-      def mean_leans(hashes)
-        rows = hashes.map { |h| leans(h).compact }.reject(&:empty?)
-        rows.flat_map(&:keys).uniq.to_h do |key|
-          values = rows.filter_map { |row| row[key] }
-          [ key, (values.sum / values.size).round(3) ]
-        end
-      end
-
-      def float(value)
-        value.nil? ? nil : Float(value)
-      rescue ArgumentError, TypeError
-        nil
       end
     end
   end
