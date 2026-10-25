@@ -71,7 +71,8 @@ RSpec.describe "Verifications" do
       patch show_verification_path(show), params: { code: code }
       expect(show.reload).not_to be_verified
       follow_redirect!
-      expect(response.body).to include("Send a new code")
+      expect(response.body).to include(ShowVerification::LOCKED_MESSAGE, "Send a new code") # the same copy as the flash
+      expect(response.body).not_to include('name="code"')
     end
 
     it "throttles resends with a friendly wait" do
@@ -83,6 +84,21 @@ RSpec.describe "Verifications" do
       expect(response).to redirect_to(show_verification_path(show))
       expect(flash[:alert]).to eq("We just sent a code. You can request another in 45 seconds.")
       expect(ShowVerification.count).to eq(1)
+    end
+
+    it "says when another account just sent a code to the same address, without blaming this user" do
+      freeze_time
+      other_user = create(:user)
+      copy = create(:show, user: other_user, title: show.title, feed_url: show.feed_url, owner_email: "jane@example.com")
+      sign_in other_user
+      perform_enqueued_jobs { post show_verification_path(copy), params: { kind: "email" } }
+      travel 15.seconds
+
+      sign_in user
+      post show_verification_path(show), params: { kind: "email" }
+      expect(flash[:alert]).to eq("A code just went to this address. You can request another in 45 seconds.")
+      expect(show.verifications.count).to eq(0)
+      expect(ActionMailer::Base.deliveries.count { |mail| mail.to == [ "jane@example.com" ] }).to eq(1)
     end
 
     it "caps codes at 5 a day and points to the feed token" do
@@ -170,6 +186,17 @@ RSpec.describe "Verifications" do
         expect(flash[:alert]).to include("We couldn't find midrolo-verify=#{ShowVerification.last.token} in your feed yet",
                                          "a few minutes")
       end
+    end
+
+    it "sends no code and issues no token for a show that is already verified" do
+      show.verify!
+
+      %w[email feed_token].each do |kind|
+        expect { post show_verification_path(show), params: { kind: kind } }.not_to have_enqueued_mail
+        expect(response).to redirect_to(edit_show_media_kit_path(show))
+        expect(flash[:notice]).to eq("You've already verified this show, so there's nothing to send.")
+      end
+      expect(ShowVerification.count).to eq(0)
     end
 
     it "shows a verified show's status instead of the forms" do

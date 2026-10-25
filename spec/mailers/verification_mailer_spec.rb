@@ -19,6 +19,17 @@ RSpec.describe VerificationMailer do
     expect(verification.reload.check_code(code)).to be(true)
   end
 
+  it "cuts a long feed title to 60 characters in the subject and the body" do
+    show.update!(title: "A" * 50 + " and an attacker's very long sales pitch goes here")
+    mail = described_class.with(verification: verification).code
+    short = show.title.truncate(60)
+
+    expect(short.length).to eq(60)
+    expect(mail.subject).to eq("Your Midrolo code for #{short}")
+    expect(mail.text_part.body.to_s).to include(short)
+    expect(mail.text_part.body.to_s + mail.html_part.body.to_s).not_to include("sales pitch")
+  end
+
   it "sends from MAIL_FROM when it is set" do
     allow(ENV).to receive(:fetch).and_call_original
     allow(ENV).to receive(:fetch).with("MAIL_FROM", anything).and_return("Kits <kits@example.com>")

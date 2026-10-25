@@ -27,7 +27,7 @@ RSpec.describe ShowVerification do
       travel 20.seconds
 
       expect { described_class.request_code!(show) }
-        .to raise_error(ShowVerification::Throttled) { |error| expect(error.retry_in).to eq(40) }
+        .to raise_error(ShowVerification::Throttled) { |error| expect([ error.retry_in, error.scope ]).to eq([ 40, :show ]) }
       travel 40.seconds
       expect { described_class.request_code!(show) }.not_to raise_error
     end
@@ -44,10 +44,63 @@ RSpec.describe ShowVerification do
       expect { described_class.request_code!(show) }.not_to raise_error
     end
 
-    it "counts sends per show, so another user's copy of the feed has its own allowance" do
-      described_class.request_code!(show)
-      copy = create(:show, title: show.title, owner_email: "jane@example.com")
-      expect { described_class.request_code!(copy) }.not_to raise_error
+    describe "the per-address cap (R65)" do
+      # Another account added the same feed; its owner address differs only in case and spacing.
+      let(:copy) { create(:show, title: show.title, feed_url: show.feed_url, owner_email: " JANE@Example.com ") }
+
+      it "stores the address normalized" do
+        expect(described_class.request_code!(copy).sent_to).to eq("jane@example.com")
+      end
+
+      it "makes another account wait 60 seconds after a code to the same address" do
+        freeze_time
+        described_class.request_code!(show)
+        travel 15.seconds
+
+        expect { described_class.request_code!(copy) }.to raise_error(ShowVerification::Throttled) { |error|
+          expect([ error.reason, error.scope, error.retry_in ]).to eq([ :resend, :address, 45 ])
+        }
+      end
+
+      it "caps two accounts with the same feed at 5 codes a day to its owner address together" do
+        3.times do
+          described_class.request_code!(show)
+          travel 61.seconds
+        end
+        2.times do
+          described_class.request_code!(copy)
+          travel 61.seconds
+        end
+
+        expect { described_class.request_code!(copy) }.to raise_error(ShowVerification::Throttled) { |error|
+          expect([ error.reason, error.scope ]).to eq([ :daily, :address ])
+          expect(error.retry_in).to be > 23.hours.to_i
+        }
+        expect(described_class.email.where(sent_to: "jane@example.com").count).to eq(5)
+        travel 1.day
+        expect { described_class.request_code!(copy) }.not_to raise_error
+      end
+
+      it "counts every show that names the address, whoever's feed it is" do
+        other_feed = create(:show, title: "Unrelated Feed", owner_email: "jane@example.com")
+        described_class.request_code!(show)
+        travel 61.seconds
+        4.times do
+          described_class.request_code!(other_feed)
+          travel 61.seconds
+        end
+
+        expect { described_class.request_code!(show) }
+          .to raise_error(ShowVerification::Throttled) { |error| expect(error.scope).to eq(:address) }
+      end
+
+      it "takes a transaction-scoped advisory lock on the address while it checks" do
+        allow(described_class.connection).to receive(:execute).and_call_original
+        described_class.request_code!(copy)
+
+        expect(described_class.connection).to have_received(:execute)
+          .with(a_string_matching(/pg_advisory_xact_lock\(#{ShowVerification::ADDRESS_LOCK_NAMESPACE}, hashtext\('jane@example\.com'\)\)/))
+      end
     end
   end
 

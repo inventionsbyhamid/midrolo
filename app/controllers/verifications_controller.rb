@@ -9,6 +9,7 @@ class VerificationsController < ApplicationController
              with: -> { redirect_to new_show_verification_path(params[:show_id]), alert: "Too many tries. Wait a minute, then try again." }
 
   VERIFIED = "You're verified. Publish your media kit when it's ready.".freeze
+  ALREADY_VERIFIED = "You've already verified this show, so there's nothing to send.".freeze
   NO_OWNER_EMAIL = "Your feed doesn't list an owner email, so we can't send a code. Verify with a feed token instead.".freeze
   NO_FEED = "We don't have an RSS feed for this show, so we can't look for a token. Verify by email instead.".freeze
 
@@ -16,7 +17,10 @@ class VerificationsController < ApplicationController
     @current = ShowVerification.current_for(@show)
   end
 
+  # A verified show never sends another code or issues a token.
   def create
+    return redirect_to(edit_show_media_kit_path(@show), notice: ALREADY_VERIFIED, status: :see_other) if @show.verified?
+
     case params[:kind]
     when "email" then ShowVerification.request_code!(@show)
     when "feed_token" then ShowVerification.start_feed_token!(@show)
@@ -51,24 +55,30 @@ class VerificationsController < ApplicationController
     @show = current_user.shows.find(params[:show_id])
   end
 
+  # The address scope counts codes from every account to that inbox, so its copy doesn't say "you".
   def throttled_message(error)
-    if error.reason == :resend
-      "We just sent a code. You can request another in #{helpers.pluralize(error.retry_in, 'second')}."
-    else
-      "You've requested #{ShowVerification::SENDS_PER_DAY} codes today. You can request another in " \
-        "#{helpers.distance_of_time_in_words(error.retry_in)}, or verify with a feed token instead."
+    wait = error.reason == :resend ? helpers.pluralize(error.retry_in, "second") : helpers.distance_of_time_in_words(error.retry_in)
+    case [ error.reason, error.scope ]
+    in [ :resend, :show ] then "We just sent a code. You can request another in #{wait}."
+    in [ :resend, :address ] then "A code just went to this address. You can request another in #{wait}."
+    in [ :daily, :show ]
+      "You've requested #{ShowVerification::SENDS_PER_DAY} codes today. You can request another in #{wait}, " \
+        "or verify with a feed token instead."
+    in [ :daily, :address ]
+      "This address has had #{ShowVerification::SENDS_PER_DAY} codes today. You can request another in #{wait}, " \
+        "or verify with a feed token instead."
     end
   end
 
   def failure_message(verification)
     case verification.failure
     when :wrong_code then "That code didn't match. You have #{helpers.pluralize(verification.attempts_left, 'try')} left."
-    when :locked then "Too many tries. Request a new code to try again."
+    when :locked then ShowVerification::LOCKED_MESSAGE
     when :not_found
       "We couldn't find #{verification.token_line} in your feed yet. Hosting providers can take a few minutes " \
         "to update your feed, so try again shortly."
     when :unreadable then "We couldn't read your feed just now. Check that it's online, then try again in a few minutes."
-    else verification.email? ? "That code has expired. Request a new one." : "That token has expired. Get a new one below."
+    else verification.email? ? ShowVerification::EXPIRED_CODE_MESSAGE : "That token has expired. Get a new one below."
     end
   end
 end

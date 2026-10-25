@@ -4,6 +4,9 @@
 #
 # Codes are never stored: code_digest is an HMAC-SHA256 keyed from secret_key_base, and the code itself is made in
 # VerificationMailer#code while the email renders, so it never sits in the job queue or a log line.
+#
+# Sends are capped twice: per show, and per recipient address across every show and account (R65), so neither many
+# accounts adding one feed nor an attacker's feed naming someone else's address can flood an inbox.
 class ShowVerification < ApplicationRecord
   CODE_TTL = 30.minutes
   TOKEN_TTL = 7.days
@@ -14,18 +17,26 @@ class ShowVerification < ApplicationRecord
   # How much of the channel description the token check reads (FeedReader truncates descriptions).
   TOKEN_SCAN_LIMIT = 20_000
   DIGEST_SALT = "show_verification/code".freeze
+  # The first key of the two-key advisory lock taken while checking a recipient address's allowance.
+  ADDRESS_LOCK_NAMESPACE = 15_015
+
+  # Shown on the verification page and in the flash after a failed check.
+  LOCKED_MESSAGE = "Too many tries. Request a new code to try again.".freeze
+  EXPIRED_CODE_MESSAGE = "That code has expired. Request a new one.".freeze
 
   # The method can't be used for this show (no owner email in the feed, or no feed URL).
   class Unavailable < StandardError; end
 
-  # Too soon after the last code (reason :resend) or too many today (reason :daily). retry_in is in seconds.
+  # Too soon after the last code (reason :resend) or too many today (reason :daily), counted for this show
+  # (scope :show) or for the recipient address across all shows (scope :address). retry_in is in seconds.
   class Throttled < StandardError
-    attr_reader :reason, :retry_in
+    attr_reader :reason, :scope, :retry_in
 
-    def initialize(reason, retry_in)
+    def initialize(reason, retry_in, scope: :show)
       @reason = reason
+      @scope = scope
       @retry_in = [ retry_in.to_f.ceil, 1 ].max
-      super("Throttled (#{reason}); retry in #{@retry_in}s")
+      super("Throttled (#{reason}, per #{scope}); retry in #{@retry_in}s")
     end
   end
 
@@ -40,14 +51,20 @@ class ShowVerification < ApplicationRecord
 
   def self.current_for(show) = show.verifications.newest_first.first
 
-  # Queues a code to the feed's owner address. Retires any earlier code, so only the newest one works.
+  # Queues a code to the feed's owner address. Retires any earlier code, so only the newest one works. The address
+  # allowance is checked under an advisory lock on the address, so parallel requests from different accounts can't
+  # both slip under the cap; the show's row lock does the same for its own allowance.
   def self.request_code!(show)
-    raise Unavailable, "the feed lists no owner email" if show.owner_email.blank?
+    address = normalize_address(show.owner_email)
+    raise Unavailable, "the feed lists no owner email" if address.blank?
 
-    verification = show.with_lock do
-      throttle!(show)
+    verification = transaction do
+      lock_address!(address)
+      show.lock!
+      throttle!(show.verifications.email, scope: :show)
+      throttle!(email.where(sent_to: address), scope: :address)
       show.verifications.email.unexpired.update_all(expires_at: Time.current)
-      create!(show: show, kind: "email", sent_to: show.owner_email, expires_at: CODE_TTL.from_now)
+      create!(show: show, kind: "email", sent_to: address, expires_at: CODE_TTL.from_now)
     end
     VerificationMailer.with(verification: verification).code.deliver_later
     verification
@@ -68,14 +85,21 @@ class ShowVerification < ApplicationRecord
     OpenSSL::HMAC.hexdigest("SHA256", key, "#{id}:#{code}")
   end
 
-  # At least RESEND_AFTER between sends, and at most SENDS_PER_DAY in any 24 hours, per show.
-  def self.throttle!(show)
-    sent = show.verifications.email.where(created_at: 1.day.ago..)
+  def self.normalize_address(email) = email.to_s.strip.downcase.presence
+
+  # At least RESEND_AFTER between sends, and at most SENDS_PER_DAY in any 24 hours, among the given sends.
+  def self.throttle!(sends, scope:)
+    sent = sends.where(created_at: 1.day.ago..)
     last = sent.maximum(:created_at)
-    raise Throttled.new(:resend, last + RESEND_AFTER - Time.current) if last && last > RESEND_AFTER.ago
-    raise Throttled.new(:daily, sent.minimum(:created_at) + 1.day - Time.current) if sent.count >= SENDS_PER_DAY
+    raise Throttled.new(:resend, last + RESEND_AFTER - Time.current, scope: scope) if last && last > RESEND_AFTER.ago
+    raise Throttled.new(:daily, sent.minimum(:created_at) + 1.day - Time.current, scope: scope) if sent.count >= SENDS_PER_DAY
   end
-  private_class_method :throttle!
+
+  # Held until the transaction ends.
+  def self.lock_address!(address)
+    connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", ADDRESS_LOCK_NAMESPACE, address ]))
+  end
+  private_class_method :throttle!, :lock_address!
 
   # Makes this request's code, stores its digest and returns it for the email. nil once the request was retired,
   # used or locked, so a late mail job can't revive it.

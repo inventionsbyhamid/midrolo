@@ -2,9 +2,9 @@
 <%= render "components/card", title: "Check your inbox" do %>
   <p>We sent a 6-digit code to <%= verification.masked_sent_to %>. It works for 30 minutes.</p>
   <% if verification.locked? %>
-    <p class="field-error">Too many tries. Request a new code to try again.</p>
+    <p class="field-error"><%= ShowVerification::LOCKED_MESSAGE %></p>
   <% elsif verification.expired? %>
-    <p class="field-error">That code has expired. Request a new one.</p>
+    <p class="field-error"><%= ShowVerification::EXPIRED_CODE_MESSAGE %></p>
   <% else %>
     <%= form_with url: show_verification_path(show), method: :patch, class: "mt-5 flex flex-wrap items-end gap-3" do |f| %>
       <div>
