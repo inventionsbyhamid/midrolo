@@ -141,13 +141,13 @@ every paid plan keeps at least a 60% margin with every cap used (`app/services/b
 bin/rails db:test:prepare
 bundle exec rspec spec/docs_spec.rb   # one file
 bundle exec rspec                     # the whole suite, about 12 minutes on a laptop
-bin/ci                                # setup, RuboCop, bundler-audit, importmap audit and Brakeman (no specs)
+LOCAL_RSPEC=1 bin/ci                  # setup, RuboCop, bundler-audit, importmap audit, Brakeman, then the specs
 ```
 
 `SKIP_NETWORK=1` leaves out the specs that need the internet, and `HEADFUL=1` shows the browser in system specs.
 Specs never call Qloo or an LLM: the Qloo client is tested against synthetic fixtures in `spec/fixtures/qloo/`.
 Operators with access to the project's test server can run the suite there with `bin/remote-rspec`
-([docs/testing.md](docs/testing.md)).
+([docs/testing.md](docs/testing.md)); plain `bin/ci`, without `LOCAL_RSPEC=1`, runs its specs that way.
 
 ## Deploy
 

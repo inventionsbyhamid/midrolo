@@ -11,10 +11,10 @@ RSpec.describe ".env.example" do
   let(:set_names) { lines.grep(/\A[A-Z0-9_]+=/).map { |line| line[/\A[A-Z0-9_]+/] } }
   let(:commented_names) { lines.grep(/\A# [A-Z0-9_]+=\z/).map { |line| line[/[A-Z0-9_]+/] } }
 
-  # Read by Rails, Puma or a rake task's own arguments, or set by the app itself: not for .env.
+  # Read by Rails, Puma, bin/ci (config/ci.rb) or a rake task's own arguments, or set by the app itself: not for .env.
   let(:internal) do
     %w[BUNDLE_GEMFILE CI EVAL_FILE EVAL_MODE FORCE STEPS FONTCONFIG_FILE PANGOCAIRO_BACKEND PIDFILE PORT
-       MY_APP_DATABASE_URL SECRET_KEY_BASE_DUMMY]
+       MY_APP_DATABASE_URL SECRET_KEY_BASE_DUMMY LOCAL_RSPEC]
   end
 
   it "is there" do

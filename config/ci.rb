@@ -9,6 +9,9 @@ CI.run do
   step "Security: Importmap vulnerability audit", "bin/importmap audit"
   step "Security: Brakeman code analysis", "bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error"
 
+  # The suite runs on the test server by default (bin/remote-rspec, docs/testing.md), not on this small Mac.
+  # LOCAL_RSPEC=1 bin/ci runs it here instead, for a machine without access to that server.
+  step "Tests: RSpec", ENV["LOCAL_RSPEC"] ? "bundle exec rspec" : "bin/remote-rspec"
 
   # Optional: set a green GitHub commit status to unblock PR merge.
   # Requires the `gh` CLI and `gh extension install basecamp/gh-signoff`.
