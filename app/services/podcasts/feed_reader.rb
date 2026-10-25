@@ -63,12 +63,12 @@ module Podcasts
       error.is_a?(Faraday::TimeoutError) || error.cause.is_a?(Net::OpenTimeout) || error.cause.is_a?(Net::ReadTimeout)
     end
 
-    # Returns the body string, or a Feed when the response was not usable.
+    # Returns the body string, or a Feed when the response was not usable. Each hop is vetted, then fetched from the
+    # address it was vetted at (R131).
     def download(url, fresh)
       (MAX_REDIRECTS + 1).times do
-        return Feed.unreadable("feed_blocked") if SafeUrl.blocked?(url)
-
-        response, body = fetch(url, fresh)
+        target = SafeUrl.resolve!(url)
+        response, body = fetch(target, fresh)
         case response.status
         when 200 then return body
         when 301, 302, 303, 307, 308
@@ -78,13 +78,15 @@ module Podcasts
         end
       end
       Feed.unreadable
+    rescue SafeUrl::Blocked
+      Feed.unreadable("feed_blocked")
     end
 
     # Streams the response, aborting as soon as the size or time budget is exceeded.
-    def fetch(url, fresh)
+    def fetch(target, fresh)
       buffer = +"".b
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      response = connection.get(url) do |req|
+      response = connection(target).get(target.uri.to_s) do |req|
         req.headers["Cache-Control"] = "no-cache" if fresh
         req.options.on_data = proc do |chunk, received|
           buffer.clear if received <= chunk.bytesize # a retry restarts the stream
@@ -97,8 +99,10 @@ module Podcasts
       [ response, buffer ]
     end
 
-    def connection
-      @connection ||= Http.build(headers: { "User-Agent" => USER_AGENT, "Accept" => "application/rss+xml, application/xml, text/xml, */*" })
+    # One per hop: it reaches only that hop's vetted address.
+    def connection(target)
+      Http.build(headers: { "User-Agent" => USER_AGENT, "Accept" => "application/rss+xml, application/xml, text/xml, */*" },
+                 pin: target)
     end
 
     def parse(xml, max_episodes, description_limit)

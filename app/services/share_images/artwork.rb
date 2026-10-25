@@ -3,7 +3,7 @@ require "timeout"
 module ShareImages
   # A show's artwork for its kit's share image, fetched by FetchShareArtworkJob, never on a request (R98). It is fetched
   # the way Podcasts::FeedReader fetches a feed: Podcasts::SafeUrl checks every hop (http(s) on 80/443, no internal
-  # address), and the body streams under a byte cap. One deadline covers the whole fetch, redirects included: each hop's
+  # address) and pins it to the address it checked (R131), and the body streams under a byte cap. One deadline covers the whole fetch, redirects included: each hop's
   # open and read timeouts come from what is left of it, and a hard wall-clock timeout around everything also bounds
   # what those can't (DNS in SafeUrl, a server that drips its headers). Only a JPEG, PNG or WebP of sane dimensions is
   # decoded. It comes back as PNG bytes, cropped to a square with rounded corners; anything else is nil, never an error.
@@ -38,8 +38,8 @@ module ShareImages
       return if url.empty?
 
       (MAX_REDIRECTS + 1).times do
-        Podcasts::SafeUrl.check!(url)
-        response, body = get(url, deadline)
+        target = Podcasts::SafeUrl.resolve!(url)
+        response, body = get(target, deadline)
         return body if response.status == 200
         return unless REDIRECTS.include?(response.status)
 
@@ -50,12 +50,12 @@ module ShareImages
 
     # One hop, with timeouts from what's left of the deadline. The body is checked against the cap and the deadline
     # as it streams.
-    def get(url, deadline)
+    def get(target, deadline)
       left = deadline - now
       raise TooSlow, "over #{TOTAL_TIMEOUT}s" unless left.positive?
 
       body = +"".b
-      response = connection(left).get(url) do |request|
+      response = connection(left, target).get(target.uri.to_s) do |request|
         request.options.on_data = proc do |chunk, received|
           raise TooLarge, "over #{MAX_BYTES} bytes" if received > MAX_BYTES
           raise TooSlow, "over #{TOTAL_TIMEOUT}s" if now > deadline
@@ -86,11 +86,12 @@ module ShareImages
       Renderer.load_svg(svg).extract_band(3)
     end
 
-    def connection(left)
+    # One per hop: it reaches only that hop's vetted address.
+    def connection(left, target)
       Faraday.new(headers: { "User-Agent" => Podcasts::FeedReader::USER_AGENT, "Accept" => "image/*" }) do |faraday|
         faraday.options.timeout = left
         faraday.options.open_timeout = [ OPEN_TIMEOUT, left ].min
-        faraday.adapter Faraday.default_adapter
+        Podcasts::SafeUrl.pin(faraday, target)
       end
     end
 

@@ -51,7 +51,10 @@ midrolo-web, midrolo-jobs, midrolo-backup ─ midrolo-net ─▶ midrolo-db:5432
   Thruster write. With Cloudflare's proxy on, it comes from CF-Connecting-IP, believed only from Cloudflare's own
   addresses (`config/initializers/client_ip.rb`). A Forwarded or Client-IP header a visitor sends never counts.
 - The database is on `midrolo-net` only, so no other stack can reach it. `midrolo-web` is also on `coolify`, which
-  other stacks' web containers share: the feed fetcher's SSRF guard is what keeps it off their ports (R13).
+  other stacks' web containers share, so network placement does not keep it off their ports. The code does (R131):
+  every user-supplied URL (a feed, show artwork) is resolved once, refused if any address is internal (private,
+  loopback, link-local, NAT64 and 6to4 ranges included), and fetched from the address that was checked, never from a
+  second DNS lookup, so a rebinding DNS answer can't move the request. Each redirect hop is checked the same way.
 
 ## First deploy
 
