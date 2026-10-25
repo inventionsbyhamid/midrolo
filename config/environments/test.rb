@@ -54,4 +54,11 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Some system specs draw the map from an inline data: style instead of fetching tiles (spec/system/report_flow_spec.rb).
+  # Production's policy never allows data: fetches (config/initializers/content_security_policy.rb); only tests do.
+  config.after_initialize do
+    policy = Rails.application.config.content_security_policy
+    policy.connect_src(*policy.directives.fetch("connect-src"), :data)
+  end
 end

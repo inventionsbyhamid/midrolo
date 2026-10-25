@@ -39,12 +39,54 @@ RSpec.describe "Content Security Policy", :network do
     sleep 1 # tiles and glyphs arrive after the first frame
   end
 
-  it "notices a blocked script, so a quiet console means something" do
+  def add_script(src) = execute_script(%(document.head.append(Object.assign(document.createElement("script"), { src: #{src.to_json} }))))
+
+  def expect_blocked(src)
+    page.document.synchronize { @blocked.any? { |text| text.include?(src) } || raise(Capybara::ExpectationNotMet, "#{src} not blocked") }
+  end
+
+  # The policy refuses these before any request goes out.
+  it "notices a blocked script, so a quiet console means something, and blocks jsDelivr outside MapLibre's folder" do
     visit "/"
-    execute_script(%(document.head.append(Object.assign(document.createElement("script"), { src: "https://example.com/x.js" }))))
+    add_script("https://example.com/x.js")
+    expect_blocked("https://example.com/x.js")
+    add_script("https://cdn.jsdelivr.net/npm/left-pad@1.3.0/index.js")
+    expect_blocked("https://cdn.jsdelivr.net/npm/left-pad@1.3.0/index.js")
+  end
+
+  # The page's menu button works: Stimulus has connected its dialog controller.
+  def wait_for_menu
     page.document.synchronize do
-      @blocked.any? { |text| text.include?("https://example.com/x.js") } || raise(Capybara::ExpectationNotMet, "not reported")
+      evaluate_script(<<~JS) || raise(Capybara::ExpectationNotMet, "the menu's controller isn't connected")
+        !!(window.Stimulus && Stimulus.getControllerForElementAndIdentifier(document.querySelector("[data-controller='dialog']"), "dialog"))
+      JS
     end
+  end
+
+  # A visitor's first page has no session yet, so it gets a nonce of its own; the next one has the session's (in
+  # production the first page's CSRF token leaves a session behind, as here). Turbo keeps the first page's policy for
+  # the visit, so this is the moment a script added with the new page's nonce would be blocked.
+  it "keeps the app's scripts running through a Turbo visit from a visitor's first page, where the nonce changes" do
+    ActionController::Base.allow_forgery_protection = true
+    page.driver.resize(375, 812)
+    visit "/"
+    expect(page).to have_css("h1", text: "Find sponsors who already love your listeners")
+    wait_for_menu
+    first_nonce = find("meta[name='csp-nonce']", visible: :all)[:content]
+    execute_script("window.firstDocument = true")
+
+    click_button "Menu"
+    within("dialog[open]") { click_link "Pricing" }
+    expect(page).to have_css("h1", text: "Pricing")
+    expect(evaluate_script("window.firstDocument")).to be(true) # Turbo swapped the page in, under the first policy
+    expect(find("meta[name='csp-nonce']", visible: :all)[:content]).not_to eq(first_nonce)
+
+    wait_for_menu # the dialog controller Stimulus connected on the new page
+    click_button "Menu"
+    expect(page).to have_css("dialog[open]")
+    expect(@blocked).to be_empty, @blocked.join("\n")
+  ensure
+    ActionController::Base.allow_forgery_protection = false
   end
 
   it "blocks nothing on the landing page, a report with its map, or a public kit" do

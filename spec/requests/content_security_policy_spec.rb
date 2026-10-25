@@ -1,10 +1,14 @@
 require "rails_helper"
 
-# The Content Security Policy (R10, config/initializers/content_security_policy.rb), enforced: scripts and styles from
-# this site, jsDelivr (MapLibre) and Google Fonts only, inline ones only with the page's nonce, and the map's style and
-# tiles from OpenFreeMap. spec/system/content_security_policy_spec.rb loads the pages in a browser.
+# The Content Security Policy (R10, R116, config/initializers/content_security_policy.rb), enforced: scripts and
+# styles from this site, the pinned MapLibre folder on jsDelivr and Google Fonts only, inline ones only with the page's
+# nonce, and the map's style and tiles from OpenFreeMap. The test environment alone also lets the map fetch a data:
+# style (config/environments/test.rb). spec/system/content_security_policy_spec.rb loads the pages in a browser, and
+# spec/requests/production_config_spec.rb reads production's header.
 RSpec.describe "Content Security Policy" do
   let(:browser) { "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15" }
+  # The folder of the maplibre-gl pin in config/importmap.rb: https://cdn.jsdelivr.net/npm/maplibre-gl@<version>/
+  let(:maplibre) { Rails.application.importmap.packages.fetch("maplibre-gl").path[%r{\A.+/maplibre-gl@[^/]+/}] }
 
   def policy
     header = response.headers["Content-Security-Policy"]
@@ -21,15 +25,24 @@ RSpec.describe "Content Security Policy" do
     get "/"
     expect(response.headers["Content-Security-Policy-Report-Only"]).to be_nil
 
+    expect(maplibre).to match(%r{\Ahttps://cdn\.jsdelivr\.net/npm/maplibre-gl@\d+\.\d+\.\d+/\z})
     expect(policy).to include(
       "default-src" => [ "'self'" ], "base-uri" => [ "'self'" ], "object-src" => [ "'none'" ],
       "frame-ancestors" => [ "'self'" ], "font-src" => [ "'self'", "https://fonts.gstatic.com" ],
-      "img-src" => [ "'self'", "https:", "data:", "blob:" ], "worker-src" => [ "'self'", "blob:", "https://cdn.jsdelivr.net" ],
-      "connect-src" => [ "'self'", "https://tiles.openfreemap.org" ]
+      "img-src" => [ "'self'", "https:", "data:", "blob:" ], "worker-src" => [ "'self'", "blob:", maplibre ],
+      "connect-src" => [ "'self'", "https://tiles.openfreemap.org", "data:" ] # data: in the test environment only
     )
-    expect(policy["script-src"]).to eq([ "'self'", "https://cdn.jsdelivr.net", "'nonce-#{nonce}'" ])
-    expect(policy["style-src"]).to eq([ "'self'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net", "'nonce-#{nonce}'" ])
+    expect(policy["script-src"]).to eq([ "'self'", maplibre, "'nonce-#{nonce}'" ])
+    expect(policy["style-src"]).to eq([ "'self'", "https://fonts.googleapis.com", maplibre, "'nonce-#{nonce}'" ])
     expect(response.headers["Content-Security-Policy"]).not_to include("unsafe")
+    expect(policy.values.flatten).not_to include("https://cdn.jsdelivr.net") # never all of jsDelivr
+  end
+
+  it "follows the maplibre-gl pin, so bumping it in config/importmap.rb moves the policy with it" do
+    pin = Rails.application.importmap.packages.fetch("maplibre-gl")
+    allow(pin).to receive(:path).and_return("https://cdn.jsdelivr.net/npm/maplibre-gl@9.8.7/dist/maplibre-gl.mjs")
+    get "/"
+    expect(policy.values_at("script-src", "style-src", "worker-src")).to all(include("https://cdn.jsdelivr.net/npm/maplibre-gl@9.8.7/"))
   end
 
   it "gives every inline script the page's nonce, and Turbo the same one for the scripts and styles it adds" do
@@ -69,7 +82,12 @@ RSpec.describe "Content Security Policy" do
     allow(ENV).to receive(:[]).and_call_original
     allow(ENV).to receive(:[]).with("MAP_STYLE_URL").and_return("https://maps.example.com/styles/light.json")
     get "/"
-    expect(policy["connect-src"]).to eq([ "'self'", "https://tiles.openfreemap.org", "https://maps.example.com" ])
+    expect(policy["connect-src"]).to eq([ "'self'", "https://tiles.openfreemap.org", "https://maps.example.com", "data:" ])
+  end
+
+  it "never lets a data: map style into the policy itself: only the test environment adds data:" do
+    expect(ContentSecurity.map_hosts("data:application/json,%7B%7D")).to eq([ "https://tiles.openfreemap.org" ])
+    expect(ContentSecurity.map_hosts("")).to eq([ "https://tiles.openfreemap.org" ])
   end
 
   it "renders the age leans without inline style attributes, which the policy would block" do
