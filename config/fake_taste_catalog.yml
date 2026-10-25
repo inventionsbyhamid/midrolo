@@ -54,7 +54,7 @@ brands:
     eBay: 0.91
     Amazon: 0.99
     Wayfair: 0.7
-  food_beverage:
+  food_and_beverage:
     HelloFresh: 0.71
     Blue Apron: 0.5
     Factor: 0.35
@@ -67,7 +67,7 @@ brands:
     Starbucks: 0.96
     Trade Coffee: 0.24
     Our Place: 0.3
-  health_wellness:
+  health_and_wellness:
     Calm: 0.7
     AG1: 0.6
     Headspace: 0.62

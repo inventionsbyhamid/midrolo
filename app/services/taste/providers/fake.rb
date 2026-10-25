@@ -142,7 +142,7 @@ module Taste
         @catalog["media_genres"].each { |k, name| tags["urn:tag:genre:media:#{k}"] = Tag.new(id: "urn:tag:genre:media:#{k}", name: name, type: MEDIA_TAG_TYPE, score: nil) }
         @catalog["brands"].each_key do |cat|
           id = "#{BRAND_TAG_TYPE}:#{cat}"
-          tags[id] = Tag.new(id: id, name: cat.tr("_", " ").split.map(&:capitalize).join(" "), type: BRAND_TAG_TYPE, score: nil)
+          tags[id] = Tag.new(id: id, name: category_name(cat), type: BRAND_TAG_TYPE, score: nil)
         end
         @catalog["extra_tags"].each { |t| tags[t["id"]] = Tag.new(id: t["id"], name: t["name"], type: t["type"], score: nil) }
         tags
@@ -169,6 +169,9 @@ module Taste
       end
 
       def slug(name) = name.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-|-\z/, "")
+
+      # "food_and_beverage" => "Food and Beverage", as Qloo names its brand categories.
+      def category_name(key) = key.split("_").map { |word| word == "and" ? word : word.capitalize }.join(" ")
 
       # ---- geo ----
 

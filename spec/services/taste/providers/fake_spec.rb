@@ -28,6 +28,15 @@ RSpec.describe Taste::Providers::Fake do
     end
   end
 
+  it "names its brand categories as Qloo does, with the and kept: Food and Beverage, Health and Wellness" do
+    names = fake.find_tags(query: "and", types: [ described_class::BRAND_TAG_TYPE ], take: 50).to_h { |tag| [ tag.id, tag.name ] }
+    expect(names).to include("urn:tag:genre:brand:food_and_beverage" => "Food and Beverage",
+                             "urn:tag:genre:brand:health_and_wellness" => "Health and Wellness")
+    expect(fake.search(query: "HelloFresh", types: [ :brand ]).first.tags.map(&:name)).to eq([ "Food and Beverage" ])
+    expect(fake.find_tags(query: "Food & Beverage", types: [ described_class::BRAND_TAG_TYPE ]).first.id)
+      .to eq("urn:tag:genre:brand:food_and_beverage")
+  end
+
   describe "#search" do
     it "finds podcasts by name case-insensitively and returns [] for gibberish" do
       pod = fake.recommend(type: :podcast, entity_ids: [ "x" ], take: 1).first

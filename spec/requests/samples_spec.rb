@@ -141,3 +141,21 @@ RSpec.describe "Sample reports" do
     end
   end
 end
+
+# The controller found "Food Beverage" under HelloFresh on sample-one: a category keeps its "and" (Fake catalog keys
+# and names follow Qloo's, and the row spells "&" as "and").
+RSpec.describe "Sample report categories" do
+  it "reads Food and Beverage under a food brand on the generated sample-one" do
+    allow(Llm).to receive(:mode).and_return(:fake)
+    Taste::Provider.reset!
+    Podcasts::Directory.reset!
+    Samples::Generate.call(io: StringIO.new, entries: Samples.entries.first(1))
+
+    get "/samples/sample-one"
+    page = Nokogiri::HTML(response.body)
+    categories = page.css(".match-row").to_h { |row| [ row.at_css(".match-name").text, row.at_css(".match-category")&.text ] }
+    expect(categories.values).to include("Food and Beverage")
+    expect(categories.values).not_to include("Food Beverage", "Health Wellness")
+    expect(categories["HelloFresh"]).to eq("Food and Beverage") if categories.key?("HelloFresh")
+  end
+end
