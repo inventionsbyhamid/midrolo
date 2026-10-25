@@ -69,7 +69,7 @@ RSpec.describe "Sample reports" do
 
       expect(page.at_css("title").text).to eq("The Founder's Ledger sample sponsor report | Midrolo")
       expect_share_tags(page, url: "http://www.example.com/samples/sample-one",
-                              image: %r{\Ahttp://www\.example\.com/samples/sample-one/og\.png\z})
+                              image: %r{\Ahttp://www\.example\.com/samples/sample-one/og\.png\?v=\h{12}\z})
       expect(share_tags(page)["og:image:alt"]).to eq([ "Sample sponsor report for The Founder's Ledger" ])
     end
 

@@ -1,12 +1,13 @@
 module ShareImages
   # A public media kit's share image: the show's title and host, its self-reported downloads per episode (with the
   # self-reported note) when the owner gave them, the audience's top taste tags (MediaKit::Content, as the kit page
-  # shows them) and the show's artwork, or the mark when there is none or it can't be fetched.
+  # shows them) and the show's stored artwork, or the mark while there is none.
   class KitCard < Card
-    def initialize(kit)
+    # content: the kit page's MediaKit::Content, when it has one already.
+    def initialize(kit, content: nil)
       @kit = kit
       @show = kit.show
-      @content = MediaKit::Content.new(kit)
+      @content = content || MediaKit::Content.new(kit)
     end
 
     def artwork? = true
@@ -14,7 +15,15 @@ module ShareImages
 
     private
 
-    def key_parts = [ "kit", version_of(@kit), version_of(@show), version_of(@content.report) ]
+    def key_parts = [ "kit", version_of(@kit), version_of(@show), version_of(@content.report), artwork_state ]
+
+    # Whether the artwork is stored yet, so the card is drawn again once it is.
+    def artwork_state
+      url = artwork_url
+      return "no-artwork" unless url
+
+      ArtworkStore.stored?(url) ? "artwork-#{Digest::SHA256.hexdigest(url).first(12)}" : "artwork-pending"
+    end
 
     def fields
       downloads = @show.downloads_per_episode

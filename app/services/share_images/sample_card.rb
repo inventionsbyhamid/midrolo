@@ -2,7 +2,7 @@ module ShareImages
   # A sample report's share image: the show's title labelled as a sample (not affiliated with the show), how many brand
   # matches the report found and the audience's top taste tags. No artwork: the show isn't the podcaster's own.
   class SampleCard < Card
-    # report comes from Samples.find!, which loads its show and matches.
+    # report comes from Samples.find!.
     def initialize(report)
       @report = report
       @show = report.show
@@ -13,11 +13,12 @@ module ShareImages
     def key_parts = [ "sample", version_of(@report), version_of(@show), "matches-#{match_count}" ]
 
     def fields
-      { label: "Sample report", title: @show.title, subline: "Sample — not affiliated with the show.",
+      { label: "Sample report", title: @show.title, subline: "Not affiliated with the show.",
         stat: match_stat, tags: taste_tags, seed: @show.id }
     end
 
-    def match_count = @report.sponsor_matches.size
+    # One COUNT when the matches aren't loaded (the image route doesn't load them).
+    def match_count = @match_count ||= @report.sponsor_matches.size
 
     def match_stat
       count = match_count

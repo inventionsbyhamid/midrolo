@@ -25,9 +25,10 @@ RSpec.describe ShareImages::SampleCard do
   it "shows the title, the Sample report label, the brand match count and the top three different taste tags" do
     shown = texts(card.layout.svg)
 
-    expect(shown).to include("Sample report", "The Founder's Ledger", "Sample — not affiliated with the show.", "2",
+    expect(shown).to include("Sample report", "The Founder's Ledger", "Not affiliated with the show.", "2",
                              "brand matches, each with its reason", "Personal finance", "Startups", "Stoicism")
     expect(shown).not_to include("Index funds")
+    expect(shown.join(" ")).not_to match(/[\u2013\u2014]/) # no dashes in copy
   end
 
   it "says one brand match, and leaves the count out when there are none" do
@@ -44,6 +45,11 @@ RSpec.describe ShareImages::SampleCard do
     expect(image.complete).to be(true)
     expect(Vips::Image.new_from_buffer(image.png, "").then { |png| [ png.width, png.height ] }).to eq([ 1200, 630 ])
     expect(a_request(:get, /.*/)).not_to have_been_made
+  end
+
+  it "has a short version of its cache key for the og:image URL" do
+    expect(card.version).to match(/\A\h{12}\z/)
+    expect(card.version).to eq(card.version)
   end
 
   it "has a cache key that changes with the report, its show and its matches" do

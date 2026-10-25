@@ -67,11 +67,17 @@ RSpec.describe "Public media kits" do
       doc = Nokogiri::HTML(response.body)
 
       expect_share_tags(doc, url: "http://www.example.com/k/the-founder-s-ledger",
-                             image: %r{\Ahttp://www\.example\.com/k/the-founder-s-ledger/og\.png\z})
+                             image: %r{\Ahttp://www\.example\.com/k/the-founder-s-ledger/og\.png\?v=\h{12}\z})
       tags = share_tags(doc)
       expect(tags["og:title"]).to eq([ "The Founder's Ledger media kit" ])
       expect(tags["og:description"]).to eq([ "Plain-English money lessons for first-time founders" ])
       expect(tags["og:image:alt"]).to eq([ "Media kit for The Founder's Ledger" ])
+      # The version follows the card, so link previews pick up a changed kit.
+      versions = [ tags["og:image"].first ]
+      travel(1.minute) { kit.update!(headline: "A new headline") }
+      visit_kit
+      versions << share_tags(Nokogiri::HTML(response.body))["og:image"].first
+      expect(versions.uniq.size).to eq(2)
       expect(response.body).not_to include("noindex")
       expect(response.headers["X-Robots-Tag"]).to be_nil
     end

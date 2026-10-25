@@ -8,10 +8,10 @@ RSpec.describe ShareImages::KitCard do
   end
   let(:kit) { create(:media_kit, :published, show: show) }
   let(:tags) { [ "Personal finance", "Startups", "Stoicism", "Index funds" ].map { |name| { "id" => name, "name" => name } } }
-  let(:teal) { Vips::Image.black(300, 300).new_from_image([ 0, 128, 128 ]).pngsave_buffer }
+  let(:teal) { Vips::Image.black(240, 240, bands: 3).new_from_image([ 0, 128, 128 ]).bandjoin(255).pngsave_buffer }
 
   before do
-    allow(Resolv).to receive(:getaddresses).and_return([ "93.184.216.34" ])
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
     create(:report, show: show, status: "done", audience: { "tags" => tags })
   end
 
@@ -37,6 +37,7 @@ RSpec.describe ShareImages::KitCard do
                              "downloads per episode", "Personal finance", "Startups", "Stoicism",
                              "Stats self-reported by the verified owner.")
     expect(shown).not_to include("Index funds")
+    expect(shown.join(" ")).not_to match(/[\u2013\u2014]/) # no dashes in copy
   end
 
   it "leaves out the downloads and their note when the owner hasn't given them, and the host when unknown" do
@@ -46,24 +47,25 @@ RSpec.describe ShareImages::KitCard do
     expect(shown).not_to include("downloads per episode", "self-reported", "Hosted by")
   end
 
-  it "draws a 1200x630 PNG with the artwork in its place" do
-    stub_request(:get, artwork_url).to_return(status: 200, body: teal)
+  it "draws a 1200x630 PNG with the stored artwork in its place, fetching nothing" do
+    ShareImages::ArtworkStore.write(artwork_url, teal)
     image = card.draw
 
     expect(image.complete).to be(true)
     expect(Vips::Image.new_from_buffer(image.png, "").then { |png| [ png.width, png.height ] }).to eq([ 1200, 630 ])
     expect(artwork_centre(image.png)).to eq([ 0, 128, 128 ])
+    expect(a_request(:any, /.*/)).not_to have_been_made
   end
 
-  it "falls back to the mark, amber slot in the middle, when the artwork fetch fails" do
-    stub_request(:get, artwork_url).to_timeout
+  it "falls back to the mark, amber slot in the middle, while no artwork is stored, and says it isn't complete" do
     image = card.draw
 
     expect(image.complete).to be(false)
     expect(artwork_centre(image.png)).to eq([ 243, 167, 18 ])
+    expect(a_request(:any, /.*/)).not_to have_been_made
   end
 
-  it "uses the mark without fetching anything when the show has no artwork" do
+  it "uses the mark, complete, when the show has no artwork" do
     show.update!(artwork_url: nil)
     image = card.draw
 
@@ -73,7 +75,7 @@ RSpec.describe ShareImages::KitCard do
 
   it "escapes a hostile show title from the feed and still draws" do
     show.update!(title: %(</text><script>alert(1)</script>), author: %(<b onload="x">Host</b>))
-    stub_request(:get, artwork_url).to_return(status: 200, body: teal)
+    ShareImages::ArtworkStore.write(artwork_url, teal)
     svg = card.layout(artwork: :image).svg
 
     expect(Nokogiri::XML(svg) { |config| config.strict }.css("script, b")).to be_empty
@@ -81,7 +83,7 @@ RSpec.describe ShareImages::KitCard do
     expect(card.draw.png.b).to start_with("\x89PNG".b)
   end
 
-  it "has a cache key that changes when the kit, the show or its report changes" do
+  it "has a cache key that changes when the kit, the show, its report or its stored artwork changes" do
     keys = [ card.cache_key ]
     travel(1.minute) { kit.update!(headline: "New headline") }
     keys << card.cache_key
@@ -89,8 +91,10 @@ RSpec.describe ShareImages::KitCard do
     keys << card.cache_key
     travel(3.minutes) { create(:report, show: show, status: "done", audience: { "tags" => tags.first(1) }) }
     keys << card.cache_key
+    ShareImages::ArtworkStore.write(artwork_url, teal)
+    keys << card.cache_key
 
-    expect(keys.uniq.size).to eq(4)
+    expect(keys.uniq.size).to eq(5)
     expect(keys).to all(start_with("share_images/"))
   end
 end

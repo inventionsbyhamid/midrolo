@@ -20,12 +20,13 @@ module Samples
   # { report_id => number of sponsor matches } for reports, in one query.
   def self.match_counts(reports) = SponsorMatch.where(report_id: reports.map(&:id)).group(:report_id).count
 
-  # The done sample at slug, with what its page shows; ActiveRecord::RecordNotFound (a 404) for anything else.
-  def self.find!(slug)
+  # The done sample at slug, with what its page shows preloaded (the share image needs only the show);
+  # ActiveRecord::RecordNotFound (a 404) for anything else.
+  def self.find!(slug, preload: %i[show agent_steps sponsor_matches])
     slug = slug.to_s
     raise ActiveRecord::RecordNotFound, "no sample #{slug.inspect}" unless slugs.include?(slug)
 
-    Report.done.includes(:show, :agent_steps, :sponsor_matches).find_by!(sample_slug: slug)
+    Report.done.includes(*preload).find_by!(sample_slug: slug)
   end
 
   def self.read_entries = Rails.application.config_for(:samples).fetch(:samples).map(&:freeze).freeze

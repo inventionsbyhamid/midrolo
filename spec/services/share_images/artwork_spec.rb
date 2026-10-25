@@ -11,9 +11,10 @@ RSpec.describe ShareImages::Artwork do
     stub_request(:get, url).to_return(status: status, body: body, headers: headers)
   end
 
-  it "fetches the artwork and crops it to a square of the asked size, with an alpha band for rounded corners" do
+  it "fetches the artwork and gives it back as a PNG, cropped square to the asked size, with rounded corners" do
     stub_art
-    image = described_class.fetch(url, size: 264)
+    png = described_class.fetch(url, size: 264)
+    image = Vips::Image.pngload_buffer(png)
 
     expect([ image.width, image.height, image.bands ]).to eq([ 264, 264, 4 ])
     expect(image.getpoint(132, 132).first(3)).to match([ be_within(4).of(0), be_within(4).of(128), be_within(4).of(128) ])
@@ -24,7 +25,7 @@ RSpec.describe ShareImages::Artwork do
     stub_request(:get, url).to_return(status: 302, headers: { "Location" => "https://img.example.net/art.jpg" })
     stub_request(:get, "https://img.example.net/art.jpg").to_return(status: 200, body: jpeg)
 
-    expect(described_class.fetch(url, size: 100).width).to eq(100)
+    expect(Vips::Image.pngload_buffer(described_class.fetch(url, size: 100)).width).to eq(100)
   end
 
   describe "falls back (nil) without raising" do

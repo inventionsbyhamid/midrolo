@@ -1,12 +1,16 @@
+require "timeout"
+
 module ShareImages
-  # A show's artwork for its kit's share image, fetched the way Podcasts::FeedReader fetches a feed: Podcasts::SafeUrl
-  # checks every hop (http(s) on 80/443, no internal address), and the body streams under a byte cap and one deadline
-  # for the whole download. Only a JPEG, PNG or WebP of sane dimensions is decoded; it comes back cropped to a square
-  # with rounded corners. Anything else is nil, never an error, and the card draws the mark instead.
+  # A show's artwork for its kit's share image, fetched by FetchShareArtworkJob, never on a request (R98). It is fetched
+  # the way Podcasts::FeedReader fetches a feed: Podcasts::SafeUrl checks every hop (http(s) on 80/443, no internal
+  # address), and the body streams under a byte cap. One deadline covers the whole fetch, redirects included: each hop's
+  # open and read timeouts come from what is left of it, and a hard wall-clock timeout around everything also bounds
+  # what those can't (DNS in SafeUrl, a server that drips its headers). Only a JPEG, PNG or WebP of sane dimensions is
+  # decoded. It comes back as PNG bytes, cropped to a square with rounded corners; anything else is nil, never an error.
   module Artwork
     MAX_BYTES = 5.megabytes
     MAX_SIDE = MediaKit::MAX_IMAGE_SIDE
-    TIMEOUT = 5
+    TOTAL_TIMEOUT = 8 # seconds, for the whole fetch
     OPEN_TIMEOUT = 3
     MAX_REDIRECTS = 3
     REDIRECTS = [ 301, 302, 303, 307, 308 ].freeze
@@ -16,22 +20,23 @@ module ShareImages
                 /\ARIFF.{4}WEBP/mn => :webpload_buffer }.freeze
 
     class TooLarge < StandardError; end
+    class TooSlow < StandardError; end
 
     module_function
 
-    # An RGBA Vips::Image, size x size, or nil.
+    # PNG bytes, size x size, or nil.
     def fetch(url, size:)
-      bytes = download(url.to_s.strip)
+      deadline = now + TOTAL_TIMEOUT
+      bytes = Timeout.timeout(TOTAL_TIMEOUT, TooSlow) { download(url.to_s.strip, deadline) }
       bytes && picture(bytes, size)
     rescue StandardError => e
       Rails.logger.info("[ShareImages::Artwork] no artwork: #{e.class}: #{e.message}")
       nil
     end
 
-    def download(url)
+    def download(url, deadline)
       return if url.empty?
 
-      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + TIMEOUT
       (MAX_REDIRECTS + 1).times do
         Podcasts::SafeUrl.check!(url)
         response, body = get(url, deadline)
@@ -43,12 +48,17 @@ module ShareImages
       nil
     end
 
+    # One hop, with timeouts from what's left of the deadline. The body is checked against the cap and the deadline
+    # as it streams.
     def get(url, deadline)
+      left = deadline - now
+      raise TooSlow, "over #{TOTAL_TIMEOUT}s" unless left.positive?
+
       body = +"".b
-      response = connection.get(url) do |request|
+      response = connection(left).get(url) do |request|
         request.options.on_data = proc do |chunk, received|
           raise TooLarge, "over #{MAX_BYTES} bytes" if received > MAX_BYTES
-          raise Faraday::TimeoutError, "over #{TIMEOUT}s" if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+          raise TooSlow, "over #{TOTAL_TIMEOUT}s" if now > deadline
 
           body << chunk
         end
@@ -67,7 +77,7 @@ module ShareImages
 
       square = Vips::Image.thumbnail_buffer(bytes, size, height: size, crop: :centre).colourspace(:srgb).cast(:uchar)
       square = square.flatten(background: 255) if square.has_alpha?
-      square.bandjoin(corner_mask(size))
+      square.bandjoin(corner_mask(size)).write_to_buffer(".png")
     end
 
     def corner_mask(size)
@@ -76,12 +86,14 @@ module ShareImages
       Renderer.load_svg(svg).extract_band(3)
     end
 
-    def connection
+    def connection(left)
       Faraday.new(headers: { "User-Agent" => Podcasts::FeedReader::USER_AGENT, "Accept" => "image/*" }) do |faraday|
-        faraday.options.timeout = TIMEOUT
-        faraday.options.open_timeout = OPEN_TIMEOUT
+        faraday.options.timeout = left
+        faraday.options.open_timeout = [ OPEN_TIMEOUT, left ].min
         faraday.adapter Faraday.default_adapter
       end
     end
+
+    def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 end

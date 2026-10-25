@@ -14,6 +14,8 @@ class Show < ApplicationRecord
   has_many :verifications, class_name: "ShowVerification", dependent: :destroy
 
   before_validation :normalize_hints
+  # A public kit's share image draws this artwork from storage, fetched off the request path.
+  after_update_commit :request_share_artwork, if: -> { saved_change_to_artwork_url? && public_kit? }
 
   validates :title, presence: true
   validates :country, inclusion: { in: COUNTRIES.keys }
@@ -84,6 +86,8 @@ class Show < ApplicationRecord
   end
 
   private
+
+  def request_share_artwork = ShareImages::ArtworkStore.request(self)
 
   def normalize_hints
     raw = self[:hints].is_a?(Hash) ? self[:hints] : {}

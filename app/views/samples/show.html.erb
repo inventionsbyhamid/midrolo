@@ -1,6 +1,6 @@
 <% content_for :title, "#{@show.title} sample sponsor report" %>
 <% content_for :meta, social_meta(description: "A sample Midrolo sponsor report for #{@show.title}: who its listeners' tastes point to, and the brands that fit, with evidence.",
-                                   image: sample_share_image_url(@report.sample_slug),
+                                   image: sample_share_image_url(@report.sample_slug, v: ShareImages::SampleCard.new(@report).version),
                                    image_alt: "Sample sponsor report for #{@show.title}") %>
 <%# A public sample (R78): the report body read-only, so no pitch, pipeline or owner controls, and no live stream. %>
 <div class="wrap flex flex-col gap-6 py-8 sm:py-10">

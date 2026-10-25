@@ -41,6 +41,8 @@ class MediaKit < ApplicationRecord
   validate :rates_are_whole_dollars
 
   before_save :purge_removed_images
+  # The share image (/k/:slug/og.png) draws the show's artwork from storage, fetched off the request path.
+  after_commit :request_share_artwork, if: -> { saved_change_to_published_at? && published? }
 
   def self.bot?(user_agent) = user_agent.blank? || user_agent.match?(BOT_AGENT)
 
@@ -140,6 +142,8 @@ class MediaKit < ApplicationRecord
       errors.add(:"#{slot}_rate", "must be a whole number of dollars, 0 or more")
     end
   end
+
+  def request_share_artwork = ShareImages::ArtworkStore.request(show)
 
   def purge_removed_images
     cover.purge_later if remove_cover && cover.attached? && !attachment_changes.key?("cover")

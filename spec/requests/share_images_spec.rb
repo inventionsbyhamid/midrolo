@@ -1,26 +1,39 @@
 require "rails_helper"
 
 # The dynamic share images (og:image) for sample reports and public media kits: 1200x630 PNGs drawn by
-# ShareImages, public and cacheable, and a 404 for anything that isn't public.
+# ShareImages, public and cacheable, and a 404 for anything that isn't public. The request never touches the network
+# (R98): a kit's artwork is fetched by FetchShareArtworkJob, and the card reads what that stored.
 RSpec.describe "Share images" do
   let(:artwork_url) { "https://cdn.example.com/art.jpg" }
-
-  before { allow(Resolv).to receive(:getaddresses).and_return([ "93.184.216.34" ]) }
+  let(:static_image) { Rails.root.join("app/assets/images/og.png").binread }
 
   def dimensions = Vips::Image.new_from_buffer(response.body, "").then { |image| [ image.width, image.height ] }
 
-  def expect_png
+  # A drawn card: a 1200x630 PNG that isn't the landing page's static og.png.
+  def expect_card
     expect(response).to have_http_status(:ok)
     expect(response.media_type).to eq("image/png")
     expect(response.body.b).to start_with("\x89PNG".b)
     expect(dimensions).to eq([ 1200, 630 ])
+    expect(response.body.b).not_to eq(static_image.b)
+  end
+
+  def expect_static_image(max_age:)
+    expect(response).to have_http_status(:ok)
+    expect(response.media_type).to eq("image/png")
+    expect(response.body.b).to eq(static_image.b)
+    expect(response.headers["Cache-Control"]).to include("public", "max-age=#{max_age}")
+  end
+
+  def with_memory_cache
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
   end
 
   shared_examples "a cacheable share image" do
     it "is public for a day, with an ETag that answers a repeat with 304 and no cookie" do
       get path
 
-      expect_png
+      expect_card
       expect(response.headers["Cache-Control"]).to include("public", "max-age=86400")
       expect(response.headers["Set-Cookie"]).to be_blank
       etag = response.headers["ETag"]
@@ -28,6 +41,35 @@ RSpec.describe "Share images" do
 
       get path, headers: { "If-None-Match" => etag }
       expect(response).to have_http_status(:not_modified)
+    end
+
+    it "is drawn once and then served from the cache" do
+      with_memory_cache
+      expect(ShareImages::Renderer).to receive(:png).once.and_call_original
+
+      2.times { get path }
+      expect_card
+    end
+
+    it "draws once at a time: a request that finds another drawing gets the static image for a minute" do
+      with_memory_cache
+      get path
+      Rails.cache.clear
+      key = card_key
+      Rails.cache.write("#{key}/lock", 1)
+
+      get path
+      expect_static_image(max_age: 60)
+      expect(Rails.cache.read(key)).to be_nil
+    end
+
+    it "serves the static image, briefly, when drawing fails" do
+      allow(ShareImages::Renderer).to receive(:png).and_raise(Vips::Error, "svgload_buffer: bad")
+      allow(Rails.error).to receive(:report)
+
+      get path
+      expect_static_image(max_age: 3600)
+      expect(Rails.error).to have_received(:report).with(an_instance_of(Vips::Error), hash_including(handled: true))
     end
   end
 
@@ -39,6 +81,8 @@ RSpec.describe "Share images" do
                       audience: { "tags" => [ { "id" => "t1", "name" => "Personal finance" } ] })
     end
     let(:path) { "/samples/sample-one/og.png" }
+
+    def card_key = ShareImages::SampleCard.new(report.reload).cache_key
 
     before { create(:sponsor_match, report: report, name: "Fieldnote Coffee", position: 1) }
 
@@ -52,6 +96,16 @@ RSpec.describe "Share images" do
       report.update!(audience: { "tags" => [ { "id" => "t2", "name" => "Startups" } ] })
       get path
       expect(response.headers["ETag"]).not_to eq(first)
+    end
+
+    it "loads only the report and its show, not its steps or matches" do
+      tables = []
+      counter = ->(*, payload) { tables << payload[:sql][/FROM "(\w+)"/, 1] }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { get path }
+
+      expect_card
+      expect(tables).not_to include("agent_steps")
+      expect(tables.count("sponsor_matches")).to eq(1) # one COUNT for "1 brand match"
     end
 
     it "is a 404 for an unknown sample, an unfinished one and one samples.yml no longer lists" do
@@ -75,29 +129,38 @@ RSpec.describe "Share images" do
       create(:show, user: user, title: "The Founder's Ledger", downloads_per_episode: 4200, artwork_url: artwork_url)
     end
     let(:path) { "/k/#{show.slug}/og.png" }
+    let(:teal) { Vips::Image.black(240, 240, bands: 3).new_from_image([ 0, 128, 128 ]).bandjoin(255).pngsave_buffer }
+
+    def card_key = ShareImages::KitCard.new(show.media_kit.reload).cache_key
 
     context "with a published kit" do
-      before do
-        create(:media_kit, :published, show: show)
-        stub_request(:get, artwork_url).to_return(status: 200, body: file_fixture("host.jpg").binread,
-                                                  headers: { "Content-Type" => "image/jpeg" })
+      before { create(:media_kit, :published, show: show) }
+
+      context "and its artwork stored" do
+        before do
+          with_memory_cache
+          ShareImages::ArtworkStore.write(artwork_url, teal)
+        end
+
+        it_behaves_like "a cacheable share image"
       end
 
-      it_behaves_like "a cacheable share image"
+      it "never fetches anything while drawing: with no artwork stored it draws the mark and queues the fetch" do
+        expect { get path }.to have_enqueued_job(FetchShareArtworkJob).with(show.id)
 
-      it "fetches the show's artwork for the card" do
-        get path
-
-        expect_png
-        expect(a_request(:get, artwork_url)).to have_been_made.once
+        expect_card
+        expect(response.headers["Cache-Control"]).to include("public", "max-age=3600") # drawn again within the hour
+        expect(a_request(:any, /.*/)).not_to have_been_made
       end
 
-      it "still draws the card, with the mark in place of the artwork, when the artwork can't be fetched" do
-        stub_request(:get, artwork_url).to_return(status: 500)
-        get path
+      it "draws the stored artwork without fetching it, for a day" do
+        with_memory_cache
+        ShareImages::ArtworkStore.write(artwork_url, teal)
 
-        expect_png
-        expect(response.headers["Cache-Control"]).to include("public", "max-age=3600") # tried again within the hour
+        expect { get path }.not_to have_enqueued_job(FetchShareArtworkJob)
+        expect_card
+        expect(response.headers["Cache-Control"]).to include("max-age=86400")
+        expect(a_request(:any, /.*/)).not_to have_been_made
       end
 
       it "is a 404 once the kit is unpublished" do
@@ -106,7 +169,6 @@ RSpec.describe "Share images" do
 
         expect(response).to have_http_status(:not_found)
         expect(response.media_type).not_to eq("image/png")
-        expect(a_request(:get, artwork_url)).not_to have_been_made
       end
     end
 
