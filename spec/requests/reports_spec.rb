@@ -280,6 +280,31 @@ RSpec.describe "Reports" do
         expect(page.css("[data-superseded]").size).to eq(3)
       end
 
+      it "tells the owner a full report takes minutes and they'll get an email, in a live status (Task 20)" do
+        report = create(:report, show: show, kind: "agent", status: "running")
+        get show_report_path(show, report)
+        page = Nokogiri::HTML(response.body)
+
+        expect(page.at_css("#report_status")["aria-live"]).to eq("polite")
+        expect(page.at_css("[data-run-note]").text.squish)
+          .to eq("A full report takes a few minutes. You can leave this page: we'll email you when it's ready.")
+
+        report.update!(status: "done")
+        get show_report_path(show, report)
+        expect(Nokogiri::HTML(response.body).at_css("[data-run-note]")).to be_nil
+      end
+
+      it "records when the owner saw the finished report, so the report ready mail can skip it (Task 20)" do
+        report = create(:report, show: show, kind: "agent", status: "running")
+        get show_report_path(show, report)
+        expect(report.reload.viewed_at).to be_nil
+
+        report.mark_done!
+        get show_report_path(show, report)
+        expect(report.reload.viewed_at).to be_within(5.seconds).of(Time.current)
+        expect(report.viewed_since_finish?).to be(true)
+      end
+
       it "404s for another user's report" do
         other = create(:report)
         get show_report_path(other.show, other)

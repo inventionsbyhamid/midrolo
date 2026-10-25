@@ -12,6 +12,8 @@ class ReportJob < ApplicationJob
       Taste::CallGuard.waiting { Research::Run.call(report) }
       # The engine may have finished the report itself (for example as needs_input).
       report.mark_done! if report.reload.running?
+      # A full report takes minutes, so its owner may have left: the mail goes unless they open it first.
+      ReportReadyMailJob.set(wait: ReportReadyMailJob::DELAY).perform_later(report.id) if report.agent? && report.done?
     rescue StandardError, NotImplementedError => e
       Rails.error.report(e, handled: true, context: { report_id: report_id, job: self.class.name })
       fail_report(report)

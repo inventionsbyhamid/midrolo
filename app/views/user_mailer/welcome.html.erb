@@ -1,0 +1,9 @@
+<p style="margin:0 0 16px;">Hi<%= " #{@first_name}" if @first_name %>,</p>
+<p style="margin:0 0 16px;">Welcome to <%= APP_NAME %>. Here's how to find sponsors whose fans already love your audience:</p>
+<ol style="margin:0 0 8px;padding-left:22px;">
+  <li style="margin:0 0 8px;"><strong>Add your show.</strong> Search by name or paste your RSS link.</li>
+  <li style="margin:0 0 8px;"><strong>Get your free Snapshot.</strong> See the brands your audience loves, ranked by fit.</li>
+  <li style="margin:0;"><strong>Run a full report</strong> for reasons, proven sponsors and pitch emails.</li>
+</ol>
+<%= mail_button "Add your show", new_show_url %>
+<%= mail_footnote "You're getting this because you signed in to #{APP_NAME} with this address." %>

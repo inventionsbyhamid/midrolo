@@ -1,0 +1,20 @@
+<%= @error_class %>: <%= @message %>
+
+When: <%= @occurred_at %>
+Where: <%= @source.presence || "unknown" %> (<%= @handled ? "handled" : "unhandled" %>, <%= @severity %>)
+<% if @context.any? -%>
+
+Context
+<% @context.each do |key, value| -%>
+  <%= key %>: <%= value %>
+<% end -%>
+<% end -%>
+<% if @backtrace.any? -%>
+
+App backtrace
+<% @backtrace.each do |line| -%>
+  <%= line %>
+<% end -%>
+<% end -%>
+
+At most one email per error class every 10 minutes. The logs have the rest.

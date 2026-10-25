@@ -232,6 +232,16 @@ RSpec.describe "Admin" do
         expect(AppSettings).to have_received(:reset_taste_auth_failures!)
         expect(Report.start!(show: show, kind: "snapshot", user: owner)).to be_persisted
       end
+
+      it "emails the notify list through a job when it resumes, as the paused notice promises (R81)" do
+        AppSettings.pause_runs!("Qloo key rotation")
+
+        expect { delete "/admin/pause", headers: basic_auth }.to have_enqueued_job(RunsResumedMailJob).once
+      end
+
+      it "emails nobody when runs weren't paused" do
+        expect { delete "/admin/pause", headers: basic_auth }.not_to have_enqueued_job(RunsResumedMailJob)
+      end
     end
 
     describe "PATCH /admin/settings" do

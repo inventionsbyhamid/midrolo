@@ -39,7 +39,7 @@ RSpec.describe "reports/_body" do
 
     how = html.at_css("#report_how details")
     expect(how["open"]).to be_nil
-    expect(how.at_css("summary").text.squish).to eq("Show the seeds, steps and method")
+    expect(how.at_css("summary").text.squish).to eq("Show the taste profile, steps and method")
     expect(how.at_css("#report_seeds").text).to include("Index Fund Mornings")
     expect(how.at_css("#agent_steps_report_#{report.id}").text).to include("Reading your last 15 episodes…")
     expect(how.css("dt").map(&:text)).to eq([ "Qloo taste data", "Proven sponsors", "Midrolo fit score" ])

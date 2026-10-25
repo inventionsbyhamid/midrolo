@@ -1,0 +1,10 @@
+<% best = best_fits(@matches).map(&:name) %>
+<p style="margin:0 0 16px;">Your full report for <strong><%= @title %></strong> is ready.</p>
+<% if @matches.any? %>
+  <p style="margin:0 0 8px;">It found <%= pluralize(@matches.size, "sponsor match", plural: "sponsor matches") %>.</p>
+  <p style="margin:0;">Best fits: <strong><%= and_list(best) %></strong>.</p>
+<% else %>
+  <p style="margin:0;">No brands matched this time. Add a few comparable shows and run it again.</p>
+<% end %>
+<%= mail_button "Open your report", show_report_url(@show, @report) %>
+<%= mail_footnote "We email when a full report finishes while you're away." %>

@@ -1,4 +1,4 @@
-<% content_for :title, "Add your show" %>
+<% content_for :title, "Find your show" %>
 <div class="mx-auto flex max-w-2xl flex-col gap-8">
   <header>
     <h1 class="type-h1">Find your show</h1>
@@ -19,7 +19,7 @@
       <p class="flash flash-alert" role="alert"><%= @error %></p>
     <% end %>
 
-    <section aria-labelledby="search-heading" class="flex flex-col gap-4">
+    <section aria-labelledby="search-heading" class="show-search flex flex-col gap-4">
       <%= form_with url: search_shows_path, method: :get, role: "search",
             data: { controller: "autosubmit", turbo_frame: "search_results", action: "submit->autosubmit#submit" } do |f| %>
         <h2 id="search-heading" class="sr-only">Search for your show</h2>
@@ -27,6 +27,8 @@
         <%= f.search_field :q, class: "input text-lg", placeholder: "Start typing your podcast's name", autofocus: true,
               autocomplete: "off", enterkeyhint: "search", data: { action: "input->autosubmit#queue" } %>
       <% end %>
+      <%# Shown in place of the results while a search loads (the frame is busy); CSS only, no script. %>
+      <div class="search-busy"><%= render "components/skeleton", lines: 2, label: "Searching", title: true %></div>
       <%= turbo_frame_tag "search_results", class: "block", aria: { live: "polite" } %>
     </section>
 

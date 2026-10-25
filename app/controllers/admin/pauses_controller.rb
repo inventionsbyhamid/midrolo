@@ -1,5 +1,5 @@
 # The kill switch for new runs (AppSettings.pause_runs!): POST /admin/pause pauses with a reason, which users see in
-# the upgrade prompt; DELETE /admin/pause resumes.
+# the upgrade prompt; DELETE /admin/pause resumes and emails the notify list.
 module Admin
   class PausesController < BaseController
     REASON_MAX = 200
@@ -16,8 +16,11 @@ module Admin
       redirect_to admin_root_path, notice: "New runs are paused."
     end
 
+    # Resuming tells the notify list, as the paused notice promised (R81).
     def destroy
+      was_paused = AppSettings.runs_paused?
       AppSettings.resume_runs!
+      RunsResumedMailJob.perform_later if was_paused
       log_change("resumed new runs")
       redirect_to admin_root_path, notice: "New runs are back on."
     end

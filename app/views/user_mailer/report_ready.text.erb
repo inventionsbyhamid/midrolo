@@ -1,0 +1,13 @@
+<% best = best_fits(@matches).map(&:name) %>
+Your full report for <%= @title %> is ready.
+
+<% if @matches.any? -%>
+It found <%= pluralize(@matches.size, "sponsor match", plural: "sponsor matches") %>.
+Best fits: <%= and_list(best) %>.
+<% else -%>
+No brands matched this time. Add a few comparable shows and run it again.
+<% end -%>
+
+Open your report: <%= show_report_url(@show, @report) %>
+
+We email when a full report finishes while you're away.

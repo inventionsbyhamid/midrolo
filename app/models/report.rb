@@ -111,6 +111,21 @@ class Report < ApplicationRecord
     update!(status: "failed", finished_at: Time.current, error_message: message)
   end
 
+  # The owner opened the finished report (ReportsController#show), so the report ready mail can skip it. A column
+  # write: no callbacks, no broadcast, and updated_at stays the run's.
+  def mark_viewed!
+    update_column(:viewed_at, Time.current) if done? && !viewed_since_finish?
+  end
+
+  def viewed_since_finish? = viewed_at.present? && finished_at.present? && viewed_at >= finished_at
+
+  # Whether the report ready mail (ReportReadyMailJob, Task 20) should go: a full report that finished while its owner
+  # was away. Never for a Snapshot (it takes seconds, so they are on the page), a sample or an account with no address.
+  def ready_email_due?
+    owner = show.user
+    agent? && done? && !viewed_since_finish? && owner.email.present? && !owner.samples_owner?
+  end
+
   # Saves one section and pushes it to open report pages. Matches live in their own table, so
   # save_section!(:matches, nil) just re-renders the list.
   def save_section!(name, data = nil)

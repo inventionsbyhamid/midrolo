@@ -20,6 +20,18 @@ RSpec.describe "Brand assets" do
     end
   end
 
+  # Task 20 audit: Rails' stock 400 and 406 pages had no favicon, no brand and its copy.
+  it "gives every static error page the favicon, a title naming the app, and a way home" do
+    Dir[Rails.root.join("public/*.html")].each do |path|
+      page = Nokogiri::HTML(File.read(path))
+      name = File.basename(path)
+
+      expect(page.at_css("link[rel='icon']")).to be_present, "#{name} has no favicon"
+      expect(page.at_css("title").text).to end_with("| Midrolo"), "#{name}'s title doesn't name the app"
+      expect(page.at_css("main a[href='/']")).to be_present, "#{name} has no way home"
+    end
+  end
+
   describe "site.webmanifest" do
     let(:manifest) { JSON.parse(public_file("site.webmanifest").read) }
 

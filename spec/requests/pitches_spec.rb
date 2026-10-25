@@ -241,6 +241,9 @@ RSpec.describe "Pitches" do
         expect(response).to have_http_status(:ok)
         expect(page.at_css("h1").text).to include("Fieldnote Coffee")
         expect(page.at_css("[data-pitch-subject]").text.squish).to eq(Pitch.last.subject)
+        # Headings go down one level at a time, as in the dialog (Task 20 audit: it skipped from h1 to h3).
+        levels = page.css("main h1, main h2, main h3, main h4").map { |h| h.name[1].to_i }
+        expect(levels.each_cons(2).select { |a, b| b > a + 1 }).to be_empty
       end
 
       it "shows a failed pitch's message with a way to try again" do

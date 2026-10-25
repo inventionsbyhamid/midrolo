@@ -52,7 +52,7 @@ RSpec.describe "Report flow", :network do
     within("#report_summary") { expect(page).to have_css("ul.glance > li", count: 3) }
 
     within("#report_how") do
-      find("summary", text: "Show the seeds, steps and method").click
+      find("summary", text: "Show the taste profile, steps and method").click
       expect(page).to have_text("Building your audience's taste profile…")
       expect(page).to have_text("Saving your sponsor matches…")
       within("#report_seeds") { expect(page).to have_text(/Built from (your show on Qloo|shows and topics like yours)/) }

@@ -5,6 +5,8 @@
     <%= ui_button "Add another show", new_show_path, variant: :secondary %>
   </header>
 
+  <%# Each card ends on its next step: the latest report, or a first Snapshot. %>
+  <% paused = AppSettings.runs_paused? %>
   <ul class="grid gap-4 sm:grid-cols-2">
     <% @shows.each do |show| %>
       <% report = show.latest_report %>
@@ -15,8 +17,15 @@
             <%= link_to show.title, show_path(show), class: "type-h3 block truncate underline-offset-4 hover:underline" %>
             <p class="truncate text-ink-soft"><%= show.author %></p>
             <p class="mt-1 text-sm text-ink-soft">
-              <%= report ? "Latest report: #{report.status_copy}" : "No report yet" %>
+              <% if report %>
+                <%= link_to "Latest report: #{report.status_copy}", show_report_path(show, report), class: "link" %>
+              <% else %>
+                No report yet
+              <% end %>
             </p>
+            <% if report.nil? && !paused %>
+              <%= button_to "Get my free Snapshot", show_reports_path(show, kind: "snapshot"), class: "btn btn-primary btn-sm mt-3" %>
+            <% end %>
           </div>
         </div>
       </li>

@@ -33,6 +33,21 @@ RSpec.describe "Shows" do
         expect(response.body).to include("My Great Show", "No report yet", "Add another show", show_path(show))
         expect(response.body).not_to include("Someone Else")
       end
+
+      it "ends each card on its next step: a first Snapshot, or the latest report (Task 20)" do
+        fresh = create(:show, user: user, title: "Fresh Show")
+        done = create(:show, user: user, title: "Done Show")
+        report = create(:report, show: done, status: "done")
+        get "/shows"
+        cards = Nokogiri::HTML(response.body).css("main li.card")
+
+        fresh_card = cards.find { |card| card.text.include?("Fresh Show") }
+        expect(fresh_card.at_css("form[action='#{show_reports_path(fresh, kind: 'snapshot')}'] button.btn-primary").text)
+          .to eq("Get my free Snapshot")
+        done_card = cards.find { |card| card.text.include?("Done Show") }
+        expect(done_card.at_css("a[href='#{show_report_path(done, report)}']").text.squish).to eq("Latest report: Report ready")
+        expect(done_card.at_css("form")).to be_nil
+      end
     end
 
     describe "GET /shows/new" do
@@ -41,6 +56,8 @@ RSpec.describe "Shows" do
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("search_results", "data-controller=\"autosubmit\"",
                                          "Paste your RSS or Apple Podcasts link instead")
+        # A skeleton stands in for the results while a search loads (Task 20).
+        expect(Nokogiri::HTML(response.body).at_css(".show-search .search-busy .skeleton[role='status']").text).to include("Searching")
       end
 
       it "shows the upgrade prompt when the plan's show limit is reached" do
@@ -211,6 +228,9 @@ RSpec.describe "Shows" do
                                          "Get my free Snapshot", "Run full report",
                                          "Media kit", edit_show_media_kit_path(show))
         expect(response.body).not_to include("Coming soon")
+        # The next action comes before the details, so a phone shows it without scrolling (Task 20).
+        titles = Nokogiri::HTML(response.body).css("main .card h2, main .card h3, main .card p.type-h3").map { |t| t.text.squish }
+        expect(titles.index("Find sponsors")).to be < titles.index("Details")
       end
 
       it "returns 404 for another user's show" do
@@ -250,6 +270,13 @@ RSpec.describe "Shows" do
           get show_path(show)
           expect(actions.at_css("form[action='#{waitlist_entries_path}']")).to be_nil
           expect(actions.text.squish).to include("You're on the list. We'll email you when they're back.")
+        end
+
+        it "offers the notify box again on a later pause once the last one's email went out (R81)" do
+          WaitlistEntry.join(email: user.email, price_key: "notify", user: user).update!(notified_at: 1.day.ago)
+
+          get show_path(show)
+          expect(actions.at_css("form[action='#{waitlist_entries_path}']")).to be_present
         end
 
         it "shows the run buttons again once runs resume" do

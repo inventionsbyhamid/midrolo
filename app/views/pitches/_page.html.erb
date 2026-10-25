@@ -7,6 +7,8 @@
   </p>
   <h1 class="type-h2">Pitch for <%= sponsor_match.name %></h1>
   <div class="card p-5 sm:p-6">
+    <%# The pack's sections are h3s, under the dialog's h2 title on the report page; here this heading stands in. %>
+    <h2 class="sr-only">Pitch pack</h2>
     <%= render "pitches/pack", sponsor_match: sponsor_match, pitch: pitch, refusal: refusal %>
   </div>
 </div>

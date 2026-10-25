@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_060000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_25_070100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -118,6 +118,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_060000) do
     t.string "sample_slug"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "viewed_at"
     t.index ["sample_slug"], name: "index_reports_on_sample_slug", unique: true, where: "(sample_slug IS NOT NULL)"
     t.index ["show_id"], name: "index_reports_on_show_id"
     t.index ["show_id"], name: "index_reports_one_active_per_show", unique: true, where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('running'::character varying)::text]))"
@@ -268,6 +269,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_060000) do
     t.bigint "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "notified_at"
     t.index "lower((email)::text), price_key", name: "index_waitlist_entries_on_lower_email_and_price_key", unique: true
     t.index ["user_id"], name: "index_waitlist_entries_on_user_id"
   end

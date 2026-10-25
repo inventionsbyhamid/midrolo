@@ -11,9 +11,13 @@ module Users
 
     private
 
+    # A sign in that made the account is the first one, so the welcome email goes then, and only then. Asked before
+    # sign_in, whose sign in tracking saves the user again.
     def sign_in_from_omniauth
       user = User.from_omniauth(request.env["omniauth.auth"])
+      first_sign_in = user.previously_new_record?
       sign_in(user, event: :authentication)
+      UserMailer.welcome(user).deliver_later if first_sign_in
       redirect_to after_sign_in_path_for(user)
     rescue ActiveRecord::RecordInvalid
       # e.g. the email already belongs to a different account

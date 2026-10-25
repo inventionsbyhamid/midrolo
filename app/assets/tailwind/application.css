@@ -483,6 +483,11 @@
     margin-bottom: 0.25rem;
   }
 
+  /* Show search (shows/new): while the results frame loads (Turbo marks it busy), a skeleton stands in for it. */
+  .search-busy { display: none; }
+  .show-search:has(#search_results[busy]) .search-busy { display: block; }
+  .show-search #search_results[busy] { display: none; }
+
   /* Flash messages. */
   .flash {
     display: flex;

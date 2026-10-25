@@ -15,8 +15,10 @@ class ReportsController < ApplicationController
     redirect_with_upgrade_prompt(show_path(@show), e)
   end
 
+  # Opening a finished report, including the refresh a live page makes when its run ends, means the owner saw it.
   def show
     @report = @show.reports.includes(:agent_steps, :sponsor_matches).find(params[:id])
+    @report.mark_viewed!
   end
 
   private

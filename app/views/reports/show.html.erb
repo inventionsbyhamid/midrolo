@@ -10,7 +10,8 @@
     <%= render "shows/artwork", show: @show, size: "size-12" %>
     <div class="min-w-0 flex-1 basis-48">
       <h1 class="type-h2 truncate"><%= link_to @show.title, show_path(@show) %></h1>
-      <p id="report_status" class="text-sm"><%= ui_badge @report.status_copy, tone: tone %></p>
+      <%# A live region: the refresh that follows each status change morphs the badge in place, so it is read out. %>
+      <p id="report_status" class="text-sm" aria-live="polite"><%= ui_badge @report.status_copy, tone: tone %></p>
     </div>
     <% if @report.active? || paused %>
       <%= ui_button "Run again", type: "button", variant: :secondary, disabled: true %>
@@ -19,6 +20,16 @@
     <% end %>
     <%= ui_button "Media kit", show_media_kit_path(@show), variant: :ghost %>
   </header>
+
+  <% if @report.active? %>
+    <p class="text-[0.9375rem] text-ink-soft" data-run-note>
+      <% if @report.agent? %>
+        A full report takes a few minutes. You can leave this page: we'll email you when it's ready.
+      <% else %>
+        Your Snapshot fills in below as each step finishes.
+      <% end %>
+    </p>
+  <% end %>
 
   <% if paused %>
     <div class="upgrade-prompt"><%= render "shared/runs_paused" %></div>
