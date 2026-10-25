@@ -109,8 +109,8 @@ LLM budget has room.
 
 - **Why not just ask ChatGPT?** It can only guess. It has no taste graph and can't tell you who sponsors similar shows
   this month.
-- **What does a report cost you?** About $0.50 of LLM per full report (our estimate, logged per run) plus up to about
-  30 Qloo calls. A Snapshot has no LLM cost.
+- **What does a report cost you?** About $0.50 of LLM per full report (our estimate, logged per run) plus about 20 to
+  30 Qloo calls, never more than 40. A Snapshot has no LLM cost.
 - **What about listener privacy?** We never see a listener. Qloo describes people with a show's taste as a group, and
   we never present it as data about any one person.
 - **How big is the market?** Our estimate is 20,000 to 30,000 shows with 1,000 to 50,000 downloads per episode, about

@@ -73,7 +73,9 @@ Qloo's hackathon key has a limited allowance, so every live call is counted and 
   call. The daily cap refuses at once.
 - **Free and promo runs share 40% of the day** (`qloo_free_share`), so judges and paying users always keep the rest.
 - **A soft cap per report** of 30 uncached calls (`max_taste_calls` in `config/research.yml`). Past it, optional calls
-  are skipped. The calls a report can't do without always run.
+  are skipped.
+- **A hard ceiling per report** of 40 uncached calls (`hard_taste_calls`). Past it, no Qloo call is made at all: the
+  agent is told the report's budget is used up and saves what it has. A Snapshot is held to it too.
 - **Retries are few.** A 429 is retried once, only when Qloo asks for a wait of 5 seconds or less. A 5xx or a timeout is
   retried once. Any other 4xx never is.
 - **A bad key pauses runs.** A 401 counts as an auth failure, and three of them pause new runs until an admin resumes

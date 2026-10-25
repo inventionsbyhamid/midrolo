@@ -11,7 +11,9 @@ module Research
   # of the block (normal end, return, break, throw) finishes it ok or warning.
   #
   # Research budget (R31): one logger serves one run. Once the run has made max_taste_calls uncached taste
-  # requests, Step#optional stops calling out. Core calls aren't wrapped in optional, so they always run.
+  # requests, Step#optional stops calling out. Core calls aren't wrapped in optional, so they keep running until the
+  # hard ceiling (R130): once the run has made hard_taste_calls, Taste::CallGuard refuses every further live request
+  # inside a step with Taste::RunBudgetSpent, before it is made.
   class StepLogger
     # Qloo trouble a non-essential sub-call may skip, as if it came back empty: an outage, a rate limit, a request Qloo
     # couldn't use (400), a type the key can't use (403, R87) or nothing found (404). AuthError is never soft: the
@@ -41,11 +43,13 @@ module Research
       def budget_spent? = @logger.budget_spent?
 
       # Runs the block unless the run's budget is spent. On a Qloo outage or rate limit, records
-      # "<what> skipped: …" and returns nil.
+      # "<what> skipped: …" and returns nil. A call the hard ceiling refuses is skipped as over budget.
       def optional(what)
         return warn!(BUDGET_WARNING) if budget_spent?
 
         yield
+      rescue Taste::RunBudgetSpent
+        warn!(BUDGET_WARNING)
       rescue *SOFT_ERRORS => e
         warn!("#{what} skipped: #{StepLogger.describe(e)}")
         nil
@@ -57,6 +61,7 @@ module Research
       case error
       when Taste::AuthError then "Qloo rejected our API key."
       when Taste::CallCapReached then "Taste data is busy right now."
+      when Taste::RunBudgetSpent then "This report's Qloo budget is used up."
       when Taste::RateLimited then "Qloo is rate limiting us."
       when Taste::Unavailable then "Qloo is unavailable right now."
       when Taste::BadRequest then "Qloo couldn't use that request."
@@ -67,14 +72,17 @@ module Research
       end
     end
 
-    # config/research.yml (R93).
+    # config/research.yml (R93, R130).
     def self.configured_max_taste_calls = Research.caps.fetch(:max_taste_calls)
+    def self.configured_hard_taste_calls = Research.caps.fetch(:hard_taste_calls)
 
-    attr_reader :report, :max_taste_calls
+    attr_reader :report, :max_taste_calls, :hard_taste_calls
 
-    def initialize(report, max_taste_calls: self.class.configured_max_taste_calls)
+    def initialize(report, max_taste_calls: self.class.configured_max_taste_calls,
+                   hard_taste_calls: self.class.configured_hard_taste_calls)
       @report = report
       @max_taste_calls = max_taste_calls
+      @hard_taste_calls = hard_taste_calls
       @uncached_calls = Concurrent::AtomicFixnum.new
       @counting_key = :"research_step_logger_#{object_id}_counting"
     end
@@ -83,6 +91,9 @@ module Research
     def uncached_calls = @uncached_calls.value
 
     def budget_spent? = uncached_calls >= max_taste_calls
+
+    # The run may make no more live taste requests (R130).
+    def hard_budget_spent? = uncached_calls >= hard_taste_calls
 
     def step(tool, label, input: nil)
       record = report.agent_steps.create!(position: next_position, tool: tool.to_s, label: label, status: "running",
@@ -108,7 +119,8 @@ module Research
     end
 
     # Only the outermost step on a thread subscribes, so nested steps don't double count. The flag is
-    # thread-local, and events from other threads are ignored, so concurrent steps each count their own.
+    # thread-local, and events from other threads are ignored, so concurrent steps each count their own. The same
+    # step holds the call guard to this run's hard ceiling.
     def counting_taste_calls(&block)
       return yield if Thread.current[@counting_key]
 
@@ -122,7 +134,9 @@ module Research
         @uncached_calls.increment
       end
       begin
-        ActiveSupport::Notifications.subscribed(counter, "request.taste", &block)
+        Taste::CallGuard.run_ceiling(-> { hard_budget_spent? }) do
+          ActiveSupport::Notifications.subscribed(counter, "request.taste", &block)
+        end
       ensure
         Thread.current[@counting_key] = nil
         record_taste_calls(calls)

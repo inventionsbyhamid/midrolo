@@ -8,9 +8,10 @@ module Research
   # toward pausing runs (Review Focus #4). A required taste call refused by the call guard, or rate limited by Qloo,
   # fails it as busy (R92). A run by a free or promo user runs in the guard's capped lane, held to its share of the day's
   # Qloo calls, and fails as busy for today once that share is spent (R95, R108); judges, paying users and the admin's
-  # own runs (sample generation, evaluations) use the rest. A failed report is never charged. A
-  # finished run picks up the podcaster's pipeline work from the show's earlier reports (R46). Returns the run's
-  # toolkit, or nil when the run didn't finish.
+  # own runs (sample generation, evaluations) use the rest. A scripted run (a Snapshot) that reaches the run's hard
+  # ceiling of Qloo calls (R130) can't finish, so it fails; the agent's tools answer it instead. A failed report is
+  # never charged. A finished run picks up the podcaster's pipeline work from the show's earlier reports (R46). Returns
+  # the run's toolkit, or nil when the run didn't finish.
   class Run
     PAUSED_MESSAGE = "Full reports are paused right now. Nothing was charged. Try again later.".freeze
     BUSY_MESSAGE = "Taste data is busy right now. Try again later.".freeze
@@ -51,6 +52,8 @@ module Research
       fail_with(e.is_a?(Taste::CallCapReached) ? nil : e, BUSY_MESSAGE)
     rescue Llm::BudgetExceeded
       fail_with(nil, PAUSED_MESSAGE)
+    rescue Taste::RunBudgetSpent => e
+      fail_with(e)
     rescue LimitReached => e
       fail_with(e, LIMIT_MESSAGES.fetch(e.kind, LIMIT_MESSAGES[:time]))
     rescue IncompleteRun => e

@@ -18,6 +18,9 @@ module Taste
   class MinuteCapReached < CallCapReached; end
   # A run by a free or promo user has used their share of today's calls (R95, R108).
   class FreeShareSpent < CallCapReached; end
+  # The research run has made its hard ceiling of uncached calls (R130, Research::StepLogger): the call guard refused
+  # the request before it was made. Not a rate limit: the run is done with Qloo, whatever the day's counts say.
+  class RunBudgetSpent < Error; end
   # 5xx, timeouts, connection failures or unparseable bodies.
   class Unavailable < Error; end
   class MissingCredentials < Error; end

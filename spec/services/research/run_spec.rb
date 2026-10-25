@@ -257,6 +257,25 @@ RSpec.describe Research::Run do
     end
   end
 
+  # R130: the deterministic path is held to the run's hard ceiling too. A Snapshot makes about 10 calls, so the ceiling
+  # is lowered here to reach it.
+  it "stops a Snapshot's Qloo requests at the hard ceiling and fails it without charging" do
+    qloo = Taste::Providers::Qloo.new(api_key: "test-key", cache: ActiveSupport::Cache::NullStore.new,
+                                      guard: Taste::CallGuard.new(store: ActiveSupport::Cache::MemoryStore.new))
+    allow(Taste::Provider).to receive(:current).and_return(qloo)
+    allow(Research::StepLogger).to receive(:configured_hard_taste_calls).and_return(3)
+    qloo_requests = stub_request(:get, %r{\Ahttps://hackathon\.api\.qloo\.com/})
+                    .to_return(status: 200, body: Rails.root.join("spec/fixtures/qloo/empty.json").read)
+    report = create(:report, show: show, kind: "snapshot")
+
+    BuildSnapshotJob.perform_now(report.id)
+
+    expect(qloo_requests).to have_been_requested.times(3)
+    expect(report.reload).to have_attributes(status: "failed", error_message: Report::FAILURE_MESSAGE, taste_calls: 3)
+    expect(report.agent_steps.last).to have_attributes(status: "error", output_summary: "This report's Qloo budget is used up.")
+    expect(Entitlements.for(show.user).used(:snapshot)).to eq(0)
+  end
+
   it "lets other Qloo outages fail through the job with the friendly message" do
     report = create(:report, show: show, kind: "snapshot")
     allow_any_instance_of(Taste::Providers::Fake).to receive(:search).and_raise(Taste::Unavailable)

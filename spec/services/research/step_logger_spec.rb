@@ -187,6 +187,34 @@ RSpec.describe Research::StepLogger do
       expect(described_class.new(report).max_taste_calls).to eq(30)
     end
 
+    it "reads the hard ceiling from config/research.yml (R130)" do
+      expect(described_class.new(report).hard_taste_calls).to eq(40)
+    end
+
+    it "refuses every live call past the hard ceiling inside a step, core or optional, and none outside (R130)" do
+      kit = described_class.new(report, max_taste_calls: 5, hard_taste_calls: 2)
+      guard = Taste::CallGuard.new(store: ActiveSupport::Cache::MemoryStore.new)
+      allow(taste).to receive(:search).and_wrap_original do |original, **kw|
+        guard.acquire!
+        original.call(**kw)
+      end
+      skipped = :unset
+
+      expect do
+        kit.step("lookup", "Looking things up…") do |step|
+          2.times { taste.search(query: "Notion", types: [ :brand ]) }
+          skipped = step.optional("Artists") { taste.search(query: "Nova", types: [ :artist ]) }
+          taste.search(query: "Ramp", types: [ :brand ])
+        end
+      end.to raise_error(Taste::RunBudgetSpent)
+
+      expect(skipped).to be_nil
+      expect(kit.uncached_calls).to eq(2)
+      expect(kit.hard_budget_spent?).to be(true)
+      expect(report.agent_steps.last).to have_attributes(status: "error", output_summary: "This report's Qloo budget is used up. · Skipped to stay within research budget")
+      expect { taste.search(query: "Ramp", types: [ :brand ]) }.not_to raise_error
+    end
+
     it "skips optional sub-calls once the run has spent its uncached calls, but never core calls" do
       results = []
       logger.step("audience", "Building…") do |step|

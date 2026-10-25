@@ -15,6 +15,9 @@ module Taste
   # MAX_MINUTE_WAITS times a call (R109): a full report makes about 30 calls and would trip the minute cap by itself.
   # The daily limit and the share refuse at once. A store that can't count (increment returns nil) refuses too: the caps
   # protect a hard daily allowance, so they fail closed.
+  #
+  # One research run has a hard ceiling too (R130): inside CallGuard.run_ceiling (Research::StepLogger sets it around
+  # each step), acquire! raises RunBudgetSpent, taking no slot, once the run's ceiling says it is reached.
   class CallGuard
     DEFAULT_PER_MINUTE = 30
     DEFAULT_DAILY_LIMIT = 100
@@ -22,6 +25,7 @@ module Taste
     LANES = [ nil, :capped ].freeze
     LANE_KEY = :taste_call_guard_lane
     WAIT_KEY = :taste_call_guard_wait
+    RUN_KEY = :taste_call_guard_run_ceiling
     MAX_MINUTE_WAITS = 2
     # Past the minute boundary, so the next attempt lands in the new minute.
     MINUTE_MARGIN = 0.5
@@ -71,6 +75,18 @@ module Taste
 
       def waiting? = ActiveSupport::IsolatedExecutionState[WAIT_KEY] == true
 
+      # Runs the block under one run's hard ceiling (R130): reached answers whether the run may make no more live
+      # calls. Restores the last ceiling after.
+      def run_ceiling(reached)
+        previous = ActiveSupport::IsolatedExecutionState[RUN_KEY]
+        ActiveSupport::IsolatedExecutionState[RUN_KEY] = reached
+        yield
+      ensure
+        ActiveSupport::IsolatedExecutionState[RUN_KEY] = previous
+      end
+
+      def run_ceiling_reached? = ActiveSupport::IsolatedExecutionState[RUN_KEY]&.call == true
+
       private
 
       # A whole number of 0 or more, else the default.
@@ -89,8 +105,9 @@ module Taste
     end
 
     # Takes one slot from every counter, or raises CallCapReached having taken none. Inside CallGuard.waiting, a full
-    # minute is waited out first, at most MAX_MINUTE_WAITS times.
+    # minute is waited out first, at most MAX_MINUTE_WAITS times. A run past its hard ceiling gets RunBudgetSpent first.
     def acquire!
+      refuse_past_run_ceiling!
       waits = 0
       begin
         take_slot!
@@ -118,6 +135,14 @@ module Taste
     end
 
     private
+
+    def refuse_past_run_ceiling!
+      return unless self.class.run_ceiling_reached?
+
+      message = "Qloo call guard: this run's hard ceiling of calls is reached"
+      Rails.logger.warn("[Qloo] #{message}")
+      raise RunBudgetSpent, message
+    end
 
     def take_slot!
       taken = []

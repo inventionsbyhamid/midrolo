@@ -84,9 +84,9 @@ report.
 - **Building before the key arrived.** We wrote the Qloo client against synthetic fixtures modeled on the docs, then
   checked every shape with a live smoke test once the key came. The client now reads fields flat or nested, and several
   coordinate spellings.
-- **A small call allowance.** A full report makes up to about 30 Qloo calls, and the key's allowance is limited. We
-  added a shared cache, a per minute and daily call guard, a per report cap, and a lane that holds free and promo users
-  to 40% of the day, so judges and paying users keep most of each day's calls.
+- **A small call allowance.** A full report makes about 20 to 30 Qloo calls (40 at most), and the key's allowance is
+  limited. We added a shared cache, a per minute and daily call guard, a per report cap, and a lane that holds free and
+  promo users to 40% of the day, so judges and paying users keep most of each day's calls.
 - **Small shows aren't on Qloo.** When a show isn't in the graph, the agent builds a **proxy** profile from comparable
   shows and topics, and the report says so. With too little to go on, it asks the host for comparable shows instead of
   showing an empty page.

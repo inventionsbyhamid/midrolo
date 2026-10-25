@@ -1,6 +1,8 @@
 module Research
   module Tools
     class FindOnQloo < Base
+      calls_qloo!
+
       MAX_NAMES = Seeds::MAX_LOOKUP_NAMES
       MAX_TOPICS = Seeds::MAX_LOOKUP_TOPICS
 

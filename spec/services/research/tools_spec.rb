@@ -32,6 +32,28 @@ RSpec.describe Research::Tools do
     expect(tools.values.map { |t| t.parameters_schema.to_json }).to all(satisfy { |json| !json.include?("strict") })
   end
 
+  describe "the run's hard ceiling of Qloo calls (R130)" do
+    let(:spent) { "This report's Qloo budget is used up. Save what you have." }
+
+    it "has every tool whose work is Qloo calls refuse up front once the run reaches it, the save tools still working" do
+      seed!
+      allow(toolkit).to receive(:taste_ceiling_reached?).and_return(true)
+      allow(taste).to receive(:search).and_call_original
+
+      expect(run("find_on_qloo", names: [ "Ramp" ])).to eq(spent)
+      expect(run("build_audience_profile")).to eq(spent)
+      expect(run("find_sponsor_candidates", categories: [ "Finance" ])).to eq(spent)
+      expect(taste).not_to have_received(:search)
+      expect(run("save_summary", bullets: [ "Your listeners love finance tools." ])).not_to eq(spent)
+    end
+
+    it "answers a call the guard refuses mid-tool the same way" do
+      seed!
+      allow(taste).to receive(:recommend).and_raise(Taste::RunBudgetSpent, "ceiling")
+      expect(run("find_sponsor_candidates", categories: [ "Finance" ])).to eq(spent)
+    end
+  end
+
   describe "read_show_feed" do
     it "returns the show metadata and up to 15 episode titles, logging its own step" do
       out = run("read_show_feed")

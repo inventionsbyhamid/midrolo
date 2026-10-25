@@ -403,7 +403,10 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 **The one unknown is Qloo's commercial price after the hackathon** (free during it, with a limited allowance). Our
 protections, as built (R92, R93, R105, R108 to R110; these replace R31's numbers):
 - **Calls per report:** a soft cap of 30 uncached Qloo calls per full agent report (`max_taste_calls`, `config/research.yml`).
-  Past it, optional sub calls are skipped; the calls a report can't do without always run. A Snapshot makes about 10.
+  Past it, optional sub calls are skipped. A hard ceiling of 40 (`hard_taste_calls`, R130) then stops every call, the
+  ones a report can't do without included: the agent is told the budget is used up and saves what it has, so one
+  runaway report can't spend the day. A Snapshot makes about 10 and is held to the same ceiling. `Billing::Margins`
+  counts every report at 40.
   Compare is off (`match_explainer_compares: 0`, R105), so explaining matches costs no call.
 - **A shared cache:** responses are cached privately in Solid Cache and **shared across users**: `/search` and `/v2/tags`
   for 30 days, everything else for 7, and a 400 or 404 miss for 1 day (R110). Heatmaps keep only their top 200 cells.

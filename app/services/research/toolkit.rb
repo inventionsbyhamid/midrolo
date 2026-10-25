@@ -22,7 +22,8 @@ module Research
     attr_accessor :last_seed_save
 
     def initialize(report, taste: nil, directory: nil, feed_reader: Podcasts::FeedReader.new,
-                   max_taste_calls: StepLogger.configured_max_taste_calls)
+                   max_taste_calls: StepLogger.configured_max_taste_calls,
+                   hard_taste_calls: StepLogger.configured_hard_taste_calls)
       @report = report
       @taste = taste
       @directory = directory
@@ -30,7 +31,7 @@ module Research
       @seen_entity_ids = Set.new
       @entities = {}
       @tags = {}
-      @log = StepLogger.new(report, max_taste_calls: max_taste_calls)
+      @log = StepLogger.new(report, max_taste_calls: max_taste_calls, hard_taste_calls: hard_taste_calls)
       @audience_tags = []
       @scored = {}
       @brand_refs = {}
@@ -46,9 +47,10 @@ module Research
     def taste = @taste ||= Taste::Provider.current
     def directory = @directory ||= Podcasts::Directory.current
 
-    # Uncached taste calls this run has made (R31), and whether its soft budget is spent.
+    # Uncached taste calls this run has made (R31), and whether its soft budget, or its hard ceiling (R130), is spent.
     def taste_calls = log.uncached_calls
     def over_taste_budget? = log.budget_spent?
+    def taste_ceiling_reached? = log.hard_budget_spent?
 
     def feed
       @feed ||= if show.feed_url.present?

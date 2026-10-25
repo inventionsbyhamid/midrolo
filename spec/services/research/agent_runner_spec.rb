@@ -222,6 +222,33 @@ RSpec.describe Research::AgentRunner do
     expect(SpendEntry.count).to eq(1)
   end
 
+  # R130: one runaway report must not spend the day. Every lookup misses the cache here, so each find_on_qloo with 3
+  # names and 4 topics makes 7 live calls: five lookups make 35, the sixth reaches 40 partway and is refused there, and
+  # the seventh is refused before it starts.
+  it "stops making Qloo requests at the hard ceiling of 40 however often the agent calls find_on_qloo" do
+    qloo = Taste::Providers::Qloo.new(api_key: "test-key", cache: ActiveSupport::Cache::NullStore.new,
+                                      guard: Taste::CallGuard.new(store: ActiveSupport::Cache::MemoryStore.new))
+    allow(Taste::Provider).to receive(:current).and_return(qloo)
+    allow(Taste::CallGuard).to receive(:per_minute).and_return(1_000)
+    qloo_requests = stub_request(:get, %r{\Ahttps://hackathon\.api\.qloo\.com/})
+                    .to_return(status: 200, body: Rails.root.join("spec/fixtures/qloo/empty.json").read)
+    lookups = Array.new(7) do |n|
+      call_tool("find_on_qloo", "names" => Array.new(3) { |i| "Show #{n}-#{i}" }, "topics" => Array.new(4) { |i| "Topic #{n}-#{i}" })
+    end
+    RubyLLM::Test.stub_responses(*lookups, final_text)
+
+    GenerateReportJob.perform_now(report.id)
+
+    expect(qloo_requests).to have_been_requested.times(40)
+    expect(report.reload.taste_calls).to eq(40)
+    replies = RubyLLM::Test.last_request.messages.select { |m| m.role == :tool }.map(&:content)
+    expect(replies.size).to eq(7)
+    expect(replies.first(5)).to all(start_with("Nothing matched on Qloo"))
+    expect(replies.last(2)).to all(eq("This report's Qloo budget is used up. Save what you have."))
+    expect(report.agent_steps.where(tool: "find_on_qloo").pluck(:status)).to eq(%w[ok ok ok ok ok error])
+    expect(Research.caps.fetch(:hard_taste_calls)).to eq(40)
+  end
+
   it "stops after the time limit" do
     allow(Llm).to receive(:agent_max_seconds).and_return(0)
     RubyLLM::Test.stub_responses(*playbook)

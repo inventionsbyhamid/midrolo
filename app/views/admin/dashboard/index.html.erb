@@ -99,7 +99,7 @@
       fees of 6% plus $0.40 a payment. LLM: <%= admin_usd(inputs.agent_llm_usd) %> a full report and
       <%= admin_usd(inputs.pitch_llm_usd) %> a pitch, or the measured average when higher. The pitch figure is an estimate
       from the design notes, since the app kept none. Qloo: <%= inputs.agent_calls %> calls a full report and
-      <%= inputs.snapshot_calls %> a Snapshot (the research cap, or the measured average when higher), at
+      <%= inputs.snapshot_calls %> a Snapshot (the hard cap per report, or the measured average when higher), at
       <%= inputs.cost_per_call ? "#{number_to_currency(inputs.cost_per_call, precision: 4)} a call" : "a price per call not set yet" %>.
     </p>
   <% end %>

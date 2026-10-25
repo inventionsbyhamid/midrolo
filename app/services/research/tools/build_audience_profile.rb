@@ -1,6 +1,8 @@
 module Research
   module Tools
     class BuildAudienceProfile < Base
+      calls_qloo!
+
       description "Builds the audience profile for a seed set (the saved seeds when no ids are given): top " \
                   "#{AudienceProfile::TYPES.map { |type| AudienceProfile::NOUNS.fetch(type) }.join(', ')}, taste tags, " \
                   "age and gender leans and where listeners live. Saves those report sections and returns a digest. " \

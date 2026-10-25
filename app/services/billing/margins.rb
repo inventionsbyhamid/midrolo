@@ -7,7 +7,7 @@ module Billing
   # The unit costs are the app's own estimates, or what done work has measured when that is higher:
   #   LLM per full report: Research::AgentRunner::ESTIMATE_USD, the budget gate's estimate.
   #   LLM per pitch: PITCH_ESTIMATE_USD. The code kept no estimate for a pitch, so this is docs/design.md §11's.
-  #   Qloo calls per full report or Snapshot: config/research.yml's max_taste_calls (R93).
+  #   Qloo calls per full report or Snapshot: config/research.yml's hard_taste_calls (R93, R130), the most a run can make.
   #   Qloo price per call: AppSettings qloo_cost_per_call_usd, set in admin once Qloo quotes; blank until then.
   # Billing.mode refuses :live (the waitlist instead) until the price is set and every paid price keeps MIN_MARGIN.
   module Margins
@@ -46,7 +46,7 @@ module Billing
       private
 
       def inputs
-        calls = Research.caps.fetch(:max_taste_calls)
+        calls = Research.caps.fetch(:hard_taste_calls)
         Inputs.new(
           agent_llm_usd: higher(BigDecimal(Research::AgentRunner::ESTIMATE_USD.to_s), Report.agent.done.average(:cost_usd)),
           pitch_llm_usd: higher(PITCH_ESTIMATE_USD, Pitch.done.average(:cost_usd)),

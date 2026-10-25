@@ -4,15 +4,22 @@ module Research
     # ("ReadShowFeed" => "read_show_feed"), and always answers with a String under 1,500 characters.
     # Qloo trouble the model can work around (rate limits, outages, bad requests) comes back as a message;
     # auth errors propagate, since the runner pauses runs on them, and so does our own call guard's refusal (R92):
-    # retrying can't help, so the run fails as busy rather than spending LLM turns.
+    # retrying can't help, so the run fails as busy rather than spending LLM turns. Once the run reaches its hard
+    # ceiling of Qloo calls (R130), a tool whose work is Qloo calls (calls_qloo!) refuses up front, and a call the guard
+    # refuses mid-tool ends the tool the same way: with QLOO_BUDGET_SPENT, so the model saves what it has.
     class Base < RubyLLM::Tool
       LIMIT = 1500
       IGNORED_NOTE_LIMIT = 300
       NO_SEEDS = "Save taste seeds first (save_taste_seeds), then call this again.".freeze
       NO_CANDIDATES = "Find sponsor candidates first (find_sponsor_candidates), then call this again.".freeze
       ARRAY_OF_STRINGS = { type: "array", items: { type: "string" } }.freeze
+      QLOO_BUDGET_SPENT = "This report's Qloo budget is used up. Save what you have.".freeze
 
       def self.tool_name = name.demodulize.underscore
+
+      # Marks a tool whose work is live Qloo calls: it refuses once the run's hard ceiling is reached (R130).
+      def self.calls_qloo! = (@calls_qloo = true)
+      def self.calls_qloo? = @calls_qloo == true
 
       # The arguments as a plain JSON Schema object.
       def self.arguments(properties = {}, required: [])
@@ -30,10 +37,14 @@ module Research
 
       # RubyLLM answers invalid arguments with {error: "..."}; everything reaches the model as a short String.
       def call(**)
+        return QLOO_BUDGET_SPENT if self.class.calls_qloo? && toolkit.taste_ceiling_reached?
+
         result = super
         compact(result.is_a?(Hash) ? result[:error] || result.to_json : result)
       rescue Taste::AuthError, Taste::MissingCredentials, Taste::CallCapReached
         raise
+      rescue Taste::RunBudgetSpent
+        QLOO_BUDGET_SPENT
       rescue Taste::BadRequest, Taste::Unsupported, Taste::NotFound => e
         # The same request gets the same answer (R110), so the model shouldn't spend a turn and a call on it.
         compact("Qloo error: #{StepLogger.describe(e)} Nothing changed. Don't retry this request; carry on with what you have.")

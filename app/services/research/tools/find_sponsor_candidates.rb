@@ -1,6 +1,8 @@
 module Research
   module Tools
     class FindSponsorCandidates < Base
+      calls_qloo!
+
       TIERS = { easy_yes: "E", realistic: "R", long_shot: "L" }.freeze
 
       description "Finds and ranks sponsor candidates for a seed set (the saved seeds when no ids are given) and the " \

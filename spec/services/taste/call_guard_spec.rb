@@ -179,6 +179,21 @@ RSpec.describe Taste::CallGuard do
     end
   end
 
+  describe "a run's hard ceiling (R130)" do
+    it "refuses inside a reached ceiling before taking any slot, and only there" do
+      spent = false
+      described_class.run_ceiling(-> { spent }) do
+        guard.acquire!
+        spent = true
+        expect { guard.acquire! }.to raise_error(Taste::RunBudgetSpent) { |error| expect(error).not_to be_a(Taste::RateLimited) }
+      end
+
+      expect(guard.usage).to have_attributes(today: 1, minute: 1)
+      guard.acquire! # outside the run
+      expect(guard.usage.today).to eq(2)
+    end
+  end
+
   it "logs each refusal" do
     AppSettings.set(:qloo_daily_call_limit, 0)
     allow(Rails.logger).to receive(:warn)

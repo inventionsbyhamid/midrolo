@@ -33,11 +33,12 @@ RSpec.describe "App configs" do
   end
 
   it "keeps every research Qloo cap in research.yml, with lean defaults (R93)" do
-    expect(config(:research)).to eq(max_taste_calls: 30, match_explainer_compares: 0, proven_scan_resolutions: 8,
+    expect(config(:research)).to eq(max_taste_calls: 30, hard_taste_calls: 40, match_explainer_compares: 0, proven_scan_resolutions: 8,
                                     comparable_show_lookups: 5, topic_lookups: 5, category_passes: 3,
                                     audience_entity_types: %w[brand podcast], metro_fallback: 3)
     expect(config(:llm)).not_to have_key(:research)
     expect(Research::StepLogger.configured_max_taste_calls).to eq(30) # R105: 35 less the 5 compares
+    expect(Research::StepLogger.configured_hard_taste_calls).to eq(40) # R130: the soft cap plus one rebuild
     expect(Research::MatchExplainer::MAX_COMPARES).to eq(0) # R105: a podcast and a brand share no compare tags
     expect(Research::ProvenSponsorScan::MAX_RESOLUTIONS).to eq(8)
     expect(Research::Seeds::MAX_LOOKUP_NAMES).to eq(5)

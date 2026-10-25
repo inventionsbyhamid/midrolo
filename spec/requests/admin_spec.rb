@@ -164,8 +164,10 @@ RSpec.describe "Admin" do
         margins = section("Go live check")
         rows = margins.css("tbody tr").to_h { |tr| [ tr.at_css("th").text.squish, tr.css("td").map { |td| td.text.squish } ] }
         expect(rows.keys).to eq([ "Creator monthly", "Creator yearly", "Pro monthly", "Pro yearly", "Sprint" ])
-        expect(rows["Creator monthly"]).to eq([ "$19.00", "$17.46", "$3.60", "240", "$0.48", "76%" ])
-        expect(margins.text.squish).to include("$0.04 a pitch", "an estimate")
+        # Every report counts at the hard ceiling of 40 calls (R130).
+        expect(rows["Creator monthly"]).to eq([ "$19.00", "$17.46", "$3.60", "320", "$0.64", "75%" ])
+        expect(margins.text.squish).to include("$0.04 a pitch", "an estimate",
+                                               "Qloo: 40 calls a full report and 40 a Snapshot (the hard cap per report")
         expect(margins.at_css("[role='alert']")).to be_nil
       end
 
