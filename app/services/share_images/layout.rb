@@ -26,7 +26,8 @@ module ShareImages
     TAG_LIMIT = 3
     TAG_MAX_WIDTH = 360
     TAG_PADDING = 20
-    # The facts' bottom edge, and the waveform's centre line below it.
+    # The top row's bottom edge, the lowest the text may reach, and the waveform's centre line below it.
+    TOP_ROW_BOTTOM = MARGIN + 40
     DETAILS_BOTTOM = 500
     WAVE_Y = 566
     WAVE_BARS = 88
@@ -66,7 +67,7 @@ module ShareImages
 
     def logo
       height = 30
-      width = (height * BrandHelper::LOGO_RATIO).round(2)
+      width = (height * Brand::LOGO_RATIO).round(2)
       nested(:logo, x: WIDTH - MARGIN - width, y: MARGIN + 5, width: width, height: height)
     end
 
@@ -82,35 +83,42 @@ module ShareImages
       end
     end
 
-    # The title and subline from the top (the title's cap height level with the artwork's top edge); the stat, its note
-    # and the tags stacked up from just above the waveform.
+    # The title, subline and facts (stat, note, tags) flow as one block, so short content keeps together. With artwork
+    # the block starts level with the artwork's top edge; without, it sits centred between the top row and the
+    # waveform. Either way it ends above DETAILS_BOTTOM.
     def body
       size, lines = title_lines
-      baseline = ARTWORK[:y] + (size * CAP_HEIGHT).round
       leading = (size * 1.08).round
-      title = lines.each_with_index.map { |line, i| %(<tspan x="#{MARGIN}" y="#{baseline + i * leading}">#{Text.escape(line)}</tspan>) }
-      font = { family: "ArchivoWide", weight: 800, size: size }
-      parts = [ %(<text data-role="title" #{font_attributes(font)} fill="#{COLORS[:ink]}">#{title.join}</text>) ]
-      if @subline.present?
-        y = baseline + [ lines.size - 1, 0 ].max * leading + 48
-        parts << text(shorten(@subline, FONTS[:subline], column_width), FONTS[:subline], x: MARGIN, y: y, fill: :ink_soft)
-      end
-      parts + facts
+      rows = [] # [kind, offset from the block's top], baselines except the tags' top edge
+      y = (size * CAP_HEIGHT).round
+      lines.each_index { |i| rows << [ :title, y + i * leading ] }
+      y += [ lines.size - 1, 0 ].max * leading
+      rows << [ :subline, y += 48 ] if @subline.present?
+      rows << [ :stat, y += 64 ] if @stat
+      rows << [ :note, y += 34 ] if @note.present?
+      rows << [ :tags, y += (@stat || @note.present? ? 26 : 40) ] if @tags.any?
+      height = @tags.any? ? y + 44 : y + 10
+      top = @artwork ? ARTWORK[:y] : TOP_ROW_BOTTOM + (WAVE_Y - 24 - TOP_ROW_BOTTOM - height) / 2
+      top = [ top, DETAILS_BOTTOM - height ].min
+      draw_rows(rows, top, size, lines)
     end
 
-    def facts
-      parts = []
-      bottom = DETAILS_BOTTOM
-      if @tags.any?
-        parts << tag_row(bottom - 44)
-        bottom -= 44 + 26
+    def draw_rows(rows, top, size, lines)
+      font = { family: "ArchivoWide", weight: 800, size: size }
+      title = rows.select { |kind, _| kind == :title }.zip(lines).map do |(_, offset), line|
+        %(<tspan x="#{MARGIN}" y="#{top + offset}">#{Text.escape(line)}</tspan>)
       end
-      if @note.present?
-        parts << text(shorten(@note, FONTS[:note], column_width), FONTS[:note], x: MARGIN, y: bottom, fill: :ink_soft)
-        bottom -= 34
+      [ %(<text data-role="title" #{font_attributes(font)} fill="#{COLORS[:ink]}">#{title.join}</text>) ] +
+        rows.reject { |kind, _| kind == :title }.map { |kind, offset| row(kind, top + offset) }
+    end
+
+    def row(kind, y)
+      case kind
+      when :subline then text(shorten(@subline, FONTS[:subline], column_width), FONTS[:subline], x: MARGIN, y: y, fill: :ink_soft, role: "subline")
+      when :stat then stat_row(y)
+      when :note then text(shorten(@note, FONTS[:note], column_width), FONTS[:note], x: MARGIN, y: y, fill: :ink_soft, role: "note")
+      when :tags then tag_row(y)
       end
-      parts << stat_row(bottom) if @stat
-      parts
     end
 
     # [font size, lines]: the largest size that shows the whole title in two lines, else the smallest, shortened.
@@ -125,7 +133,7 @@ module ShareImages
       value, label = @stat
       value_width = measure(value, FONTS[:stat])
       label_x = MARGIN + value_width + 14
-      text(value, FONTS[:stat], x: MARGIN, y: baseline, fill: :ink) +
+      text(value, FONTS[:stat], x: MARGIN, y: baseline, fill: :ink, role: "stat") +
         text(shorten(label.to_s, FONTS[:stat_label], MARGIN + column_width - label_x), FONTS[:stat_label],
              x: label_x, y: baseline, fill: :ink_soft)
     end
@@ -172,8 +180,9 @@ module ShareImages
       svg.to_xml
     end
 
-    def text(content, font, x:, y:, fill:)
-      %(<text x="#{x.round(1)}" y="#{y.round(1)}" #{font_attributes(font)} fill="#{COLORS.fetch(fill)}">#{Text.escape(content)}</text>)
+    def text(content, font, x:, y:, fill:, role: nil)
+      role = %( data-role="#{role}") if role
+      %(<text#{role} x="#{x.round(1)}" y="#{y.round(1)}" #{font_attributes(font)} fill="#{COLORS.fetch(fill)}">#{Text.escape(content)}</text>)
     end
 
     def font_attributes(font) = %(font-family="#{font[:family]}" font-weight="#{font[:weight]}" font-size="#{font[:size]}")

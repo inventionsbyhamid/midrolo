@@ -77,6 +77,26 @@ RSpec.describe ShareImages::Layout do
     expect(long.length).to be < 60
   end
 
+  it "keeps the facts with a short title instead of leaving a band between them" do
+    doc = parse(layout(title: "Ledger", subline: "Not affiliated with the show.", stat: [ "18", "brand matches" ],
+                       tags: [ "One" ]).svg)
+    subline = doc.at_css("[data-role='subline']")["y"].to_f
+    stat = doc.at_css("[data-role='stat']")["y"].to_f
+    tags_bottom = doc.at_css("[data-role='tag'] rect").then { |rect| rect["y"].to_f + rect["height"].to_f }
+
+    expect(stat - subline).to be <= 72
+    expect(tags_bottom).to be <= described_class::DETAILS_BOTTOM
+  end
+
+  it "keeps a tall card's facts clear of the waveform" do
+    doc = parse(layout(title: "The Founder's Ledger, a long title for two lines", subline: "Hosted by Maya Brandt",
+                       stat: [ "4,200", "downloads per episode" ], note: "Stats self-reported by the verified owner.",
+                       tags: %w[One Two Three], artwork: :image).svg)
+    tags_bottom = doc.at_css("[data-role='tag'] rect").then { |rect| rect["y"].to_f + rect["height"].to_f }
+
+    expect(tags_bottom).to be <= described_class::DETAILS_BOTTOM
+  end
+
   describe "the artwork place" do
     it "has none without artwork" do
       doc = parse(layout.svg)

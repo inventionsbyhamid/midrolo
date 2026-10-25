@@ -72,6 +72,14 @@ RSpec.describe "Public pages" do
       themes = page.css("meta[name='theme-color']").to_h { |meta| [ meta["media"], meta["content"] ] }
       expect(themes).to eq("(prefers-color-scheme: light)" => "#f6f2f4", "(prefers-color-scheme: dark)" => "#22132b")
     end
+
+    it "serves the web manifest as application/manifest+json" do
+      get "/site.webmanifest"
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("application/manifest+json")
+      expect(JSON.parse(response.body)["name"]).to eq("Midrolo")
+    end
   end
 
   describe "GET / (R78)" do

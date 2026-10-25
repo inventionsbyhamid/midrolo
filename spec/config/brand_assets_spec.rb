@@ -27,6 +27,11 @@ RSpec.describe "Brand assets" do
       expect(manifest).to include("name" => "Midrolo", "short_name" => "Midrolo", "start_url" => "/",
                                   "theme_color" => "#22132b", "background_color" => "#f6f2f4")
       expect(manifest["icons"].map { |icon| icon["sizes"] }).to eq(%w[192x192 512x512])
+      expect(manifest.values_at("name", "short_name", "description").join(" ")).not_to match(/[\u2013\u2014]/)
+    end
+
+    it "is the only web manifest" do
+      expect(Rails.root.join("app/views/pwa/manifest.json.erb")).not_to exist
     end
 
     it "lists icons that exist at the sizes it gives" do
@@ -66,7 +71,7 @@ RSpec.describe "Brand assets" do
     width, height = size(Rails.root.join("app/assets/images/brand/logo-email.png"))
 
     expect(height).to eq(56)
-    expect(width).to be_within(1).of(56 * BrandHelper::LOGO_RATIO)
+    expect(width).to be_within(1).of(56 * Brand::LOGO_RATIO)
   end
 
   it "has a landing share image of 1200x630" do
