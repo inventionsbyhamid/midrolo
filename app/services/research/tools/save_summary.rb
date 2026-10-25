@@ -44,7 +44,7 @@ module Research
         [
           ("Kept the first #{MAX_BULLETS} bullets." if given.size > MAX_BULLETS),
           if shortened.any?
-            "Shortened #{'bullet'.pluralize(shortened.size)} #{shortened.to_sentence} to #{BULLET_WORDS} words; " \
+            "Shortened #{'bullet'.pluralize(shortened.size)} #{Copy.and_list(shortened.map(&:to_s))} to #{BULLET_WORDS} words; " \
               "save again to reword #{shortened.one? ? 'it' : 'them'}."
           end
         ].compact

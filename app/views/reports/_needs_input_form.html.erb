@@ -4,7 +4,7 @@
 <div class="needs-input mt-4" role="region" aria-labelledby="needs_input_title_<%= report.id %>">
   <p id="needs_input_title_<%= report.id %>" class="type-h3 max-w-prose">We need a little more to go on. Tell us 2 or 3 shows your listeners also love.</p>
   <% if report.unresolved_seeds.any? %>
-    <p class="mt-2 text-[0.9375rem]">We couldn't find these on Qloo: <%= report.unresolved_seeds.to_sentence %>. Try another spelling or a different show.</p>
+    <p class="mt-2 text-[0.9375rem]">We couldn't find these on Qloo: <%= and_list(report.unresolved_seeds) %>. Try another spelling or a different show.</p>
   <% end %>
 
   <%= form_with model: show, url: show_path(show), method: :patch, class: "mt-5 flex flex-col gap-5" do |f| %>

@@ -33,11 +33,11 @@
       </div>
       <div>
         <dt class="text-sm text-ink-soft">Comparable shows</dt>
-        <dd class="font-semibold"><%= @show.hints[:comparable_shows].to_sentence.presence || "None yet" %></dd>
+        <dd class="font-semibold"><%= and_list(@show.hints[:comparable_shows]).presence || "None yet" %></dd>
       </div>
       <div>
         <dt class="text-sm text-ink-soft">Topics</dt>
-        <dd class="font-semibold"><%= @show.hints[:topics].to_sentence.presence || "None yet" %></dd>
+        <dd class="font-semibold"><%= and_list(@show.hints[:topics]).presence || "None yet" %></dd>
       </div>
       <div>
         <dt class="text-sm text-ink-soft">Contact email</dt>

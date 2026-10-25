@@ -80,7 +80,7 @@ module Research
       return "#{@tags.size} taste tags" unless @entities
 
       counts = TYPES.map { |type| "#{@lists[type].size} #{NOUNS.fetch(type)}" } << "#{@tags.size} taste tags"
-      counts.to_sentence(last_word_connector: " and ")
+      Copy.and_list(counts)
     end
 
     # Seeds are inputs, not results: never list the show (or another seed) as something its audience loves.
@@ -180,7 +180,7 @@ module Research
 
       top = @points.filter_map(&:label).uniq.first(3)
       where = @location == "metros" ? "#{country_name} metros" : country_name
-      "#{@points.size} areas across #{where}#{", strongest in #{top.to_sentence}" if top.any?}"
+      "#{@points.size} areas across #{where}#{", strongest in #{Copy.and_list(top)}" if top.any?}"
     end
   end
 end

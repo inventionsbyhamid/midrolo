@@ -47,7 +47,7 @@
     <% if report.needs_input? && !read_only %>
       <%= render "reports/needs_input_form", report: report %>
     <% elsif report.unresolved_seeds.any? %>
-      <p class="mt-3 text-sm text-ink-soft">Not found on Qloo: <%= report.unresolved_seeds.to_sentence %></p>
+      <p class="mt-3 text-sm text-ink-soft">Not found on Qloo: <%= and_list(report.unresolved_seeds) %></p>
     <% end %>
   <% end %>
 <% end %>

@@ -37,7 +37,7 @@
       <span id="<%= dom_id(match, :status_saved) %>" class="status-saved" role="status" aria-live="polite"></span>
     </div>
     <% if match.errors.key?(:status) %>
-      <p class="field-error" role="alert"><%= match.errors.full_messages_for(:status).to_sentence %></p>
+      <p class="field-error" role="alert"><%= and_list(match.errors.full_messages_for(:status)) %></p>
     <% end %>
 
     <details class="status-notes" <%= "open" if notes_invalid || date_invalid %>>
@@ -60,7 +60,7 @@
                 aria: { invalid: (notes_invalid || nil), describedby: [ notes_hint_id, (notes_error_id if notes_invalid) ].compact.join(" ") } %>
           <p id="<%= notes_hint_id %>" class="hint">Only you can see your notes.</p>
           <% if notes_invalid %>
-            <p id="<%= notes_error_id %>" class="field-error" role="alert"><%= match.errors.full_messages_for(:notes).to_sentence %></p>
+            <p id="<%= notes_error_id %>" class="field-error" role="alert"><%= and_list(match.errors.full_messages_for(:notes)) %></p>
           <% end %>
         </div>
         <div>
@@ -68,7 +68,7 @@
           <%= f.date_field :follow_up_on, class: "input status-date-input",
                 aria: { invalid: (date_invalid || nil), describedby: (date_error_id if date_invalid) } %>
           <% if date_invalid %>
-            <p id="<%= date_error_id %>" class="field-error" role="alert"><%= match.errors.full_messages_for(:follow_up_on).to_sentence %></p>
+            <p id="<%= date_error_id %>" class="field-error" role="alert"><%= and_list(match.errors.full_messages_for(:follow_up_on)) %></p>
           <% end %>
         </div>
         <div>

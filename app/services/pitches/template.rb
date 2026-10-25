@@ -44,7 +44,7 @@ module Pitches
       if tags.any?
         count = "#{tags.size} taste #{'signal'.pluralize(tags.size)}"
         affinity = ", with #{@in.affinity_percent}% affinity for your brand" if @in.affinity_percent
-        "Qloo's taste data shows our audience shares #{count} with your fans, including #{tags.first(3).to_sentence}#{affinity}."
+        "Qloo's taste data shows our audience shares #{count} with your fans, including #{Copy.and_list(tags.first(3))}#{affinity}."
       else
         "Qloo's taste data shows a strong overlap between our listeners' tastes and #{[ @in.category, 'brands like yours' ].compact.join(' ')}."
       end
@@ -84,7 +84,7 @@ module Pitches
 
     def follow_up
       tags = @in.shared_tags.first(2)
-      overlap = tags.any? ? "share #{tags.to_sentence} with your fans" : "line up with brands like yours"
+      overlap = tags.any? ? "share #{Copy.and_list(tags)} with your fans" : "line up with brands like yours"
       "Hi #{brand} team,\n\nJust bringing my note about a midroll on #{title} back to the top of your inbox. " \
         "Our listeners #{overlap}, so I think a spot read in my own voice would land well. Happy to send the media kit or hold " \
         "a slot for you, whichever is easier.\n\nThanks,\n#{signer}"

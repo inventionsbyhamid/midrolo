@@ -13,7 +13,7 @@
   <div class="kit-hero-text">
     <h1 id="kit-title" class="kit-title"><%= show.title %></h1>
     <% if show.author.present? %><p class="kit-byline">Hosted by <%= show.author %></p><% end %>
-    <% if show.categories.any? %><p class="kit-categories"><%= show.categories.to_sentence %></p><% end %>
+    <% if show.categories.any? %><p class="kit-categories"><%= and_list(show.categories) %></p><% end %>
     <% if show.verified? %>
       <% host = kit_feed_host(show) %>
       <p class="kit-verified">

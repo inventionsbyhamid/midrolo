@@ -30,7 +30,7 @@ class ShowsController < ApplicationController
       RefreshShowFeedJob.perform_later(show.id)
       redirect_to edit_show_path(show, onboarding: 1)
     else
-      render_new(status: :unprocessable_content, error: show.errors.full_messages.to_sentence)
+      render_new(status: :unprocessable_content, error: Copy.and_list(show.errors.full_messages))
     end
   rescue ActiveRecord::RecordNotUnique
     # A concurrent double-submit won the race: send them to the show that now exists.

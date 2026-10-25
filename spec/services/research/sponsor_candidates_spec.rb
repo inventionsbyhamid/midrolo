@@ -68,7 +68,7 @@ RSpec.describe Research::SponsorCandidates do
     find(categories: %w[Finance Productivity Technology Travel Fitness])
 
     expect(taste).to have_received(:recommend).with(hash_including(filter_tags: anything)).exactly(3).times
-    expect(report.agent_steps.find_by(label: "Looking for Finance, Productivity, and Technology brands…")).to be_present
+    expect(report.agent_steps.find_by(label: "Looking for Finance, Productivity and Technology brands…")).to be_present
   end
 
   it "marks brands in a chosen category" do

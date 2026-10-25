@@ -84,7 +84,7 @@ module Research
       log.step("find_tags", "Matching your topics and categories to taste tags…", input: (topics + categories).join(", ")) do |step|
         topics.each { |topic| add_tag(topic, source: "Topic: #{topic}") if room_for_tag? }
         categories.each { |category| add_category_tag(category) if room_for_tag? }
-        step.output_summary = @tags.empty? ? "No matching taste tags" : "Matched #{@tags.values.map(&:name).to_sentence}"
+        step.output_summary = @tags.empty? ? "No matching taste tags" : "Matched #{Copy.and_list(@tags.values.map(&:name))}"
       end
     end
 

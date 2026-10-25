@@ -62,7 +62,7 @@ module Research
     end
 
     def category_passes
-      log.step("find_sponsor_candidates", "Looking for #{@categories.to_sentence} brands…", input: @categories.join(", ")) do |step|
+      log.step("find_sponsor_candidates", "Looking for #{Copy.and_list(@categories)} brands…", input: @categories.join(", ")) do |step|
         counts = @categories.map do |name|
           tag_id = category_tag_id(name, step)
           @category_tag_ids << tag_id
@@ -72,7 +72,7 @@ module Research
           add(brands || [])
           "#{name}: #{brands&.size || 0}"
         end
-        dropped = "; searched the first #{MAX_CATEGORIES}, not #{@dropped_categories.to_sentence}" if @dropped_categories.any?
+        dropped = "; searched the first #{MAX_CATEGORIES}, not #{Copy.and_list(@dropped_categories)}" if @dropped_categories.any?
         step.output_summary = "#{counts.join(', ')}#{dropped}"
       end
     end

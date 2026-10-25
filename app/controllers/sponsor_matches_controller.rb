@@ -46,7 +46,7 @@ class SponsorMatchesController < ApplicationController
   end
 
   def redirect_back_to_card
-    flash_message = @saved ? { notice: "Saved #{@sponsor_match.name}." } : { alert: "Couldn't save: #{@sponsor_match.errors.full_messages.to_sentence}." }
+    flash_message = @saved ? { notice: "Saved #{@sponsor_match.name}." } : { alert: "Couldn't save: #{Copy.and_list(@sponsor_match.errors.full_messages)}." }
     redirect_to card_path(@sponsor_match), status: :see_other, **flash_message
   end
 
