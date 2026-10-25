@@ -27,4 +27,6 @@ step "tailwindcss:build"
 bin/rails tailwindcss:build
 
 step "rspec $*"
+# libvips warnings for the images specs break on purpose (R96); spec/spec_helper.rb sets this too.
+export VIPS_WARNING=0
 exec bundle exec rspec "$@"
