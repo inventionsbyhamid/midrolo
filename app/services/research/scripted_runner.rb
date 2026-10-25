@@ -29,7 +29,7 @@ module Research
       toolkit.add_candidates(scored).show_candidates(scored.map { |s| s.candidate.entity.id })
       explain(scored) if @with_reasons
       save_matches(scored)
-      Tools::SaveSummary.new(toolkit).call(summary: Templates.summary(toolkit, scored)) if @with_reasons
+      Tools::SaveSummary.new(toolkit).call(bullets: Templates.summary(toolkit, scored)) if @with_reasons
       toolkit
     end
 

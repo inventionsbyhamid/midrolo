@@ -199,19 +199,18 @@ RSpec.describe Research::Tools do
   end
 
   describe "save_sponsor_matches" do
-    it "saves matches with scored data, rejects unknown brand ids and long reasons" do
+    it "saves matches with scored data and rejects unknown brand ids" do
       candidates!
       run("explain_matches", brand_ids: %w[b1 b2])
       first = toolkit.scored.values.first
       out = run("save_sponsor_matches", matches: [
         { "brand_id" => "b2", "reason" => "Shares personal finance tastes with your listeners." },
         { "brand_id" => "b1", "reason" => "Your audience overlaps on early adopters." },
-        { "brand_id" => "not-a-brand", "reason" => "Invented." },
-        { "brand_id" => "b3", "reason" => "x" * 201 }
+        { "brand_id" => "not-a-brand", "reason" => "Invented." }
       ])
 
-      expect(out).to start_with("Saved 2 matches; rejected 2:")
-      expect(out).to include("not-a-brand", "b3")
+      expect(out).to start_with("Saved 2 matches; rejected 1:")
+      expect(out).to include("not-a-brand")
       matches = report.sponsor_matches.reload
       expect(matches.size).to eq(2)
       expect(matches.pluck(:brand_entity_id)).not_to include("not-a-brand")
@@ -222,6 +221,36 @@ RSpec.describe Research::Tools do
       expect(top.category).to be_present
       expect(top.evidence["shared_tags"]).to eq(toolkit.explanations[top.brand_entity_id].map(&:name).uniq)
       expect(top.evidence["proven"]).to include("items", "count")
+    end
+
+    it "asks for one plain sentence of 25 words or fewer per reason in the schema" do
+      reason = tools.fetch("save_sponsor_matches").parameters_schema.dig("properties", "matches", "items", "properties", "reason")
+      expect(reason["maxLength"]).to eq(SponsorMatch::REASON_LENGTH)
+      expect(reason["description"]).to include("25 words or fewer")
+      expect(tools.fetch("save_sponsor_matches").description).to include("25 words or fewer")
+    end
+
+    it "shortens a reason over 25 words to its first sentence, or at a word boundary, and says so (R99)" do
+      candidates!
+      two_sentences = "Shares personal finance tastes with your listeners. #{'They also love long walks and cheap flights. ' * 3}"
+      long = "Your listeners love #{(1..30).map { |i| "t#{i}" }.join(" ")} and more."
+      out = run("save_sponsor_matches", matches: [ { brand_id: "b1", reason: two_sentences }, { brand_id: "b2", reason: long },
+                                                   { brand_id: "b3", reason: "Fits well." } ])
+
+      reasons = report.sponsor_matches.reload.to_h { |m| [ toolkit.brand_ref(m.brand_entity_id), m.reason ] }
+      expect(reasons["b1"]).to eq("Shares personal finance tastes with your listeners.")
+      expect(reasons["b2"].split.size).to eq(25)
+      expect(reasons["b2"]).to start_with("Your listeners love t1 t2").and end_with("…")
+      expect(reasons["b3"]).to eq("Fits well.")
+      expect(reasons.values.map(&:length)).to all(be <= SponsorMatch::REASON_LENGTH)
+      expect(out).to start_with("Saved 3 matches")
+      expect(out).to include("Shortened 2 reasons to 25 words (b1, b2)")
+    end
+
+    it "takes the dashes out of a reason before saving it (R100)" do
+      candidates!
+      run("save_sponsor_matches", matches: [ { brand_id: "b1", reason: "Your listeners love budgeting — and this brand sponsors shows like yours." } ])
+      expect(report.sponsor_matches.reload.first.reason).to eq("Your listeners love budgeting, and this brand sponsors shows like yours.")
     end
 
     it "stores each brand's Qloo description, cut to 600 characters, for the pitch writer (R52)" do
@@ -297,20 +326,48 @@ RSpec.describe Research::Tools do
   end
 
   describe "save_summary" do
-    it "saves the summary" do
-      expect(run("save_summary", summary: "Your listeners love finance tools.")).to include("saved")
-      expect(report.reload.summary).to eq("Your listeners love finance tools.")
+    it "saves 1 to 3 bullets, one a line, for the At a glance box" do
+      out = run("save_summary", bullets: [ "Your listeners love finance tools.", "Start with the budgeting apps." ])
+      expect(out).to eq("Summary saved.")
+      expect(report.reload.summary).to eq("Your listeners love finance tools.\nStart with the budgeting apps.")
+      expect(report.summary_points).to eq([ "Your listeners love finance tools.", "Start with the budgeting apps." ])
       expect(report.agent_steps.last.tool).to eq("save_summary")
     end
 
+    it "caps the bullets in the schema: at most 3, each short" do
+      schema = tools.fetch("save_summary").parameters_schema
+      bullets = schema.dig("properties", "bullets")
+      expect(bullets).to include("type" => "array", "minItems" => 1, "maxItems" => 3)
+      expect(bullets.dig("items", "maxLength")).to eq(Report::SUMMARY_POINT_LENGTH)
+      expect(schema["required"]).to eq([ "bullets" ])
+      expect(tools.fetch("save_summary").description).to include("20 words or fewer")
+    end
+
+    it "keeps the first 3 bullets and shortens one over 20 words, and says so" do
+      long = "Your listeners are #{(1..30).map { |i| "word#{i}" }.join(' ')}."
+      out = run("save_summary", bullets: [ "One.", long, "Three.", "Four." ])
+
+      points = report.reload.summary_points
+      expect(points.size).to eq(3)
+      expect(points[1].split.size).to eq(20)
+      expect(points[1]).to end_with("…")
+      expect(points.values_at(0, 2)).to eq([ "One.", "Three." ])
+      expect(out).to include("Kept the first 3 bullets", "Shortened bullet 2 to 20 words")
+    end
+
+    it "takes the dashes out before saving (R100)" do
+      run("save_summary", bullets: [ "Founders who love tools — and long walks.", "Start small – Notion first." ])
+      expect(report.reload.summary_points).to eq([ "Founders who love tools, and long walks.", "Start small. Notion first." ])
+    end
+
     it "rejects a summary citing numbers that aren't in the data" do
-      out = run("save_summary", summary: "Reach 10,000 eager listeners.")
-      expect(out).to include("cites numbers not in the data (10,000) — rephrase without them")
+      out = run("save_summary", bullets: [ "Reach 10,000 eager listeners." ])
+      expect(out).to include("cites numbers not in the data (10,000)")
       expect(report.reload.summary).to be_nil
     end
 
-    it "rejects a summary over 600 characters" do
-      expect(run("save_summary", summary: "x" * 601)).to include("600")
+    it "asks again for an empty summary" do
+      expect(run("save_summary", bullets: [ " ", "" ])).to include("empty")
       expect(report.reload.summary).to be_nil
     end
   end
@@ -323,7 +380,7 @@ RSpec.describe Research::Tools do
     outputs << run("find_sponsor_candidates", categories: %w[Finance Productivity Technology])
     outputs << run("explain_matches", brand_ids: Array.new(30) { |i| "b#{i + 1}" })
     outputs << run("save_sponsor_matches", matches: Array.new(40) { |i| { brand_id: "b#{i + 1}", reason: "A strong taste match." } })
-    outputs << run("save_summary", summary: "Done.")
+    outputs << run("save_summary", bullets: [ "Done." ])
 
     expect(outputs).to all(be_a(String))
     expect(outputs.map(&:length)).to all(be < 1500)

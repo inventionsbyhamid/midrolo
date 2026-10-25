@@ -265,6 +265,29 @@ RSpec.describe Pitches::Writer do
       expect(prompt_of(RubyLLM::Test.requests.last)).to include("subject")
     end
 
+    it "takes the dashes out of the subject, body, follow up, offer and angles before they are saved (R100)" do
+      RubyLLM::Test.stub_response(good_pitch(subject: "Fieldnote Coffee — a midroll on The Founder's Ledger",
+                                             body: "Hi Fieldnote team — I host a show.\n\nThanks,\n— Maya",
+                                             follow_up: "Just bumping this – happy to send the kit.",
+                                             offer: "Midroll bundle — $#{rate.bundle4}",
+                                             angles: [ "Morning ritual — coffee first", "Deep work", "Side projects" ]))
+
+      result = described_class.call(brand_match, pitch: pitch)
+
+      expect(result["subject"]).to eq("Fieldnote Coffee, a midroll on The Founder's Ledger")
+      expect(result["body"]).to eq("Hi Fieldnote team. I host a show.\n\nThanks,\nMaya")
+      expect(result["follow_up"]).to eq("Just bumping this, happy to send the kit.")
+      expect(result["offer"]).to eq("Midroll bundle, $#{rate.bundle4}")
+      expect(result["angles"].first).to eq("Morning ritual, coffee first")
+    end
+
+    it "asks for plain, specific sentences with no jargon, and never a claim about one listener" do
+      RubyLLM::Test.stub_response(good_pitch)
+      described_class.call(brand_match, pitch: pitch)
+      instructions = instructions_of(RubyLLM::Test.last_request)
+      expect(instructions).to include("no jargon", "as a group", "never what one listener")
+    end
+
     it "lets BudgetExceeded through without calling the model" do
       AppSettings.set(:runs_paused, true)
       expect { described_class.call(brand_match, pitch: pitch) }.to raise_error(Llm::BudgetExceeded)

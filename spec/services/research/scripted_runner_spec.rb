@@ -25,12 +25,16 @@ RSpec.describe Research::ScriptedRunner do
       expect(report.heatmap["points"]).to be_present
       expect(report.sponsor_matches.size).to be_between(20, 50)
       expect(report.sponsor_matches.map(&:reason)).to all(be_present)
-      expect(report.sponsor_matches.map(&:reason).map(&:length)).to all(be <= 200)
-      expect(report.sponsor_matches.first.reason).to match(/\AYour audience shares \d+ taste signals? with .+ fans \(.+\)\./)
-      expect(report.sponsor_matches.map(&:reason)).to include(a_string_including("Seen sponsoring"))
+      reasons = report.sponsor_matches.map(&:reason)
+      expect(reasons.map(&:length)).to all(be <= SponsorMatch::REASON_LENGTH)
+      expect(reasons.map { |reason| reason.split.size }).to all(be <= SponsorMatch::REASON_WORDS) # R99
+      expect(reasons).to all(match(/\A[^.!?]+[.!?]\z/)) # one sentence
+      expect(report.sponsor_matches.first.reason).to match(/\A.+ fans share this audience's love of .+\.\z/)
       expect(report.sponsor_matches.map(&:brand_description)).to all(start_with("Sample ")) # R52, from the Fake catalog
-      expect(report.summary).to be_present
-      expect(report.summary.length).to be <= 600
+      points = report.summary_points
+      expect(points.size).to be_between(2, Report::SUMMARY_POINTS)
+      expect(points.map { |point| point.split.size }).to all(be <= Report::SUMMARY_POINT_WORDS) # R99
+      expect(points.first).to start_with("This audience leans toward")
       expect(report.agent_steps.pluck(:status)).to all(eq("ok"))
       expect(report.taste_calls).to be_positive
       expect(report.status).to eq("running") # the job marks it done

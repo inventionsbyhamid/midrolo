@@ -114,7 +114,7 @@ module Research
 
     def save_fallback_summary
       scored = report.sponsor_matches.filter_map { |m| toolkit.scored[m.brand_entity_id] }
-      Tools::SaveSummary.new(toolkit).call(summary: Templates.summary(toolkit, scored))
+      Tools::SaveSummary.new(toolkit).call(bullets: Templates.summary(toolkit, scored))
     end
 
     # Runs inside an ensure: never let a ledger problem replace the run's own outcome.

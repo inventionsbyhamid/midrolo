@@ -5,6 +5,10 @@ class SponsorMatch < ApplicationRecord
   # A won or lost deal has no follow-up to chase.
   CLOSED_STATUSES = %w[won lost].freeze
   NOTES_LIMIT = 2_000
+  # A match reason is one plain sentence of at most this many words (R99); Research::Tools::SaveSponsorMatches holds
+  # the agent to it, and Research::Templates writes within it.
+  REASON_WORDS = 25
+  REASON_LENGTH = 180
   # The brand's Qloo description is kept for the pitch writer (R52), cut to this many characters.
   BRAND_DESCRIPTION_LIMIT = 600
   # A date input left half-typed can submit a year like 0002; nobody follows up outside these years.

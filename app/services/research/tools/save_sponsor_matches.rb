@@ -3,19 +3,23 @@ module Research
     # The provenance check (spec §6): only brands from this run's candidate set that were shown to the model
     # are saved, each with the scored data and evidence the tools produced. The model supplies just the pick
     # and its reason, and a reason may cite only numbers found in that data (R38, NumericClaims).
+    # A reason is one plain sentence of 25 words or fewer (R99): dashes come out first (R100), and a longer reason is
+    # cut to its first sentence or at a word boundary (the last resort), and the result says which were cut.
     class SaveSponsorMatches < Base
       MAX_MATCHES = SponsorCandidates::MAX_RESULTS
-      REASON_LIMIT = 200
+      REASON_LIMIT = SponsorMatch::REASON_LENGTH
+      REASON_WORDS = SponsorMatch::REASON_WORDS
       TARGET_MATCHES = 20
 
-      description "Saves the sponsor matches: 20–40 candidate refs from find_sponsor_candidates, each with a " \
-                  "one-sentence reason (under #{REASON_LIMIT} characters) citing shared taste tags or proven-sponsor " \
-                  "evidence from the tools, with no numbers the tools didn't give. Brands not in the candidate list are " \
-                  "rejected. Each call replaces the saved list, so resend the full list when fixing rejections."
+      description "Saves the sponsor matches: 20–40 candidate refs from find_sponsor_candidates, each with a reason: " \
+                  "one plain, specific sentence of #{REASON_WORDS} words or fewer citing shared taste tags or " \
+                  "proven-sponsor evidence from the tools, with no numbers the tools didn't give. Brands not in the " \
+                  "candidate list are rejected. Each call replaces the saved list, so resend the full list when fixing rejections."
       arguments({ matches: { type: "array", maxItems: MAX_MATCHES,
                              items: { type: "object", additionalProperties: false, required: %w[brand_id reason],
                                       properties: { brand_id: { type: "string", description: "Candidate ref (b1…) or brand id" },
-                                                    reason: { type: "string", maxLength: REASON_LIMIT } } } } },
+                                                    reason: { type: "string", maxLength: REASON_LIMIT,
+                                                              description: "One plain sentence, #{REASON_WORDS} words or fewer" } } } } },
                 required: %i[matches])
 
       # The scripted snapshot saves matches without reasons.
@@ -27,6 +31,7 @@ module Research
       def execute(matches: [])
         return NO_CANDIDATES if toolkit.scored.empty?
 
+        @shortened = []
         picks = Array(matches)
         log.step("save_sponsor_matches", "Saving your sponsor matches…", input: "#{picks.size} picks") do |step|
           accepted, rejected = sort(picks)
@@ -49,7 +54,7 @@ module Research
         rejected = []
         picks.each do |pick|
           key = value(pick, :brand_id).to_s.strip
-          reason = value(pick, :reason).to_s.squish.presence
+          reason = fit_reason(key, value(pick, :reason))
           id = toolkit.resolve_brand(key)
           problem = problem_with(id, key, reason)
           next rejected << problem if problem
@@ -59,10 +64,19 @@ module Research
         [ accepted.first(MAX_MATCHES).to_h, rejected ]
       end
 
+      # The reason without dashes, cut to one sentence of REASON_WORDS when longer; nil when blank.
+      def fit_reason(key, text)
+        reason = Llm::PlainText.sanitize(text.to_s.squish).presence
+        return reason if reason.nil?
+
+        fitted = Llm::PlainText.clip_words(reason, REASON_WORDS, max_chars: REASON_LIMIT)
+        @shortened << (key.presence || "(no brand_id)") if fitted != reason
+        fitted
+      end
+
       def problem_with(id, key, reason)
         label = key.presence || "(no brand_id)"
         return "#{label} (not in the candidate list)" if id.nil?
-        return "#{label} (reason over #{REASON_LIMIT} characters)" if reason && reason.length > REASON_LIMIT
         return "#{label} (no reason)" if reason.nil? && @require_reasons
 
         unsupported = reason ? claims.unsupported(reason, claims.for_match(toolkit.scored.fetch(id))) : []
@@ -116,6 +130,10 @@ module Research
           text += kept.positive? ? " Nothing changed: your earlier #{kept} #{'match'.pluralize(kept)} are still saved." : " Nothing was saved."
         elsif rejected.any?
           text += " Each call replaces the saved list: resend the full list to fix these."
+        end
+        if @shortened.any?
+          text += " Shortened #{@shortened.size} #{'reason'.pluralize(@shortened.size)} to #{REASON_WORDS} words " \
+                  "(#{@shortened.first(10).join(', ')}): keep each to one sentence of #{REASON_WORDS} words or fewer."
         end
         if saved.positive? && saved < TARGET_MATCHES && toolkit.shown_candidate_count >= TARGET_MATCHES
           text += " You saved #{saved}; consider saving at least #{TARGET_MATCHES}."

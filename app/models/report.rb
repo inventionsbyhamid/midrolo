@@ -11,6 +11,11 @@ class Report < ApplicationRecord
   FAILURE_MESSAGE = "Something went wrong while researching. Nothing was charged. Try again.".freeze
   STATUS_COPY = { "queued" => "Getting started…", "running" => "Researching your audience…", "done" => "Report ready",
                   "failed" => "Something went wrong", "needs_input" => "Needs a little more info" }.freeze
+  # The summary is the At a glance box's bullets (R99): at most this many, each one plain sentence of at most this
+  # many words. Research::Tools::SaveSummary holds the agent to it.
+  SUMMARY_POINTS = 3
+  SUMMARY_POINT_WORDS = 20
+  SUMMARY_POINT_LENGTH = 160
 
   belongs_to :show
   has_many :agent_steps, -> { order(:position, :id) }, dependent: :destroy
@@ -66,6 +71,14 @@ class Report < ApplicationRecord
   def seed_items = seeds.is_a?(Hash) ? Array(seeds["entities"]) + Array(seeds["tags"]) : []
   def unresolved_seeds = seeds.is_a?(Hash) ? Array(seeds["unresolved"]) : []
   def status_copy = STATUS_COPY.fetch(status)
+
+  # The summary's bullets, one a line as SaveSummary saves them. A line longer than a bullet is older prose, which
+  # reads as its sentences.
+  def summary_points
+    lines = summary.to_s.lines.map(&:strip).compact_blank
+    lines.flat_map { |line| line.split.size > SUMMARY_POINT_WORDS ? line.split(/(?<=[.!?])\s+/) : [ line ] }
+         .first(SUMMARY_POINTS)
+  end
 
   def mark_running!
     update!(status: "running", started_at: Time.current)
