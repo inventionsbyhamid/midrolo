@@ -11,6 +11,12 @@ module AdminHelper
     ui_meter(share, label: label, value_text: "#{admin_usd(spent)} of #{admin_usd(ceiling)}")
   end
 
+  # A used-of-cap meter for a count of calls: "Qloo calls today", "12 / 100".
+  def admin_call_meter(label, used, cap)
+    share = cap.positive? ? used.fdiv(cap) : (used.positive? ? 1 : 0)
+    ui_meter(share, label: label, value_text: "#{used} / #{cap}")
+  end
+
   # The Totals table: { group heading (nil for the first group) => [[row label, { today:, month: }]] }.
   def admin_total_groups(stats)
     { nil => admin_headline_rows(stats), "Reports" => admin_report_rows(stats), "Spend" => admin_spend_rows(stats) }

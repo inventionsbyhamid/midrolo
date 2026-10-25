@@ -38,6 +38,18 @@
     </p>
   <% end %>
 
+  <%= render "components/card", title: "Qloo calls" do %>
+    <% calls = @stats.qloo_calls %>
+    <div class="flex flex-col gap-3">
+      <%= admin_call_meter("Qloo calls today", calls.today, calls.daily_limit) %>
+      <%= admin_call_meter("This minute", calls.minute, calls.per_minute) %>
+    </div>
+    <p class="mt-3 text-sm text-ink-soft">
+      Every live call to Qloo counts, retries included. Cached answers are free. Over a cap, new calls are refused until the
+      next minute or the next UTC day; optional steps skip and reports that need the data fail without charge.
+    </p>
+  <% end %>
+
   <%= render "components/card", title: "Totals" do %>
     <div class="overflow-x-auto">
       <table class="w-full text-left text-sm tabular-nums">
@@ -90,6 +102,11 @@
           <%= f.label :promo_pro_until, Admin::SettingsForm.human_attribute_name(:promo_pro_until), class: "label" %>
           <%= f.date_field :promo_pro_until, class: "input", required: true,
                 aria: { invalid: @settings.errors.include?(:promo_pro_until) } %>
+        </div>
+        <div class="flex flex-col gap-1">
+          <%= f.label :qloo_daily_call_limit, Admin::SettingsForm.human_attribute_name(:qloo_daily_call_limit), class: "label" %>
+          <%= f.number_field :qloo_daily_call_limit, class: "input", min: 0, step: 1, required: true,
+                aria: { invalid: @settings.errors.include?(:qloo_daily_call_limit) } %>
         </div>
       </div>
       <%= f.submit "Save settings", class: "btn btn-primary btn-md self-start" %>

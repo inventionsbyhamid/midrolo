@@ -34,6 +34,9 @@ module Admin
 
     def budgets = @budgets ||= Llm::Budget.usage
 
+    # Live Qloo calls this UTC day and minute against the call guard's caps (R92).
+    def qloo_calls = @qloo_calls ||= Taste::CallGuard.new.usage
+
     def failed_reports
       @failed_reports ||= Report.failed.includes(:show)
                                 .order(Report.arel_table[:finished_at].desc.nulls_last, id: :desc).limit(FAILED_SHOWN)

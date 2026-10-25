@@ -146,6 +146,17 @@ RSpec.describe "Admin" do
         failures = section("Latest failed reports")
         expect(failures.text.squish).to include("Money Talks", "Qloo returned 401")
       end
+
+      it "shows Qloo calls today and this minute against their caps (R92)" do
+        allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+        2.times { Taste::CallGuard.new.acquire! }
+
+        get "/admin", headers: basic_auth
+
+        meters = section("Qloo calls").css("[role='meter']").to_h { |meter| [ meter["aria-label"], meter.at_css(".meter-value").text ] }
+        expect(meters).to include("Qloo calls today" => "2 / 100", "This minute" => "2 / 30")
+        expect(section("Settings").at_css("input[name='settings[qloo_daily_call_limit]']")["value"]).to eq("100")
+      end
     end
 
     describe "pausing new runs" do
@@ -192,7 +203,8 @@ RSpec.describe "Admin" do
 
     describe "PATCH /admin/settings" do
       let(:valid) do
-        { promo_budget_usd: "20", judge_reserve_usd: "7.5", llm_daily_budget_usd: "8.25", promo_pro_until: "2026-11-20" }
+        { promo_budget_usd: "20", judge_reserve_usd: "7.5", llm_daily_budget_usd: "8.25", promo_pro_until: "2026-11-20",
+          qloo_daily_call_limit: "100" }
       end
 
       it "saves the budgets and the promo date, and logs who changed what" do
@@ -214,16 +226,23 @@ RSpec.describe "Admin" do
         ))
       end
 
+      it "saves the Qloo daily call limit (R92)" do
+        patch "/admin/settings", params: { settings: valid.merge(qloo_daily_call_limit: "500") }, headers: basic_auth
+
+        expect(response).to redirect_to("/admin")
+        expect(Taste::CallGuard.daily_limit).to eq(500)
+      end
+
       it "re-renders with every error and saves nothing when a value is invalid" do
         patch "/admin/settings", headers: basic_auth,
                                  params: { settings: valid.merge(promo_budget_usd: "-1", llm_daily_budget_usd: "lots",
-                                                                 promo_pro_until: "2026-13-40") }
+                                                                 promo_pro_until: "2026-13-40", qloo_daily_call_limit: "-5") }
 
         expect(response).to have_http_status(:unprocessable_content)
         errors = section("Settings").at_css("[role='alert']").text.squish
         expect(errors).to include("Promo budget must be a dollar amount, 0 or more.",
                                   "Daily LLM budget must be a dollar amount, 0 or more.",
-                                  "Promo Pro until must be a date.")
+                                  "Promo Pro until must be a date.", "Qloo calls a day must be a whole number, 0 or more.")
         expect(section("Settings").at_css("input[name='settings[llm_daily_budget_usd]']")["value"]).to eq("lots")
         expect(Setting.count).to eq(0)
       end
