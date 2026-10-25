@@ -14,13 +14,14 @@ Rails.application.routes.draw do
   end
 
   # Public pages (Task 19, R78): the landing page for everyone, signed in or not, pricing, about and the legal pages,
-  # the public sample reports and the sitemap. robots.txt is a static file in public/.
+  # the public sample reports, the sitemap and robots.txt (R88: a route, so its sitemap URL is the request's host).
   root "pages#home"
   get "pricing", to: "pages#pricing", as: :pricing
   get "about", to: "pages#about", as: :about
   get "privacy", to: "pages#privacy", as: :privacy
   get "terms", to: "pages#terms", as: :terms
   get "sitemap.xml", to: "pages#sitemap", as: :sitemap, format: false, defaults: { format: "xml" }
+  get "robots.txt", to: "pages#robots", as: :robots, format: false, defaults: { format: "text" }
   resources :samples, only: %i[index show], param: :slug, format: false
 
   resource :account, only: %i[show destroy] do

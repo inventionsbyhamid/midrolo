@@ -70,7 +70,9 @@ RSpec.describe "Public pages" do
     it "sends See a sample report to /samples until a sample is done, then to the first done sample" do
       get "/"
       expect(page.at_xpath("//main//a[normalize-space()='See a sample report']")["href"]).to eq("/samples")
-      expect(page.at_css("#hero").text).to include("An illustration of a match list")
+      hero = page.at_css("#hero").text
+      expect(hero).to include("An illustration of a match list", "Coffee roaster", "Note-taking app", "Budgeting app")
+      expect(hero).not_to match(/Fieldnote|Ledgerly|Northwind|Affinity \d/) # no invented brands or numbers (R89)
 
       create_sample("sample-two", title: "Index Fund Mornings")
       create_sample("sample-one")
@@ -182,14 +184,30 @@ RSpec.describe "Public pages" do
     end
   end
 
-  describe "robots.txt" do
-    it "lets crawlers into the public pages and keeps them out of private ones" do
-      robots = Rails.root.join("public/robots.txt").read
+  describe "GET /robots.txt (R88)" do
+    it "lets crawlers into the public pages, keeps them out of private ones and points to this host's sitemap" do
+      get "/robots.txt"
 
-      expect(robots).to include("User-agent: *", "Allow: /")
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("text/plain")
+      robots = response.body
+      expect(robots).to start_with("User-agent: *\nAllow: /\n")
       %w[/admin /account /shows /pipeline].each { |path| expect(robots).to match(/^Disallow: #{path}$/) }
       expect(robots).not_to match(%r{^Disallow: /k\b})
-      expect(robots).to match(%r{^Sitemap: https://midrolo\.com/sitemap\.xml$})
+      expect(robots).to match(%r{^Sitemap: http://www\.example\.com/sitemap\.xml$})
+    end
+
+    it "names the sitemap on whichever host served it, never a hard-coded domain" do
+      host! "midrolo.dijmo.com"
+      https!
+      get "/robots.txt"
+
+      expect(response.body).to match(%r{^Sitemap: https://midrolo\.dijmo\.com/sitemap\.xml$})
+      expect(response.body).not_to include("midrolo.com/")
+    end
+
+    it "isn't shadowed by a static file" do
+      expect(Rails.root.join("public/robots.txt")).not_to exist
     end
   end
 

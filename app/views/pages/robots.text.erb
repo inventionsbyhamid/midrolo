@@ -1,0 +1,16 @@
+<%# Public pages (the landing page, pricing, about, the legal pages, sample reports and published media kits at
+    /k/:slug) are open to crawlers; signed-in pages are not. A kit's private preview lives under /shows and also sends
+    noindex. The sitemap's address is this request's host, never a hard-coded domain (R88). -%>
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /shows
+Disallow: /pipeline
+Disallow: /sponsor_matches
+Disallow: /users
+Disallow: /checkouts
+Disallow: /billing
+Disallow: /waitlist_entries
+
+Sitemap: <%= sitemap_url %>

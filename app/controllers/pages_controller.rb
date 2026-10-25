@@ -1,5 +1,5 @@
 # The public pages (Task 19, R78): the landing page (for everyone; signed-in visitors get "Go to my shows" in the
-# header), pricing, about, privacy, terms and the sitemap. Nothing here needs a session.
+# header), pricing, about, privacy, terms, the sitemap and robots.txt. Nothing here needs a session.
 class PagesController < ApplicationController
   layout "marketing"
 
@@ -13,6 +13,8 @@ class PagesController < ApplicationController
   def about; end
   def privacy; end
   def terms; end
+
+  def robots; end
 
   def sitemap
     @samples = Samples.reports

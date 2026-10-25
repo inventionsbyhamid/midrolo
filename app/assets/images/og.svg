@@ -5,7 +5,8 @@
     Pango doesn't read "Expanded" in a family name as a stretch. With those static instances from Google Fonts in a
     fontconfig directory, render with:
       PANGOCAIRO_BACKEND=fc FONTCONFIG_FILE=path/to/fonts.conf vips copy og.svg og.png
-    The match card is an illustration: the brand names are made up, shown with initials as the product shows logos.
+    The match card is an illustration: brands appear as category labels with a blank logo tile, never as invented
+    brand names (R89).
   -->
   <rect width="1200" height="630" fill="#f6f2f4"/>
 
@@ -85,8 +86,8 @@
   <rect x="784" y="261" width="320" height="1" fill="#e3dae3"/>
     <g>
       <rect x="784" y="280" width="44" height="44" rx="10" fill="#eee5f3"/>
-      <text x="806" y="308" text-anchor="middle" font-family="Archivo" font-weight="700" font-size="15" fill="#4a2266">FC</text>
-      <text x="844" y="298" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Fieldnote Coffee</text>
+      <circle cx="806" cy="302" r="8" fill="#4a2266" opacity="0.3"/>
+      <text x="844" y="298" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Coffee roaster</text>
       <rect x="1016.4" y="282" width="87.6" height="22" rx="11" fill="#e2f1e8"/>
       <text x="1060.2" y="298" text-anchor="middle" font-family="Archivo" font-weight="600" font-size="13" fill="#1d6b45">Easy yes</text>
       <rect x="844.0" y="312" width="8.5" height="8" rx="1" fill="#4a2266"/>
@@ -114,8 +115,8 @@
     <rect x="784" y="341" width="320" height="1" fill="#e3dae3"/>
     <g>
       <rect x="784" y="360" width="44" height="44" rx="10" fill="#eee5f3"/>
-      <text x="806" y="388" text-anchor="middle" font-family="Archivo" font-weight="700" font-size="15" fill="#4a2266">LG</text>
-      <text x="844" y="378" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Ledgerly</text>
+      <circle cx="806" cy="382" r="8" fill="#4a2266" opacity="0.3"/>
+      <text x="844" y="378" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Note-taking app</text>
       <rect x="1008.2" y="362" width="95.8" height="22" rx="11" fill="#eee5f3"/>
       <text x="1056.1" y="378" text-anchor="middle" font-family="Archivo" font-weight="600" font-size="13" fill="#4a2266">Realistic</text>
       <rect x="844.0" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>
@@ -143,8 +144,8 @@
     <rect x="784" y="421" width="320" height="1" fill="#e3dae3"/>
     <g>
       <rect x="784" y="440" width="44" height="44" rx="10" fill="#eee5f3"/>
-      <text x="806" y="468" text-anchor="middle" font-family="Archivo" font-weight="700" font-size="15" fill="#4a2266">NB</text>
-      <text x="844" y="458" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Northwind Budget</text>
+      <circle cx="806" cy="462" r="8" fill="#4a2266" opacity="0.3"/>
+      <text x="844" y="458" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Budgeting app</text>
       <rect x="1016.4" y="442" width="87.6" height="22" rx="11" fill="#e2f1e8"/>
       <text x="1060.2" y="458" text-anchor="middle" font-family="Archivo" font-weight="600" font-size="13" fill="#1d6b45">Easy yes</text>
       <rect x="844.0" y="472" width="8.5" height="8" rx="1" fill="#4a2266"/>

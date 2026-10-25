@@ -1,6 +1,7 @@
 <%# locals: (sample:, matches:) -%>
 <%# Up to three top matches from the first done sample, with the evidence that sells each one: a proven sponsorship
-    when there is one, else the first chip. Without a sample, an illustration says it's one. %>
+    when there is one, else the first chip. Without a sample, an illustration says it's one, and names kinds of brands
+    with a blank logo tile and kinds of evidence, never an invented brand or number (R89). %>
 <% if sample && matches.any? %>
   <figure class="hero-card">
     <figcaption class="hero-card-head">
@@ -43,11 +44,11 @@
       </span>
     </figcaption>
     <ol class="hero-matches">
-      <% [ [ "Fieldnote Coffee", 91, "easy_yes", "Shares 6 taste tags" ],
-           [ "Ledgerly", 84, "realistic", "Affinity 0.82" ],
-           [ "Northwind Budget", 78, "easy_yes", "Shares 4 taste tags" ] ].each do |name, fit, tier, chip| %>
+      <% [ [ "Coffee roaster", 91, "easy_yes", "Sponsors shows like yours" ],
+           [ "Note-taking app", 84, "realistic", "Shares your listeners' taste tags" ],
+           [ "Budgeting app", 78, "easy_yes", "Your listeners love it more than most" ] ].each do |name, fit, tier, chip| %>
         <li class="hero-match">
-          <span class="avatar size-10 text-sm" aria-hidden="true"><%= initials_for(name) %></span>
+          <span class="avatar size-10" aria-hidden="true"><span class="size-3 rounded-full bg-plum/30"></span></span>
           <div class="min-w-0 flex-1">
             <div class="flex items-start justify-between gap-2">
               <p class="hero-match-name"><%= name %></p>
