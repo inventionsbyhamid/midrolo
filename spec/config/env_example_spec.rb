@@ -1,10 +1,13 @@
 require "rails_helper"
 
-# .env.example (Task 21): every variable the app reads, blank, under a comment saying what it does. Production's
-# required ones (lib/required_env.rb, plus the backup bucket) are set lines; the rest are commented out, since a
-# NAME= line in .env sets an empty string, which isn't the same as unset for the variables with a default.
+# .env.example (Task 21): every variable the app and compose.yml read, blank, under a comment saying what it does.
+# What production requires (lib/required_env.rb) and what compose.yml refuses to start without are set lines; the
+# rest are commented out, since a NAME= line in .env sets an empty string, which isn't the same as unset for the
+# variables with a default. bin/remote-rspec sends this file to the test lane (R118): a missing file fails here.
 RSpec.describe ".env.example" do
-  let(:lines) { Rails.root.join(".env.example").read.lines.map(&:chomp) }
+  let(:path) { Rails.root.join(".env.example") }
+  let(:lines) { path.read.lines.map(&:chomp) }
+  let(:compose_required) { Rails.root.join("compose.yml").read.scan(/\$\{([A-Z0-9_]+):\?/).flatten.uniq }
   let(:set_names) { lines.grep(/\A[A-Z0-9_]+=/).map { |line| line[/\A[A-Z0-9_]+/] } }
   let(:commented_names) { lines.grep(/\A# [A-Z0-9_]+=\z/).map { |line| line[/[A-Z0-9_]+/] } }
 
@@ -12,6 +15,10 @@ RSpec.describe ".env.example" do
   let(:internal) do
     %w[BUNDLE_GEMFILE CI EVAL_FILE EVAL_MODE FORCE STEPS FONTCONFIG_FILE PANGOCAIRO_BACKEND PIDFILE PORT
        MY_APP_DATABASE_URL SECRET_KEY_BASE_DUMMY]
+  end
+
+  it "is there" do
+    expect(path).to exist
   end
 
   it "holds blank values only" do
@@ -29,10 +36,11 @@ RSpec.describe ".env.example" do
     end
   end
 
-  it "sets only what production requires, and leaves every optional variable commented out" do
-    required = RequiredEnv::VARIABLES.map { |names, _| names.first } + %w[R2_BACKUP_BUCKET]
+  it "sets only what production and compose require, and leaves every optional variable commented out" do
+    required = RequiredEnv::VARIABLES.map { |names, _| names.first } | compose_required
     alternatives = RequiredEnv::VARIABLES.flat_map { |names, _| names.drop(1) }
 
+    expect(compose_required).to include("R2_BACKUP_BUCKET", "BACKUP_R2_ACCESS_KEY_ID", "BACKUP_R2_SECRET_ACCESS_KEY")
     expect(set_names).to match_array(required)
     expect(commented_names).to include(*alternatives)
   end

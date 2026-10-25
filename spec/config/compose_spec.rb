@@ -1,33 +1,42 @@
 require "rails_helper"
 
-# compose.yml, the production stack on ioflood (R37, R79; docs/deploy.md), read as YAML: Docker isn't on the Mac, and
-# nothing here may build or start the stack. ioflood is a shared production server, so the stack publishes no host
-# port, keeps every name under midrolo-, and only web joins Coolify's network, where Traefik routes midrolo.com to it.
+# compose.yml, the production stack on ioflood (R37, R79, R115; docs/deploy.md), read as YAML: Docker isn't on the
+# Mac, and nothing here may build or start the stack. ioflood is a shared production server, so the stack publishes no
+# host port, keeps every name under midrolo-, and only midrolo-web joins Coolify's network, where Traefik routes
+# midrolo.com to it. Compose makes each service's key a DNS alias on every network the service joins, so the keys are
+# midrolo- names too: a bare "web" on the shared coolify network could answer another app's lookups.
 RSpec.describe "The compose stack" do
   let(:compose) { YAML.load_file(Rails.root.join("compose.yml")) } # no anchors: plain YAML, as the brief checks it
   let(:services) { compose.fetch("services") }
-  let(:labels) { services.dig("web", "labels") }
+  let(:labels) { services.dig("midrolo-web", "labels") }
 
   def label(key) = labels.find { |entry| entry.start_with?("#{key}=") }&.delete_prefix("#{key}=")
 
-  it "runs web, jobs, db and backup, every name under midrolo-" do
+  it "runs web, jobs, db and backup, every name (and so every DNS alias) under midrolo-" do
     expect(compose["name"]).to eq("midrolo")
-    expect(services.keys).to eq(%w[web jobs db backup])
-    expect(services.values.map { |service| service["container_name"] }).to all(start_with("midrolo-"))
-    expect(compose["volumes"].values.map { |volume| volume["name"] }).to eq([ "midrolo-db" ])
+    expect(services.keys).to eq(%w[midrolo-web midrolo-jobs midrolo-db midrolo-backup])
+    services.each { |key, service| expect(service["container_name"]).to eq(key) }
+    expect(compose["volumes"].values.map { |volume| volume["name"] }).to eq(%w[midrolo-db midrolo-backup-state])
     expect(compose.dig("networks", "midrolo", "name")).to eq("midrolo-net")
     expect(services.values.filter_map { |service| service["image"] }).to eq(
       [ "midrolo-app:latest", "midrolo-app:latest", "postgres:16", "midrolo-backup:latest" ]
     )
   end
 
-  it "publishes no port on the host, and shares no network but Coolify's" do
+  it "publishes no port on the host, adds no alias of its own, and shares no network but Coolify's" do
     services.each do |name, service|
-      expect(service.keys).not_to include("ports", "network_mode"), name
-      expect(service["networks"]).to include("midrolo"), name
+      expect(service.keys).not_to include("ports", "network_mode", "hostname"), name
+      expect(service["networks"]).to be_an(Array).and(include("midrolo")), name # the list form: no extra aliases
     end
-    expect(services.select { |_, service| service["networks"].include?("coolify") }.keys).to eq([ "web" ])
+    expect(services.select { |_, service| service["networks"].include?("coolify") }.keys).to eq([ "midrolo-web" ])
     expect(compose.dig("networks", "coolify")).to eq("external" => true)
+  end
+
+  it "starts each service after the ones it needs, by their midrolo- names" do
+    expect(services.transform_values { |service| service.fetch("depends_on", {}).keys }).to eq(
+      "midrolo-web" => [ "midrolo-db" ], "midrolo-jobs" => [ "midrolo-web" ], "midrolo-db" => [],
+      "midrolo-backup" => [ "midrolo-db" ]
+    )
   end
 
   it "limits, health checks and restarts every service" do
@@ -72,24 +81,37 @@ RSpec.describe "The compose stack" do
     queue = YAML.load(ERB.new(Rails.root.join("config/queue.yml").read).result, aliases: true)
     job_threads = queue.dig("production", "workers").sum { |worker| worker["threads"] * worker["processes"].to_i }
 
-    expect(services.dig("jobs", "command")).to eq([ "./bin/jobs" ])
-    expect(services.dig("jobs", "environment", "RAILS_MAX_THREADS").to_i).to be >= job_threads + 2
-    expect(services.dig("web", "environment")).not_to have_key("SOLID_QUEUE_IN_PUMA")
-    expect(services.dig("jobs", "pull_policy")).to eq("never") # the image web built, never one from a registry
+    expect(services.dig("midrolo-jobs", "command")).to eq([ "./bin/jobs" ])
+    expect(services.dig("midrolo-jobs", "environment", "RAILS_MAX_THREADS").to_i).to be >= job_threads + 2
+    expect(services.dig("midrolo-web", "environment")).not_to have_key("SOLID_QUEUE_IN_PUMA")
+    expect(services.dig("midrolo-jobs", "pull_policy")).to eq("never") # the image web built, never one from a registry
   end
 
   it "keeps the database on its own volume, reached as midrolo-db by the app and the backups" do
-    db = services["db"]
+    db = services["midrolo-db"]
     expect(db["volumes"]).to eq([ "midrolo-db:/var/lib/postgresql/data" ])
     expect(db.dig("environment", "POSTGRES_USER")).to eq("midrolo")
-    expect(%w[web jobs].map { |name| services.dig(name, "environment", "DB_HOST") }).to all(eq(db["container_name"]))
-    expect(services.dig("backup", "environment", "PGHOST")).to eq(db["container_name"])
-    expect(services.dig("backup", "environment").keys).to include("R2_BACKUP_BUCKET", "PGPASSWORD")
+    expect(%w[midrolo-web midrolo-jobs].map { |name| services.dig(name, "environment", "DB_HOST") }).to all(eq("midrolo-db"))
+    expect(services.dig("midrolo-backup", "environment", "PGHOST")).to eq("midrolo-db")
   end
 
-  it "backs up nightly with bin/backup, healthy unless the last run failed" do
-    expect(services.dig("backup", "command")).to eq(%w[backup daily])
-    expect(services.dig("backup", "healthcheck", "test")).to eq(%w[CMD backup health])
+  it "backs up nightly with bin/backup on a token of its own, flagged unhealthy until a failed run is followed by a good one" do
+    backup = services["midrolo-backup"]
+    expect(backup["command"]).to eq(%w[backup daily])
+    expect(backup.dig("healthcheck", "test")).to eq(%w[CMD backup health])
+    expect(backup["environment"].keys).to include("R2_BACKUP_BUCKET", "BACKUP_R2_ACCESS_KEY_ID", "BACKUP_R2_SECRET_ACCESS_KEY", "PGPASSWORD")
+    expect(backup["environment"].keys).not_to include("R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET") # the app's
+    expect(backup["volumes"]).to eq([ "midrolo-backup-state:#{backup.dig('environment', 'BACKUP_STATE_DIR')}" ])
     expect(Rails.root.join("Dockerfile.backup").read).to include("FROM docker.io/library/postgres:16", "COPY bin/backup")
+  end
+
+  it "is what docs/deploy.md tells the operator to run: every docker compose command names a service here" do
+    commands = Rails.root.join("docs/deploy.md").read.scan(/docker compose (exec|run|logs|stop|start|ps|build|restart)([^\n`]*)/)
+    named = commands.flat_map do |verb, rest|
+      words = rest.split.reject { |word| word.start_with?("-") || word.match?(/\A\d+\z/) }
+      %w[exec run logs].include?(verb) ? words.first(1) : words.take_while { |word| word.match?(/\A[a-z][\w-]*\z/) }
+    end.uniq
+    expect(named).not_to be_empty
+    expect(named - services.keys).to be_empty
   end
 end

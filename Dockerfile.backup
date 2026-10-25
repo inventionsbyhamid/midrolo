@@ -12,6 +12,10 @@ RUN apt-get update -qq && \
 
 COPY bin/backup /usr/local/bin/backup
 
-# Not root: the postgres image's own user, which needs nothing but /tmp.
+# Where bin/backup records a failed run (BACKUP_STATE_DIR in compose.yml). The midrolo-backup-state volume mounts here
+# and starts with this directory's owner, so the flag outlives restarts and redeploys.
+RUN mkdir -p /var/lib/midrolo-backup && chown postgres:postgres /var/lib/midrolo-backup
+
+# Not root: the postgres image's own user, which writes only there and in /tmp.
 USER postgres
 CMD ["backup", "daily"]

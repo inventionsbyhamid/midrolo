@@ -1,10 +1,12 @@
 # Midrolo's production stack on ioflood (docs/deploy.md). Build and run it there, never on the Mac.
 #
-# ioflood is a shared production server: everything here is named midrolo-* (project, containers, images, network,
-# volume, Traefik routers, services and middlewares), so nothing can collide with another stack. No port is published
-# on the host: Coolify's Traefik reaches the web container over the external coolify network and routes midrolo.com to
-# it by the labels below. The other containers sit only on midrolo-net, this stack's own bridge network, which no other
-# stack joins (not `internal: true`, since jobs and backups need outbound HTTPS).
+# ioflood is a shared production server: everything here is named midrolo-* (project, service keys, containers,
+# images, network, volumes, Traefik routers, services and middlewares), so nothing can collide with another stack.
+# That includes DNS: compose makes each service key an alias on every network the service joins, and midrolo-web
+# joins the shared coolify network, where a bare "web" could answer another app's lookups (R115). No port is
+# published on the host: Coolify's Traefik reaches midrolo-web over the external coolify network and routes
+# midrolo.com to it by the labels below. The other containers sit only on midrolo-net, this stack's own bridge
+# network, which no other stack joins (not `internal: true`, since jobs and backups need outbound HTTPS).
 #
 # Every service runs with at most 2 CPUs, 2 GB and 512 processes, restarts unless stopped by hand, and rotates its logs.
 
@@ -12,7 +14,7 @@ name: midrolo
 
 services:
   # Thruster on port 80 in front of Puma. Its entrypoint runs db:prepare before the server starts.
-  web:
+  midrolo-web:
     restart: unless-stopped
     deploy: { resources: { limits: { cpus: "2", memory: 2G } } }
     pids_limit: 512
@@ -26,7 +28,7 @@ services:
     environment:
       DB_HOST: midrolo-db
     depends_on:
-      db:
+      midrolo-db:
         condition: service_healthy
     networks:
       - midrolo
@@ -68,12 +70,12 @@ services:
 
   # Solid Queue: every queue in config/queue.yml (default and solid_queue_recurring on 3 threads, artwork on 1), with
   # outbound HTTPS for Qloo, the LLM, feeds, artwork and R2.
-  jobs:
+  midrolo-jobs:
     restart: unless-stopped
     deploy: { resources: { limits: { cpus: "2", memory: 2G } } }
     pids_limit: 512
     logging: { driver: json-file, options: { max-size: 10m, max-file: "3" } }
-    image: midrolo-app:latest # built by web; never pulled from a registry
+    image: midrolo-app:latest # built by midrolo-web; never pulled from a registry
     pull_policy: never
     container_name: midrolo-jobs
     command: [ "./bin/jobs" ]
@@ -82,8 +84,8 @@ services:
       DB_HOST: midrolo-db
       RAILS_MAX_THREADS: "6" # the connection pool: every job thread in config/queue.yml (3 + 1), plus 2 for Solid Queue
     depends_on:
-      web:
-        condition: service_healthy # web's entrypoint has prepared the databases
+      midrolo-web:
+        condition: service_healthy # its entrypoint has prepared the databases
     networks:
       - midrolo
     healthcheck:
@@ -100,7 +102,7 @@ services:
       start_period: 120s
     stop_grace_period: 30s
 
-  db:
+  midrolo-db:
     restart: unless-stopped
     deploy: { resources: { limits: { cpus: "2", memory: 2G } } }
     pids_limit: 512
@@ -123,9 +125,9 @@ services:
       start_period: 30s
     stop_grace_period: 30s
 
-  # bin/backup every night at 03:00 UTC: pg_dump | gzip to R2_BACKUP_BUCKET, keeping 14 days. Unhealthy when the last
-  # run failed.
-  backup:
+  # bin/backup every night at 03:00 UTC: pg_dump | gzip to R2_BACKUP_BUCKET, keeping 14 days. Unhealthy from a failed
+  # run until a later one succeeds.
+  midrolo-backup:
     restart: unless-stopped
     deploy: { resources: { limits: { cpus: "2", memory: 2G } } }
     pids_limit: 512
@@ -142,12 +144,18 @@ services:
       PGUSER: midrolo
       PGPASSWORD: ${MIDROLO_DATABASE_PASSWORD:?set MIDROLO_DATABASE_PASSWORD in .env}
       PGDATABASE: midrolo_production
+      # Its own R2 token, scoped to the backup bucket alone: the app's token can't touch the backups, nor this one
+      # the uploads.
       R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:?set R2_ACCOUNT_ID in .env}
-      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:?set R2_ACCESS_KEY_ID in .env}
-      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:?set R2_SECRET_ACCESS_KEY in .env}
+      BACKUP_R2_ACCESS_KEY_ID: ${BACKUP_R2_ACCESS_KEY_ID:?set BACKUP_R2_ACCESS_KEY_ID in .env}
+      BACKUP_R2_SECRET_ACCESS_KEY: ${BACKUP_R2_SECRET_ACCESS_KEY:?set BACKUP_R2_SECRET_ACCESS_KEY in .env}
       R2_BACKUP_BUCKET: ${R2_BACKUP_BUCKET:?set R2_BACKUP_BUCKET in .env}
+      # Where a failed run is recorded, on a volume, so a restart or a redeploy doesn't forget it.
+      BACKUP_STATE_DIR: /var/lib/midrolo-backup
+    volumes:
+      - midrolo-backup-state:/var/lib/midrolo-backup
     depends_on:
-      db:
+      midrolo-db:
         condition: service_healthy
     networks:
       - midrolo
@@ -160,6 +168,8 @@ services:
 volumes:
   midrolo-db:
     name: midrolo-db
+  midrolo-backup-state:
+    name: midrolo-backup-state
 
 networks:
   midrolo:
