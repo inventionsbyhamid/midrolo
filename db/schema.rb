@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_25_080000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_26_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -285,7 +285,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_080000) do
   add_foreign_key "show_verifications", "shows"
   add_foreign_key "shows", "users"
   add_foreign_key "spend_entries", "reports", on_delete: :nullify
-  add_foreign_key "spend_entries", "users"
+  add_foreign_key "spend_entries", "users", on_delete: :nullify
   add_foreign_key "sponsor_matches", "reports"
   add_foreign_key "sponsor_matches", "shows"
   add_foreign_key "subscriptions", "users"

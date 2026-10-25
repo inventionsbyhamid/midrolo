@@ -286,5 +286,51 @@ RSpec.describe "Account" do
       expect { delete "/account" }.to change(Show, :count).by(-1)
       expect(Show.exists?(other.id)).to be true
     end
+
+    # R129: the privacy page promises deletion, whatever the account holds. Spend rows stay for the budget totals,
+    # with no owner.
+    it "deletes an account that holds every kind of record and keeps its spend rows ownerless" do
+      show = create(:show, user: user)
+      snapshot = create(:report, show: show, kind: "snapshot", status: "done")
+      agent = create(:report, show: show, kind: "agent", status: "done", spend_bucket: "paid")
+      create(:agent_step, report: agent)
+      match = create(:sponsor_match, report: agent, status: "pitched")
+      create(:sponsor_match, report: snapshot, status: "saved")
+      pitch = Pitch.create!(sponsor_match: match, status: "done")
+      Llm::Budget.record!(user: user, bucket: :paid, model: "claude-opus-5-5", tokens: { input: 1000 }, report: agent)
+      Llm::Budget.record!(user: user, bucket: :paid, model: "claude-opus-5-5", tokens: { input: 500 }, pitch: pitch)
+      create(:subscription, user: user, cancel_at_period_end: true)
+      WaitlistEntry.join(email: user.email, price_key: "pro_monthly", user: user)
+      verified = create(:show, user: user)
+      ShowVerification.create!(show: verified, kind: "email", sent_to: "host@example.com", expires_at: 30.minutes.from_now)
+      kit = create(:media_kit, :published, show: verified)
+      kit.cover.attach(io: file_fixture("cover.png").open, filename: "cover.png")
+      kit.host_photo.attach(io: file_fixture("host.jpg").open, filename: "host.jpg")
+      others = create(:show)
+      create(:report, show: others)
+      spent_before = Llm::Budget.usage
+
+      sign_in user
+      perform_enqueued_jobs(only: ActiveStorage::PurgeJob) { delete "/account" }
+
+      expect(response).to redirect_to("/")
+      expect(flash[:notice]).to eq("Your account and data were deleted.")
+      expect(User.exists?(user.id)).to be false
+      expect(Show.where(user_id: user.id)).to be_empty
+      expect(Report.where(id: [ snapshot.id, agent.id ])).to be_empty
+      expect(AgentStep.count).to eq(0)
+      expect(SponsorMatch.count).to eq(0)
+      expect(Pitch.count).to eq(0)
+      expect(Subscription.count).to eq(0)
+      expect(WaitlistEntry.count).to eq(0)
+      expect(ShowVerification.count).to eq(0)
+      expect(MediaKit.count).to eq(0)
+      expect(ActiveStorage::Attachment.count).to eq(0)
+      expect(ActiveStorage::Blob.count).to eq(0)
+      expect(SpendEntry.count).to eq(2)
+      expect(SpendEntry.pluck(:user_id, :report_id)).to all(eq([ nil, nil ]))
+      expect(Llm::Budget.usage).to eq(spent_before)
+      expect(Report.where(show: others).count).to eq(1)
+    end
   end
 end
