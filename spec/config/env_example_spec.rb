@@ -14,7 +14,7 @@ RSpec.describe ".env.example" do
   # Read by Rails, Puma, bin/ci (config/ci.rb) or a rake task's own arguments, or set by the app itself: not for .env.
   let(:internal) do
     %w[BUNDLE_GEMFILE CI EVAL_FILE EVAL_MODE FORCE STEPS FONTCONFIG_FILE PANGOCAIRO_BACKEND PIDFILE PORT
-       MY_APP_DATABASE_URL SECRET_KEY_BASE_DUMMY LOCAL_RSPEC]
+       MY_APP_DATABASE_URL SECRET_KEY_BASE_DUMMY REMOTE_RSPEC]
   end
 
   it "is there" do

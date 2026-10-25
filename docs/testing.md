@@ -29,8 +29,8 @@ bin/remote-rspec --clean                           # delete this lane's copy of 
 
 Options go before the rspec arguments. It needs `ssh ioflood` to work, which means the VPN is on.
 
-`bin/ci` (setup, RuboCop, the audits and Brakeman, run here) ends with the suite through `bin/remote-rspec` too;
-`LOCAL_RSPEC=1 bin/ci` runs the suite locally instead.
+`bin/ci` (setup, RuboCop, the audits and Brakeman) ends with the suite, run locally; `REMOTE_RSPEC=1 bin/ci` runs
+the suite through `bin/remote-rspec` instead.
 
 What a run does:
 
