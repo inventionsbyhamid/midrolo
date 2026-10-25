@@ -1,4 +1,4 @@
-<%# locals: (sponsor_match:) -%>
+<%# locals: (sponsor_match:, read_only:) -%>
 <%#
   Why it fits, collapsed under a match's row: the full evidence, with Qloo's taste data kept apart from what the
   podcast feeds showed and from Midrolo's own fit score (R86). The audience is spoken of as a group (Qloo SAFE_USE).
@@ -13,7 +13,7 @@
   <summary class="disclosure disclosure-sm"><span>Why it fits</span></summary>
   <dl class="why-list">
     <% if match.reason.present? && match.reason.squish != match_reason_line(match) %>
-      <div><dt>Full reason</dt><dd><%= match.reason %></dd></div>
+      <div><dt>Full reason</dt><dd><%= report_text(match.reason, read_only) %></dd></div>
     <% end %>
     <% if band || shared.any? %>
       <div>

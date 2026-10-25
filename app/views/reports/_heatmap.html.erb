@@ -1,12 +1,13 @@
-<%# locals: (id:, heatmap:, points:) -%>
+<%# locals: (id:, heatmap:, points:, read_only:) -%>
 <%# The top places in words, then the heatmap figure (map_controller), shared by the report and the media kit. If the
-    map can't load it hides itself and the words stand alone; print stylesheets hide the canvas the same way. %>
+    map can't load it hides itself and the words stand alone; print stylesheets hide the canvas the same way. A public
+    sample or a kit (read_only) labels the map in the third person. %>
 <% if (places = top_places(points)) %>
   <p class="map-places" data-top-places><span class="map-places-label">Top places:</span> <%= places %></p>
 <% end %>
 <%# Kept through page-refresh morphs so the live map isn't torn down; a section broadcast still replaces it. %>
 <figure id="<%= id %>" class="map-frame" data-turbo-permanent
-        aria-label="<%= heatmap_label(heatmap) %>"
+        aria-label="<%= heatmap_label(heatmap, read_only: read_only) %>"
         data-controller="map" data-map-points-value="<%= points.map { |p| p.slice("lat", "lng", "affinity") }.to_json %>"
         data-map-style-value="<%= map_style_url %>" data-map-stylesheet-value="<%= maplibre_stylesheet_url %>">
   <div class="map-canvas" data-map-target="canvas"></div>

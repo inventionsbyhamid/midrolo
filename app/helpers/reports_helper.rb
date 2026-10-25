@@ -22,8 +22,12 @@ module ReportsHelper
   DEFAULT_MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/positron".freeze
 
   # Who a report's copy talks about: "your listeners" to the show's owner, "this show's listeners" on a public sample
-  # (read_only, R78), so a stranger never reads "your". Agent-written text (the summary, reasons) stays as written.
+  # (read_only, R78), so a stranger never reads "your".
   def report_listeners(read_only) = read_only ? "this show's listeners" : "your listeners"
+
+  # Text the research saved for the owner (the summary, step labels and summaries, seed sources, reasons), as this page
+  # shows it: in the third person on a public sample (Copy.third_person, Task 20), as written on the owner's report.
+  def report_text(text, read_only) = read_only ? Copy.third_person(text) : text
 
   # True while the run may still fill a section in; finished reports hide sections that never came.
   def section_pending?(report) = report.active?
@@ -188,9 +192,11 @@ module ReportsHelper
     country && heatmap["location"] == "metros" ? "#{country} metros" : country
   end
 
-  def heatmap_label(heatmap)
+  # The map's label for screen readers. A public sample and a kit (read_only) speak of the audience, not "your listeners".
+  def heatmap_label(heatmap, read_only:)
     country = heatmap_country(heatmap)
-    "Heatmap of where people with your listeners' tastes live#{" in #{country}" if country}"
+    whose = read_only ? "this audience's" : "your listeners'"
+    "Heatmap of where people with #{whose} tastes live#{" in #{country}" if country}"
   end
 
   def map_style_url = ENV["MAP_STYLE_URL"].presence || DEFAULT_MAP_STYLE_URL

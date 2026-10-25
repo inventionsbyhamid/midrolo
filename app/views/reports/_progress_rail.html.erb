@@ -1,5 +1,5 @@
-<%# locals: (report:) -%>
-<%# The rail is a plain list that agent steps append into over the report stream. %>
+<%# locals: (report:, read_only:) -%>
+<%# The rail is a plain list that agent steps append into over the report stream (only the owner's page streams). %>
 <div id="<%= dom_id(report, :agent_steps) %>" class="flex flex-col gap-2" aria-live="polite" aria-label="Agent steps">
-  <%= render partial: "reports/step", collection: report.agent_steps, as: :agent_step %>
+  <%= render partial: "reports/step", collection: report.agent_steps, as: :agent_step, locals: { read_only: read_only } %>
 </div>

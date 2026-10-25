@@ -14,7 +14,7 @@
       <%# One rail: open on desktop, collapsed on mobile (responsive-details controller). %>
       <details id="<%= dom_id(report, :agent_rail) %>" class="rail" open data-turbo-permanent data-controller="responsive-details">
         <summary class="cursor-pointer font-semibold">Show agent steps</summary>
-        <div class="mt-2"><%= render "reports/progress_rail", report: report %></div>
+        <div class="mt-2"><%= render "reports/progress_rail", report: report, read_only: read_only %></div>
       </details>
     </aside>
   <% end %>

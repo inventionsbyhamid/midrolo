@@ -28,7 +28,7 @@ RSpec.describe "Sample reports" do
       expect(page.at_css("#report_matches")).to be_present
       # A finished report has no steps rail: its steps wait in How we built this, collapsed (R99).
       expect(page.at_css("aside[aria-label='Agent steps']")).to be_nil
-      expect(page.at_css("#report_how details:not([open])").text).to include("Reading your last 15 episodes…")
+      expect(page.at_css("#report_how details:not([open])").text).to include("Reading the last 15 episodes…")
     end
 
     it "reads in the same order as the owner's report: At a glance, matches, audience, where they are, How we built this" do
@@ -71,6 +71,27 @@ RSpec.describe "Sample reports" do
       expect(copy).to include("Built from the show on Qloo", "Qloo knows the show", "Modeled from Qloo taste data, not measured.",
                               "What people with this show's listeners' tastes love")
       expect(copy).not_to match(/\byour\b/i)
+    end
+
+    it "puts generated text in the third person too: the summary, steps, seed sources, reasons and map label (Task 20)" do
+      seeds = { "entities" => [ { "id" => "q0", "name" => "The Founder's Ledger", "source" => Research::Seeds::SHOW_SOURCE } ], "tags" => [] }
+      report.update!(seeds: seeds, summary: "Your listeners plan their money.\nPitch Fieldnote Coffee first: your audience loves it.",
+                     heatmap: { "location" => "US", "points" => [ { "lat" => 40.7, "lng" => -74.0, "affinity" => 0.9, "label" => "New York" } ] })
+      report.sponsor_matches.first.update!(reason: "Fieldnote Coffee fans share your audience's love of Investing.")
+      create(:agent_step, report: report, label: "Mapping where your listeners live…", status: "ok",
+                          input_summary: "Your show", output_summary: "Your profile is built from topics")
+
+      get "/samples/sample-one"
+
+      doc = page
+      doc.css(".glance-next").each(&:remove) # the next step speaks to the reader about a show of their own
+      generated = doc.css("#report_summary, #report_how, #report_seeds, .match-reason, #report_map")
+                     .map { |node| node.text }.join(" ").squish
+      labels = doc.css("[aria-label]").map { |node| node["aria-label"] }.join(" ")
+      expect(generated).to include("The listeners plan their money.", "the audience loves it", "The show on Qloo",
+                                   "Mapping where the listeners live…", "the audience's love of Investing")
+      expect(labels).to include("Heatmap of where people with this audience's tastes live in United States")
+      expect("#{generated} #{labels}").not_to match(/\byour\b/i)
     end
 
     it "has no live stream: a sample never changes while it's open" do

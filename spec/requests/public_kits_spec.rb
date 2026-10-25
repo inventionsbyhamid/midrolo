@@ -90,6 +90,8 @@ RSpec.describe "Public media kits" do
       audience = doc.at_css("[aria-labelledby='kit-audience-title']")
       order = %w[.taste-chips details.kit-more .leans .kit-map].map { |selector| audience.to_html.index(audience.at_css(selector).to_html) }
       expect(order).to eq(order.sort)
+      # Brands read the kit, so the map speaks of the audience in the third person (Task 20).
+      expect(doc.at_css("figure.map-frame")["aria-label"]).to eq("Heatmap of where people with this audience's tastes live in United States")
     end
 
     it "never lists sponsor matches" do

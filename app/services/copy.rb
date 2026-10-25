@@ -13,4 +13,11 @@ module Copy
 
     ActionController::Base.helpers.to_sentence(items, CONNECTORS)
   end
+
+  # Text written to the show's owner ("Mapping where your listeners live"), as a public page shows it to anyone else:
+  # "your" becomes "the" ("Your show on Qloo" reads "The show on Qloo"). The public sample pages and kits use it for
+  # what the research saved (Task 20); the owner's own report keeps the second person.
+  def third_person(text)
+    text.to_s.gsub(/\byour\b/i) { |word| { "Your" => "The", "YOUR" => "THE" }.fetch(word, "the") }
+  end
 end

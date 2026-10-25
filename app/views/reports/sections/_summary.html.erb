@@ -8,10 +8,10 @@
 %>
 <% if report.done? %>
   <% visible, _locked = split_matches(report) %>
-  <% points = report.summary_points %>
+  <% points = report.summary_points.map { |point| report_text(point, read_only) } %>
   <% audience = points.first || glance_audience(report) %>
   <% best = best_fits(visible) %>
-  <% notes = report.legacy_summary? ? [ report.legacy_summary_sentences.join(" ") ].compact_blank : points.drop(1) %>
+  <% notes = report.legacy_summary? ? [ report_text(report.legacy_summary_sentences.join(" "), read_only) ].compact_blank : points.drop(1) %>
   <%= render "reports/section", name: "summary", title: "At a glance" do %>
     <ul class="glance">
       <% if audience %>

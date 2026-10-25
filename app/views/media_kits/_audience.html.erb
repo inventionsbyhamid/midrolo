@@ -33,7 +33,7 @@
   <% if points.any? %>
     <div class="kit-block kit-map">
       <h3 class="kit-h3">Where they live<% if (place = heatmap_place(heatmap)) %><span class="kit-h3-aside"><%= place %></span><% end %></h3>
-      <%= render "reports/heatmap", id: "kit_heatmap", heatmap: heatmap, points: points %>
+      <%= render "reports/heatmap", id: "kit_heatmap", heatmap: heatmap, points: points, read_only: true %>
       <p class="kit-note">Modeled from Qloo taste data. Useful for regional and local sponsors.</p>
     </div>
   <% end %>

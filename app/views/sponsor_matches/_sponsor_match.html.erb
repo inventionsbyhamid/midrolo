@@ -5,7 +5,7 @@
   (a public sample, R78) leaves them out.
 %>
 <% match = sponsor_match %>
-<% reason = match_reason_line(match) %>
+<% reason = report_text(match_reason_line(match), read_only) %>
 <% chips = evidence_chips(match) %>
 <article id="<%= dom_id(match) %>" class="match-row" aria-labelledby="<%= dom_id(match, :name) %>">
   <div class="match-logo"><%= render "sponsor_matches/logo", sponsor_match: match, size: "size-11 text-sm" %></div>
@@ -34,7 +34,7 @@
           <% end %>
         </ul>
       <% end %>
-      <%= render "sponsor_matches/why", sponsor_match: match %>
+      <%= render "sponsor_matches/why", sponsor_match: match, read_only: read_only %>
     </div>
   </div>
   <% unless read_only %>

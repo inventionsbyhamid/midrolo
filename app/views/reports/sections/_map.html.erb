@@ -17,7 +17,7 @@
     <% if points.empty? %>
       <p class="mt-2 rounded-control border border-dashed border-line-strong px-4 py-6 text-ink-soft">Not enough location data for this audience</p>
     <% else %>
-      <%= render "reports/heatmap", id: dom_id(report, :heatmap), heatmap: heatmap, points: points %>
+      <%= render "reports/heatmap", id: dom_id(report, :heatmap), heatmap: heatmap, points: points, read_only: read_only %>
     <% end %>
     <p class="report-section-note mt-3">Modeled from Qloo taste data. Handy for regional and local sponsors.</p>
   <% end %>

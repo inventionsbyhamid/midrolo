@@ -17,7 +17,7 @@
       <% unless report.active? %>
         <section class="report-subsection" aria-labelledby="<%= dom_id(report, :steps_title) %>">
           <h3 id="<%= dom_id(report, :steps_title) %>" class="report-subsection-title">Research steps</h3>
-          <div class="mt-3"><%= render "reports/progress_rail", report: report %></div>
+          <div class="mt-3"><%= render "reports/progress_rail", report: report, read_only: read_only %></div>
         </section>
       <% end %>
       <section class="report-subsection" aria-labelledby="<%= dom_id(report, :method_title) %>">

@@ -25,6 +25,7 @@ class SponsorResearchAgent < RubyLLM::Agent
     - When a tool reports an error or no results, adapt (other seeds, fewer categories) instead of guessing.
     - The podcaster reads the reasons and the summary in under a minute. Write plain, specific sentences with no jargon: say "loves more than most people do", not "affinity" or "over-indexes". Use no em dashes or en dashes (use a comma, period, colon or parentheses), and write ranges as "25 to 34".
     - Describe the audience as a group ("this audience", "people with these tastes"). Never say what one listener does, buys or will do.
+    - Write about the show in the third person ("this show", "its listeners"), never "you" or "your": public sample pages show the summary and reasons too.
     - Always finish by calling save_sponsor_matches, then save_summary, then reply "Done."
   TEXT
 

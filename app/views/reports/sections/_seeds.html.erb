@@ -37,7 +37,7 @@
           <li class="seed" data-seed>
             <span class="block font-semibold leading-snug" data-seed-name><%= seed["name"] %></span>
             <% if seed["source"].present? %>
-              <span class="block text-[0.8125rem] leading-snug text-ink-soft" data-seed-source><%= seed["source"] %></span>
+              <span class="block text-[0.8125rem] leading-snug text-ink-soft" data-seed-source><%= report_text(seed["source"], read_only) %></span>
             <% end %>
           </li>
         <% end %>
