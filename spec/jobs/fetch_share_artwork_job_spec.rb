@@ -46,17 +46,19 @@ RSpec.describe FetchShareArtworkJob do
     describe "one deadline for the whole fetch" do
       before { stub_const("ShareImages::Artwork::TOTAL_TIMEOUT", 0.5) }
 
+      # Three hops of 0.3 s each, then the picture: within MAX_REDIRECTS, and each hop well inside the deadline, so
+      # per-hop timeouts alone would follow the whole chain (0.9 s) and store the picture.
       it "gives up on a redirect chain whose hops each fit the deadline but together don't" do
-        hops = Array.new(4) { |i| "https://cdn.example.com/hop-#{i}.jpg" }
-        stub_request(:get, url).to_return { sleep 0.2; { status: 302, headers: { "Location" => hops[0] } } }
-        hops.each_cons(2) do |from, to|
-          stub_request(:get, from).to_return { sleep 0.2; { status: 302, headers: { "Location" => to } } }
+        hops = Array.new(2) { |i| "https://cdn.example.com/hop-#{i}.jpg" }
+        picture = "https://cdn.example.com/final.jpg"
+        [ url, *hops ].zip([ *hops, picture ]).each do |from, to|
+          stub_request(:get, from).to_return { sleep 0.3; { status: 302, headers: { "Location" => to } } }
         end
-        stub_request(:get, hops.last).to_return(status: 200, body: jpeg)
+        stub_request(:get, picture).to_return(status: 200, body: jpeg)
 
-        expect(elapsed { described_class.perform_now(show.id) }).to be < 1.0
+        expect(elapsed { described_class.perform_now(show.id) }).to be < 0.8
+        expect(a_request(:get, picture)).not_to have_been_made
         expect(ShareImages::ArtworkStore.read(url)).to be_nil
-        expect(a_request(:get, hops.last)).not_to have_been_made
       end
 
       it "gives up on a server that is slow to send its headers" do
