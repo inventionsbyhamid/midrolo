@@ -64,6 +64,7 @@ RSpec.describe "Public media kits" do
                      demographics: { "age" => { "25_to_29" => 0.3, "30_to_34" => -0.2 }, "gender" => { "female" => 0.3 } },
                      heatmap: { "location" => "US", "points" => [ { "lat" => 30.3, "lng" => -97.7, "affinity" => 1.0, "label" => "Austin" },
                                                                  { "lat" => 39.7, "lng" => -105.0, "affinity" => 0.5, "label" => "Denver" } ] })
+      show.update!(contact_email: "sponsors@example.com")
       get public_kit_path(show.slug), headers: { "User-Agent" => browser }
       doc = Nokogiri::HTML(response.body)
 
@@ -77,10 +78,18 @@ RSpec.describe "Public media kits" do
       brand_names = more.css(".kit-brand-name").map(&:text)
       expect(brand_names).to include("Brand 1", "Brand 13")
       expect(brand_names).not_to include("Brand 2")
+      # A printed kit has every list even without JS: a print-only copy outside the closed disclosure.
+      expect(doc.at_css(".kit-print-tastes").css(".kit-brand-name").map(&:text)).to eq(brand_names)
       expect(doc.css(".age-bars [data-lean]").size).to eq(2)
       expect(doc.at_css("[data-gender-line]").text.squish).to eq("Gender Leans strongly toward women")
       expect(doc.at_css(".leans-note").text).to eq("Modeled from Qloo taste data, not measured.")
       expect(doc.at_css("[data-top-places]").text.squish).to eq("Top places: Austin and Denver")
+
+      # The report's order (R99): the kit's sections, and within Who listens the tastes, age and gender, then places.
+      expect(doc.css(".kit-sheet .kit-h2").map(&:text)).to eq([ "About the show", "Who listens", "Rates", "Work with us" ])
+      audience = doc.at_css("[aria-labelledby='kit-audience-title']")
+      order = %w[.taste-chips details.kit-more .leans .kit-map].map { |selector| audience.to_html.index(audience.at_css(selector).to_html) }
+      expect(order).to eq(order.sort)
     end
 
     it "never lists sponsor matches" do

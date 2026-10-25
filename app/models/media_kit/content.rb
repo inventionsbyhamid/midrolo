@@ -11,8 +11,6 @@ class MediaKit
     TAG_LIMIT = 12
     TASTE_LIST_LIMIT = 5
     TASTE_LISTS = { "podcasts" => "Podcasts they love", "tv_shows" => "TV they love", "artists" => "Music they love" }.freeze
-    # Short labels for the kit's taste chips, in the order they read.
-    CHIP_LABELS = { "tags" => "Interests", "brands" => "Brands", "podcasts" => "Podcasts", "tv_shows" => "TV", "artists" => "Music" }.freeze
     SHARE_DESCRIPTION_LIMIT = 200
 
     Rates = Data.define(:midroll, :preroll, :postroll, :bundle4, :custom, :basis) do
@@ -56,7 +54,7 @@ class MediaKit
     # [[label, names]] for the taste chips: interests, brands (minus the hidden ones), then podcasts, TV and music.
     def taste_groups
       names = { "tags" => taste_tags, "brands" => brands.map { |brand| brand["name"] } }
-      CHIP_LABELS.filter_map do |key, label|
+      Report::AUDIENCE_LABELS.filter_map do |key, label|
         list = names.fetch(key) { items(key).map { |item| item["name"] }.first(TASTE_LIST_LIMIT) }
         [ label, list ] if list.any?
       end

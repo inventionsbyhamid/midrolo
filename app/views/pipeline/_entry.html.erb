@@ -8,7 +8,7 @@
     <div class="min-w-0 flex-1">
       <h3 id="<%= name_id %>" class="match-name"><%= match.name %></h3>
       <%# A no-break space keeps the dot with the show's title when the line wraps. %>
-      <p class="text-sm text-ink-soft"><%= [ match.show.title, match.category.presence ].compact.join("\u00A0· ") %></p>
+      <p class="text-sm text-ink-soft"><%= [ match.show.title, category_label(match.category) ].compact.join("\u00A0· ") %></p>
     </div>
     <%= tier_badge(match.tier) %>
   </div>

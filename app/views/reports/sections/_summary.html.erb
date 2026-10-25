@@ -1,15 +1,17 @@
 <%# locals: (report:, read_only:) -%>
 <%#
-  At a glance (R99): at most three bullets under the header. Who listens (the summary's first bullet, or for a
-  Snapshot a line from its top interests), the best fits (the top three visible matches, so a locked brand never shows,
-  R43, with the summary's second bullet under them) and the next step. The summary's caveat, if any, sits below.
+  At a glance (R99): at most three labelled bullets under the header. Who listens is the summary's first bullet, or
+  for a Snapshot or an older prose summary a line from the top interests. Best fits is data only (R104): the visible
+  top three by fit score, so a locked brand never shows (R43). Then the next step. The summary's other bullets, and
+  an older summary's sentences without its "Built from" opener (R103), follow as plain unlabelled lines.
   Only a finished report has one: a needs-input ask or a failure leads the page instead (Review Focus #1).
 %>
 <% if report.done? %>
   <% visible, _locked = split_matches(report) %>
   <% points = report.summary_points %>
   <% audience = points.first || glance_audience(report) %>
-  <% best = visible.first(3) %>
+  <% best = best_fits(visible) %>
+  <% notes = report.legacy_summary? ? [ report.legacy_summary_sentences.join(" ") ].compact_blank : points.drop(1) %>
   <%= render "reports/section", name: "summary", title: "At a glance" do %>
     <ul class="glance">
       <% if audience %>
@@ -22,8 +24,7 @@
         <li class="glance-row">
           <span class="glance-label">Best fits</span>
           <div class="glance-body">
-            <p class="glance-text"><%= and_join(best.map { |match| link_to(match.name, "##{dom_id(match)}", class: "glance-brand") }) %></p>
-            <% if points[1] %><p class="glance-aside"><%= points[1] %></p><% end %>
+            <p class="glance-text"><%= and_list(best.map { |match| link_to(match.name, "##{dom_id(match)}", class: "glance-brand") }) %></p>
           </div>
         </li>
       <% end %>
@@ -32,7 +33,11 @@
         <div class="glance-body"><%= render "reports/next_step", report: report, read_only: read_only, matches: visible %></div>
       </li>
     </ul>
-    <% if points[2] %><p class="glance-note"><%= points[2] %></p><% end %>
+    <% if notes.any? %>
+      <div class="glance-notes">
+        <% notes.each do |note| %><p><%= note %></p><% end %>
+      </div>
+    <% end %>
   <% end %>
 <% elsif section_pending?(report) %>
   <%= render "reports/section", name: "summary", title: "At a glance" do %>

@@ -20,7 +20,7 @@
         <dt>Qloo taste data</dt>
         <dd>
           <% if band %><p>This audience likes <%= match.name %> <%= band.downcase %> people do.</p><% end %>
-          <% if shared.any? %><p>Shared tastes: <%= shared.to_sentence(last_word_connector: " and ") %>.</p><% end %>
+          <% if shared.any? %><p>Shared tastes: <%= and_list(shared) %>.</p><% end %>
         </dd>
       </div>
     <% end %>
@@ -40,7 +40,7 @@
     <% if match.fit_score %>
       <div>
         <dt><%= APP_NAME %> fit score</dt>
-        <dd><%= match.fit_score %> of 100<% if (hint = tier_hint(match.tier)) %>. <%= tier_label(match.tier) %>: <%= hint %><% end %>.</dd>
+        <dd><%= match.fit_score %> of 100<% if (note = tier_note(match.tier)) %>. <%= note %><% end %>.</dd>
       </div>
     <% end %>
     <% if (url = safe_external_url(match.website)) %>

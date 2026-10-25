@@ -1,0 +1,45 @@
+<%# locals: (content:) -%>
+<%# Every taste on the kit: the brands (minus the hidden ones), interests and the podcasts, TV and music lists. The
+    kit shows it inside See all tastes on screen and as a print-only copy, so a printed kit has it all without JS. %>
+<% brands = content.brands %>
+<% tags = content.taste_tags %>
+<% lists = content.taste_lists %>
+<% if brands.any? %>
+  <div class="kit-block">
+    <h3 class="kit-h3">Brands our audience loves</h3>
+    <ul class="kit-brands">
+      <% brands.each do |brand| %>
+        <li class="kit-brand">
+          <span class="avatar size-10" aria-hidden="true" data-controller="logo">
+            <%= initials_for(brand["name"]) %>
+            <% if (src = safe_external_url(brand["image_url"])) %>
+              <img src="<%= src %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                   data-logo-target="image" data-action="error->logo#fallback">
+            <% end %>
+          </span>
+          <span class="kit-brand-name"><%= brand["name"] %></span>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+<% if tags.any? %>
+  <div class="kit-block">
+    <h3 class="kit-h3">Their interests</h3>
+    <ul class="kit-tags">
+      <% tags.each do |tag_name| %><li class="kit-tag"><%= tag_name %></li><% end %>
+    </ul>
+  </div>
+<% end %>
+<% if lists.any? %>
+  <div class="kit-block kit-lists">
+    <% lists.each do |label, names| %>
+      <div class="kit-keep">
+        <h3 class="kit-h3"><%= label %></h3>
+        <ol class="kit-list">
+          <% names.each do |name| %><li><%= name %></li><% end %>
+        </ol>
+      </div>
+    <% end %>
+  </div>
+<% end %>

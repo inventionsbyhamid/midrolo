@@ -23,6 +23,10 @@ RSpec.describe "reports/sections/_summary" do
     (1..count).map { |i| create(:sponsor_match, report: report, position: i, name: "Brand #{i}") }
   end
 
+  def slot(label) = bullet(label)&.at_css(".glance-body")&.text&.squish
+
+  def notes = html.css("#report_summary .glance-notes p").map { |p| p.text.squish }
+
   it "shows At a glance with at most 3 bullets: who listens, the best fits and the next step" do
     add_matches(5)
     render_section
@@ -30,10 +34,50 @@ RSpec.describe "reports/sections/_summary" do
     expect(html.at_css("#report_summary h2").text).to eq("At a glance")
     expect(bullets.size).to eq(3)
     expect(bullets.map { |li| li.at_css(".glance-label").text }).to eq([ "Who listens", "Best fits", "Next step" ])
-    expect(bullets[0].text).to include("Money minded founders who love slow travel.")
-    expect(bullets[1].css("a").map(&:text)).to eq([ "Brand 1", "Brand 2", "Brand 3" ])
-    expect(bullets[1].text.squish).to include("Brand 1, Brand 2 and Brand 3", "Start with the budgeting apps.")
-    expect(html.at_css(".glance-note").text).to eq("Built from shows like yours.")
+    expect(slot("Who listens")).to eq("Money minded founders who love slow travel.")
+    expect(slot("Best fits")).to eq("Brand 1, Brand 2 and Brand 3") # data only, never a model bullet (R104)
+    expect(bullet("Best fits").css("a").map(&:text)).to eq([ "Brand 1", "Brand 2", "Brand 3" ])
+    expect(notes).to eq([ "Start with the budgeting apps.", "Built from shows like yours." ]) # the rest, unlabelled
+  end
+
+  it "names the visible top 3 by fit score as the best fits (R104)" do
+    create(:sponsor_match, report: report, position: 1, name: "Brand Low", fit_score: 60)
+    create(:sponsor_match, report: report, position: 2, name: "Brand High", fit_score: 95)
+    create(:sponsor_match, report: report, position: 3, name: "Brand Mid", fit_score: 80)
+    create(:sponsor_match, report: report, position: 4, name: "Brand Least", fit_score: 50)
+    render_section
+    expect(slot("Best fits")).to eq("Brand High, Brand Mid and Brand Low")
+  end
+
+  context "with an older prose summary (R103)" do
+    let(:prose) do
+      "Built from your show's own Qloo profile. Your listeners' tastes center on Healthy Eating, Education, and Fitness. " \
+        "We ranked 50 sponsors: 32 easy yes, 17 realistic, and 1 long shot. Start with Dr. Squatch."
+    end
+
+    before do
+      report.update!(summary: prose, audience: { "tags" => [ { "name" => "Healthy Eating", "score" => 0.9 }, { "name" => "Fitness", "score" => 0.8 } ] })
+      add_matches(3)
+      render_section
+    end
+
+    it "keeps its sentences out of the labelled lines: who listens comes from the data" do
+      expect(slot("Who listens")).to eq("This audience leans toward Healthy Eating and Fitness.")
+      expect(slot("Best fits")).to eq("Brand 1, Brand 2 and Brand 3")
+      bullets.each { |li| expect(li.text).not_to include("Your listeners' tastes", "We ranked", "Built from") }
+    end
+
+    it "shows its sentences as plain text, without the leading Built from" do
+      expect(notes).to eq([ "Your listeners' tastes center on Healthy Eating, Education, and Fitness. " \
+                            "We ranked 50 sponsors: 32 easy yes, 17 realistic, and 1 long shot. Start with Dr. Squatch." ])
+    end
+  end
+
+  it "leaves out who listens when older prose comes with no interests to speak from" do
+    report.update!(summary: "Built from shows like yours. #{'Your listeners love finance tools and slow travel. ' * 3}")
+    add_matches(3)
+    render_section
+    expect(bullets.map { |li| li.at_css(".glance-label").text }).to eq([ "Best fits", "Next step" ])
   end
 
   it "links each best fit to its row" do
@@ -95,14 +139,6 @@ RSpec.describe "reports/sections/_summary" do
 
     expect(html.text).not_to include("This is your free Snapshot")
     expect(html.css("form, button")).to be_empty
-  end
-
-  it "reads an older prose summary as its sentences, still at most 3" do
-    report.update!(summary: "Built from your show's own Qloo profile. Your listeners love finance. We ranked 40 sponsors. " \
-                            "Start with Notion and Linear. And more words to push this well past twenty words in all.")
-    render_section
-    expect(report.summary_points.size).to eq(3)
-    expect(bullets.size).to be <= 3
   end
 
   it "keeps the upsell off a snapshot that needs input" do

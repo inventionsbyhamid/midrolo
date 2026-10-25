@@ -344,6 +344,12 @@
     margin-top: 1.25rem;
   }
 
+  /* A print-only copy of every list (media_kits/_all_tastes): on screen they wait in See all tastes, which a printed
+     page can't open without JS. */
+  .kit-print-tastes {
+    display: none;
+  }
+
   .kit-brands {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
@@ -622,8 +628,12 @@
   .kit-screen-only,
   .flash,
   .kit-map .map-frame,
-  .kit-more > summary {
+  .kit-more {
     display: none !important;
+  }
+
+  .kit-print-tastes {
+    display: block;
   }
 
   .kit-sheet {

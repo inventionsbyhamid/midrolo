@@ -23,7 +23,7 @@
       <select class="input select-sm" data-filter-target="category" data-action="filter#apply" aria-controls="<%= controls %>">
         <option value="">All categories</option>
         <% categories.each do |category| %>
-          <option value="<%= category %>"><%= category %></option>
+          <option value="<%= category %>"><%= category_label(category) %></option>
         <% end %>
       </select>
     </label>

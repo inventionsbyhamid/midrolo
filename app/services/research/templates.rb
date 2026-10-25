@@ -35,7 +35,7 @@ module Research
       tier_line = TIER_LABELS.filter_map { |tier, label| "#{tiers[tier]} #{label}" if tiers[tier] }.join(", ")
       proven = scored_list.count { |s| proven_show(s) }
       [
-        (tastes.any? ? "This audience leans toward #{and_list(tastes)}." : "This audience's tastes come from #{basis(toolkit)}."),
+        (tastes.any? ? "This audience leans toward #{Copy.and_list(tastes)}." : "This audience's tastes come from #{basis(toolkit)}."),
         "We ranked #{scored_list.size} #{'sponsor'.pluralize(scored_list.size)}: #{tier_line.presence || 'none yet'}." \
           "#{" #{proven} already #{proven == 1 ? 'sponsors' : 'sponsor'} similar podcasts." if proven.positive?}",
         ("Built from shows and topics like this one, since Qloo doesn't know the show itself." unless toolkit.report.direct?)
@@ -44,7 +44,7 @@ module Research
 
     def reason_text(name, tags, shown, proven)
       if tags.any?
-        "#{name} fans share this audience's love of #{and_list(tags.first(shown))}."
+        "#{name} fans share this audience's love of #{Copy.and_list(tags.first(shown))}."
       elsif proven
         "#{name} already sponsors #{proven}, a show much like this one."
       else
@@ -63,8 +63,5 @@ module Research
     end
 
     def basis(toolkit) = toolkit.report.direct? ? "the show's own Qloo profile" : "shows and topics like this one"
-
-    # "A, B and C", with no comma before the "and".
-    def and_list(words) = words.to_sentence(last_word_connector: " and ")
   end
 end

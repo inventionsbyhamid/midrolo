@@ -22,11 +22,6 @@ module Pitches
     CHECKED_FIELDS = %w[subject body offer follow_up].freeze
     DESCRIPTION_LIMIT = 600
     SUMMARY_LIMIT = 600
-    TIER_NOTES = {
-      "easy_yes" => "Easy yes: a niche brand that's likely to welcome a show this size",
-      "realistic" => "Realistic: a mid-size brand, so lead with the fit",
-      "long_shot" => "Long shot: a big brand, so keep the ask small and concrete"
-    }.freeze
 
     class Schema < Schematist::Schema
       string :subject, description: "Email subject line, under #{SUBJECT_LIMIT} characters"
@@ -136,7 +131,7 @@ module Pitches
         ("- Category: #{wrap(inputs.category)}" if inputs.category),
         ("- Description: #{wrap(inputs.brand_description)}" if inputs.brand_description),
         ("- Official site: #{wrap(inputs.website)}" if inputs.website),
-        ("- Reachability: #{TIER_NOTES[inputs.tier]}" if TIER_NOTES.key?(inputs.tier))
+        ("- Reachability: #{Matching::Tier.note(inputs.tier)}" if Matching::Tier.note(inputs.tier))
       ].compact
     end
 

@@ -2,11 +2,8 @@
 <%#
   Who listens, as on the report (R99): the top tastes as a few grouped chips, every list behind See all tastes, the
   age and gender leans in one compact block, and a small map with its top places in words. Hidden brands stay out
-  of all of it. No scores: a kit never shows them.
+  of all of it. No scores: a kit never shows them. Print shows every list without JS (media_kits/_all_tastes).
 %>
-<% brands = content.brands %>
-<% tags = content.taste_tags %>
-<% lists = content.taste_lists %>
 <% leans = content.demographics %>
 <% heatmap = content.heatmap %>
 <% points = heatmap ? heatmap_points(heatmap) : [] %>
@@ -20,46 +17,9 @@
       <%= render "reports/taste_chips", groups: top_tastes(groups) %>
       <details class="taste-more kit-more">
         <summary class="disclosure"><span>See all tastes</span></summary>
-        <% if brands.any? %>
-          <div class="kit-block">
-            <h3 class="kit-h3">Brands our audience loves</h3>
-            <ul class="kit-brands">
-              <% brands.each do |brand| %>
-                <li class="kit-brand">
-                  <span class="avatar size-10" aria-hidden="true" data-controller="logo">
-                    <%= initials_for(brand["name"]) %>
-                    <% if (src = safe_external_url(brand["image_url"])) %>
-                      <img src="<%= src %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
-                           data-logo-target="image" data-action="error->logo#fallback">
-                    <% end %>
-                  </span>
-                  <span class="kit-brand-name"><%= brand["name"] %></span>
-                </li>
-              <% end %>
-            </ul>
-          </div>
-        <% end %>
-        <% if tags.any? %>
-          <div class="kit-block">
-            <h3 class="kit-h3">Their interests</h3>
-            <ul class="kit-tags">
-              <% tags.each do |tag_name| %><li class="kit-tag"><%= tag_name %></li><% end %>
-            </ul>
-          </div>
-        <% end %>
-        <% if lists.any? %>
-          <div class="kit-block kit-lists">
-            <% lists.each do |label, names| %>
-              <div class="kit-keep">
-                <h3 class="kit-h3"><%= label %></h3>
-                <ol class="kit-list">
-                  <% names.each do |name| %><li><%= name %></li><% end %>
-                </ol>
-              </div>
-            <% end %>
-          </div>
-        <% end %>
+        <%= render "media_kits/all_tastes", content: content %>
       </details>
+      <div class="kit-print-tastes"><%= render "media_kits/all_tastes", content: content %></div>
     </div>
   <% end %>
 

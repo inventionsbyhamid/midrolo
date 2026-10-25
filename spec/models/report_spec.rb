@@ -180,4 +180,37 @@ RSpec.describe Report do
         }
     end
   end
+
+  describe "the summary's shapes (R99, R103)" do
+    let(:report) { build(:report) }
+
+    it "reads bullets, one a line, as its points" do
+      report.summary = "Founders who love finance tools.\nStart with the budgeting apps.\nBuilt from shows like this one."
+      expect(report.summary_points).to eq([ "Founders who love finance tools.", "Start with the budgeting apps.",
+                                            "Built from shows like this one." ])
+      expect(report).not_to be_legacy_summary
+      expect(report.legacy_summary_sentences).to eq([])
+    end
+
+    it "reads a single short bullet as one point" do
+      report.summary = "Founders who love finance tools."
+      expect(report.summary_points).to eq([ "Founders who love finance tools." ])
+      expect(report).not_to be_legacy_summary
+    end
+
+    it "keeps older prose apart: no points, its sentences without the leading Built from" do
+      report.summary = "Built from your show's own Qloo profile. Your listeners' tastes center on Healthy Eating, Education, " \
+                       "and Fitness. We ranked 50 sponsors: 32 easy yes, 17 realistic, and 1 long shot. Start with Dr. Squatch."
+      expect(report).to be_legacy_summary
+      expect(report.summary_points).to eq([])
+      expect(report.legacy_summary_sentences).to eq([ "Your listeners' tastes center on Healthy Eating, Education, and Fitness.",
+                                                      "We ranked 50 sponsors: 32 easy yes, 17 realistic, and 1 long shot.",
+                                                      "Start with Dr. Squatch." ])
+    end
+
+    it "has neither without a summary" do
+      expect(report.summary_points).to eq([])
+      expect(report.legacy_summary_sentences).to eq([])
+    end
+  end
 end

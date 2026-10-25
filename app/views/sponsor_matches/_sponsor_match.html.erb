@@ -12,7 +12,7 @@
   <div class="match-head">
     <h3 id="<%= dom_id(match, :name) %>" class="match-name"><%= match.name %></h3>
     <% if match.category.present? %>
-      <p class="match-category"><%= match.category %></p>
+      <p class="match-category"><%= category_label(match.category) %></p>
     <% end %>
   </div>
   <div class="match-fit">

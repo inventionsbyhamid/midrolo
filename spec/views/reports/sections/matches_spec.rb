@@ -127,9 +127,9 @@ RSpec.describe "reports/sections/_matches" do
       expect(card.css("[data-match-reason]").map(&:text)).to eq([ "Your audience shares 6 taste signals with Fieldnote fans." ])
     end
 
-    it "shows at most 3 evidence chips, with no scores: shared tastes, the newest proven show and a count of the rest" do
+    it "shows at most 3 evidence chips, with no scores: shared tastes, the newest proven show and how many other shows" do
       chips = card.css(".match-chips .chip").map { |chip| chip.text.squish }
-      expect(chips).to eq([ "Shares 6 tastes", "Sponsors Harbor Lights", "+3 more" ])
+      expect(chips).to eq([ "Shares 6 tastes", "Sponsors Harbor Lights", "+1 more show" ])
       expect(card.at_css(".chip em").text).to eq("Harbor Lights")
       expect(card.at_css(".match-chips").text).not_to include("0.82", "Affinity")
     end
@@ -311,6 +311,23 @@ RSpec.describe "reports/sections/_matches" do
     expect(badges).to eq([ "Easy yes", "Realistic", "Long shot" ])
   end
 
+  it "reads a category with & or _and_ as and, on the row and in the category menu" do
+    create(:sponsor_match, report: report, category: "Food & Beverage", position: 1, name: "HelloFresh")
+    create(:sponsor_match, report: report, category: "health_and_wellness", position: 2)
+    (3..12).each { |i| create(:sponsor_match, report: report, category: "Finance", position: i) }
+    render_section
+
+    expect(html.at_css("##{ActionView::RecordIdentifier.dom_id(report.sponsor_matches.first)} .match-category").text).to eq("Food and Beverage")
+    options = html.css("select[data-filter-target='category'] option").to_h { |option| [ option.text, option["value"] ] }
+    expect(options).to include("Food and Beverage" => "Food & Beverage", "Health and Wellness" => "health_and_wellness")
+  end
+
+  it "says what a realistic tier means, in Why it fits" do
+    create(:sponsor_match, report: report, tier: "realistic", fit_score: 70)
+    render_section
+    expect(html.at_css("details.match-why").text.squish).to include("70 of 100. Realistic: a midsize brand, so lead with the fit.")
+  end
+
   it "offers tier and proven filters, a category menu and a sort, all unset" do
     create(:sponsor_match, report: report, category: "Finance", position: 1)
     create(:sponsor_match, report: report, category: "Coffee", position: 2, evidence: proven("Harbor Lights"))
@@ -334,10 +351,10 @@ RSpec.describe "reports/sections/_matches" do
   end
 
   it "shows an older reason over 25 words as its first sentence on the row and in full in Why it fits" do
-    long = "Fits this audience well. #{'Its fans love slow travel and coffee. ' * 4}"
+    long = "Fits this audience very well. #{'Its fans love slow travel and coffee. ' * 4}"
     create(:sponsor_match, report: report, reason: long)
     render_section
-    expect(html.at_css("[data-match-reason]").text).to eq("Fits this audience well.")
+    expect(html.at_css("[data-match-reason]").text).to eq("Fits this audience very well.")
     expect(html.at_css("details.match-why dd").text.squish).to eq(long.squish)
   end
 

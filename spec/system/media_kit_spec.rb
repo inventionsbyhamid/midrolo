@@ -113,19 +113,16 @@ RSpec.describe "Media kit" do
       click_button "Print or save as PDF"
       expect(evaluate_script("window.printed")).to be(true)
 
-      # See all tastes prints open, however printing starts, and closes again after.
-      expect(page).to have_css("details.kit-more:not([open])", visible: :all)
-      execute_script("window.dispatchEvent(new Event('beforeprint'))")
-      expect(page).to have_css("details.kit-more[open]", visible: :all)
-      execute_script("window.dispatchEvent(new Event('afterprint'))")
-      expect(page).to have_css("details.kit-more:not([open])", visible: :all)
+      # Every taste prints, with no help from JS: the closed See all tastes gives way to a print-only copy of the lists.
+      expect(computed(".kit-print-tastes", "display")).to eq("none")
 
       page.driver.browser.page.command("Emulation.setEmulatedMedia", media: "print")
       expect(computed("[data-controller='print']", "display")).to eq("none")
       expect(computed(".kit-contact-button", "display")).to eq("none")
       expect(computed(".kit-map .map-frame", "display")).to eq("none")
       expect(computed("[data-top-places]", "display")).not_to eq("none")
-      expect(computed("details.kit-more > summary", "display")).to eq("none")
+      expect(computed("details.kit-more", "display")).to eq("none")
+      expect(computed(".kit-print-tastes", "display")).not_to eq("none")
       expect(computed(".kit-contact-address", "display")).not_to eq("none")
       expect(computed(".kit-rates", "break-inside")).to eq("avoid")
     ensure

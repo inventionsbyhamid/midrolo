@@ -5,25 +5,17 @@ module ReportsHelper
   # tier => [label, badge tone], in tier order.
   TIERS = Matching::Tier::LABELS.to_h { |tier, label| [ tier, [ label, TIER_TONES.fetch(tier) ] ] }.freeze
   HIGH_FIT = 75
-  # What each tier means for the podcaster, in the match's Why it fits.
-  TIER_HINTS = { "easy_yes" => "a smaller brand, likely to welcome a show this size",
-                 "realistic" => "a mid-size brand, so lead with the fit",
-                 "long_shot" => "a big brand, so keep the ask small and concrete" }.freeze
-  # The audience's lists, in the order their chips and lists read: the interests describe the audience best.
-  AUDIENCE_GROUPS = { "tags" => "Interests", "brands" => "Brands", "podcasts" => "Podcasts", "tv_shows" => "TV",
-                      "artists" => "Music" }.freeze
   TOP_TASTES = 8
-  # A Qloo score (0 to 1) in words: how much more this audience likes something than most people do (R99). Qloo
-  # gives a score, not a ratio, so the words grade it without inventing a multiple.
-  TASTE_BANDS = [ [ 0.9, "Far more than most" ], [ 0.75, "Much more than most" ], [ 0.5, "More than most" ],
-                  [ 0.0, "Somewhat more than most" ] ].freeze
+  # A Qloo score (0 to 1) in words: how much more this audience likes something than most people do (R99, R102).
+  # Qloo gives a score, not a ratio, so the words grade it without inventing a multiple; below the last floor no band
+  # shows at all.
+  TASTE_BANDS = [ [ 0.9, "Far more than most" ], [ 0.75, "Much more than most" ], [ 0.5, "More than most" ] ].freeze
   GENDERS = { "male" => "Men", "female" => "Women" }.freeze
   # Leans are relative skews (about -1..1), never shares of a headcount, so they read as words.
   EVEN_BELOW = 0.05
   STRONG_FROM = 0.25
   LEAN_SEGMENTS = 10
   LEAN_SCALE_FLOOR = 0.5
-  TOP_METROS = 8
   TOP_PLACES = 3
   MAX_CHIPS = 3
   TOP_MATCHES = 10
@@ -36,17 +28,14 @@ module ReportsHelper
   # True while the run may still fill a section in; finished reports hide sections that never came.
   def section_pending?(report) = report.active?
 
-  # "A, B and C" from html-safe parts (links), with no comma before the "and".
-  def and_join(parts)
-    return safe_join(parts) if parts.size < 2
+  # "A, B and C" (Copy.and_list), for links as well as words.
+  def and_list(items) = Copy.and_list(items)
 
-    safe_join([ safe_join(parts[0...-1], ", "), " and ", parts.last ])
-  end
-
-  # At a glance's audience line when there is no summary (a Snapshot): its top three interests, as a group (R99).
+  # At a glance's audience line when the summary has none (a Snapshot, an older prose summary): its top three
+  # interests, as a group (R99, R103).
   def glance_audience(report)
     names = audience_groups(report.audience).find { |key, _, _| key == "tags" }&.last.to_a.first(3).map { |tag| tag["name"] }
-    "This audience leans toward #{names.to_sentence(last_word_connector: ' and ')}." if names.any?
+    "This audience leans toward #{and_list(names)}." if names.any?
   end
 
   def tier_label(tier) = TIERS.fetch(tier.to_s, [ tier.to_s.humanize ]).first
@@ -90,7 +79,7 @@ module ReportsHelper
 
   # [[key, label, items]] for the lists that came back (a snapshot has only tags).
   def audience_groups(audience)
-    AUDIENCE_GROUPS.filter_map do |key, label|
+    Report::AUDIENCE_LABELS.filter_map do |key, label|
       items = Array(audience.is_a?(Hash) ? audience[key] : nil).select { |item| item.is_a?(Hash) && item["name"].present? }
       [ key, label, items ] if items.any?
     end
@@ -110,11 +99,7 @@ module ReportsHelper
     groups.each_with_index.filter_map { |(label, _), i| [ label, picked[i] ] if picked[i].any? }
   end
 
-  def taste_band(score)
-    return if score.nil?
-
-    TASTE_BANDS.find { |floor, _| score.to_f >= floor }&.last || TASTE_BANDS.last.last
-  end
+  def taste_band(score) = (TASTE_BANDS.find { |floor, _| score.to_f >= floor }&.last if score)
 
   # ---- Leans ----
 
@@ -181,20 +166,14 @@ module ReportsHelper
     Array(heatmap.is_a?(Hash) ? heatmap["points"] : nil).select { |p| p.is_a?(Hash) && p["lat"] && p["lng"] }
   end
 
-  # [[label, share of the top metro's summed affinity (0..1)]], strongest first.
-  def top_metros(points, limit: TOP_METROS)
-    totals = points.select { |p| p["label"].present? }
-                   .group_by { |p| p["label"] }
-                   .map { |label, group| [ label, group.sum { |p| p["affinity"].to_f } ] }
-                   .sort_by { |label, total| [ -total, label ] }
-                   .first(limit)
-    top = totals.first&.last.to_f
-    totals.map { |label, total| [ label, top.positive? ? total / top : 0.0 ] }
-  end
-
-  # "Austin, Denver and Boise": the strongest places in words, or nil.
+  # "Austin, Denver and Boise": the places with the most summed affinity, strongest first, in words; nil for none.
   def top_places(points, limit: TOP_PLACES)
-    top_metros(points, limit: limit).map(&:first).to_sentence(last_word_connector: " and ").presence
+    names = points.select { |p| p["label"].present? }
+                  .group_by { |p| p["label"] }
+                  .map { |label, group| [ label, group.sum { |p| p["affinity"].to_f } ] }
+                  .sort_by { |label, total| [ -total, label ] }
+                  .first(limit).map(&:first)
+    and_list(names).presence
   end
 
   # The country's name, or nil when the section doesn't say ("metros" with no country).
@@ -245,17 +224,29 @@ module ReportsHelper
 
   def shared_tastes(match) = Array(Matching::Evidence.value(match.evidence, :shared_tags)).compact_blank
 
-  # At most three: "Shares 6 tastes", "Sponsors <em>Show X</em>" (the newest), "+2 more". No scores (R99).
+  # The visible matches with the best fit scores, best first: At a glance's best fits, from data only (R104).
+  def best_fits(matches, count: 3) = matches.sort_by { |match| [ -match.fit_score.to_i, match.position.to_i ] }.first(count)
+
+  # A brand category as it reads: "&" and "_and_" become "and", never dropped ("Food and Beverage"); a bare id is
+  # capitalised.
+  def category_label(name)
+    label = name.to_s.gsub(/\s*&\s*|_and_/, " and ").tr("_", " ").squish
+    return if label.empty?
+
+    label == label.downcase ? label.split.map { |word| word == "and" ? word : word.capitalize }.join(" ") : label
+  end
+
+  # At most three: "Shares 6 tastes", "Sponsors <em>Show X</em>" (the newest), "+2 more shows" (other shows among the
+  # sponsorships found, not episodes). No scores (R99).
   def evidence_chips(match)
     chips = []
     shared = shared_tastes(match)
     chips << "Shares #{pluralize(shared.size, 'taste')}" if shared.any?
-    proven = proven_evidence(match)
-    item = Matching::Evidence.items(proven).first
-    if item
-      chips << safe_join([ "Sponsors ", tag.em(Matching::Evidence.value(item, :show).presence || "a similar show") ])
-      more = Matching::Evidence.count(proven) - 1
-      chips << "+#{more} more" if more.positive?
+    items = Matching::Evidence.items(proven_evidence(match))
+    if items.any?
+      chips << safe_join([ "Sponsors ", tag.em(Matching::Evidence.value(items.first, :show).presence || "a similar show") ])
+      more = items.filter_map { |item| Matching::Evidence.value(item, :show).presence }.uniq.size - 1
+      chips << "+#{more} more #{'show'.pluralize(more)}" if more.positive?
     end
     chips.first(MAX_CHIPS)
   end
@@ -266,7 +257,7 @@ module ReportsHelper
     reason && Llm::PlainText.clip_words(reason, SponsorMatch::REASON_WORDS)
   end
 
-  def tier_hint(tier) = TIER_HINTS[tier.to_s]
+  def tier_note(tier) = Matching::Tier.note(tier)
 
   # "Sponsored <em>Harbor Lights</em> on “Cash flow surprises”, Oct 12" for one proven item.
   def proven_item_line(item)

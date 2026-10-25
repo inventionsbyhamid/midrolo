@@ -16,6 +16,10 @@ class Report < ApplicationRecord
   SUMMARY_POINTS = 3
   SUMMARY_POINT_WORDS = 20
   SUMMARY_POINT_LENGTH = 160
+  # The audience section's lists, as people read them, in the order they show: the interests describe the audience
+  # best. The report and the media kit both label their taste chips and lists with these.
+  AUDIENCE_LABELS = { "tags" => "Interests", "brands" => "Brands", "podcasts" => "Podcasts", "tv_shows" => "TV",
+                      "artists" => "Music" }.freeze
 
   belongs_to :show
   has_many :agent_steps, -> { order(:position, :id) }, dependent: :destroy
@@ -72,13 +76,24 @@ class Report < ApplicationRecord
   def unresolved_seeds = seeds.is_a?(Hash) ? Array(seeds["unresolved"]) : []
   def status_copy = STATUS_COPY.fetch(status)
 
-  # The summary's bullets, one a line as SaveSummary saves them. A line longer than a bullet is older prose, which
-  # reads as its sentences.
+  # The summary's bullets, one a line as SaveSummary saves them; none for an older prose summary.
   def summary_points
-    lines = summary.to_s.lines.map(&:strip).compact_blank
-    lines.flat_map { |line| line.split.size > SUMMARY_POINT_WORDS ? line.split(/(?<=[.!?])\s+/) : [ line ] }
-         .first(SUMMARY_POINTS)
+    legacy_summary? ? [] : summary_lines.first(SUMMARY_POINTS)
   end
+
+  # A summary saved before R1 (R103): prose, with a line longer than any bullet SaveSummary would save.
+  def legacy_summary? = summary_lines.any? { |line| line.split.size > SUMMARY_POINT_WORDS }
+
+  # An older prose summary's sentences, without a leading "Built from…" one (How we built this says where the profile
+  # came from), to show as plain text rather than in At a glance's labelled lines (R103).
+  def legacy_summary_sentences
+    return [] unless legacy_summary?
+
+    sentences = Llm::PlainText.sentences(summary_lines.join(" "))
+    sentences.first&.start_with?("Built from") ? sentences.drop(1) : sentences
+  end
+
+  def summary_lines = summary.to_s.lines.map(&:strip).compact_blank
 
   def mark_running!
     update!(status: "running", started_at: Time.current)

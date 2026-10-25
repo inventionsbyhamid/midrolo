@@ -38,9 +38,28 @@ RSpec.describe ReportsHelper do
   end
 
   describe "#taste_band" do
-    it "puts a Qloo score in plain words, with no number" do
-      expect([ 0.97, 0.8, 0.6, 0.2, nil ].map { |score| helper.taste_band(score) })
-        .to eq([ "Far more than most", "Much more than most", "More than most", "Somewhat more than most", nil ])
+    it "puts a Qloo score in plain words, with no number, and shows no band below the floor (R102)" do
+      expect([ 0.97, 0.8, 0.6, 0.5, 0.49, 0.2, nil ].map { |score| helper.taste_band(score) })
+        .to eq([ "Far more than most", "Much more than most", "More than most", "More than most", nil, nil, nil ])
+    end
+  end
+
+  describe "#category_label" do
+    it "spells & and _and_ as and, never dropping it" do
+      expect(helper.category_label("Food & Beverage")).to eq("Food and Beverage")
+      expect(helper.category_label("Health&Wellness")).to eq("Health and Wellness")
+      expect(helper.category_label("food_and_beverage")).to eq("Food and Beverage")
+      expect(helper.category_label("Food and Beverage")).to eq("Food and Beverage")
+      expect(helper.category_label("Technology")).to eq("Technology")
+      expect(helper.category_label(nil)).to be_nil
+    end
+  end
+
+  describe "#best_fits" do
+    it "takes the top 3 by fit score" do
+      matches = [ build(:sponsor_match, name: "A", fit_score: 60, position: 1), build(:sponsor_match, name: "B", fit_score: 95, position: 2),
+                  build(:sponsor_match, name: "C", fit_score: 80, position: 3), build(:sponsor_match, name: "D", fit_score: 50, position: 4) ]
+      expect(helper.best_fits(matches).map(&:name)).to eq(%w[B C A])
     end
   end
 
@@ -55,34 +74,30 @@ RSpec.describe ReportsHelper do
   end
 
   describe "#top_places" do
-    it "names the 3 strongest places in words" do
-      points = [ { "label" => "Austin", "affinity" => 0.9 }, { "label" => "Denver", "affinity" => 0.5 },
-                 { "label" => "Boise", "affinity" => 0.4 }, { "label" => "Reno", "affinity" => 0.1 }, { "label" => nil, "affinity" => 1 } ]
+    it "names the 3 strongest places in words, grouped by label and ranked by summed affinity" do
+      points = [ { "label" => "Austin", "affinity" => 0.5 }, { "label" => "Austin", "affinity" => 0.5 },
+                 { "label" => "Denver", "affinity" => 0.9 }, { "label" => "Boise", "affinity" => 0.4 },
+                 { "label" => "Reno", "affinity" => 0.1 }, { "label" => nil, "affinity" => 1 } ]
       expect(helper.top_places(points)).to eq("Austin, Denver and Boise")
+      expect(helper.top_places([ { "label" => "Austin", "affinity" => 0 } ])).to eq("Austin")
       expect(helper.top_places([])).to be_nil
     end
   end
 
-  describe "#top_metros" do
-    it "groups by label, ranks by summed affinity and scales to the top metro" do
-      points = [ { "label" => "Austin", "affinity" => 0.5 }, { "label" => "Austin", "affinity" => 0.5 },
-                 { "label" => "Denver", "affinity" => 0.5 }, { "label" => nil, "affinity" => 0.9 } ]
-      expect(helper.top_metros(points)).to eq([ [ "Austin", 1.0 ], [ "Denver", 0.5 ] ])
-    end
-
-    it "copes with zero affinity" do
-      expect(helper.top_metros([ { "label" => "Austin", "affinity" => 0 } ])).to eq([ [ "Austin", 0.0 ] ])
-    end
-  end
-
   describe "#evidence_chips" do
-    it "reads symbol-keyed evidence: shared tastes, the newest proven show and a count of the rest, at most 3" do
+    it "reads symbol-keyed evidence: shared tastes, the newest proven show and how many other shows, at most 3" do
       match = build(:sponsor_match, affinity: 0.82, evidence: {
         shared_tags: [ "Investing" ],
-        proven: { items: [ { show: "Harbor Lights", published_at: Time.utc(2025, 3, 2) }, { show: nil } ], count: 4 }
+        proven: { items: [ { show: "Harbor Lights", published_at: Time.utc(2025, 3, 2) }, { show: "Tide Tables" },
+                           { show: "Harbor Lights" } ], count: 7 }
       })
       expect(helper.evidence_chips(match).map { |chip| Nokogiri::HTML5.fragment(chip).text })
-        .to eq([ "Shares 1 taste", "Sponsors Harbor Lights", "+3 more" ])
+        .to eq([ "Shares 1 taste", "Sponsors Harbor Lights", "+1 more show" ]) # shows, not the 7 episodes
+    end
+
+    it "leaves out the count when every sponsorship is on the same show" do
+      match = build(:sponsor_match, evidence: { "shared_tags" => [], "proven" => { "items" => [ { "show" => "Harbor Lights" }, { "show" => "Harbor Lights" } ], "count" => 5 } })
+      expect(helper.evidence_chips(match).map { |chip| Nokogiri::HTML5.fragment(chip).text }).to eq([ "Sponsors Harbor Lights" ])
     end
 
     it "never shows a score, and says a similar show when the proven one has no name" do
@@ -94,8 +109,8 @@ RSpec.describe ReportsHelper do
   describe "#match_reason_line" do
     it "keeps a reason within 25 words as it is and cuts an older, longer one to its first sentence" do
       expect(helper.match_reason_line(build(:sponsor_match, reason: "Fits well."))).to eq("Fits well.")
-      long = "Fits well. #{'More words here. ' * 10}"
-      expect(helper.match_reason_line(build(:sponsor_match, reason: long))).to eq("Fits well.")
+      long = "Fits this audience very well. #{'More words here. ' * 10}"
+      expect(helper.match_reason_line(build(:sponsor_match, reason: long))).to eq("Fits this audience very well.")
       expect(helper.match_reason_line(build(:sponsor_match, reason: nil))).to be_nil
     end
   end

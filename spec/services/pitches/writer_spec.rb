@@ -129,6 +129,14 @@ RSpec.describe Pitches::Writer do
       expect(prompt).to include("3 sponsored episodes found")
       expect(prompt).to include("82%")
       expect(prompt).to include("1,500")
+      expect(prompt).to include("- Reachability: Easy yes: a smaller brand, likely to welcome a show this size")
+    end
+
+    it "says what the tier means in the same words as the report (one source)" do
+      brand_match.update!(tier: "realistic")
+      RubyLLM::Test.stub_response(good_pitch)
+      described_class.call(brand_match, pitch: pitch)
+      expect(prompt_of(RubyLLM::Test.last_request)).to include("- Reachability: Realistic: a midsize brand, so lead with the fit")
     end
 
     it "gives the model the brand's Qloo description inside markers, and lets the pitch cite its numbers (R52)" do
