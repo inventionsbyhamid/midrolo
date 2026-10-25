@@ -36,6 +36,9 @@ Every variable is in [.env.example](../.env.example), with what it does.
       `docs/devpost.md` keeps `<<JUDGE_CODE>>`), `PROMO_PRO_UNTIL=2026-11-06`.
 - [ ] **Made on the server** (deploy.md step 5): `SECRET_KEY_BASE`, `MIDROLO_DATABASE_PASSWORD`, and
       `APP_URL=https://midrolo.com`.
+- [ ] **In the server's `.env`** (deploy.md step 5): fill in the uncommented lines, then uncomment and fill in each
+      commented line you use: `ANTHROPIC_API_KEY`, the Google, admin and Dodo keys, `JUDGE_CODE` and
+      `PROMO_PRO_UNTIL`. A line left commented stays unset, so what it turns on stays off.
 
 Production refuses to boot without `QLOO_API_KEY`, `PODCAST_INDEX_KEY`, `PODCAST_INDEX_SECRET`, an absolute http(s)
 `APP_URL` and the rest of the uncommented lines in `.env.example`. Compose refuses to start `midrolo-backup` without
@@ -43,8 +46,11 @@ Production refuses to boot without `QLOO_API_KEY`, `PODCAST_INDEX_KEY`, `PODCAST
 
 ## 2. Before the first deploy, in the repo
 
-- [ ] `config/samples.yml`: replace `fake-1`, `fake-2` and `fake-3` with the Podcast Index feed ids of three public
-      shows. The `fake-` ids exist only in the demo catalog, so `samples:generate` with live keys needs real ones.
+- [ ] `config/samples.yml`: each sample's `directory_id` is the field to change. Replace `fake-1`, `fake-2` and
+      `fake-3` with the Podcast Index feed ids of three public shows. A feed id is the number in the show's
+      podcastindex.org URL (`https://podcastindex.org/podcast/<id>`), or the `feed.id` that the API's
+      `/podcasts/byfeedurl` lookup returns for its RSS URL. The `fake-` ids exist only in the demo catalog, so
+      `samples:generate` with live keys needs real ones.
 - [ ] Commit. Push and create anything on GitHub or GitLab only when you decide to.
 
 ## 3. Deploy ([deploy.md](deploy.md), First deploy)
