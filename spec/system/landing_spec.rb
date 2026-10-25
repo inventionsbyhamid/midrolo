@@ -84,11 +84,14 @@ RSpec.describe "Landing and public pages" do
     visit "/pricing"
 
     creator = find(".plan-card[data-plan='creator']")
-    expect(creator).to have_text("$19")
-    expect(creator).to have_no_text("$190")
+    expect(creator).to have_css("[data-interval='monthly']", text: "$19")
+    expect(creator).to have_no_css("[data-interval='yearly']")
 
     choose "Yearly", allow_label_click: true
-    expect(creator).to have_text("$190")
-    expect(creator).to have_no_text("$19/month")
+    expect(creator).to have_css("[data-interval='yearly']", text: "$190")
+    expect(creator).to have_no_css("[data-interval='monthly']")
+
+    page.driver.browser.keyboard.type(:left) # arrow keys move between the radios
+    expect(creator).to have_css("[data-interval='monthly']", text: "$19")
   end
 end

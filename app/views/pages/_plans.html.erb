@@ -10,10 +10,12 @@
   <div class="pricing-bar">
     <fieldset class="interval-switch">
       <legend class="sr-only">Billing period</legend>
-      <input type="radio" name="billing_interval" id="billing_interval_monthly" value="monthly" class="interval-input" checked>
-      <label for="billing_interval_monthly" class="interval-option">Monthly</label>
-      <input type="radio" name="billing_interval" id="billing_interval_yearly" value="yearly" class="interval-input">
-      <label for="billing_interval_yearly" class="interval-option">
+      <label class="interval-option">
+        <input type="radio" name="billing_interval" id="billing_interval_monthly" value="monthly" class="interval-input" checked>
+        Monthly
+      </label>
+      <label class="interval-option">
+        <input type="radio" name="billing_interval" id="billing_interval_yearly" value="yearly" class="interval-input">
         Yearly<% if (saving = yearly_saving(paid.first)) %> <span class="interval-saving"><%= saving %></span><% end %>
       </label>
     </fieldset>
