@@ -167,9 +167,9 @@ RSpec.describe Research::StepLogger do
   describe "research budget" do
     let(:logger) { described_class.new(report, max_taste_calls: 2) }
 
-    it "reads the default budget from config/llm.yml" do
-      expect(described_class.new(report).max_taste_calls).to eq(Rails.application.config_for(:llm).dig(:research, :max_taste_calls))
-      expect(described_class.new(report).max_taste_calls).to eq(60)
+    it "reads the default budget from config/research.yml (R93)" do
+      expect(described_class.new(report).max_taste_calls).to eq(Rails.application.config_for(:research)[:max_taste_calls])
+      expect(described_class.new(report).max_taste_calls).to eq(35)
     end
 
     it "skips optional sub-calls once the run has spent its uncached calls, but never core calls" do

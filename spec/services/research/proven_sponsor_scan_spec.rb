@@ -129,17 +129,17 @@ RSpec.describe Research::ProvenSponsorScan do
     expect(evidence[:items].map { |e| e[:episode_title] }).to eq([ "Episode 5", "Episode 4", "Episode 3" ])
   end
 
-  it "resolves at most 15 names per scan, the most frequent first (R31)" do
+  it "resolves at most 8 names per scan, the most frequent first (R93)" do
     once = %w[Alder Birch Cedar Dogwood Elmwood Firtree Ginkgo Hazel Ironbark Juniper Kapok Larch Maplewood Nutmeg Olivewood Pinewood]
     serve(once.map { |n| "This episode is sponsored by #{n}." } + Array.new(3) { "This episode is sponsored by Notion." })
     allow(taste).to receive(:search).and_call_original
 
     result = scan
-    expect(taste).to have_received(:search).exactly(15).times
+    expect(taste).to have_received(:search).exactly(8).times
     expect(taste).to have_received(:search).with(hash_including(query: "Notion"))
-    expect(taste).not_to have_received(:search).with(hash_including(query: "Pinewood"))
+    expect(taste).not_to have_received(:search).with(hash_including(query: "Hazel"))
     expect(result.keys).to eq([ notion_id ])
-    expect(report.agent_steps.order(:position).last.output_summary).to include("15 most frequent of 17 names")
+    expect(report.agent_steps.order(:position).last.output_summary).to include("8 most frequent of 17 names")
   end
 
   it "stops resolving once the run's research budget is spent" do

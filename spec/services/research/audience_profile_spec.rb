@@ -16,11 +16,9 @@ RSpec.describe Research::AudienceProfile do
     report.reload
 
     audience = report.audience
-    expect(audience.keys).to match_array(%w[brands artists tv_shows podcasts tags])
+    expect(audience.keys).to match_array(%w[brands podcasts tags]) # R93: brands and podcasts only
     expect(audience["brands"].size).to eq(20)
     expect(audience["brands"].first.keys).to match_array(%w[id name image_url affinity popularity website])
-    expect(audience["artists"].size).to eq(10)
-    expect(audience["tv_shows"].size).to eq(10)
     expect(audience["podcasts"].size).to eq(10)
     expect(audience["tags"].size).to eq(15)
     expect(audience["tags"].first.keys).to match_array(%w[id name score])
@@ -50,7 +48,7 @@ RSpec.describe Research::AudienceProfile do
     build
     audience = report.reload.audience
     expect(toolkit.audience_tags.map(&:id)).to eq(audience["tags"].pluck("id"))
-    ids = %w[brands artists tv_shows podcasts].flat_map { |k| audience[k].pluck("id") }
+    ids = %w[brands podcasts].flat_map { |k| audience[k].pluck("id") }
     expect(toolkit.seen_entity_ids).to include(*ids)
   end
 
@@ -73,7 +71,7 @@ RSpec.describe Research::AudienceProfile do
     expect(build[:digest]).to include("No brands came back")
   end
 
-  it "falls back to the first 6 metros when the country heatmap is empty" do
+  it "falls back to the first 3 metros (R93) when the country heatmap is empty" do
     locations = []
     allow(taste).to receive(:heatmap).and_wrap_original do |original, **kw|
       locations << kw[:location]
@@ -82,7 +80,7 @@ RSpec.describe Research::AudienceProfile do
 
     build
     heatmap = report.reload.heatmap
-    metros = Rails.application.config_for(:geo)[:US].first(6)
+    metros = Rails.application.config_for(:geo)[:US].first(3)
     expect(locations).to eq([ "United States", *metros ])
     expect(heatmap["location"]).to eq("metros")
     expect(heatmap["points"].size).to be > 0
@@ -126,7 +124,7 @@ RSpec.describe Research::AudienceProfile do
 
   it "skips optional parts on a Qloo outage and still saves every section" do
     allow(taste).to receive(:recommend).and_wrap_original do |original, **kw|
-      raise Taste::RateLimited, "429" if kw[:type] == :artist
+      raise Taste::RateLimited, "429" if kw[:type] == :podcast
 
       original.call(**kw)
     end
@@ -134,7 +132,7 @@ RSpec.describe Research::AudienceProfile do
 
     result = build
     report.reload
-    expect(report.audience["artists"]).to eq([])
+    expect(report.audience["podcasts"]).to eq([])
     expect(report.audience["brands"].size).to eq(20)
     expect(report.demographics).to eq("age" => {}, "gender" => {})
     expect(result[:thin]).to be(false)
@@ -147,7 +145,7 @@ RSpec.describe Research::AudienceProfile do
     report.reload
 
     expect(report.audience["brands"].size).to eq(20)
-    expect(report.audience.values_at("artists", "tv_shows", "podcasts", "tags")).to all(eq([]))
+    expect(report.audience.values_at("podcasts", "tags")).to all(eq([]))
     expect(report.demographics).to eq("age" => {}, "gender" => {})
     expect(report.heatmap["points"]).to eq([])
     expect(result[:thin]).to be(false)
@@ -162,9 +160,14 @@ RSpec.describe Research::AudienceProfile do
     expect(report.reload.audience).to be_nil
   end
 
-  it "counts the taste calls it makes" do
+  it "counts the taste calls it makes: brands, podcasts, tags, leans and the map (R93)" do
+    allow(taste).to receive(:recommend).and_call_original
     build
-    expect(report.reload.taste_calls).to eq(7)
+    expect(report.reload.taste_calls).to eq(5)
+    expect(taste).to have_received(:recommend).with(hash_including(type: :brand))
+    expect(taste).to have_received(:recommend).with(hash_including(type: :podcast))
+    expect(taste).not_to have_received(:recommend).with(hash_including(type: :artist))
+    expect(taste).not_to have_received(:recommend).with(hash_including(type: :tv_show))
   end
 
   describe "for a snapshot (R36)" do

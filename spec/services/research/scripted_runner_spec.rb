@@ -20,7 +20,7 @@ RSpec.describe Research::ScriptedRunner do
 
       expect(report.seeds["entities"].pluck("name")).to include("The Founder's Ledger", "Index Fund Mornings")
       expect(report.profile_kind).to eq("direct")
-      expect(report.audience.keys).to match_array(%w[brands artists tv_shows podcasts tags])
+      expect(report.audience.keys).to match_array(%w[brands podcasts tags])
       expect(report.demographics.keys).to match_array(%w[age gender])
       expect(report.heatmap["points"]).to be_present
       expect(report.sponsor_matches.size).to be_between(20, 50)

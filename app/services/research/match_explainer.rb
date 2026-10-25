@@ -1,13 +1,13 @@
 module Research
-  # Explains matches: for the top brands (R31: 12, to keep a run's Qloo calls down), the taste tags its fans
-  # share with the show's entity seeds, from Qloo compare. Returns {brand_id => [Taste::Tag]}; brands past
-  # the cap get their reasons from the R27 shared tags instead.
+  # Explains matches: for the top brands (R93: config/research.yml, 5 by default, to keep a run's Qloo calls down),
+  # the taste tags its fans share with the show's entity seeds, from Qloo compare. Returns {brand_id => [Taste::Tag]};
+  # brands past the cap get a simpler template reason from the R27 shared tags instead (Research::Templates).
   #
   # A failing comparison skips that brand with a step warning; three failures in a row, or a spent research
   # budget, end the step early. Auth errors propagate. Compare needs entity seeds: a tag-only profile (a
   # show not on Qloo, seeded from topics) logs a warning step and returns {}.
   class MatchExplainer
-    MAX_COMPARES = 12
+    MAX_COMPARES = Research.caps.fetch(:match_explainer_compares)
     TAKE = 10
     MAX_FAILURES_IN_A_ROW = 3
     LABEL = "Finding the tastes your audience shares with each brand…".freeze

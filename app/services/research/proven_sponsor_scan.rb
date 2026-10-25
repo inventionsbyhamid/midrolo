@@ -2,7 +2,8 @@ module Research
   # Finds brands that already sponsor podcasts like this one, in two phases:
   #   1. per similar show (one step each): find it in the podcast directory, read its last 20 episodes
   #      (descriptions up to 4,000 characters), and pull sponsor names out with regexes (no LLM, no cost);
-  #   2. one step: confirm the most frequent 15 names on Qloo (R31), keeping only exact brand matches.
+  #   2. one step: confirm the most frequent names on Qloo (R93: config/research.yml, 8 by default), keeping only
+  #      exact brand matches.
   # Platforms and self-promotion never count (R32): the config/proven_scan.yml denylist and show titles
   # (the user's show and every similar show) everywhere, plus each feed's owner (host or network) and owner
   # email domain within that feed only. Webmail domains (gmail.com, protonmail.com…) are never excluded.
@@ -25,7 +26,7 @@ module Research
     EPISODES = 20
     DESCRIPTION_LIMIT = 4000
     DIRECTORY_RESULTS = 5
-    MAX_RESOLUTIONS = 15
+    MAX_RESOLUTIONS = Research.caps.fetch(:proven_scan_resolutions)
     EVIDENCE_ITEMS = 3
     MIN_NAME_LENGTH = 2
 

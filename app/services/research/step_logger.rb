@@ -17,7 +17,6 @@ module Research
     # couldn't use (400) or a type the key can't use (403, R87). AuthError is never soft: the runner pauses runs on it.
     SOFT_ERRORS = [ Taste::Unavailable, Taste::RateLimited, Taste::BadRequest, Taste::Unsupported ].freeze
     BUDGET_WARNING = "Skipped to stay within research budget".freeze
-    DEFAULT_MAX_TASTE_CALLS = 60
     SUMMARY_LIMIT = 500
     INPUT_LIMIT = 300
 
@@ -66,9 +65,8 @@ module Research
       end
     end
 
-    def self.configured_max_taste_calls
-      Rails.application.config_for(:llm).dig(:research, :max_taste_calls) || DEFAULT_MAX_TASTE_CALLS
-    end
+    # config/research.yml (R93).
+    def self.configured_max_taste_calls = Research.caps.fetch(:max_taste_calls)
 
     attr_reader :report, :max_taste_calls
 

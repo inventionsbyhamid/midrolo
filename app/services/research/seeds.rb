@@ -13,14 +13,15 @@ module Research
     MEDIA_TAG_PREFIX = "#{MEDIA_TAG_TYPE}:".freeze
     MAX_ENTITIES = 8
     MAX_TAGS = 5
-    MAX_LOOKUP_NAMES = 10
-    MAX_LOOKUP_TOPICS = 5
+    # config/research.yml (R93).
+    MAX_LOOKUP_NAMES = Research.caps.fetch(:comparable_show_lookups)
+    MAX_LOOKUP_TOPICS = Research.caps.fetch(:topic_lookups)
 
     def self.from_lookup(toolkit, names:, topics:) = new(toolkit).from_lookup(names, topics)
 
     # No LLM: the show itself on Qloo, then the shows the user listed, then their topics, then the show's
-    # categories as media genre tags. Lookups are capped like from_lookup's (10 names, 5 topics), and an
-    # unresolved hint still uses up its lookup.
+    # categories as media genre tags. Lookups are capped like from_lookup's (MAX_LOOKUP_NAMES names and
+    # MAX_LOOKUP_TOPICS topics), and an unresolved hint still uses up its lookup.
     def self.deterministic(toolkit) = new(toolkit).deterministic
 
     def initialize(toolkit)

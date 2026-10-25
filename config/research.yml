@@ -1,0 +1,22 @@
+# Research call caps (R93): the one place that says how many Qloo calls a report may make. The lean defaults aim at
+# about 25 to 35 uncached calls for a full report and about 10 for a Snapshot, against the admin's daily Qloo cap
+# (AppSettings qloo_daily_call_limit). Cached answers are free: lookups by name and tag lookups keep 30 days, other
+# calls 7 (Taste::Providers::Qloo).
+shared:
+  # Per run soft cap (R31): once a run has made this many uncached Qloo calls, optional sub-calls are skipped. Core
+  # calls (the seeds, the broad brand pass, scoring) always run.
+  max_taste_calls: 35
+  # Brands compared with Qloo's compare per report. The rest get a simpler template reason from shared tags.
+  match_explainer_compares: 5
+  # Sponsor names from similar shows' feeds confirmed on Qloo per scan, most frequent first.
+  proven_scan_resolutions: 8
+  # Names looked up on Qloo per lookup: the comparable shows a podcaster lists, and the agent's find_on_qloo names.
+  comparable_show_lookups: 5
+  # Topic phrases matched to taste tags per lookup.
+  topic_lookups: 5
+  # Brand categories searched per run, each a tag lookup and a filtered brand recommendation.
+  category_passes: 3
+  # The audience profile's entity lists. Brands are always fetched; the others are optional calls.
+  audience_entity_types: [brand, podcast]
+  # Metros tried, one call each, when the country-wide heatmap comes back empty.
+  metro_fallback: 3

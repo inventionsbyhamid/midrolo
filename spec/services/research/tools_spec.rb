@@ -67,13 +67,13 @@ RSpec.describe Research::Tools do
   end
 
   describe "find_on_qloo" do
-    it "caps names at 10 and topics at 5 and lists what it found with ids" do
+    it "caps names at 5 (R93) and topics at 5 and lists what it found with ids" do
       allow(taste).to receive(:search).and_call_original
       allow(taste).to receive(:find_tags).and_call_original
       names = Array.new(14) { |i| "Name #{i}" } + [ "The Founder's Ledger" ]
       out = run("find_on_qloo", names: [ "The Founder's Ledger", *names ], topics: %w[a1 b2 c3 d4 e5 f6 g7])
 
-      expect(taste).to have_received(:search).exactly(10).times
+      expect(taste).to have_received(:search).exactly(5).times
       expect(taste).to have_received(:find_tags).exactly(5).times
       expect(out).to include("The Founder's Ledger (fake:podcast:the-founder-s-ledger")
       expect(out.length).to be < 1500
@@ -193,11 +193,11 @@ RSpec.describe Research::Tools do
   end
 
   describe "explain_matches" do
-    it "explains up to 12 brands and keeps the shared tags on the toolkit" do
+    it "explains up to 5 brands (R93) and keeps the shared tags on the toolkit" do
       candidates!
       out = run("explain_matches", brand_ids: Array.new(15) { |i| "b#{i + 1}" } + [ "bogus" ])
 
-      expect(toolkit.explanations.size).to eq(12)
+      expect(toolkit.explanations.size).to eq(5)
       expect(out).to include("b1 ", "Not compared")
       expect(out).to include("bogus")
       expect(out.length).to be < 1500
@@ -227,6 +227,29 @@ RSpec.describe Research::Tools do
       expect(top.category).to be_present
       expect(top.evidence["shared_tags"]).to eq(toolkit.explanations[top.brand_entity_id].map(&:name).uniq)
       expect(top.evidence["proven"]).to include("items", "count")
+    end
+
+    it "writes a template reason from shared tags for a brand past the compare cap whose reason is left empty (R93)" do
+      candidates!
+      run("explain_matches", brand_ids: %w[b1])
+      uncompared = toolkit.resolve_brand("b8")
+      expected = Research::Templates.reason(toolkit, toolkit.scored.fetch(uncompared))
+
+      out = run("save_sponsor_matches", matches: [ { brand_id: "b1", reason: "Shares finance tastes with this audience." },
+                                                   { brand_id: "b8", reason: " " } ])
+
+      saved = report.sponsor_matches.reload.to_h { |m| [ m.brand_entity_id, m.reason ] }
+      expect(saved[uncompared]).to eq(expected)
+      expect(expected.split.size).to be <= SponsorMatch::REASON_WORDS
+      expect(out).to start_with("Saved 2 matches.")
+      expect(out).to include("Wrote 1 short reason from shared tags (b8)")
+    end
+
+    it "still asks for a reason for a brand explain_matches compared" do
+      candidates!
+      run("explain_matches", brand_ids: %w[b1])
+      out = run("save_sponsor_matches", matches: [ { brand_id: "b1", reason: "" }, { brand_id: "b2", reason: "Fits well." } ])
+      expect(out).to include("rejected 1: b1 (no reason)")
     end
 
     it "asks for one plain sentence of 25 words or fewer per reason in the schema" do

@@ -8,7 +8,10 @@ module Taste
     # never.
     class Qloo
       DEFAULT_BASE_URL = "https://hackathon.api.qloo.com".freeze
+      # R93: lookups by name and tag lookups barely change, so they keep longer; every other answer 7 days.
       CACHE_TTL = 7.days
+      STABLE_CACHE_TTL = 30.days
+      STABLE_PATHS = %w[/search /v2/tags].freeze
       AFFINITY_CHUNK = 50
       TIMEOUT = 20
       OPEN_TIMEOUT = 5
@@ -116,7 +119,7 @@ module Taste
         end
 
         json = parse(path, live_body(path, params))
-        @cache.write(key, json, expires_in: CACHE_TTL)
+        @cache.write(key, json, expires_in: STABLE_PATHS.include?(path) ? STABLE_CACHE_TTL : CACHE_TTL)
         json
       end
 

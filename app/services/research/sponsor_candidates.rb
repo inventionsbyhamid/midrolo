@@ -1,7 +1,7 @@
 module Research
   # Finds and ranks sponsor candidates for a seed set:
   #   1. a broad brand recommendation (popularity capped, so household names don't crowd the list)
-  #   2. one filtered recommendation per brand category the caller picked (the first 3, R31)
+  #   2. one filtered recommendation per brand category the caller picked (the first MAX_CATEGORIES, R93)
   #   3. brands proven to sponsor similar podcasts (ProvenSponsorScan)
   # then scores the merged set with affinity_for and Matching::Score. Returns up to 50 Matching::Scored,
   # one per brand, best first. Every candidate is remembered on the toolkit for the provenance check.
@@ -11,7 +11,7 @@ module Research
   class SponsorCandidates
     BROAD_TAKE = 50
     CATEGORY_TAKE = 20
-    MAX_CATEGORIES = 3
+    MAX_CATEGORIES = Research.caps.fetch(:category_passes)
     POPULARITY_MAX = 0.97
     MAX_RESULTS = 50
     BRAND_TAG_TYPE = "urn:tag:genre:brand".freeze

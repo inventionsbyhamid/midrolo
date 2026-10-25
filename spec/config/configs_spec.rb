@@ -32,6 +32,21 @@ RSpec.describe "App configs" do
     expect(config(:rate_card)[:flat_floor_usd]).to eq(25)
   end
 
+  it "keeps every research Qloo cap in research.yml, with lean defaults (R93)" do
+    expect(config(:research)).to eq(max_taste_calls: 35, match_explainer_compares: 5, proven_scan_resolutions: 8,
+                                    comparable_show_lookups: 5, topic_lookups: 5, category_passes: 3,
+                                    audience_entity_types: %w[brand podcast], metro_fallback: 3)
+    expect(config(:llm)).not_to have_key(:research)
+    expect(Research::StepLogger.configured_max_taste_calls).to eq(35)
+    expect(Research::MatchExplainer::MAX_COMPARES).to eq(5)
+    expect(Research::ProvenSponsorScan::MAX_RESOLUTIONS).to eq(8)
+    expect(Research::Seeds::MAX_LOOKUP_NAMES).to eq(5)
+    expect(Research::Seeds::MAX_LOOKUP_TOPICS).to eq(5)
+    expect(Research::SponsorCandidates::MAX_CATEGORIES).to eq(3)
+    expect(Research::AudienceProfile::TYPES).to eq(%i[brand podcast])
+    expect(Research::AudienceProfile::FALLBACK_METROS).to eq(3)
+  end
+
   it "loads LLM settings" do
     expect(config(:llm)[:agent][:max_tool_calls]).to eq(40)
   end

@@ -10,7 +10,4 @@ shared:
   pitch:
     model: <%= ENV.fetch("LLM_PITCH_MODEL", "claude-opus-5-5") %>
     effort: low
-  # Per research run (R31): once this many uncached Qloo calls are made, optional sub-calls (extra entity
-  # types, metros, category passes, sponsor lookups, compares) are skipped. Core calls always run.
-  research:
-    max_taste_calls: 60
+  # The research run's Qloo call caps live in config/research.yml (R93).

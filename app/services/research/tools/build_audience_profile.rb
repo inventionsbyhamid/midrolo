@@ -1,9 +1,10 @@
 module Research
   module Tools
     class BuildAudienceProfile < Base
-      description "Builds the audience profile for a seed set (the saved seeds when no ids are given): top brands, " \
-                  "artists, TV shows, podcasts, taste tags, age and gender leans and where listeners live. Saves those " \
-                  "report sections and returns a digest. It says when the profile is thin."
+      description "Builds the audience profile for a seed set (the saved seeds when no ids are given): top " \
+                  "#{AudienceProfile::TYPES.map { |type| AudienceProfile::NOUNS.fetch(type) }.join(', ')}, taste tags, " \
+                  "age and gender leans and where listeners live. Saves those report sections and returns a digest. " \
+                  "It says when the profile is thin."
       arguments({ entity_ids: string_array("Seed entity ids; leave empty to use the saved seeds"),
                   tag_ids: string_array("Seed tag ids; leave empty to use the saved seeds") })
 

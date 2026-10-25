@@ -38,7 +38,8 @@ module Research
         end
         if rest.any? && toolkit.seed_entity_ids.any?
           lines << "Not compared (#{MatchExplainer::MAX_COMPARES} per report, or no shared tastes found): " \
-                   "#{rest.map { |id| toolkit.brand_ref(id) }.join(', ')}. Use their shared tags or proven evidence."
+                   "#{rest.map { |id| toolkit.brand_ref(id) }.join(', ')}. Use their shared tags or proven evidence, or " \
+                   "leave their reason empty for a short one from shared tags."
         end
         lines << "Unknown refs ignored: #{unknown.join(', ')}." if unknown.any?
         lines.join("\n").presence || "Nothing to explain."

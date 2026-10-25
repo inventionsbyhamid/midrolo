@@ -1,6 +1,7 @@
 module Research
   # Builds the audience profile for a seed set and saves three report sections as it goes:
-  #   audience     {brands: top 20, artists: top 10, tv_shows: top 10, podcasts: top 10, tags: top 15}
+  #   audience     {brands: top 20, podcasts: top 10, tags: top 15}: a list per TYPES entry (config/research.yml,
+  #                R93: brands and podcasts by default; artists and tv_shows, top 10 each, when configured)
   #   leans        {age: {bucket => lean}, gender: {gender => lean}} (the demographics column)
   #   map          {location: country code or "metros", country:, points: [{lat, lng, affinity, label}]} (heatmap)
   # Returns {digest: String (< 1,500 chars, for the agent), thin: Boolean (fewer than 8 brands)}.
@@ -14,11 +15,14 @@ module Research
     TAKE = { brand: 20, artist: 10, tv_show: 10, podcast: 10 }.freeze
     SECTION_KEYS = { brand: "brands", artist: "artists", tv_show: "tv_shows", podcast: "podcasts" }.freeze
     LABELS = { artist: "Artists", tv_show: "TV shows", podcast: "Podcasts" }.freeze
+    NOUNS = { brand: "brands", artist: "artists", tv_show: "TV shows", podcast: "podcasts" }.freeze
+    # config/research.yml (R93): the entity lists to fetch, brands first and always; and the metros to try.
+    TYPES = ([ :brand ] + Array(Research.caps.fetch(:audience_entity_types)).map(&:to_sym)).uniq.freeze
+    FALLBACK_METROS = Research.caps.fetch(:metro_fallback)
     TAG_TAKE = 15
     THIN_BELOW = 8
     HEATMAP_TAKE = 50
     MAX_POINTS = 200
-    FALLBACK_METROS = 6
     DIGEST_LIMIT = 1500
 
     def self.build(toolkit, seed_entity_ids:, seed_tag_ids:, country:, include_demographics: true, entities: true)
@@ -53,7 +57,7 @@ module Research
 
     def build_audience
       log.step("taste_profile", "Building your audience's taste profile…", input: seeds_input) do |step|
-        @lists = @entities ? recommend_entities(step) : TAKE.transform_values { [] }
+        @lists = @entities ? recommend_entities(step) : TYPES.index_with { [] }
         @tags = step.optional("Taste tags") { taste.taste_tags(**signals, take: TAG_TAKE) } || []
 
         toolkit.remember(@lists.values.flatten)
@@ -66,15 +70,16 @@ module Research
 
     def recommend_entities(step)
       lists = { brand: recommend(:brand) }
-      LABELS.each { |type, label| lists[type] = step.optional(label) { recommend(type) } || [] }
+      (TYPES - [ :brand ]).each { |type| lists[type] = step.optional(LABELS.fetch(type)) { recommend(type) } || [] }
       lists
     end
 
+    # "20 brands, 10 podcasts and 15 taste tags"
     def audience_summary
       return "#{@tags.size} taste tags" unless @entities
 
-      "#{@lists[:brand].size} brands, #{@lists[:artist].size} artists, #{@lists[:tv_show].size} TV shows, " \
-        "#{@lists[:podcast].size} podcasts and #{@tags.size} taste tags"
+      counts = TYPES.map { |type| "#{@lists[type].size} #{NOUNS.fetch(type)}" } << "#{@tags.size} taste tags"
+      counts.to_sentence(last_word_connector: " and ")
     end
 
     # Seeds are inputs, not results: never list the show (or another seed) as something its audience loves.
@@ -121,7 +126,7 @@ module Research
       tags = { "tags" => @tags.map { |t| { "id" => t.id, "name" => t.name, "score" => t.score } } }
       return tags unless @entities
 
-      SECTION_KEYS.to_h { |type, key| [ key, @lists[type].map { |e| entity_json(e) } ] }.merge(tags)
+      TYPES.to_h { |type| [ SECTION_KEYS.fetch(type), @lists[type].map { |e| entity_json(e) } ] }.merge(tags)
     end
 
     def entity_json(entity)
@@ -151,6 +156,7 @@ module Research
     end
 
     def names_line(label, items, count)
+      items = Array(items)
       "#{label}: #{items.first(count).map(&:name).join(', ')}" if items.any?
     end
 

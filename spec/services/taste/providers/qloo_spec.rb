@@ -418,6 +418,20 @@ RSpec.describe Taste::Providers::Qloo do
       ActiveSupport::Notifications.unsubscribe(sub)
     end
 
+    it "keeps lookups by name and tag lookups 30 days, every other answer 7 (R93)" do
+      stub_request(:get, "#{base}/search").with(query: hash_including({})).to_return(json("search"))
+      stub_request(:get, "#{base}/v2/tags").with(query: hash_including({})).to_return(json("tags"))
+      stub_request(:get, "#{base}/v2/insights").with(query: hash_including({})).to_return(json("insights_brand"))
+      allow(cache).to receive(:write).and_call_original
+
+      adapter.search(query: "widget", types: [ :podcast ])
+      adapter.find_tags(query: "business")
+      adapter.recommend(type: :brand, entity_ids: [ "E1" ])
+
+      expect(cache).to have_received(:write).with(anything, anything, expires_in: 30.days).twice
+      expect(cache).to have_received(:write).with(anything, anything, expires_in: 7.days).once
+    end
+
     it "keys the cache independent of param order" do
       adapter.send(:cache_key, "/p", { "b" => "1", "a" => "2" }).then do |k|
         expect(k).to eq(adapter.send(:cache_key, "/p", { "a" => "2", "b" => "1" }))

@@ -92,6 +92,6 @@ Q /v2/analysis/compare --data-urlencode "a.signal.interests.entities=$POD_ID" --
 ```
 - **Good:** HTTP 200, `results.tags[]` with `tag_id`, `name`, `subtype`, `popularity` and `query.score`, and no `success` key. A 404 here confirms M1 for compare.
 
-This is 8 calls, plus about 5 cheap variants: well under one report's budget of 60 (R31).
+This is 8 calls, plus about 5 cheap variants: well under one report's budget of 35 (R93).
 
 Once these pass, the committed fixtures in `spec/fixtures/qloo/` stay synthetic. Real responses, if kept at all, go only in the git-ignored `spec/fixtures/private/`: the hackathon guide (HG) doesn't allow Qloo data in public repositories.

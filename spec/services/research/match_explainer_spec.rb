@@ -21,13 +21,13 @@ RSpec.describe Research::MatchExplainer do
     expect(taste).to have_received(:compare).with(a_entity_ids: seed_ids, b_entity_ids: [ brand_ids.first ], take: 10)
   end
 
-  it "compares only the top 12 brands (R31) and ignores duplicates" do
+  it "compares only the top 5 brands (R93) and ignores duplicates" do
     allow(taste).to receive(:compare).and_call_original
     result = explain([ brand_ids.first ] + brand_ids)
 
-    expect(described_class::MAX_COMPARES).to eq(12)
-    expect(result.keys).to eq(brand_ids.first(12))
-    expect(taste).to have_received(:compare).exactly(12).times
+    expect(described_class::MAX_COMPARES).to eq(5)
+    expect(result.keys).to eq(brand_ids.first(5))
+    expect(taste).to have_received(:compare).exactly(5).times
   end
 
   it "stops comparing once the run's research budget is spent" do
