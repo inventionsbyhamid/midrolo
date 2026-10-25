@@ -5,8 +5,8 @@ require_relative "../../lib/required_env"
 # with only SECRET_KEY_BASE_DUMMY set, so that boot is let through.
 RequiredEnv.check! unless ENV["SECRET_KEY_BASE_DUMMY"]
 
-# The site's public address (APP_URL, required above), for links in email.
-app_url = URI.parse(ENV["APP_URL"].presence || "https://midrolo.com")
+# The site's public address (APP_URL, required and checked above), for links in email.
+app_url = RequiredEnv.app_uri(ENV["APP_URL"]) || URI("https://midrolo.com")
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.

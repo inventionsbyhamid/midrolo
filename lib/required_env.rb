@@ -30,11 +30,23 @@ module RequiredEnv
   # The entries none of whose names has a value.
   def missing(env = ENV) = VARIABLES.reject { |names, _| names.any? { |name| env[name].to_s.strip != "" } }
 
-  def check!(env = ENV)
-    gaps = missing(env)
-    return if gaps.empty?
+  # APP_URL as a URI when it's an absolute http(s) address with a host, else nil.
+  def app_uri(value)
+    uri = URI.parse(value.to_s.strip)
+    uri if uri.is_a?(URI::HTTP) && uri.host.to_s != ""
+  rescue URI::InvalidURIError
+    nil
+  end
 
-    lines = gaps.map { |names, purpose| "  #{names.join(' or ')}: #{purpose}\n" }
-    raise Missing, "Production is missing environment variables:\n#{lines.join}Set them in .env (see .env.example), then start again."
+  # Names what's wrong, never a value: these lines end up in logs.
+  def check!(env = ENV)
+    lines = missing(env).map { |names, purpose| "  #{names.join(' or ')}: #{purpose}\n" }
+    if env["APP_URL"].to_s.strip != "" && !app_uri(env["APP_URL"])
+      lines << "  APP_URL: isn't an absolute http(s) address, such as https://midrolo.com\n"
+    end
+    return if lines.empty?
+
+    raise Missing, "Production can't start until these environment variables are set right:\n#{lines.join}" \
+                   "Set them in .env (see .env.example), then start again."
   end
 end

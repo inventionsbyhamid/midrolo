@@ -29,10 +29,28 @@ RSpec.describe RequiredEnv do
   it "stops with every missing variable named, and what it is for" do
     env = complete.except("APP_URL", "R2_SECRET_ACCESS_KEY", "QLOO_API_KEY")
     expect { described_class.check!(env) }.to raise_error(RequiredEnv::Missing) { |error|
-      expect(error.message.lines.first).to eq("Production is missing environment variables:\n")
+      expect(error.message.lines.first).to eq("Production can't start until these environment variables are set right:\n")
       expect(error.message).to include("  APP_URL: ", "  R2_SECRET_ACCESS_KEY: ", "  QLOO_API_KEY: ", ".env.example")
       expect(error.message).not_to include("RESEND_API_KEY")
     }
+  end
+
+  it "stops when APP_URL isn't an absolute http(s) address, naming APP_URL but never its value" do
+    [ "example.org", "ftp://example.org", "http:///no-host", "http://exa mple.org", "javascript:alert(1)", "/pricing" ].each do |value|
+      expect { described_class.check!(complete.merge("APP_URL" => value)) }.to raise_error(RequiredEnv::Missing) { |error|
+        expect(error.message).to include("  APP_URL: isn't an absolute http(s) address")
+        expect(error.message).not_to include(value)
+      }
+    end
+  end
+
+  it "takes an absolute http(s) APP_URL, and gives production its parts" do
+    %w[https://midrolo.com http://localhost:3100 https://midrolo.com/].each do |value|
+      expect { described_class.check!(complete.merge("APP_URL" => value)) }.not_to raise_error
+    end
+    expect(described_class.app_uri("https://midrolo.com")).to have_attributes(scheme: "https", host: "midrolo.com")
+    expect(described_class.app_uri("midrolo.com")).to be_nil
+    expect(described_class.app_uri(nil)).to be_nil
   end
 
   it "leaves the optional keys alone: admin, error mail, LLM, sign in and billing" do

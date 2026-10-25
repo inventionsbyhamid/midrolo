@@ -4,7 +4,9 @@ require "open3"
 # Production's configuration, from a real production boot: `bin/rails runner` in a child process, with dummy values
 # for what production requires (lib/required_env.rb) and a database host that can't resolve. Nothing connects
 # anywhere: the facts come from the configuration, and from requests through the whole middleware stack that never
-# reach the database (a public file, and /up, the health check).
+# reach the database (a public file, and /up, the health check). cloudflare-rails would fetch Cloudflare's ranges from
+# cloudflare.com on the first remote_ip; the child seeds them with the gem's own list and refuses any outside request,
+# and the facts say whether one was tried or the database was touched.
 RSpec.describe "Production configuration" do
   def dummy_env = {
     "RAILS_ENV" => "production", "SECRET_KEY_BASE" => "0" * 64, "MIDROLO_DATABASE_PASSWORD" => "dummy",
@@ -14,6 +16,9 @@ RSpec.describe "Production configuration" do
   }
 
   def facts_script = <<~'RUBY'
+    outside = []
+    Net::HTTP.prepend(Module.new { define_method(:connect) { outside << address; raise IOError, "outside request: #{address}" } })
+    CloudflareRails::Importer.instance_variable_set(:@ips, CloudflareRails::FallbackIps::IPS_V4 + CloudflareRails::FallbackIps::IPS_V6)
     app = Rails.application
     get = ->(url, env = {}) { Rack::MockRequest.new(app).get(url, { "HTTP_HOST" => URI(url).host }.merge(env)) }
     status = ->(url, env = {}) { get.(url, env).status }
@@ -34,8 +39,12 @@ RSpec.describe "Production configuration" do
         health_any_host: status.("http://localhost/up"), health_container_ip: status.("http://172.18.0.9/up"),
         plain_http: status.("http://midrolo.com/icon.svg"),
         spoofed_client_ip: status.("https://midrolo.com/up", "REMOTE_ADDR" => "172.18.0.5",
-                                   "HTTP_X_FORWARDED_FOR" => "198.51.100.1", "HTTP_CLIENT_IP" => "203.0.113.7")
-      }
+                                   "HTTP_X_FORWARDED_FOR" => "198.51.100.1", "HTTP_CLIENT_IP" => "203.0.113.7"),
+        behind_cloudflare: status.("https://midrolo.com/up", "REMOTE_ADDR" => "127.0.0.1",
+                                   "HTTP_X_FORWARDED_FOR" => "173.245.48.10, 172.18.0.5", "HTTP_CF_CONNECTING_IP" => "198.51.100.1")
+      },
+      outside_requests: outside,
+      database_touched: ActiveRecord::Base.connection_handler.connection_pool_list(:all).any?(&:connected?)
     }
     puts "FACTS #{facts.to_json}"
   RUBY
@@ -70,9 +79,21 @@ RSpec.describe "Production configuration" do
       expect(@facts["mail_url"]).to eq("host" => "midrolo.com", "protocol" => "https")
     end
 
-    it "enforces the Content Security Policy" do
+    it "enforces the Content Security Policy: MapLibre's pinned folder only, and no data: fetches" do
+      folder = Rails.application.importmap.packages.fetch("maplibre-gl").path[%r{\A.+/maplibre-gl@[^/]+/}]
+      directives = @facts["csp"].split(";").to_h { |directive| directive.strip.split(/\s+/).then { |name, *sources| [ name, sources ] } }
+
       expect(@facts["report_only"]).to be(false)
-      expect(@facts["csp"]).to include("script-src 'self' https://cdn.jsdelivr.net 'nonce-")
+      expect(directives["script-src"]).to start_with("'self'", folder)
+      expect(directives.values_at("style-src", "worker-src")).to all(include(folder))
+      expect(directives.values.flatten).not_to include("https://cdn.jsdelivr.net")
+      expect(directives["connect-src"]).to eq([ "'self'", "https://tiles.openfreemap.org" ])
+    end
+
+    it "makes no outside request and touches no database while answering (the Cloudflare ranges are seeded)" do
+      expect(@facts["statuses"]["behind_cloudflare"]).to eq(200) # remote_ip read the seeded ranges
+      expect(@facts["outside_requests"]).to eq([])
+      expect(@facts["database_touched"]).to be(false)
     end
 
     it "trusts Cloudflare's ranges as proxies, and answers a Client-IP that disagrees with X-Forwarded-For with a 400" do
@@ -86,8 +107,16 @@ RSpec.describe "Production configuration" do
     _out, err, status = boot("puts :booted", dummy_env.except("R2_BUCKET", "APP_URL"))
 
     expect(status).not_to be_success
-    expect(err).to include("Production is missing environment variables:", "  APP_URL: ", "  R2_BUCKET: ")
+    expect(err).to include("Production can't start until these environment variables are set right:", "  APP_URL: ", "  R2_BUCKET: ")
     expect(err).not_to include("RESEND_API_KEY")
+  end
+
+  it "stops at boot when APP_URL isn't an absolute http(s) address, naming it but never printing its value" do
+    _out, err, status = boot("puts :booted", dummy_env.merge("APP_URL" => "midrolo.example/s3cr3t-path"))
+
+    expect(status).not_to be_success
+    expect(err).to include("  APP_URL: isn't an absolute http(s) address")
+    expect(err).not_to include("s3cr3t")
   end
 
   # The Docker build precompiles assets in production with only SECRET_KEY_BASE_DUMMY set.
