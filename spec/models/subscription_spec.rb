@@ -54,4 +54,20 @@ RSpec.describe Subscription do
       expect(described_class.best_for(user)).to be_nil
     end
   end
+
+  # R132: what keeps an account from being deleted.
+  describe ".renewing" do
+    let(:user) { create(:user) }
+
+    it "is an active or past due plan that isn't cancelled at period end, never a Sprint or one long past its period" do
+      renewing = [ create(:subscription, user: user), create(:subscription, user: user, status: "past_due"),
+                   create(:subscription, user: user, current_period_end: nil) ]
+      create(:subscription, user: user, cancel_at_period_end: true)
+      create(:subscription, user: user, status: "canceled")
+      create(:subscription, user: user, plan: "sprint")
+      create(:subscription, user: user, current_period_end: (described_class::RENEWAL_GRACE + 1.day).ago)
+
+      expect(described_class.renewing).to match_array(renewing)
+    end
+  end
 end

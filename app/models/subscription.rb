@@ -27,6 +27,15 @@ class Subscription < ApplicationRecord
       .or(where(status: "canceled").where(in_period))
   }
 
+  # Subscriptions the provider will charge again (R132): active or past due, not cancelled at period end, and not a
+  # Sprint (a one-off payment), within the period plus RENEWAL_GRACE (or with no period end yet). The account can't be
+  # deleted while one is left.
+  scope :renewing, lambda {
+    period_end = arel_table[:current_period_end]
+    where(status: RENEWING, cancel_at_period_end: false).where.not(plan: "sprint")
+      .where(period_end.eq(nil).or(period_end.gt(RENEWAL_GRACE.ago)))
+  }
+
   # The user's entitling subscription with the best plan (the newest of equals), or nil. plans narrows the plans looked at.
   def self.best_for(user, plans: PLANS)
     user.subscriptions.entitling.where(plan: plans)

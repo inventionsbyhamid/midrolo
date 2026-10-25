@@ -26,6 +26,9 @@ class User < ApplicationRecord
 
   def samples_owner? = email == SAMPLES_EMAIL && provider.nil?
 
+  # A plan the provider will charge again (R132): the account can't be deleted until it's cancelled.
+  def renewing_subscription? = subscriptions.renewing.exists?
+
   # Devise checks this for every session, a remembered one included.
   def active_for_authentication? = super && !samples_owner?
 

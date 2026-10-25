@@ -287,6 +287,52 @@ RSpec.describe "Account" do
       expect(Show.exists?(other.id)).to be true
     end
 
+    # R132: deleting the account would leave the provider charging a plan nobody can use.
+    describe "while a plan renews" do
+      let(:refusal) { "Cancel your plan in Manage billing first, then delete your account." }
+
+      def delete_card
+        Nokogiri::HTML(response.body).css(".card").find { |node| node.at_css("h2")&.text&.squish == "Delete account" }
+      end
+
+      it "refuses, keeping the account, and points to Manage billing" do
+        create(:subscription, user: user, provider: "fake", provider_customer_id: "fake_cus_1", cancel_at_period_end: false)
+        sign_in user
+
+        expect { delete "/account" }.not_to change(User, :count)
+
+        expect(response).to redirect_to("/account")
+        expect(flash[:alert]).to eq(refusal)
+        follow_redirect!
+        expect(delete_card.text.squish).to include(refusal)
+        expect(delete_card.at_css("form[action='/billing_portal'] [type=submit]").text.squish).to eq("Manage billing")
+        expect(delete_card.at_css("form[action='/account']")).to be_nil
+      end
+
+      it "refuses while a payment is past due, since the provider still tries to renew it" do
+        create(:subscription, user: user, status: "past_due")
+        sign_in user
+
+        expect { delete "/account" }.not_to change(User, :count)
+        expect(flash[:alert]).to eq(refusal)
+      end
+
+      it "deletes once the plan is cancelled at period end, has ended, or never renews (a Sprint)" do
+        [ { cancel_at_period_end: true }, { status: "canceled" }, { plan: "sprint", current_period_end: 20.days.from_now } ]
+          .each do |attributes|
+          owner = create(:user)
+          create(:subscription, user: owner, **attributes)
+          sign_in owner
+          get "/account"
+          expect(delete_card.at_css("form[action='/account']")).to be_present
+          expect(delete_card.text).not_to include(refusal)
+
+          expect { delete "/account" }.to change(User, :count).by(-1)
+          expect(response).to redirect_to("/")
+        end
+      end
+    end
+
     # R129: the privacy page promises deletion, whatever the account holds. Spend rows stay for the budget totals,
     # with no owner.
     it "deletes an account that holds every kind of record and keeps its spend rows ownerless" do

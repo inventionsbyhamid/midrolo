@@ -61,15 +61,22 @@
 
   <%= render "components/card", title: "Delete account" do %>
     <p class="mb-4 text-ink-soft">This permanently deletes your account and everything in it.</p>
-    <div data-controller="dialog">
-      <%= ui_button "Delete account", type: "button", variant: :danger, data: { action: "dialog#open" } %>
-      <%= render "components/dialog", title: "Delete your account?" do %>
-        <p class="mb-6 text-ink-soft">This can't be undone. Your data is removed immediately.</p>
-        <div class="flex gap-3">
-          <%= button_to "Yes, delete everything", account_path, method: :delete, class: "btn btn-danger btn-md" %>
-          <%= ui_button "Keep my account", type: "button", variant: :ghost, data: { action: "dialog#close" } %>
-        </div>
+    <% if current_user.renewing_subscription? %>
+      <p class="mb-4 text-ink-soft"><%= AccountsController::CANCEL_FIRST %></p>
+      <% if Billing.portal_subscription(current_user) %>
+        <%= button_to "Manage billing", billing_portal_path, class: "btn btn-secondary btn-md", form: { data: { turbo: false } } %>
       <% end %>
-    </div>
+    <% else %>
+      <div data-controller="dialog">
+        <%= ui_button "Delete account", type: "button", variant: :danger, data: { action: "dialog#open" } %>
+        <%= render "components/dialog", title: "Delete your account?" do %>
+          <p class="mb-6 text-ink-soft">This can't be undone. Your data is removed immediately.</p>
+          <div class="flex gap-3">
+            <%= button_to "Yes, delete everything", account_path, method: :delete, class: "btn btn-danger btn-md" %>
+            <%= ui_button "Keep my account", type: "button", variant: :ghost, data: { action: "dialog#close" } %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
   <% end %>
 </div>
