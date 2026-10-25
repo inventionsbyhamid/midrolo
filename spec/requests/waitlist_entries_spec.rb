@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Waitlist entries" do
-  let(:confirmation) { "You're on the founding-member list — we'll email you when paid plans open." }
+  let(:confirmation) { WaitlistEntriesController::CONFIRMATION }
 
   around { |example| with_billing_env { example.run } }
 

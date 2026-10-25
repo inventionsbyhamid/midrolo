@@ -6,7 +6,7 @@ module Users
     def developer = sign_in_from_omniauth
 
     def failure
-      redirect_to new_user_session_path, alert: "Sign-in didn't work. Please try again."
+      redirect_to new_user_session_path, alert: "Signing in didn't work. Please try again."
     end
 
     private

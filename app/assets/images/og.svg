@@ -113,7 +113,7 @@
     <g>
       <rect x="784" y="360" width="44" height="44" rx="10" fill="#eee5f3"/>
       <circle cx="806" cy="382" r="8" fill="#4a2266" opacity="0.3"/>
-      <text x="844" y="378" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Note-taking app</text>
+      <text x="844" y="378" font-family="Archivo" font-weight="700" font-size="18" fill="#22132b">Notes app</text>
       <rect x="1008.2" y="362" width="95.8" height="22" rx="11" fill="#eee5f3"/>
       <text x="1056.1" y="378" text-anchor="middle" font-family="Archivo" font-weight="600" font-size="13" fill="#4a2266">Realistic</text>
       <rect x="844.0" y="392" width="8.5" height="8" rx="1" fill="#4a2266"/>

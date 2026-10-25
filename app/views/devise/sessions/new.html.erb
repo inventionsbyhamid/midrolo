@@ -5,7 +5,7 @@
     <%= render "components/card", title: "Sign in to #{APP_NAME}", heading: :h1 do %>
       <p class="mb-6 text-ink-soft">One click and you're in. We never post to your account.</p>
       <% if AuthConfig.developer_strategy? %>
-        <%= button_to "Continue (dev sign-in)", user_developer_omniauth_authorize_path,
+        <%= button_to "Continue (dev sign in)", user_developer_omniauth_authorize_path,
               method: :post, form: { data: { turbo: false } }, class: "btn btn-primary btn-lg w-full" %>
       <% else %>
         <%= button_to "Continue with Google", user_google_oauth2_omniauth_authorize_path,

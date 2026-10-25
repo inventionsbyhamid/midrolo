@@ -1,25 +1,20 @@
 <%# locals: (samples:, sample:, matches:) -%>
-<%# The hero: the promise, the two calls to action, and an episode waveform whose lit mid-roll slot holds a brand
+<%# The hero: the promise, the two calls to action, and an episode waveform whose lit midroll slot holds a brand
     match. The match card is the first sample's real top matches (or an illustration until a sample is done). %>
 <section id="hero" class="hero" aria-labelledby="hero-title">
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <h1 id="hero-title" class="hero-title">Find sponsors who already love your listeners</h1>
-      <p class="hero-lead">
-        <%= APP_NAME %>'s AI agent studies your show with Qloo's taste data, then ranks the brands your listeners love more
-        than most people do, including brands already sponsoring shows like yours. Each match comes with its reason and
-        evidence.
-      </p>
+      <p class="hero-lead">An AI agent uses Qloo taste data to rank the brands your listeners love.</p>
       <div class="hero-actions">
         <%= ui_button "Get my free Snapshot", snapshot_start_path, size: :lg %>
         <%= ui_button "See a sample report", sample_start_path(samples), variant: :secondary, size: :lg %>
       </div>
-      <p class="hero-note">Free with Google sign-in. No card needed.</p>
     </div>
 
     <div class="hero-wave">
       <%= episode_waveform %>
-      <p class="hero-wave-label">Your mid-roll</p>
+      <p class="hero-wave-label">Your midroll</p>
     </div>
 
     <%= render "pages/home/hero_card", sample: sample, matches: matches %>

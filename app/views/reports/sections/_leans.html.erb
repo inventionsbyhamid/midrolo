@@ -11,7 +11,7 @@
   <% end %>
 <% else %>
   <%= render "reports/section", name: "leans", title: "Leans" do %>
-    <p class="report-section-note">Modeled from Qloo taste data — how people with <%= report_listeners(read_only) %>' tastes lean, not a headcount.</p>
+    <p class="report-section-note">Modeled from Qloo taste data: how people with <%= report_listeners(read_only) %>' tastes lean, not a headcount.</p>
     <%= render "reports/lean_groups", demographics: demographics %>
   <% end %>
 <% end %>

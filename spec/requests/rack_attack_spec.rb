@@ -5,7 +5,7 @@ require "rails_helper"
 # straddles a window boundary.
 RSpec.describe "Rate limits", :rack_attack do
   let(:user) { create(:user) }
-  let(:message) { "Too many requests — try again in a few minutes." }
+  let(:message) { ThrottledResponse::MESSAGE }
   let(:turbo_stream) { { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" } }
 
   # 1,230 seconds into the hour and 30 into the minute.

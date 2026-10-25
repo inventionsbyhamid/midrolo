@@ -8,7 +8,7 @@ class Report < ApplicationRecord
   # Report column behind each section (leans come from demographics, map from heatmap).
   SECTION_COLUMNS = { "summary" => :summary, "seeds" => :seeds, "audience" => :audience,
                       "leans" => :demographics, "map" => :heatmap }.freeze
-  FAILURE_MESSAGE = "Something went wrong while researching. Nothing was charged — try again.".freeze
+  FAILURE_MESSAGE = "Something went wrong while researching. Nothing was charged. Try again.".freeze
   STATUS_COPY = { "queued" => "Getting started…", "running" => "Researching your audience…", "done" => "Report ready",
                   "failed" => "Something went wrong", "needs_input" => "Needs a little more info" }.freeze
 

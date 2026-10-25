@@ -26,9 +26,9 @@ RSpec.describe "Sponsor pipeline" do
     expect(brand_match.reload.status).to eq("pitched")
     expect(active_element_id).to eq(status[:id]) # focus stays on the select through the save
 
-    find("summary", text: "Notes & follow-up").click
+    find("summary", text: "Notes & follow up").click
     fill_in "Notes", with: "Emailed Sam at partnerships"
-    fill_in "Follow-up date", with: Date.current
+    fill_in "Follow up date", with: Date.current
     click_button "Save notes"
 
     expect(page).to have_css("details[open] summary", text: "Follow up today", wait: 10)
@@ -63,7 +63,7 @@ RSpec.describe "Sponsor pipeline" do
   it "shows a validation error inline without losing the panel" do
     visit show_report_path(podcast, report)
 
-    find("summary", text: "Notes & follow-up").click
+    find("summary", text: "Notes & follow up").click
     fill_in "Notes", with: "x" * SponsorMatch::NOTES_LIMIT
     # The browser enforces maxlength while typing; a crafted value past it still gets a friendly error.
     execute_script("document.querySelector('textarea').removeAttribute('maxlength')")
@@ -81,7 +81,7 @@ RSpec.describe "Sponsor pipeline" do
     page.driver.resize(375, 812)
 
     visit show_report_path(podcast, report)
-    find("summary", text: "Notes & follow-up").click
+    find("summary", text: "Notes & follow up").click
     expect(page).to have_field("Notes")
     expect(horizontal_overflow).to eq(0)
 

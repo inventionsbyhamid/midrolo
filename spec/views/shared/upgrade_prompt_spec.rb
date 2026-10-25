@@ -40,25 +40,25 @@ RSpec.describe "shared/_upgrade_prompt" do
   describe ":budget (R63a)" do
     it "sends a promo user to the waitlist once the promo pool is spent" do
       node = render_prompt(reason: :budget, kind: :agent, bucket: :promo)
-      expect(node.text.squish).to eq("Full reports are paused for now — join the waitlist Join the waitlist")
+      expect(node.text.squish).to eq("Full reports are paused for now. Join the waitlist. Join the waitlist")
       expect(link(node)).to eq([ "Join the waitlist", "/pricing" ])
       expect(render_prompt(reason: :budget, kind: :pitch, bucket: :promo).text.squish)
-        .to start_with("Pitch packs are paused for now — join the waitlist")
+        .to start_with("Pitch packs are paused for now. Join the waitlist.")
     end
 
     it "tells a paying user it's today's capacity, never to join a waitlist" do
       node = render_prompt(reason: :budget, kind: :agent, bucket: :paid)
       expect(node.text.squish)
-        .to eq("We've hit today's capacity for full reports — try again tomorrow. This didn't use any of your quota.")
+        .to eq("We've hit today's limit for full reports. Try again tomorrow. This didn't use any of your quota.")
       expect(node.at_css("a")).to be_nil
       expect(render_prompt(reason: :budget, kind: :pitch, bucket: :paid).text.squish)
-        .to eq("We've hit today's capacity for pitch packs — try again tomorrow. This didn't use any of your quota.")
+        .to eq("We've hit today's limit for pitch packs. Try again tomorrow. This didn't use any of your quota.")
     end
 
     it "tells a judge whose reserve is spent the same" do
       node = render_prompt(reason: :budget, kind: :agent, bucket: :judge)
       expect(node.text.squish)
-        .to eq("We've hit today's capacity for full reports — try again tomorrow. This didn't use any of your quota.")
+        .to eq("We've hit today's limit for full reports. Try again tomorrow. This didn't use any of your quota.")
       expect(node.text).not_to include("waitlist")
     end
   end

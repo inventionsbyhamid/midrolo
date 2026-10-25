@@ -43,7 +43,7 @@
 
     <% angles_id = dom_id(pitch, :angles) %>
     <section class="pitch-section" aria-labelledby="<%= angles_id %>">
-      <h3 id="<%= angles_id %>" class="pitch-label">Ad-read angles</h3>
+      <h3 id="<%= angles_id %>" class="pitch-label">Ad read angles</h3>
       <ol class="pitch-angles" data-pitch-angles>
         <% pitch.angles.each do |angle| %>
           <li><%= angle %></li>
@@ -78,9 +78,9 @@
     <% follow_up_id = dom_id(pitch, :follow_up) %>
     <section class="pitch-section" aria-labelledby="<%= follow_up_id %>" data-controller="clipboard">
       <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 id="<%= follow_up_id %>" class="pitch-label">Follow-up for day 7</h3>
+        <h3 id="<%= follow_up_id %>" class="pitch-label">Follow up for day 7</h3>
         <button type="button" class="link text-sm font-semibold" data-action="clipboard#copy">
-          <span data-clipboard-target="label" aria-live="polite">Copy follow-up</span>
+          <span data-clipboard-target="label" aria-live="polite">Copy follow up</span>
         </button>
       </div>
       <div class="pitch-text pitch-text-quiet" data-pitch-follow-up data-clipboard-target="source"><%= pitch.follow_up %></div>

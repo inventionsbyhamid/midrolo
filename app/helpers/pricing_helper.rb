@@ -18,21 +18,13 @@ module PricingHelper
 
   def free_price_label = "$#{Entitlements.plans.dig(:free, :price_monthly_usd).to_i}"
 
-  def plan_tagline(plan)
-    case plan
-    when :creator then "For a show chasing its next sponsors."
-    when :pro then "For hosts with up to #{pluralize(Entitlements.limits(:pro)[:shows], 'show')}."
-    when :sprint then "For a focused push, like the weeks before a new season."
-    end
-  end
-
   # What the page says about buying, by Billing.mode: on the waitlist, that paid plans aren't open yet. Test mode has
   # its own note under the buttons (test_payments_note); live mode needs none.
   def pricing_mode_note
-    "Paid plans open soon. Join the founding-member waitlist and we'll email you when they do." if Billing.mode == :waitlist
+    "Paid plans open soon. Join the waitlist to hear first." if Billing.mode == :waitlist
   end
 
-  # What the plan includes, a line each.
+  # What the plan includes: five short lines at most (R97), so the cards stay skimmable.
   def plan_features(plan)
     limits = Entitlements.limits(plan)
     case plan
@@ -40,7 +32,7 @@ module PricingHelper
     when :creator then creator_features(limits)
     when :pro then pro_features(limits)
     when :sprint then [ "Everything in #{Entitlements.limits(:pro)[:name]} for #{limits[:duration_days]} days",
-                        "One payment, no renewal" ]
+                        "One payment, no renewal", "Good for a new season's launch" ]
     end
   end
 
@@ -48,26 +40,31 @@ module PricingHelper
 
   def free_features(limits)
     [ pluralize(limits[:shows], "show"),
-      "#{pluralize(limits[:snapshots_per_month], 'Snapshot')} a month: taste profile, map and your top #{limits[:visible_matches]} brand matches",
-      "A media kit page#{" with a small “Made with #{APP_NAME}” badge" if limits[:kit_badge]}",
+      "#{pluralize(limits[:snapshots_per_month], 'Snapshot')} a month",
+      "Your top #{limits[:visible_matches]} brand matches",
+      "Media kit#{' with a small badge' if limits[:kit_badge]}",
       "Every sample report" ]
   end
 
   def creator_features(limits)
     [ pluralize(limits[:shows], "show"),
-      "#{pluralize(limits[:agent_reports], 'full agent report')} a month",
-      "Every match, with its reason, evidence and proven sponsors",
-      "#{pluralize(limits[:pitches], 'pitch pack')} a month",
-      ("A media kit without the badge" unless limits[:kit_badge]),
-      ("A pipeline to track every brand you pitch" if limits[:pipeline]) ].compact
+      monthly_work(limits),
+      "Every match, with its evidence",
+      ("A pipeline for your pitches" if limits[:pipeline]),
+      ("Media kit without the badge" unless limits[:kit_badge]) ].compact
   end
 
   def pro_features(limits)
     creator_scan = Entitlements.limits(:creator)[:deep_scan_similar]
     [ pluralize(limits[:shows], "show"),
-      "#{pluralize(limits[:agent_reports], 'full agent report')} and #{pluralize(limits[:pitches], 'pitch pack')} a month",
-      "A deeper sponsor scan: #{limits[:deep_scan_similar]} similar shows checked, not #{creator_scan}",
+      monthly_work(limits),
+      "Deeper scan: #{limits[:deep_scan_similar]} similar shows, not #{creator_scan}",
       ("CSV export of your pipeline" if limits[:csv_export]),
       "Everything in #{Entitlements.limits(:creator)[:name]}" ].compact
+  end
+
+  # "4 full reports and 40 pitch packs a month"
+  def monthly_work(limits)
+    "#{pluralize(limits[:agent_reports], 'full report')} and #{pluralize(limits[:pitches], 'pitch pack')} a month"
   end
 end

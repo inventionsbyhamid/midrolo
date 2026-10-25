@@ -111,12 +111,6 @@
     line-height: 1.2;
   }
 
-  .plan-for {
-    margin-top: -0.875rem;
-    font-size: 0.9375rem;
-    color: var(--color-ink-soft);
-  }
-
   .plan-price {
     display: flex;
     align-items: baseline;

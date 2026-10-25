@@ -26,7 +26,7 @@ RSpec.describe SponsorMatch do
     it "rejects a follow-up date that isn't a date instead of silently dropping it" do
       match.follow_up_on = "2026-13-45"
       expect(match).not_to be_valid
-      expect(match.errors.full_messages_for(:follow_up_on)).to eq([ "Follow-up date isn't a valid date" ])
+      expect(match.errors.full_messages_for(:follow_up_on)).to eq([ "Follow up date isn't a valid date" ])
     end
 
     it "rejects a follow-up date in an implausible year (a half-typed year like 0002)" do

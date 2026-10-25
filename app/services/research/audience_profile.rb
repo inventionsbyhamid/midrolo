@@ -154,9 +154,9 @@ module Research
       "#{label}: #{items.first(count).map(&:name).join(', ')}" if items.any?
     end
 
-    # "25–29 and 30–34; female" — the strongest positive leans, never percentages.
+    # "age 25 to 29 and 30 to 34; female": the strongest positive leans, never percentages.
     def leans_line
-      ages = top_leans(@leans.age, 2).map { |bucket| bucket.to_s.sub("_to_", "–").tr("_", " ") }
+      ages = top_leans(@leans.age, 2).map { |bucket| bucket.to_s.tr("_", " ") }
       gender = top_leans(@leans.gender, 1)
       parts = [ ages.any? ? "age #{ages.join(' and ')}" : nil, gender.any? ? gender.first.to_s : nil ].compact
       parts.any? ? parts.join("; ") : "no clear leans"

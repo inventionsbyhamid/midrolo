@@ -14,7 +14,7 @@
         <%= f.label :downloads_per_episode, "Downloads per episode", class: "label" %>
         <%= f.number_field :downloads_per_episode, class: "input", min: 0, step: 1, inputmode: "numeric",
               aria: { describedby: "downloads-help", invalid: show.errors.key?(:downloads_per_episode).presence } %>
-        <p id="downloads-help" class="hint">Your average downloads per episode in the first 30 days — used to suggest your ad rate</p>
+        <p id="downloads-help" class="hint">Your average downloads per episode in the first 30 days. We use it to suggest your ad rate.</p>
       </div>
 
       <div>

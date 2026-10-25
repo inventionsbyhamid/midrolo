@@ -118,7 +118,7 @@ RSpec.describe "Account" do
       expect(forms_to("/waitlist_entries").map { |form| form.at_css("input[name=price_key]")["value"] })
         .to eq(%w[creator_monthly creator_yearly pro_monthly pro_yearly sprint])
       expect(forms_to("/waitlist_entries").map { |form| form.at_css("[type=submit]")["value"] }.uniq)
-        .to eq([ "Join the founding-member waitlist" ])
+        .to eq([ "Join the founding member waitlist" ])
       expect(forms_to("/waitlist_entries").css("input[name=email]")).to be_empty # signed in: the account's email
       expect(forms_to("/checkouts")).to be_empty
       expect(card("Billing").text).to include("Creator", "$19/month", "$190/year", "Pro", "$49/month", "$490/year",
@@ -136,7 +136,7 @@ RSpec.describe "Account" do
       expect(forms_to("/waitlist_entries").size).to eq(5)
       expect(forms_to("/checkouts").map { |form| form.at_css("[type=submit]").text.squish }.uniq)
         .to eq([ "Try checkout in test mode" ])
-      expect(card("Billing").text).to include("Test mode — use Dodo's test card; nothing is charged.")
+      expect(card("Billing").text).to include(BillingHelper::TEST_NOTE)
     end
 
     it "offers checkout to everyone in test mode" do
@@ -148,7 +148,7 @@ RSpec.describe "Account" do
       expect(forms_to("/checkouts").map { |form| form.at_css("input[name=price_key]")["value"] })
         .to eq(%w[creator_monthly creator_yearly pro_monthly pro_yearly sprint])
       expect(forms_to("/waitlist_entries")).to be_empty
-      expect(card("Billing").text).to include("Test mode — use Dodo's test card; nothing is charged.")
+      expect(card("Billing").text).to include(BillingHelper::TEST_NOTE)
     end
 
     it "shows a subscriber the renewal date and Manage billing, in test and live modes" do
@@ -185,11 +185,11 @@ RSpec.describe "Account" do
       create(:subscription, user: user, status: "canceled", current_period_end: Time.zone.local(2026, 11, 2, 9))
       sign_in user
       get "/account"
-      expect(card("Plan").text.squish).to include("Ends on Nov 2, 2026 — it won't renew.")
+      expect(card("Plan").text.squish).to include("Ends on Nov 2, 2026. It won't renew.")
 
       user.subscriptions.sole.update!(status: "active", cancel_at_period_end: true)
       get "/account"
-      expect(card("Plan").text.squish).to include("Ends on Nov 2, 2026 — it won't renew.")
+      expect(card("Plan").text.squish).to include("Ends on Nov 2, 2026. It won't renew.")
     end
 
     it "gives a sprint's end and a failed payment's warning" do
@@ -218,7 +218,7 @@ RSpec.describe "Account" do
 
       expect(user.reload.judge).to be true
       expect(response).to redirect_to("/account")
-      expect(flash[:notice]).to eq("Judge access unlocked — enjoy full Pro features.")
+      expect(flash[:notice]).to eq("Judge access unlocked. Enjoy full Pro features.")
     end
 
     it "rejects a wrong code" do
@@ -255,7 +255,7 @@ RSpec.describe "Account" do
       post "/account/judge_code", params: { code: "nope" }, headers: { "Accept" => "text/vnd.turbo-stream.html, text/html" }
       expect(response).to have_http_status(:too_many_requests)
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      expect(response.body).to include('target="flash"', "Too many requests — try again in a few minutes.")
+      expect(response.body).to include('target="flash"', ThrottledResponse::MESSAGE)
     end
 
     it "counts each user's tries apart" do

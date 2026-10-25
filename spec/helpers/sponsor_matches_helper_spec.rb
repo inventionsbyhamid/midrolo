@@ -8,7 +8,7 @@ RSpec.describe SponsorMatchesHelper do
   describe "#follow_up_flag" do
     it "says today, overdue, or the date" do
       expect(helper.follow_up_flag(match_due(Date.new(2026, 10, 25)))).to eq("Follow up today")
-      expect(helper.follow_up_flag(match_due(Date.new(2026, 10, 1)))).to eq("Follow-up overdue")
+      expect(helper.follow_up_flag(match_due(Date.new(2026, 10, 1)))).to eq("Follow up overdue")
       expect(Nokogiri::HTML5.fragment(helper.follow_up_flag(match_due(Date.new(2026, 11, 2)))).text).to eq("Follow up Nov 2")
       expect(helper.follow_up_flag(match_due(nil))).to be_nil
     end

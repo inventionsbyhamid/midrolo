@@ -6,7 +6,7 @@ class MediaKit < ApplicationRecord
   MAX_IMAGE_BYTES = 5.megabytes
   # A small file can still decode to a huge bitmap; variants would then eat the server's memory.
   MAX_IMAGE_SIDE = 8000
-  RATE_SLOTS = { "midroll" => "Mid-roll", "preroll" => "Pre-roll", "postroll" => "Post-roll" }.freeze
+  RATE_SLOTS = { "midroll" => "Midroll", "preroll" => "Preroll", "postroll" => "Postroll" }.freeze
   HEADLINE_LIMIT = 120
   ABOUT_LIMIT = 2000
   HIDDEN_BRANDS_LIMIT = 100 # reports list 20 brands; this only bounds a crafted request

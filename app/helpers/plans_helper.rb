@@ -10,8 +10,8 @@ module PlansHelper
             snapshot: { noun: "Snapshot", label: "Snapshots" },
             pitch: { noun: "pitch", label: "Pitches" } }.freeze
   PAUSED_MESSAGE = "New reports are paused for a little while. Please try again later.".freeze
-  PITCH_PACK = "Each one is a ready-to-send email, three ad-read angles, an offer priced from your rate card and " \
-               "a follow-up.".freeze
+  PITCH_PACK = "Each one is an email ready to send, three ad read angles, an offer priced from your rate card and " \
+               "a follow up email.".freeze
 
   # The copy for a refusal's details (Entitlements::NotAllowed#details): reason, kind and bucket, and for :limit the
   # used, in_flight and limit counts and the period (nil when the plan counts in total).
@@ -23,10 +23,10 @@ module PlansHelper
       UpgradePrompt.new(limit_message(prompt), nil, "See plans")
     when :budget
       if prompt[:bucket].in?(%i[paid judge])
-        UpgradePrompt.new("We've hit today's capacity for #{work} — try again tomorrow. This didn't use any of your quota.",
+        UpgradePrompt.new("We've hit today's limit for #{work}. Try again tomorrow. This didn't use any of your quota.",
                           nil, nil)
       else
-        UpgradePrompt.new("#{work.upcase_first} are paused for now — join the waitlist", nil, "Join the waitlist")
+        UpgradePrompt.new("#{work.upcase_first} are paused for now. Join the waitlist.", nil, "Join the waitlist")
       end
     when :paused
       UpgradePrompt.new(AppSettings.get(:runs_paused_reason).to_s.presence || PAUSED_MESSAGE, nil, nil)
@@ -74,9 +74,9 @@ module PlansHelper
     "#{label}: #{plan.used(kind)} of #{limit} used#{" this #{period}" if period}#{", #{in_flight} in progress" if in_flight.positive?}"
   end
 
-  # "Free Pro access during the Qloo hackathon judging — through Nov 6"
+  # "Free Pro access during the Qloo hackathon judging, through Nov 6"
   def promo_offer
-    "Free Pro access during the Qloo hackathon judging — through #{Entitlements.promo_until&.strftime('%b %-d')}"
+    "Free Pro access during the Qloo hackathon judging, through #{Entitlements.promo_until&.strftime('%b %-d')}"
   end
 
   private

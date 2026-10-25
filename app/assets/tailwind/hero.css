@@ -67,12 +67,6 @@
     margin-top: 2rem;
   }
 
-  .hero-note {
-    margin-top: 0.875rem;
-    font-size: 0.875rem;
-    color: var(--color-ink-soft);
-  }
-
   .hero-wave {
     grid-area: wave;
     position: relative;

@@ -5,7 +5,7 @@
   <% elsif results.nil? %>
     <%# Empty query: nothing to show. %>
   <% elsif results.empty? %>
-    <%= render "components/empty_state", title: "No shows found — try the exact title or paste your RSS feed URL." %>
+    <%= render "components/empty_state", title: "No shows found. Try the exact title or paste your RSS feed URL." %>
   <% else %>
     <ul class="flex flex-col gap-3" aria-label="Search results">
       <% results.each do |info| %>

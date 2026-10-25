@@ -14,17 +14,17 @@ RSpec.describe "reports/sections/_leans" do
 
   it "labels the leans as modeled from Qloo taste data, not a headcount" do
     render_section
-    expect(html.text.squish).to match(/modeled from Qloo taste data — how people with your listeners' tastes lean, not a headcount/i)
+    expect(html.text.squish).to match(/modeled from Qloo taste data: how people with your listeners' tastes lean, not a headcount/i)
   end
 
   it "draws a diverging bar per age bucket and gender, centered on zero, with words instead of percentages" do
     render_section
     rows = html.css("[data-lean]")
     expect(rows.map { |row| row.at_css("[data-lean-label]").text.squish })
-      .to eq([ "24 and under", "25–29", "30–34", "35–44", "45–54", "55+", "Men", "Women" ])
+      .to eq([ "24 and under", "25 to 29", "30 to 34", "35 to 44", "45 to 54", "55+", "Men", "Women" ])
     expect(rows.map { |row| row["data-lean"] }).to eq(%w[under over over even under under over under])
 
-    over = rows[1] # 25–29, the strongest positive lean
+    over = rows[1] # 25 to 29, the strongest positive lean
     expect(over.css(".lean-seg-over").size).to be > 0
     expect(over.css(".lean-seg-under")).to be_empty
     under = rows[5] # 55+, the strongest negative lean
@@ -41,7 +41,7 @@ RSpec.describe "reports/sections/_leans" do
     report.update!(demographics: demographics) # jsonb sorts keys by length: "24_and_younger" comes back last
     render(partial: "reports/sections/leans", locals: { report: Report.find(report.id), read_only: false })
     labels = html.css("[data-lean-label]").map { |label| label.text.squish }
-    expect(labels.first(6)).to eq([ "24 and under", "25–29", "30–34", "35–44", "45–54", "55+" ])
+    expect(labels.first(6)).to eq([ "24 and under", "25 to 29", "30 to 34", "35 to 44", "45 to 54", "55+" ])
   end
 
   it "skips a group with no data" do

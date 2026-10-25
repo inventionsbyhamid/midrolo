@@ -8,10 +8,10 @@ module Research
   # toward pausing runs (Review Focus #4). A finished run picks up the podcaster's pipeline work from the show's
   # earlier reports (R46). Returns the run's toolkit, or nil when the run didn't finish.
   class Run
-    PAUSED_MESSAGE = "Full reports are paused right now — nothing was charged. Try again later.".freeze
+    PAUSED_MESSAGE = "Full reports are paused right now. Nothing was charged. Try again later.".freeze
     LIMIT_MESSAGES = {
-      tool_calls: "The research needed more steps than one report allows, so we stopped it. Nothing was charged — try again.",
-      time: "The research took too long, so we stopped it. Nothing was charged — try again."
+      tool_calls: "The research needed more steps than one report allows, so we stopped it. Nothing was charged. Try again.",
+      time: "The research took too long, so we stopped it. Nothing was charged. Try again."
     }.freeze
 
     def self.call(report) = new(report).call

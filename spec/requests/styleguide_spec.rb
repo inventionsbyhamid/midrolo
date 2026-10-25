@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Styleguide" do
-  def banner = "Demo mode — showing sample data (no API keys configured)."
+  def banner = "Demo mode: showing sample data (no API keys configured)."
 
   def layouts = %w[application marketing app kit print]
 

@@ -139,7 +139,7 @@ RSpec.describe "reports/sections/_matches" do
 
       details = form.at_css("details")
       expect(details["open"]).to be_nil
-      expect(details.at_css("summary").text.squish).to eq("Notes & follow-up")
+      expect(details.at_css("summary").text.squish).to eq("Notes & follow up")
       %w[notes follow_up_on].each do |field|
         input = details.at_css("[name='sponsor_match[#{field}]']")
         expect(details.at_css("label[for='#{input['id']}']")).to be_present
@@ -160,7 +160,7 @@ RSpec.describe "reports/sections/_matches" do
 
     it "flags both on the closed notes panel" do
       summary = html.at_css("details summary")
-      expect(summary.text.squish).to eq("Notes & follow-up Note Follow up today")
+      expect(summary.text.squish).to eq("Notes & follow up Note Follow up today")
       expect(html.at_css("select option[selected]")["value"]).to eq("pitched")
     end
   end
@@ -210,7 +210,7 @@ RSpec.describe "reports/sections/_matches" do
     card = html.at_css("[data-filter-target='item']")
     expect(card.css("form:not([action$='/pitch']), select, textarea")).to be_empty
     link = card.at_css("a[href='/pricing']")
-    expect(link.text.squish).to eq("Track this brand in your pipeline — Creator plan")
+    expect(link.text.squish).to eq("Track this brand in your pipeline (Creator plan)")
   end
 
   it "opens the written pitch instead of writing another once the match has one" do

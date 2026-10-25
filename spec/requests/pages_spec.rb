@@ -109,7 +109,7 @@ RSpec.describe "Public pages" do
       get "/"
       expect(page.at_xpath("//main//a[normalize-space()='See a sample report']")["href"]).to eq("/samples")
       hero = page.at_css("#hero").text
-      expect(hero).to include("An illustration of a match list", "Coffee roaster", "Note-taking app", "Budgeting app")
+      expect(hero).to include("An illustration of a match list", "Coffee roaster", "Notes app", "Budgeting app")
       expect(hero).not_to match(/Fieldnote|Ledgerly|Northwind|Affinity \d/) # no invented brands or numbers (R89)
 
       create_sample("sample-two", title: "Index Fund Mornings")
@@ -133,9 +133,12 @@ RSpec.describe "Public pages" do
       get "/"
 
       quotes = page.at_css("#quotes")
-      expect(quotes.text.squish).to include("What podcasters say — paraphrased from r/podcasting, 2026")
+      expect(quotes.at_css("h2").text.squish).to eq("What podcasters say, paraphrased from r/podcasting in 2026")
       expect(quotes.css("blockquote").size).to eq(3)
       expect(quotes.css("cite")).to be_empty
+      expect(quotes.at_css(".quotes-coda").text.squish)
+        .to eq("Only 39% of podcasters make money from their show. 48% of the rest say their audience is too small. " \
+               "RSS.com podcaster survey")
     end
 
     it "explains how it works, what makes it different and the old way, then the FAQ" do
@@ -143,6 +146,7 @@ RSpec.describe "Public pages" do
 
       expect(page.at_css("#how-it-works").css("ol > li").size).to eq(3)
       expect(page.at_css("#different").text).to include("Qloo taste data", "Proven sponsors", "Honest labels")
+      expect(page.at_css("#different").text.squish).to include("modeled from Qloo taste data, not measured")
       expect(page.at_css("#old-way").text).to include("The old way", APP_NAME)
       faq = page.at_css("#faq").text.squish
       expect(faq).to include("Where does the data come from?", "Is this my real audience?", "What's a proxy profile?")
@@ -152,11 +156,33 @@ RSpec.describe "Public pages" do
     it "says it in plain words" do
       get "/"
 
-      expect(page.at_css(".hero-lead").text.squish).to include("brands your listeners love more than most people do")
+      expect(page.at_css(".hero-lead").text.squish).to include("Qloo taste data", "brands your listeners love")
+      expect(page.at_css("#different").text.squish).to include("Brands your listeners love more than most people do.")
       expect(page.at_css("main").text).not_to include("over-index")
       expect(page.at_css("#how-it-works").text.squish).to include("In a few minutes")
-      expect(page.at_css("#old-way").text.squish)
-        .to include("Podcorn, a marketplace for small shows, is shutting down (Nov 1, 2026).")
+    end
+
+    # R97: short headline, one line subhead, short bullets. The FAQ may run long, but stays collapsed.
+    it "keeps every section skimmable, as the copy rules size it", :aggregate_failures do
+      words = ->(node) { node.text.split.size }
+      get "/"
+
+      expect(words.(page.at_css(".hero-lead"))).to be <= 15
+      expect(page.css("#hero .hero-actions a").map { |a| a.text.squish }).to eq([ "Get my free Snapshot", "See a sample report" ])
+      expect(page.css("#hero p").map { |p| p["class"] }).not_to include("hero-note")
+      page.css("#quotes blockquote").each { |quote| expect(words.(quote)).to be <= 12, quote.text.squish }
+      page.css("#how-it-works li p").each { |step| expect(words.(step)).to be <= 10, step.text.squish }
+      expect(page.css("#different dd").size).to eq(3)
+      page.css("#different dd").each { |point| expect(words.(point)).to be <= 12, point.text.squish }
+      expect(page.css("#old-way tbody tr").size).to eq(4)
+      page.css("#old-way th, #old-way td").each { |cell| expect(words.(cell)).to be <= 6, cell.text.squish }
+      expect(page.css("#samples p.section-lead")).to be_empty
+      page.css("#pricing .plan-features").each { |list| expect(list.css("li").size).to be <= 5 }
+      expect(page.css("#faq details").size).to be >= 8
+      expect(page.css("#faq details[open]")).to be_empty
+      closing = page.at_css(".closing")
+      expect(closing.css("p")).to be_empty
+      expect(closing.css("a").map { |a| a.text.squish }).to eq([ "Get my free Snapshot", "See a sample report" ])
     end
   end
 
@@ -171,7 +197,7 @@ RSpec.describe "Public pages" do
       expect(waitlist_forms.map { |form| form.at_css("input[name='price_key']")["value"] })
         .to match_array(Billing.prices.map(&:key))
       expect(waitlist_forms.map { |form| form.at_css("input[type='submit']")["value"] }.uniq)
-        .to eq([ "Join the founding-member waitlist" ])
+        .to eq([ "Join the founding member waitlist" ])
       expect(page.at_xpath("//main//a[normalize-space()='Get my free Snapshot']")).to be_present
     end
 
@@ -195,7 +221,7 @@ RSpec.describe "Public pages" do
                                 headers: { "HTTP_REFERER" => "http://www.example.com/pricing" }
       follow_redirect!
 
-      expect(page.at_css(".flash-notice").text).to include("founding-member list")
+      expect(page.at_css(".flash-notice").text).to include("founding member list")
     end
   end
 

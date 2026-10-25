@@ -111,7 +111,7 @@ RSpec.describe "Media kits (owner)" do
         } }
 
         expect(response).to have_http_status(:unprocessable_content)
-        expect(response.body).to include("Mid-roll rate must be a whole number of dollars, 0 or more",
+        expect(response.body).to include("Midroll rate must be a whole number of dollars, 0 or more",
                                          "Cover must be a JPEG, PNG or WebP image", "Contact email is invalid")
         expect(show.reload.contact_email).to be_nil
       end

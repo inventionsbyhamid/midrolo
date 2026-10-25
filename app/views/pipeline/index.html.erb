@@ -6,7 +6,7 @@
     <div class="min-w-0 basis-96 grow">
       <h1 class="type-h1">Pipeline</h1>
       <p class="type-lead mt-2">
-        Every brand you're working, from saved to won.<%= " Change a brand's stage, notes or follow-up date on its card in the report." if @matches.any? %>
+        Every brand you're working, from saved to won.<%= " Change a brand's stage, notes or follow up date on its card in the report." if @matches.any? %>
       </p>
     </div>
     <% if @matches.any? %>
@@ -20,7 +20,7 @@
 
   <% if @matches.empty? %>
     <%= render "components/empty_state", title: "Your pipeline is empty",
-          body: "Open one of your reports and set a brand's pipeline status to Saved — or Pitched once you've reached out. It shows up here by stage, with your notes and follow-up dates.",
+          body: "Open one of your reports and set a brand's pipeline status to Saved, or Pitched once you've reached out. It shows up here by stage, with your notes and follow up dates.",
           action_label: "Go to your shows", action_href: shows_path %>
   <% else %>
     <nav aria-label="Pipeline stages" class="stage-strip">
@@ -44,7 +44,7 @@
 
     <% if due[:overdue] || due[:today] %>
       <p class="-mt-4 flex flex-wrap gap-2" data-follow-up-summary>
-        <%= ui_badge("#{pluralize(due[:overdue], 'follow-up')} overdue", tone: :danger) if due[:overdue] %>
+        <%= ui_badge("#{pluralize(due[:overdue], 'follow up')} overdue", tone: :danger) if due[:overdue] %>
         <%= ui_badge("#{due[:today]} due today", tone: :warning) if due[:today] %>
       </p>
     <% end %>

@@ -16,7 +16,7 @@
     <%= render "pitches/pitch", pitch: pitch %>
   <% elsif !refusal %>
     <div class="pitch-empty">
-      <p>Get a ready-to-send email, three ad-read angles, an offer priced from your rate card and a follow-up for next week.</p>
+      <p>Get an email ready to send, three ad read angles, an offer priced from your rate card and a follow up for next week.</p>
       <%= button_to "Write my pitch", sponsor_match_pitch_path(sponsor_match), params: { regenerate: 1 }, class: "btn btn-primary btn-md" %>
     </div>
   <% end %>

@@ -23,7 +23,7 @@ RSpec.describe "Sample reports" do
 
       expect(response).to have_http_status(:ok)
       main = page.at_css("main").text.squish
-      expect(main).to include("Sample — not affiliated with the show.", "The Founder's Ledger", "Fieldnote Coffee",
+      expect(main).to include("Sample report. Not affiliated with the show.", "The Founder's Ledger", "Fieldnote Coffee",
                               "Index Fund Mornings", "People with this show's taste plan their money.")
       expect(page.at_css("#report_matches")).to be_present
       expect(page.at_css("aside[aria-label='Agent steps']").text).to include("Reading your last 15 episodes…")
@@ -34,7 +34,7 @@ RSpec.describe "Sample reports" do
       get "/samples/sample-one"
 
       body = response.body
-      expect(body).not_to include("Write my pitch", "Open pitch", "Pipeline", "Notes &amp; follow-up", "Re-run",
+      expect(body).not_to include("Write my pitch", "Open pitch", "Pipeline", "Notes &amp; follow up", "Run again",
                                   "Try again", "Run full report")
       expect(page.css("main form")).to be_empty
       expect(page.at_css(".match-actions")).to be_nil

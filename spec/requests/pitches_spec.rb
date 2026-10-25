@@ -11,7 +11,7 @@ RSpec.describe "Pitches" do
                            evidence: { "shared_tags" => [ "Specialty Coffee", "Remote Work" ], "proven" => { "items" => [], "count" => 0 } })
   end
   let(:turbo) { { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" } }
-  let(:paused) { "Pitches are paused right now — try again later." }
+  let(:paused) { Pitch::PAUSED_MESSAGE }
 
   def page = Nokogiri::HTML5.fragment(response.body)
   def dom_id(*) = ActionView::RecordIdentifier.dom_id(*)
@@ -244,10 +244,10 @@ RSpec.describe "Pitches" do
       end
 
       it "shows a failed pitch's message with a way to try again" do
-        Pitch.create!(sponsor_match: brand_match, status: "failed", error_message: "We couldn't ground this pitch in your data — try again")
+        Pitch.create!(sponsor_match: brand_match, status: "failed", error_message: Pitch::UNGROUNDED_MESSAGE)
         get sponsor_match_pitch_path(brand_match), headers: turbo
         dialog = stream("update", "pitch_dialog")
-        expect(dialog.at_css("[role='alert']").text).to include("We couldn't ground this pitch in your data — try again")
+        expect(dialog.at_css("[role='alert']").text).to include(Pitch::UNGROUNDED_MESSAGE)
         expect(dialog.at_xpath(".//form[.//button[contains(., 'Try again')]]").at_css("input[name='regenerate']")).to be_present
       end
 
@@ -367,7 +367,7 @@ RSpec.describe "Pitches" do
           expect(response).to have_http_status(:payment_required)
           prompt = stream("update", "pitch_dialog").at_css("[data-upgrade-reason='budget']")
           expect(prompt.text.squish)
-            .to eq("We've hit today's capacity for pitch packs — try again tomorrow. This didn't use any of your quota.")
+            .to eq("We've hit today's limit for pitch packs. Try again tomorrow. This didn't use any of your quota.")
           expect(prompt.at_css("a")).to be_nil
         end
 

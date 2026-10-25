@@ -66,7 +66,7 @@
   <% end %>
 
   <%= render "components/card", title: "Rates" do %>
-    <p class="text-ink-soft">Leave a rate blank to use our suggestion. The 4-episode bundle follows your mid-roll.</p>
+    <p class="text-ink-soft">Leave a rate blank to use our suggestion. The bundle price follows your midroll rate.</p>
     <div class="mt-4 grid gap-4 sm:grid-cols-3">
       <% MediaKit::RATE_SLOTS.each do |slot, label| %>
         <% field_id = "media_kit_rate_card_overrides_#{slot}" %>

@@ -75,7 +75,7 @@ RSpec.describe "Checkouts" do
       %w[creator_monthly pro_yearly sprint].each do |price_key|
         post "/checkouts", params: { price_key: price_key }
         expect(response).to redirect_to(account_path)
-        expect(flash[:alert]).to eq("You're already on Creator — use Manage billing to change plans.")
+        expect(flash[:alert]).to eq("You're already on Creator. Use Manage billing to change plans.")
       end
     end
 
@@ -88,7 +88,7 @@ RSpec.describe "Checkouts" do
 
       post "/checkouts", params: { price_key: "pro_monthly" }
       expect(response).to redirect_to(account_path)
-      expect(flash[:alert]).to eq("You're already on Sprint — use Manage billing to change plans.")
+      expect(flash[:alert]).to eq("You're already on Sprint. Use Manage billing to change plans.")
     end
 
     it "lets a lapsed subscriber buy again" do
@@ -105,7 +105,7 @@ RSpec.describe "Checkouts" do
 
       expect(response).to redirect_to(account_path)
       follow_redirect!
-      expect(response.body).to include("Thanks — your plan updates in a few seconds.")
+      expect(response.body).to include(CheckoutsController::THANKS)
     end
 
     it "says so when the provider reports the checkout failed" do

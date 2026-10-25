@@ -6,9 +6,9 @@ class Pitch < ApplicationRecord
   FIELDS = %w[subject body angles offer follow_up contact_role].freeze
   # A pitch queued for longer than this is presumed lost (killed worker): it shows as failed and can be retried.
   STALE_AFTER = 15.minutes
-  FAILURE_MESSAGE = "Something went wrong while writing this pitch. It wasn't counted — try again.".freeze
-  PAUSED_MESSAGE = "Pitches are paused right now — try again later.".freeze
-  UNGROUNDED_MESSAGE = "We couldn't ground this pitch in your data — try again".freeze
+  FAILURE_MESSAGE = "Something went wrong while writing this pitch. It wasn't counted. Try again.".freeze
+  PAUSED_MESSAGE = "Pitches are paused right now. Try again later.".freeze
+  UNGROUNDED_MESSAGE = "We couldn't ground this pitch in your data. Try again.".freeze
 
   belongs_to :sponsor_match
 

@@ -35,7 +35,7 @@ RSpec.describe ShareImages::KitCard do
 
     expect(shown).to include("Media kit", "The Founder's Ledger", "Hosted by Maya Brandt", "4,200",
                              "downloads per episode", "Personal finance", "Startups", "Stoicism",
-                             "Stats self-reported by the verified owner.")
+                             "Stats as reported by the verified owner.")
     expect(shown).not_to include("Index funds")
     expect(shown.join(" ")).not_to match(/[\u2013\u2014]/) # no dashes in copy
   end
@@ -44,7 +44,7 @@ RSpec.describe ShareImages::KitCard do
     show.update!(downloads_per_episode: nil, author: nil)
     shown = texts(card.layout(artwork: :image).svg).join(" ")
 
-    expect(shown).not_to include("downloads per episode", "self-reported", "Hosted by")
+    expect(shown).not_to include("downloads per episode", "as reported", "Hosted by")
   end
 
   it "draws a 1200x630 PNG with the stored artwork in its place, fetching nothing" do

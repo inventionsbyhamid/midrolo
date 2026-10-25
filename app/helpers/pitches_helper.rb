@@ -23,6 +23,6 @@ module PitchesHelper
   def pitch_word_count(pitch)
     count = pitch.word_count
     text = pluralize(count, "word")
-    BODY_WORDS.cover?(count) ? text : "#{text} · aim for #{BODY_WORDS.min}–#{BODY_WORDS.max}"
+    BODY_WORDS.cover?(count) ? text : "#{text} · aim for #{BODY_WORDS.min} to #{BODY_WORDS.max}"
   end
 end

@@ -1,5 +1,5 @@
 <%# locals: (price_key:, label: "Choose", note: true) -%>
-<%# The buy button for one price key, as Billing.mode has it (R66). On the waitlist: "Join the founding-member
+<%# The buy button for one price key, as Billing.mode has it (R66). On the waitlist: "Join the founding member
     waitlist" (a visitor gives an email), plus a test checkout for judges and admins. In test and live modes: checkout,
     or sign-in for a visitor. note: false leaves the test-payments note to the page. Task 19's pricing page reuses it. %>
 <div class="flex flex-col items-start gap-2">
@@ -11,7 +11,7 @@
         <%= email_field_tag :email, nil, id: "waitlist_email_#{price_key}", class: "input", required: true,
                                          autocomplete: "email", placeholder: "you@example.com" %>
       <% end %>
-      <%= form.submit "Join the founding-member waitlist", class: "btn btn-primary btn-md" %>
+      <%= form.submit "Join the founding member waitlist", class: "btn btn-primary btn-md" %>
     <% end %>
     <% if Billing.test_checkout?(current_user) %>
       <%= button_to "Try checkout in test mode", checkouts_path, params: { price_key: price_key },

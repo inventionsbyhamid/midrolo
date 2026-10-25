@@ -7,7 +7,7 @@ module Pipeline
   # file in a legacy encoding and garbles accents and symbols.
   class Csv
     BOM = "\uFEFF".freeze
-    HEADERS = [ "Show", "Brand", "Status", "Fit score", "Tier", "Category", "Website", "Follow-up date", "Notes",
+    HEADERS = [ "Show", "Brand", "Status", "Fit score", "Tier", "Category", "Website", "Follow up date", "Notes",
                 "Why it fits" ].freeze
     FORMULA_START = /\A[=+\-@\t\r]/
 

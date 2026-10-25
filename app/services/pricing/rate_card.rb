@@ -69,13 +69,13 @@ module Pricing
 
     def flat_basis
       "Flat rate for shows under #{@config[:flat_threshold_downloads].to_fs(:delimited)} downloads per episode, " \
-        "based on small-show guidance of $15–40 per spot"
+        "based on the $15 to $40 per spot suggested for small shows"
     end
 
     def cpm_basis(niche, niche_key)
-      base = "$#{@config[:cpm_usd]} CPM host-read baseline"
+      base = "$#{@config[:cpm_usd]} CPM baseline for host reads"
       base += " × #{niche} #{niche_key} niche multiplier" if niche_key
-      "#{base}, in line with published 2026 benchmarks ($20–30 CPM)"
+      "#{base}, in line with published 2026 benchmarks ($20 to $30 CPM)"
     end
   end
 end

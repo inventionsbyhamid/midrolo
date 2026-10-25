@@ -5,7 +5,7 @@
     <h1 class="type-h1">About <%= APP_NAME %></h1>
     <p class="type-lead">
       <%= APP_NAME %> does a sponsorship team's research for one independent podcast at a time. The name comes from the
-      mid-roll, the best-paid ad slot in an episode.
+      midroll, the ad slot that pays best in an episode.
     </p>
 
     <h2>Why it exists</h2>
@@ -30,7 +30,7 @@
       <% if Billing.mode == :live %>
         Paid plans are open.
       <% else %>
-        Paid plans aren't on sale yet: billing is built and tested in test mode, and you can join the founding-member
+        Paid plans aren't on sale yet: billing is built and tested in test mode, and you can join the founding member
         waitlist from the <%= link_to "pricing page", pricing_path, class: "link" %>.
       <% end %>
       Its code is open source under the AGPL-3.0 license.

@@ -23,6 +23,7 @@ class SponsorResearchAgent < RubyLLM::Agent
     - Refer to brands by the refs the tools give (b1, b2...).
     - Demographics are leans modeled from Qloo taste data, never percentages.
     - When a tool reports an error or no results, adapt (other seeds, fewer categories) instead of guessing.
+    - The podcaster reads the reasons and the summary: no em dashes or en dashes (use a comma, period, colon or parentheses), and ranges as "25 to 34".
     - Always finish by calling save_sponsor_matches, then save_summary, then reply "Done."
   TEXT
 

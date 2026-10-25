@@ -84,7 +84,7 @@ RSpec.describe "Pipeline" do
       expect(entries["Later Co"]["data-follow-up"]).to be_nil
       expect(entries["Later Co"].css(".pipeline-follow-up .badge").map(&:text)).not_to include("Due today", "Overdue")
       expect(brands_in("pitched")).to eq([ "Late Co", "Today Co", "Later Co" ]) # soonest follow-up first
-      expect(page.text.squish).to include("1 follow-up overdue", "1 due today")
+      expect(page.text.squish).to include("1 follow up overdue", "1 due today")
     end
 
     it "doesn't flag follow-ups on won or lost brands, or count them as due" do
@@ -270,10 +270,10 @@ RSpec.describe "Pipeline" do
           expect(response.body.b).to start_with("\xEF\xBB\xBF".b) # UTF-8 BOM, so Excel reads it as UTF-8
           rows = csv_rows
           expect(rows.headers).to eq([ "Show", "Brand", "Status", "Fit score", "Tier", "Category", "Website",
-                                       "Follow-up date", "Notes", "Why it fits" ])
+                                       "Follow up date", "Notes", "Why it fits" ])
           expect(rows.first.to_h).to include("Show" => "The Founder's Ledger", "Brand" => "Fieldnote Coffee",
                                              "Status" => "Pitched", "Fit score" => "91", "Tier" => "Easy yes",
-                                             "Follow-up date" => "2026-11-02", "Notes" => "Emailed Sam")
+                                             "Follow up date" => "2026-11-02", "Notes" => "Emailed Sam")
         end
 
         it "neutralizes values that a spreadsheet would run as formulas" do

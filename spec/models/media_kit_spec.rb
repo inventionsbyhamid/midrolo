@@ -83,7 +83,7 @@ RSpec.describe MediaKit do
       %w[-5 12.5 lots].each do |value|
         kit.rate_card_overrides = { "midroll" => value }
         expect(kit).not_to be_valid
-        expect(kit.errors.full_messages).to include("Mid-roll rate must be a whole number of dollars, 0 or more")
+        expect(kit.errors.full_messages).to include("Midroll rate must be a whole number of dollars, 0 or more")
       end
     end
   end

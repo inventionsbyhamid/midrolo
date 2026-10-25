@@ -3,8 +3,8 @@
 # billing mode, and limited per IP. The paused-runs notify-me box (shared/_runs_paused) posts here too, with
 # Billing::NOTIFY_KEY: only signed in, so the notify list holds account emails, never one a visitor typed.
 class WaitlistEntriesController < ApplicationController
-  CONFIRMATION = "You're on the founding-member list — we'll email you when paid plans open.".freeze
-  NOTIFY_CONFIRMATION = "Thanks — we'll email you when new reports are back.".freeze
+  CONFIRMATION = "You're on the founding member list. We'll email you when paid plans open.".freeze
+  NOTIFY_CONFIRMATION = "Thanks. We'll email you when new reports are back.".freeze
 
   rate_limit to: 10, within: 1.hour, only: :create,
              with: -> { redirect_back_or_to pricing_path, alert: "Too many tries. Please try again later." }

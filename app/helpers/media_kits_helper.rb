@@ -28,10 +28,10 @@ module MediaKitsHelper
     url_for(attachment.variant(variant)) if attachment.attached? && attachment.blob.persisted?
   end
 
-  # "Run a mid-roll in 4 episodes for $415, 10% off."
+  # "Run a midroll in 4 episodes for $415, 10% off."
   def kit_bundle_line(rates)
     config = Rails.application.config_for(:rate_card)
-    safe_join([ "Run a mid-roll in #{config[:bundle_episodes]} episodes for ", tag.strong(kit_money(rates.bundle4)),
+    safe_join([ "Run a midroll in #{config[:bundle_episodes]} episodes for ", tag.strong(kit_money(rates.bundle4)),
                 ", #{(config[:bundle_discount] * 100).round}% off." ])
   end
 

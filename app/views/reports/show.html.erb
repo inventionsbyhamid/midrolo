@@ -12,9 +12,9 @@
       <p id="report_status" class="text-sm"><%= ui_badge @report.status_copy, tone: tone %></p>
     </div>
     <% if @report.active? || paused %>
-      <%= ui_button "Re-run", type: "button", variant: :secondary, disabled: true %>
+      <%= ui_button "Run again", type: "button", variant: :secondary, disabled: true %>
     <% else %>
-      <%= button_to "Re-run", show_reports_path(@show, kind: @report.kind), method: :post, class: "btn btn-secondary btn-md" %>
+      <%= button_to "Run again", show_reports_path(@show, kind: @report.kind), method: :post, class: "btn btn-secondary btn-md" %>
     <% end %>
     <%= ui_button "Media kit", show_media_kit_path(@show), variant: :ghost %>
   </header>

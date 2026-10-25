@@ -3,7 +3,7 @@
 # the page's flash for MESSAGE, a Turbo Frame request gets MESSAGE inside its frame, and anything else gets the static
 # public/429.html. Each carries Retry-After in seconds.
 class ThrottledResponse
-  MESSAGE = "Too many requests — try again in a few minutes.".freeze
+  MESSAGE = "Too many requests. Try again in a few minutes.".freeze
   STATUS = 429
 
   # For Rack::Attack: Retry-After is the time left in the throttle's window.

@@ -1,21 +1,14 @@
-<%# The old way of finding sponsors against Midrolo's, row by row. On a phone each row stacks into labelled pairs. %>
-<% creator = plan_price(:creator, :monthly) %>
+<%# The old way of finding sponsors against Midrolo's, row by row, six words a cell at most. On a phone each row
+    stacks into labelled pairs. %>
 <% rows = [
-     [ "Choosing brands", "Guess from your topic, or copy the sponsors you hear on bigger shows.",
-       "Brands your listeners love more than most people do, ranked by fit." ],
-     [ "Proving fit", "A media kit with downloads and countries, and nothing about taste.",
-       "Shared taste tags, affinity scores and sponsors of similar shows, for every brand." ],
-     [ "Pricing a spot", "A mysterious formula.",
-       "A rate card built from published CPM benchmarks, which you can edit." ],
-     [ "Landing the deal",
-       "Marketplaces that take a cut and keep closing. Podcorn, a marketplace for small shows, is shutting down (Nov 1, 2026).",
-       "You pitch brands directly. #{APP_NAME} takes no commission." ],
-     [ "What it costs", "Research tools built for agencies, from $99 a month.",
-       "A free Snapshot. Full reports from #{price_label(creator)}." ]
+     [ "Choosing brands", "Guess from your topic", "Ranked by your listeners' taste" ],
+     [ "Proving fit", "Downloads and countries, nothing on taste", "Shared taste and proven sponsors" ],
+     [ "Pricing a spot", "A mysterious formula", "Editable rate card from published benchmarks" ],
+     [ "Landing the deal", "Marketplaces that take a cut", "Pitch directly. No commission." ]
    ] %>
 <section id="old-way" class="page-section" aria-labelledby="old-way-title">
   <div class="wrap">
-    <h2 id="old-way-title" class="type-h2">The old way, and the <%= APP_NAME %> way</h2>
+    <h2 id="old-way-title" class="type-h2">The old way vs <%= APP_NAME %></h2>
     <%# Explicit roles keep it a table for screen readers when a phone's CSS stacks the cells (display: block). %>
     <table class="compare" role="table">
       <thead role="rowgroup">

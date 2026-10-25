@@ -124,8 +124,8 @@ RSpec.describe Pitches::Writer do
       described_class.call(brand_match, pitch: pitch)
 
       prompt = prompt_of(RubyLLM::Test.last_request)
-      expect(prompt).to include("Mid-roll: $#{rate.midroll}", "$#{rate.bundle4}")
-      expect(prompt).to include("<untrusted_feed>Index Fund Mornings — Cash flow surprises</untrusted_feed>", "Sep 14, 2026")
+      expect(prompt).to include("Midroll: $#{rate.midroll}", "$#{rate.bundle4}")
+      expect(prompt).to include("<untrusted_feed>Index Fund Mornings: Cash flow surprises</untrusted_feed>", "Sep 14, 2026")
       expect(prompt).to include("3 sponsored episodes found")
       expect(prompt).to include("82%")
       expect(prompt).to include("1,500")
@@ -211,7 +211,7 @@ RSpec.describe Pitches::Writer do
       expect(RubyLLM::Test.requests.size).to eq(2)
       retry_prompt = prompt_of(RubyLLM::Test.requests.last)
       expect(retry_prompt).to include("40%", "10k")
-      expect(retry_prompt).to include("Mid-roll: $#{rate.midroll}")
+      expect(retry_prompt).to include("Midroll: $#{rate.midroll}")
       expect(SpendEntry.where(pitch_id: pitch.id).count).to eq(2)
     end
 

@@ -64,7 +64,7 @@ RSpec.describe "Reports" do
         post show_reports_path(show), params: { kind: "agent" }
         follow_redirect!
         prompt = Nokogiri::HTML(response.body).at_css(".upgrade-prompt")
-        expect(prompt.text.squish).to include("We've hit today's capacity for full reports — try again tomorrow.")
+        expect(prompt.text.squish).to include("We've hit today's limit for full reports. Try again tomorrow.")
         expect(prompt.text).not_to include("waitlist")
       end
 
@@ -103,12 +103,12 @@ RSpec.describe "Reports" do
       it "disables Re-run while active and enables it when finished" do
         report = create(:report, show: show, status: "running")
         get show_report_path(show, report)
-        expect(response.body).to match(/<button[^>]*disabled[^>]*>Re-run/)
+        expect(response.body).to match(/<button[^>]*disabled[^>]*>Run again/)
 
         report.update!(status: "done")
         get show_report_path(show, report)
         expect(response.body).to include(show_reports_path(show, kind: "snapshot"))
-        expect(response.body).not_to match(/<button[^>]*disabled[^>]*>Re-run/)
+        expect(response.body).not_to match(/<button[^>]*disabled[^>]*>Run again/)
       end
 
       it "re-runs the same kind" do
@@ -146,7 +146,7 @@ RSpec.describe "Reports" do
         report = create(:report, show: show, kind: "agent", status: "needs_input")
         get show_report_path(show, report)
         page = Nokogiri::HTML(response.body)
-        expect(page.text.squish).to include("We need a little more to go on — tell us 2–3 shows your listeners also love.")
+        expect(page.text.squish).to include("We need a little more to go on. Tell us 2 or 3 shows your listeners also love.")
         form = page.at_css("#report_seeds form[action='#{show_path(show)}']")
         expect(form.at_css("input[name='rerun']")["value"]).to eq("agent")
         expect(response.body).to include(edit_show_path(show))
@@ -180,9 +180,9 @@ RSpec.describe "Reports" do
           get show_report_path(show, report)
 
           expect(page.css("form[action^='#{show_reports_path(show)}']")).to be_empty
-          expect(disabled_buttons).to include("Re-run", "Try again")
+          expect(disabled_buttons).to include("Run again", "Try again")
           paused = page.at_css("[data-runs-paused]")
-          expect(paused.at_css("[role='status']").text.squish).to eq("New reports are paused — we'll email you when they're back")
+          expect(paused.at_css("[role='status']").text.squish).to eq("New reports are paused. We'll email you when they're back.")
           expect(paused.at_css("form[action='#{waitlist_entries_path}'] input[name='price_key']")["value"]).to eq("notify")
         end
 
@@ -191,7 +191,7 @@ RSpec.describe "Reports" do
           get show_report_path(show, report)
 
           expect(page.css("form[action^='#{show_reports_path(show)}']")).to be_empty
-          expect(disabled_buttons).to include("Re-run", "Run full report")
+          expect(disabled_buttons).to include("Run again", "Run full report")
         end
 
         it "shows them live again once runs resume" do

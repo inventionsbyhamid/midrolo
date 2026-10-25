@@ -21,7 +21,7 @@ RSpec.describe AdminHelper do
         [ "Pitches", { today: 0, month: 3 } ],
         [ "Waitlist: notify me", { today: 2, month: 5 } ],
         [ "Waitlist: plans", { today: 0, month: 1 } ],
-        [ "Average cost per done full report", { today: "—", month: "$0.46" } ]
+        [ "Average cost per done full report", { today: "None", month: "$0.46" } ]
       ])
     end
 

@@ -3,7 +3,7 @@
 # to the URL the provider returns, never to anything from params. A user with an entitling subscription changes plans
 # in the portal instead; only the sprint can be bought again, to extend it.
 class CheckoutsController < ApplicationController
-  THANKS = "Thanks — your plan updates in a few seconds.".freeze
+  THANKS = "Thanks. Your plan updates in a few seconds.".freeze
   NOT_CHARGED = "Checkout didn't go through, so nothing was charged.".freeze
   # The statuses the provider's return URL reports for a checkout that took no payment.
   UNPAID_STATUSES = %w[failed expired].freeze
@@ -17,7 +17,7 @@ class CheckoutsController < ApplicationController
 
     if (subscription = Billing.blocking_subscription(current_user, price))
       plan_name = Entitlements.limits(subscription.plan.to_sym).fetch(:name)
-      return redirect_to(account_path, alert: "You're already on #{plan_name} — use Manage billing to change plans.")
+      return redirect_to(account_path, alert: "You're already on #{plan_name}. Use Manage billing to change plans.")
     end
 
     url = Billing::Provider.current.checkout_url(user: current_user, price_key: price.key, return_url: billing_success_url)

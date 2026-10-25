@@ -85,7 +85,7 @@
       <p class="type-h3">Brands this audience over-indexes on</p>
       <p class="type-lead max-w-2xl">Listeners like yours spend on slow travel, specialty coffee and repairable gear. Here are the brands that already reach them.</p>
       <p class="max-w-prose">Body copy is 16px on a 1.6 line height, set to about 65 characters a line. Ages and genders are shown as leans modeled from Qloo taste data, never as percentages, because that is all the data can honestly support.</p>
-      <p class="text-sm text-ink-soft">Small print, 14px: Stats self-reported by the verified owner.</p>
+      <p class="text-sm text-ink-soft">Small print, 14px: Stats as reported by the verified owner.</p>
     </div>
   </section>
 
@@ -105,7 +105,7 @@
         <%= ui_button "Small", "#", size: :sm %>
         <%= ui_button "Medium", "#" %>
         <%= ui_button "Large", "#", size: :lg %>
-        <%= ui_button "Re-run (running)", type: "button", variant: :secondary, disabled: true %>
+        <%= ui_button "Run again (running)", type: "button", variant: :secondary, disabled: true %>
       </div>
       <p class="text-sm">Inline links use <a href="#" class="link">the link class</a>.</p>
     </div>
@@ -155,10 +155,10 @@
   <section class="grid gap-6 border-t border-line py-10 lg:grid-cols-[13rem_1fr] lg:gap-10" aria-labelledby="sg-stats">
     <div>
       <h2 id="sg-stats" class="type-h3">Stats</h2>
-      <p class="mt-1 text-sm text-ink-soft"><code>render "components/stat", value:, label:, note:</code>. Media-kit numbers.</p>
+      <p class="mt-1 text-sm text-ink-soft"><code>render "components/stat", value:, label:, note:</code>. Media kit numbers.</p>
     </div>
     <div class="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3">
-      <%= render "components/stat", value: "4,200", label: "Downloads per episode", note: "Self-reported by the verified owner" %>
+      <%= render "components/stat", value: "4,200", label: "Downloads per episode", note: "As reported by the verified owner" %>
       <%= render "components/stat", value: "212", label: "Episodes" %>
       <%= render "components/stat", value: "Weekly", label: "New episodes", note: "From the RSS feed" %>
     </div>
@@ -255,7 +255,7 @@
 
 I host Tidewater Tapes, a weekly show about slow travel on the Atlantic coast. Qloo's taste data says our listeners over-index on specialty coffee and on two shows Fieldnote already sponsors.
 
-Would a 4-episode mid-roll bundle at $180 be worth a quick call?
+Would a midroll bundle of 4 episodes at $180 be worth a quick call?
 
 Maya</div>
           <div class="flex flex-wrap gap-2">

@@ -2,7 +2,7 @@ require "rails_helper"
 
 # The hackathon promo's banner shows only to signed-in users on the promo plan (R63).
 RSpec.describe "Promo banner" do
-  let(:copy) { "Free Pro access during the Qloo hackathon judging — through Nov 6." }
+  let(:copy) { "Free Pro access during the Qloo hackathon judging, through Nov 6." }
 
   def banner = Nokogiri::HTML(response.body).at_css(".promo-banner")
 

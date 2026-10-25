@@ -23,15 +23,15 @@ module Pitches
     private
 
     def subject
-      [ "A mid-roll for #{brand} on #{title}", "A mid-roll for #{brand}" ].find { |text| text.length <= Writer::SUBJECT_LIMIT } ||
-        "A mid-roll for #{brand}".truncate(Writer::SUBJECT_LIMIT, separator: " ")
+      [ "A midroll for #{brand} on #{title}", "A midroll for #{brand}" ].find { |text| text.length <= Writer::SUBJECT_LIMIT } ||
+        "A midroll for #{brand}".truncate(Writer::SUBJECT_LIMIT, separator: " ")
     end
 
     def body
       [
         "Hi #{brand} team,",
         "I host #{title}, an independent podcast whose listeners already lean your way, and I'd love to talk about a sponsorship.",
-        [ fit, proven_line || "That overlap is why a host-read spot would feel like a recommendation, not an interruption." ].join(" "),
+        [ fit, proven_line || "That overlap is why my read would feel like a recommendation, not an interruption." ].join(" "),
         "I only take sponsors I'd happily recommend to a friend, and I read every spot myself.",
         offer_line,
         "Would you be open to a quick call, or shall I send over our media kit?",
@@ -59,7 +59,7 @@ module Pitches
       card = @in.rate_card
       reach = "With about #{@in.downloads.to_fs(:delimited)} downloads per episode, I" if @in.downloads
       "#{reach || 'I'}'d suggest a #{bundle} at #{@in.money(card.bundle4)}, #{@in.bundle_discount_percent}% off our " \
-        "#{@in.money(card.midroll)} per-episode rate, read in my own words."
+        "#{@in.money(card.midroll)} rate per episode, read in my own words."
     end
 
     def angles
@@ -69,9 +69,9 @@ module Pitches
         tag ? "Shared taste: tie #{brand} to #{tag}, something your listeners already love." :
               "Shared taste: tie #{brand} to the topics your listeners come to the show for.",
         if @in.proven_show
-          "Familiar format: a conversational mid-roll like the ones #{brand} ran on #{@in.proven_show}, with a listener code."
+          "Familiar format: a conversational midroll like the ones #{brand} ran on #{@in.proven_show}, with a listener code."
         else
-          "Low-key offer: a conversational mid-roll at the episode's natural break, with a listener code to track results."
+          "Simple offer: a conversational midroll at the episode's natural break, with a listener code to track results."
         end
       ]
     end
@@ -79,18 +79,18 @@ module Pitches
     def offer
       card = @in.rate_card
       "#{bundle.capitalize}: #{@in.money(card.bundle4)} (#{@in.bundle_discount_percent}% off #{@in.money(card.midroll)} per episode). " \
-        "Single spots: mid-roll #{@in.money(card.midroll)}, pre-roll #{@in.money(card.preroll)}, post-roll #{@in.money(card.postroll)}."
+        "Single spots: midroll #{@in.money(card.midroll)}, preroll #{@in.money(card.preroll)}, postroll #{@in.money(card.postroll)}."
     end
 
     def follow_up
       tags = @in.shared_tags.first(2)
       overlap = tags.any? ? "share #{tags.to_sentence} with your fans" : "line up with brands like yours"
-      "Hi #{brand} team,\n\nJust bringing my note about a mid-roll on #{title} back to the top of your inbox. " \
-        "Our listeners #{overlap}, so I think a host-read spot would land well. Happy to send the media kit or hold " \
+      "Hi #{brand} team,\n\nJust bringing my note about a midroll on #{title} back to the top of your inbox. " \
+        "Our listeners #{overlap}, so I think a spot read in my own voice would land well. Happy to send the media kit or hold " \
         "a slot for you, whichever is easier.\n\nThanks,\n#{signer}"
     end
 
-    def bundle = "#{@in.bundle_episodes}-episode mid-roll bundle"
+    def bundle = "midroll bundle of #{@in.bundle_episodes} episodes"
 
     def brand = @in.brand
 

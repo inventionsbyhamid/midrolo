@@ -25,7 +25,7 @@ module AdminHelper
       [ "Waitlist: notify me", waitlist.transform_values { |counts| counts[:notify] } ],
       [ "Waitlist: plans", waitlist.transform_values { |counts| counts[:plans] } ],
       [ "Average cost per done full report",
-        stats.average_agent_cost.transform_values { |average| average ? admin_usd(average) : "—" } ] ]
+        stats.average_agent_cost.transform_values { |average| average ? admin_usd(average) : "None" } ] ]
   end
 
   # One row per kind and status seen this month.

@@ -13,7 +13,7 @@ class AccountsController < ApplicationController
   def judge_code
     if judge_code_valid?(params[:code])
       current_user.update!(judge: true)
-      redirect_to account_path, notice: "Judge access unlocked — enjoy full Pro features."
+      redirect_to account_path, notice: "Judge access unlocked. Enjoy full Pro features."
     else
       redirect_to account_path, alert: "That code didn't work."
     end

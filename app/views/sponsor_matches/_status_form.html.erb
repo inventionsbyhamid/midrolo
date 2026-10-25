@@ -43,7 +43,7 @@
     <details class="status-notes" <%= "open" if notes_invalid || date_invalid %>>
       <summary class="status-notes-summary">
         <svg viewBox="0 0 16 16" class="status-notes-chevron" aria-hidden="true"><path d="m6 4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>Notes &amp; follow-up</span>
+        <span>Notes &amp; follow up</span>
         <%# One inner span per flag: in the inline-flex flag, loose text runs would lose their edge spaces. %>
         <% if match.notes.present? %>
           <span class="status-flag"><span>Note</span></span>
@@ -64,7 +64,7 @@
           <% end %>
         </div>
         <div>
-          <%= f.label :follow_up_on, "Follow-up date", class: "label" %>
+          <%= f.label :follow_up_on, "Follow up date", class: "label" %>
           <%= f.date_field :follow_up_on, class: "input status-date-input",
                 aria: { invalid: (date_invalid || nil), describedby: (date_error_id if date_invalid) } %>
           <% if date_invalid %>
@@ -79,6 +79,6 @@
   <% end %>
 <% else %>
   <p id="<%= form_id %>" class="status-locked">
-    <%= link_to pricing_path, class: "link" do %>Track this brand in your pipeline — Creator plan<% end %>
+    <%= link_to pricing_path, class: "link" do %>Track this brand in your pipeline (Creator plan)<% end %>
   </p>
 <% end %>

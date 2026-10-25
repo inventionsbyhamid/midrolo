@@ -1,6 +1,7 @@
 /*
  * The landing page's sections below the hero (app/views/pages/home), imported from application.css: the podcaster
- * quotes, how it works, what makes this different and the closing call to action. The hero is in hero.css.
+ * quotes, how it works, what makes this different and the closing call to action (a headline and the two buttons).
+ * The hero is in hero.css.
  */
 @layer components {
   /* ---------- What podcasters say: the page's one dark band ---------- */
@@ -184,12 +185,5 @@
     line-height: 1.05;
     letter-spacing: -0.025em;
     text-wrap: balance;
-  }
-
-  .closing-lead {
-    max-width: 52ch;
-    margin-top: 1rem;
-    font-size: 1.125rem;
-    color: var(--color-ink-soft);
   }
 }

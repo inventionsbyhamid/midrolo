@@ -1,7 +1,7 @@
 <%# locals: (heading: :h3) -%>
 <%#
   The pricing table, shared by /pricing and the landing page (R78). Every number comes from config/plans.yml, and the
-  buttons are billing/_plan_button, so they follow Billing.mode (the founding-member waitlist by default). The
+  buttons are billing/_plan_button, so they follow Billing.mode (the founding member waitlist by default). The
   monthly/yearly switch is two radios and CSS (:has), so it needs no JavaScript; both intervals' buttons are in the
   page. heading is the plan names' level under the page's own headings.
 %>
@@ -27,7 +27,6 @@
   <div class="plan-grid">
     <article class="plan-card" data-plan="free" aria-labelledby="plan_free_name">
       <%= content_tag heading, Entitlements.limits(:free)[:name], id: "plan_free_name", class: "plan-name" %>
-      <p class="plan-for">For a first look at your audience.</p>
       <p class="plan-price"><span class="plan-amount"><%= free_price_label %></span></p>
       <div class="plan-action">
         <%= ui_button "Get my free Snapshot", snapshot_start_path, variant: :secondary %>
@@ -40,7 +39,6 @@
       <article class="<%= class_names("plan-card", "plan-card-featured" => plan == paid.first) %>" data-plan="<%= plan %>"
                aria-labelledby="plan_<%= plan %>_name">
         <%= content_tag heading, name, id: "plan_#{plan}_name", class: "plan-name" %>
-        <p class="plan-for"><%= plan_tagline(plan) %></p>
         <% %i[monthly yearly].each do |interval| %>
           <% next unless (price = plan_price(plan, interval)) %>
           <div class="plan-interval" data-interval="<%= interval %>">
@@ -61,7 +59,6 @@
     <article class="plan-card plan-sprint" data-plan="sprint" aria-labelledby="plan_sprint_name">
       <div class="plan-sprint-text">
         <%= content_tag heading, Entitlements.limits(:sprint)[:name], id: "plan_sprint_name", class: "plan-name" %>
-        <p class="plan-for"><%= plan_tagline(:sprint) %></p>
         <%= render "pages/plan_features", plan: :sprint %>
       </div>
       <div class="plan-sprint-buy">
@@ -77,6 +74,6 @@
 
   <%= test_payments_note %>
   <% if Entitlements.promo_active? %>
-    <p class="pricing-promo"><%= promo_offer %>: signed-in accounts get Pro features with <%= pluralize(Entitlements.limits(:promo)[:agent_reports], "full agent report") %>, while the promo budget lasts.</p>
+    <p class="pricing-promo"><%= promo_offer %>. Every account gets Pro features with <%= pluralize(Entitlements.limits(:promo)[:agent_reports], "full report") %>, while the promo budget lasts.</p>
   <% end %>
 </div>

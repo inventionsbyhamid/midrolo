@@ -38,13 +38,13 @@ module SponsorMatchesHelper
     tag.time(text, datetime: date.iso8601)
   end
 
-  # The closed notes panel's flag: "Follow up today" or "Follow-up overdue" on an open deal, else "Follow up Nov 2".
+  # The closed notes panel's flag: "Follow up today" or "Follow up overdue" on an open deal, else "Follow up Nov 2".
   def follow_up_flag(match)
     return unless match.follow_up_on
 
     case match.follow_up_alert
     when :today then "Follow up today"
-    when :overdue then "Follow-up overdue"
+    when :overdue then "Follow up overdue"
     else safe_join([ "Follow up ", follow_up_time(match.follow_up_on) ])
     end
   end

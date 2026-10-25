@@ -229,7 +229,7 @@ RSpec.describe "Shows" do
           get show_path(show)
 
           expect(actions.at_css("[role='status']").text.squish)
-            .to eq("New reports are paused — we'll email you when they're back")
+            .to eq("New reports are paused. We'll email you when they're back.")
           expect(actions.css("form[action^='#{show_reports_path(show)}']")).to be_empty
           expect(actions.css("button[disabled]").map { |button| button.text.squish })
             .to eq([ "Get my free Snapshot", "Run full report" ])
@@ -243,13 +243,13 @@ RSpec.describe "Shows" do
           2.times do
             post waitlist_entries_path, params: { price_key: "notify", notify: "1" }, headers: { "HTTP_REFERER" => show_url(show) }
             expect(response).to redirect_to(show_url(show))
-            expect(flash[:notice]).to eq("Thanks — we'll email you when new reports are back.")
+            expect(flash[:notice]).to eq(WaitlistEntriesController::NOTIFY_CONFIRMATION)
           end
           expect(WaitlistEntry.sole).to have_attributes(email: user.email, price_key: "notify", user: user)
 
           get show_path(show)
           expect(actions.at_css("form[action='#{waitlist_entries_path}']")).to be_nil
-          expect(actions.text.squish).to include("You're on the list — we'll email you when they're back.")
+          expect(actions.text.squish).to include("You're on the list. We'll email you when they're back.")
         end
 
         it "shows the run buttons again once runs resume" do
@@ -398,7 +398,7 @@ RSpec.describe "Show search" do
 
   it "renders the empty state when nothing matches" do
     get "/shows/search", params: { q: "zzzzqqq" }
-    expect(response.body).to include("No shows found — try the exact title or paste your RSS feed URL.")
+    expect(response.body).to include("No shows found. Try the exact title or paste your RSS feed URL.")
   end
 
   it "shows a friendly message, not a 500, when the directory is down" do

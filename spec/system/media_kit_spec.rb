@@ -74,7 +74,7 @@ RSpec.describe "Media kit" do
 
     visit public_kit_path(podcast.reload.slug)
     expect(page).to have_css("h1", text: "The Founder's Ledger")
-    expect(page).to have_text("Stats self-reported by the verified owner.")
+    expect(page).to have_text("Stats as reported by the verified owner.")
     expect(page).to have_text("Fieldnote Coffee")
     expect(page).to have_no_text("Rival Pods")
     expect(page).to have_no_css(".kit-watermark")

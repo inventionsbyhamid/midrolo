@@ -14,7 +14,7 @@ RSpec.describe ReportsHelper do
   describe "#age_bucket_label" do
     it "turns Qloo bucket keys into ranges" do
       expect(%w[24_and_younger 25_to_29 35_to_44 55_and_older].map { |b| helper.age_bucket_label(b) })
-        .to eq([ "24 and under", "25–29", "35–44", "55+" ])
+        .to eq([ "24 and under", "25 to 29", "35 to 44", "55+" ])
     end
   end
 

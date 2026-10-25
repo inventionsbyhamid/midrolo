@@ -75,7 +75,7 @@ module ReportsHelper
 
   def age_bucket_label(bucket)
     case bucket.to_s
-    when /\A(\d+)_to_(\d+)\z/ then "#{$1}–#{$2}"
+    when /\A(\d+)_to_(\d+)\z/ then "#{$1} to #{$2}"
     when /\A(\d+)_and_younger\z/ then "#{$1} and under"
     when /\A(\d+)_and_older\z/ then "#{$1}+"
     else bucket.to_s.humanize

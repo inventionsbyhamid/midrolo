@@ -38,7 +38,7 @@ RSpec.describe "reports/sections/_seeds" do
 
     it "asks for comparable shows with an inline form that re-runs the same kind" do
       render_section
-      expect(html.text.squish).to include("We need a little more to go on — tell us 2–3 shows your listeners also love.")
+      expect(html.text.squish).to include("We need a little more to go on. Tell us 2 or 3 shows your listeners also love.")
       expect(html.text).to include("Nonexistent Pod Zzz")
 
       form = html.at_css("form[action='#{show_path(show)}']")

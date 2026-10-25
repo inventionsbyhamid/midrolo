@@ -43,7 +43,7 @@ RSpec.describe "Fake billing (development)" do
                                                        provider_customer_id: "fake_cus_#{user.id}")
     follow_redirect!
     follow_redirect!
-    expect(response.body).to include("Thanks — your plan updates in a few seconds.", "Manage billing")
+    expect(response.body).to include(CheckoutsController::THANKS, "Manage billing")
   end
 
   it "completes a sprint as a one-time payment" do

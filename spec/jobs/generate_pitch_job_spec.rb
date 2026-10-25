@@ -61,7 +61,7 @@ RSpec.describe GeneratePitchJob do
     allow(Pitches::Writer).to receive(:call).and_raise(Llm::BudgetExceeded)
     described_class.perform_now(pitch.id)
 
-    expect(pitch.reload).to have_attributes(status: "failed", error_message: "Pitches are paused right now — try again later.")
+    expect(pitch.reload).to have_attributes(status: "failed", error_message: Pitch::PAUSED_MESSAGE)
     expect(Pitches::Writer).to have_received(:call).once
     expect(Pitch.counted).to be_empty
   end
@@ -70,7 +70,7 @@ RSpec.describe GeneratePitchJob do
     allow(Pitches::Writer).to receive(:call).and_raise(Pitches::Writer::Ungrounded, "cites 10k")
     described_class.perform_now(pitch.id)
 
-    expect(pitch.reload).to have_attributes(status: "failed", error_message: "We couldn't ground this pitch in your data — try again")
+    expect(pitch.reload).to have_attributes(status: "failed", error_message: Pitch::UNGROUNDED_MESSAGE)
   end
 
   it "fails with the friendly message, not the grounding one, when the rewrite is still malformed" do

@@ -13,7 +13,7 @@ RSpec.describe "Authentication" do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Continue with Google", 'action="/users/auth/google_oauth2"', 'data-turbo="false"')
-    expect(response.body).not_to include("dev sign-in")
+    expect(response.body).not_to include("dev sign in")
   end
 
   it "signs in with Google and lands on /shows" do

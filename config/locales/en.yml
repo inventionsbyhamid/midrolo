@@ -32,11 +32,11 @@ en:
   activerecord:
     attributes:
       sponsor_match:
-        follow_up_on: "Follow-up date"
+        follow_up_on: "Follow up date"
       media_kit:
-        midroll_rate: "Mid-roll rate"
-        preroll_rate: "Pre-roll rate"
-        postroll_rate: "Post-roll rate"
+        midroll_rate: "Midroll rate"
+        preroll_rate: "Preroll rate"
+        postroll_rate: "Postroll rate"
       # The kit form edits the show's contact email through nested attributes.
       media_kit/show:
         contact_email: "Contact email"

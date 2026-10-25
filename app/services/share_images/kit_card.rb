@@ -29,7 +29,7 @@ module ShareImages
       downloads = @show.downloads_per_episode
       { label: "Media kit", title: @show.title, subline: ("Hosted by #{@show.author}" if @show.author.present?),
         stat: ([ ActiveSupport::NumberHelper.number_to_delimited(downloads), "downloads per episode" ] if downloads),
-        note: ("Stats self-reported by the verified owner." if downloads),
+        note: ("Stats as reported by the verified owner." if downloads),
         tags: @content.taste_tags, seed: @show.id }
     end
   end

@@ -2,7 +2,7 @@
 # account page's line on when a plan renews or ends.
 module BillingHelper
   INTERVALS = { monthly: "/month", yearly: "/year", once: " once" }.freeze
-  TEST_NOTE = "Test mode — use Dodo's test card; nothing is charged.".freeze
+  TEST_NOTE = "Test mode: use Dodo's test card. Nothing is charged.".freeze
 
   # "$19/month", "$190/year", "$49 once"
   def price_label(price) = "$#{price.usd}#{INTERVALS.fetch(price.interval)}"
@@ -24,7 +24,7 @@ module BillingHelper
     date = subscription.current_period_end.strftime("%b %-d, %Y")
     if subscription.sprint? then "Your Sprint ends on #{date}."
     elsif subscription.past_due? then "Your last payment failed. Update your card in Manage billing to keep your plan."
-    elsif subscription.canceled? || subscription.cancel_at_period_end? then "Ends on #{date} — it won't renew."
+    elsif subscription.canceled? || subscription.cancel_at_period_end? then "Ends on #{date}. It won't renew."
     else "Renews on #{date}."
     end
   end

@@ -27,6 +27,6 @@ RSpec.describe "layouts/app" do
   it "shows it to a signed-in user on the promo" do
     render_layout(signed_in: true)
     expect(Nokogiri::HTML(rendered).at_css(".promo-banner").text.squish)
-      .to eq("Free Pro access during the Qloo hackathon judging — through #{Entitlements.promo_until.strftime('%b %-d')}.")
+      .to eq("Free Pro access during the Qloo hackathon judging, through #{Entitlements.promo_until.strftime('%b %-d')}.")
   end
 end
