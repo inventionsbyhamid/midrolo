@@ -1,0 +1,128 @@
+<% content_for :title, "Admin" %>
+<% budgets = @stats.budgets %>
+<div class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-baseline justify-between gap-3">
+    <h1 class="type-h1">Admin</h1>
+    <%= link_to "Jobs", mission_control_jobs_path, class: "link", data: { turbo: false } %>
+  </header>
+
+  <%= render "components/card", title: "New runs" do %>
+    <% if AppSettings.runs_paused? %>
+      <p class="flex flex-wrap items-center gap-2">
+        <%= ui_badge "Paused", tone: :danger %>
+        <span><%= AppSettings.get(:runs_paused_reason).presence || "No reason given" %></span>
+      </p>
+      <p class="mt-2 text-sm text-ink-soft">New reports, Snapshots and pitches are refused. Running work finishes.</p>
+      <%= button_to "Resume new runs", admin_pause_path, method: :delete, class: "btn btn-primary btn-md mt-4" %>
+    <% else %>
+      <p><%= ui_badge "Running", tone: :success %></p>
+      <%= form_with url: admin_pause_path, class: "mt-4 flex flex-wrap items-end gap-3" do |f| %>
+        <div class="flex min-w-0 flex-1 basis-64 flex-col gap-1">
+          <%= f.label :reason, "Reason (users see it)", class: "label" %>
+          <%= f.text_field :reason, class: "input", required: true, maxlength: Admin::PausesController::REASON_MAX %>
+        </div>
+        <%= f.submit "Pause new runs", class: "btn btn-danger btn-md" %>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%= render "components/card", title: "Budgets" do %>
+    <div class="flex flex-col gap-3">
+      <%= admin_budget_meter("Promo", budgets[:promo]) %>
+      <%= admin_budget_meter("Judge", budgets[:judge]) %>
+      <%= admin_budget_meter("Today, all buckets", budgets[:daily]) %>
+    </div>
+    <p class="mt-3 text-sm text-ink-soft">
+      Promo and judge are all-time spend. The judge ceiling is its reserve plus unspent promo. The daily cap stops promo
+      and paid work.
+    </p>
+  <% end %>
+
+  <%= render "components/card", title: "Totals" do %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm tabular-nums">
+        <thead>
+          <tr>
+            <th scope="col" class="py-2 pr-4"><span class="sr-only">Metric</span></th>
+            <% AdminHelper::ADMIN_PERIODS.each_value do |label| %>
+              <th scope="col" class="py-2 pl-4 text-right font-semibold"><%= label %></th>
+            <% end %>
+          </tr>
+        </thead>
+        <% admin_total_groups(@stats).each do |group, rows| %>
+          <tbody>
+            <% if group %>
+              <tr class="border-t border-line"><th scope="rowgroup" colspan="3" class="pt-4 pb-2 font-semibold"><%= group %></th></tr>
+            <% end %>
+            <% if rows.empty? %>
+              <tr class="border-t border-line"><td colspan="3" class="py-2 text-ink-soft">None this month.</td></tr>
+            <% end %>
+            <% rows.each do |label, values| %>
+              <tr class="border-t border-line">
+                <th scope="row" class="py-2 pr-4 font-normal"><%= label %></th>
+                <% AdminHelper::ADMIN_PERIODS.each_key do |period| %>
+                  <td class="py-2 pl-4 text-right"><%= values.fetch(period) %></td>
+                <% end %>
+              </tr>
+            <% end %>
+          </tbody>
+        <% end %>
+      </table>
+    </div>
+  <% end %>
+
+  <%= render "components/card", title: "Settings" do %>
+    <% if @settings.errors.any? %>
+      <div class="flash flash-alert mb-4" role="alert">
+        <ul><% @settings.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+      </div>
+    <% end %>
+    <%= form_with model: @settings, scope: :settings, url: admin_settings_path, method: :patch, class: "flex flex-col gap-4" do |f| %>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <% Admin::SettingsForm::BUDGET_KEYS.each do |key| %>
+          <div class="flex flex-col gap-1">
+            <%= f.label key, "#{Admin::SettingsForm.human_attribute_name(key)} (USD)", class: "label" %>
+            <%= f.number_field key, class: "input", min: 0, step: "0.01", required: true,
+                  aria: { invalid: @settings.errors.include?(key) } %>
+          </div>
+        <% end %>
+        <div class="flex flex-col gap-1">
+          <%= f.label :promo_pro_until, Admin::SettingsForm.human_attribute_name(:promo_pro_until), class: "label" %>
+          <%= f.date_field :promo_pro_until, class: "input", required: true,
+                aria: { invalid: @settings.errors.include?(:promo_pro_until) } %>
+        </div>
+      </div>
+      <%= f.submit "Save settings", class: "btn btn-primary btn-md self-start" %>
+    <% end %>
+  <% end %>
+
+  <%= render "components/card", title: "Latest failed reports" do %>
+    <% failed = @stats.failed_reports %>
+    <% if failed.empty? %>
+      <p class="text-ink-soft">No failed reports.</p>
+    <% else %>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr>
+              <th scope="col" class="py-2 pr-4 font-semibold">Failed (UTC)</th>
+              <th scope="col" class="py-2 pr-4 font-semibold">Show</th>
+              <th scope="col" class="py-2 pr-4 font-semibold">Kind</th>
+              <th scope="col" class="py-2 font-semibold">Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% failed.each do |report| %>
+              <tr class="border-t border-line align-top">
+                <td class="py-2 pr-4 whitespace-nowrap tabular-nums"><%= (report.finished_at || report.updated_at).utc.strftime("%b %-d %H:%M") %></td>
+                <td class="py-2 pr-4"><%= report.show.title %></td>
+                <td class="py-2 pr-4"><%= report.kind.humanize %></td>
+                <td class="py-2"><%= report.error_message.presence || "—" %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  <% end %>
+</div>

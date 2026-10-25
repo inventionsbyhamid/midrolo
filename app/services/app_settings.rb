@@ -27,13 +27,24 @@ class AppSettings
       get(:runs_paused, default: false) == true
     end
 
+    # The kill switch: new reports, Snapshots and pitches refuse with :paused, and the upgrade prompt shows reason.
+    def pause_runs!(reason)
+      set(:runs_paused, true)
+      set(:runs_paused_reason, reason)
+    end
+
+    # Lifts the kill switch. The Qloo failure count starts again too, so a single failure after resuming can't pause
+    # runs at once.
+    def resume_runs!
+      set(:runs_paused, false)
+      set(:runs_paused_reason, nil)
+      reset_taste_auth_failures!
+    end
+
     # One more Qloo auth failure in a row; the third pauses new runs. Returns the count.
     def record_taste_auth_failure!
       count = Rails.cache.increment(TASTE_AUTH_FAILURES_KEY, 1, expires_in: 1.day).to_i
-      if count >= TASTE_AUTH_FAILURE_LIMIT && !runs_paused?
-        set(:runs_paused, true)
-        set(:runs_paused_reason, TASTE_AUTH_PAUSE_REASON)
-      end
+      pause_runs!(TASTE_AUTH_PAUSE_REASON) if count >= TASTE_AUTH_FAILURE_LIMIT && !runs_paused?
       count
     end
 

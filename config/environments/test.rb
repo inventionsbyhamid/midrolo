@@ -23,6 +23,8 @@ Rails.application.configure do
   config.cache_store = :null_store
 
   config.active_job.queue_adapter = :test
+  # Mission Control Jobs (/admin/jobs) can't inspect the :test adapter, so in specs it shows an empty async one.
+  config.mission_control.jobs.adapters = Set[:async]
 
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable

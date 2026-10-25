@@ -3,6 +3,8 @@ module Llm
   # the daily cap covers today's spend across every bucket but only blocks :promo and :paid.
   module Budget
     DAILY_CAPPED = %i[promo paid].freeze
+    # The budget settings' values (USD) when neither a Setting row nor ENV gives one.
+    DEFAULTS = { promo_budget_usd: 10, judge_reserve_usd: 5, llm_daily_budget_usd: 5 }.freeze
 
     class << self
       # The bucket the user's LLM work draws on: their plan's (Entitlements::Plan#spend_bucket, R62).
@@ -36,26 +38,37 @@ module Llm
         )
       end
 
+      # What the admin page's meters show, from the same sums and ceilings allow? checks: promo and judge spend (all
+      # time) against their ceilings, and today's spend across every bucket against the daily cap.
+      def usage
+        { promo: { spent: spent(:promo), ceiling: promo_ceiling },
+          judge: { spent: spent(:judge), ceiling: judge_ceiling },
+          daily: { spent: spent_today, ceiling: daily_cap } }
+      end
+
+      # A budget setting (a DEFAULTS key) as a BigDecimal: the Setting row, then ENV, then the default.
+      def setting(key) = dec(AppSettings.get(key, default: DEFAULTS.fetch(key)))
+
       private
 
       def daily_cap_reached?(estimate)
-        cap = setting(:llm_daily_budget_usd, 5)
+        cap = daily_cap
         today = spent_today
         today >= cap || today + estimate > cap
       end
 
-      def promo_ceiling = setting(:promo_budget_usd, 10) - setting(:judge_reserve_usd, 5)
+      def daily_cap = setting(:llm_daily_budget_usd)
+
+      def promo_ceiling = setting(:promo_budget_usd) - setting(:judge_reserve_usd)
 
       def judge_ceiling
-        reserve = setting(:judge_reserve_usd, 5)
+        reserve = setting(:judge_reserve_usd)
         reserve + [ promo_ceiling - spent(:promo), 0 ].max
       end
 
       def spent(bucket) = SpendEntry.where(bucket: bucket.to_s).sum(:cost_usd)
 
       def spent_today = SpendEntry.today.sum(:cost_usd)
-
-      def setting(key, default) = dec(AppSettings.get(key, default: default))
 
       def dec(value) = BigDecimal(value.to_s)
     end

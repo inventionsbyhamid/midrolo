@@ -61,6 +61,27 @@ RSpec.describe Llm::Budget do
     end
   end
 
+  describe ".usage" do
+    it "gives promo and judge spend (all time) and today's spend against their ceilings, as allow? computes them" do
+      AppSettings.set(:llm_daily_budget_usd, 6)
+      spend(:promo, 2.0, at: 3.days.ago)
+      spend(:judge, 1.5)
+      spend(:paid, 0.5)
+
+      expect(described_class.usage).to eq(
+        promo: { spent: BigDecimal("2"), ceiling: BigDecimal("5") },
+        judge: { spent: BigDecimal("1.5"), ceiling: BigDecimal("8") },
+        daily: { spent: BigDecimal("2"), ceiling: BigDecimal("6") }
+      )
+    end
+
+    it "falls back to the defaults when nothing is set" do
+      Setting.delete_all
+      expect(described_class.usage.transform_values { |row| row[:ceiling] })
+        .to eq(promo: BigDecimal("5"), judge: BigDecimal("10"), daily: BigDecimal("5"))
+    end
+  end
+
   describe ".bucket_for" do
     it "returns paid for creator, pro and sprint subscribers" do
       %w[creator pro sprint].each do |plan|

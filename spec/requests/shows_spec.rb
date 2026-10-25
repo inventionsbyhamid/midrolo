@@ -218,6 +218,47 @@ RSpec.describe "Shows" do
         get "/shows/#{other.id}"
         expect(response).to have_http_status(:not_found)
       end
+
+      context "when new runs are paused" do
+        let(:show) { create(:show, user: user) }
+        let(:actions) { Nokogiri::HTML(response.body).css(".card").find { |card| card.at_css("h2")&.text == "Find sponsors" } }
+
+        before { AppSettings.pause_runs!("Back after maintenance") }
+
+        it "says so, disables the run buttons and offers a notify-me checkbox" do
+          get show_path(show)
+
+          expect(actions.at_css("[role='status']").text.squish)
+            .to eq("New reports are paused — we'll email you when they're back")
+          expect(actions.css("form[action^='#{show_reports_path(show)}']")).to be_empty
+          expect(actions.css("button[disabled]").map { |button| button.text.squish })
+            .to eq([ "Get my free Snapshot", "Run full report" ])
+          form = actions.at_css("form[action='#{waitlist_entries_path}']")
+          expect(form.at_css("input[name='price_key']")["value"]).to eq("notify")
+          expect(form.at_css("input[type='checkbox'][required]")).to be_present
+          expect(form.at_css("label").text.squish).to eq("Email me when new reports are back")
+        end
+
+        it "adds the user to the notify list once, then says they're on it" do
+          2.times do
+            post waitlist_entries_path, params: { price_key: "notify", notify: "1" }, headers: { "HTTP_REFERER" => show_url(show) }
+            expect(response).to redirect_to(show_url(show))
+            expect(flash[:notice]).to eq("Thanks — we'll email you when new reports are back.")
+          end
+          expect(WaitlistEntry.sole).to have_attributes(email: user.email, price_key: "notify", user: user)
+
+          get show_path(show)
+          expect(actions.at_css("form[action='#{waitlist_entries_path}']")).to be_nil
+          expect(actions.text.squish).to include("You're on the list — we'll email you when they're back.")
+        end
+
+        it "shows the run buttons again once runs resume" do
+          AppSettings.resume_runs!
+          get show_path(show)
+          expect(actions.css("form[action^='#{show_reports_path(show)}']").size).to eq(2)
+          expect(actions.text).not_to include("paused")
+        end
+      end
     end
 
     describe "editing" do

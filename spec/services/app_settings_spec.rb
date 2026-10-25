@@ -26,6 +26,27 @@ RSpec.describe AppSettings do
     expect(described_class.runs_paused?).to be(true)
   end
 
+  describe ".pause_runs! and .resume_runs!" do
+    let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+
+    before { allow(Rails).to receive(:cache).and_return(cache) }
+
+    it "pauses with a reason, then resumes with no reason and the Qloo failure count cleared" do
+      described_class.pause_runs!("Over budget")
+      expect(described_class.runs_paused?).to be(true)
+      expect(described_class.get(:runs_paused_reason)).to eq("Over budget")
+
+      2.times { described_class.record_taste_auth_failure! }
+      described_class.resume_runs!
+      expect(described_class.runs_paused?).to be(false)
+      expect(described_class.get(:runs_paused_reason)).to be_nil
+
+      # The count started again: one more failure doesn't pause.
+      described_class.record_taste_auth_failure!
+      expect(described_class.runs_paused?).to be(false)
+    end
+  end
+
   describe "Qloo auth failures" do
     let(:cache) { ActiveSupport::Cache::MemoryStore.new }
 

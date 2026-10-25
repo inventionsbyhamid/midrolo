@@ -38,5 +38,10 @@ module Midrolo
 
     # Don't generate system test files.
     config.generators.system_tests = nil
+
+    # Mission Control Jobs (/admin/jobs) sits behind the admin area's own guard (R68), so its built-in basic auth is off:
+    # one auth path for all of /admin.
+    config.mission_control.jobs.base_controller_class = "Admin::BaseController"
+    config.mission_control.jobs.http_basic_auth_enabled = false
   end
 end

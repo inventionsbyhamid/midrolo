@@ -52,6 +52,15 @@ Rails.application.routes.draw do
     get "fake_portal", to: "fake_billing#portal", as: :fake_portal
   end
 
+  # Admin (Task 18, R68): the dashboard and Mission Control Jobs, both behind Admin::BaseController (a signed-in admin
+  # plus HTTP basic auth; a 404 for anyone else, and for everyone when ADMIN_USERNAME or ADMIN_PASSWORD is unset).
+  namespace :admin do
+    root to: "dashboard#index"
+    resource :settings, only: :update
+    resource :pause, only: %i[create destroy]
+  end
+  mount MissionControl::Jobs::Engine, at: "/admin/jobs"
+
   # Design system gallery and sent mail (letter_opener_web). Development only: production has no such routes.
   if Rails.env.development?
     get "styleguide" => "styleguide#show", as: :styleguide
