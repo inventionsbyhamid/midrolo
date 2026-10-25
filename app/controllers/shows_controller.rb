@@ -1,5 +1,7 @@
 class ShowsController < ApplicationController
   layout "app"
+  # A re-run (update with rerun=<kind>) starts a report, so it counts with ReportsController#create.
+  rate_limit_report_starts only: :update, if: -> { Report::KINDS.include?(params[:rerun].to_s) }
   before_action :authenticate_user!
   before_action :set_show, only: %i[show edit update]
 

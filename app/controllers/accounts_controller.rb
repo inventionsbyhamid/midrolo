@@ -4,9 +4,11 @@ class AccountsController < ApplicationController
 
   layout "app"
   before_action :authenticate_user!
-  # Guesses at JUDGE_CODE, per user (R83). Rack::Attack limits them too; this one holds however the path is spelled.
+  # Guesses at JUDGE_CODE, per user and per IP (R83).
   rate_limit to: JUDGE_CODE_TRIES, within: JUDGE_CODE_WINDOW, only: :judge_code, by: -> { current_user.id },
-             store: RATE_LIMIT_STORE, with: -> { render_throttled(retry_after: JUDGE_CODE_WINDOW) }
+             name: "per_user", store: RATE_LIMIT_STORE, with: -> { render_throttled(retry_after: JUDGE_CODE_WINDOW) }
+  rate_limit to: JUDGE_CODE_TRIES, within: JUDGE_CODE_WINDOW, only: :judge_code, by: -> { request.remote_ip },
+             name: "per_ip", store: RATE_LIMIT_STORE, with: -> { render_throttled(retry_after: JUDGE_CODE_WINDOW) }
 
   def show; end
 

@@ -48,7 +48,6 @@ gem "aws-sdk-s3", require: false
 gem "dodopayments"
 gem "standardwebhooks"
 gem "resend"
-gem "rack-attack"
 gem "pagy"
 gem "mission_control-jobs"
 gem "cloudflare-rails"

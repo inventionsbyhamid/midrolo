@@ -249,7 +249,7 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 | HTTP / RSS | Faraday with retries that honor `Retry-After` · Feedjira for RSS *(builder may swap)* |
 | Payments | **Dodo Payments** for now (`dodopayments` gem, as in `reelmoney`). Merchant of record, so global tax is handled; hosted checkout, webhooks, customer portal. It sits **behind a provider interface** (§9a), so Polar.sh or another provider can be swapped in later. |
 | Email | **Resend** (as in `reelmoney`): welcome, report ready, payment issues |
-| Rate limiting / security | Rails 8 `rate_limit`, Rack::Attack, CSP, Brakeman, bundler-audit |
+| Rate limiting / security | Rails 8 `rate_limit`, CSP, Brakeman, bundler-audit |
 | Pagination | pagy |
 | Tests | RSpec, FactoryBot, shoulda-matchers, WebMock. **Synthetic** fixtures go in the repo; fixtures recorded from Qloo stay private (gitignored). |
 | Deploy | Rails 8 Dockerfile + Thruster → **Docker Compose on ioflood** behind a **Cloudflare tunnel** |
@@ -411,7 +411,7 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 - The cost of every report and pitch is logged, and the admin page shows margin per user.
 - A kill switch.
 - Google sign-in is required for everything except sample reports.
-- Rack::Attack and per-user rate limits.
+- Per-IP and per-user rate limits (Rails `rate_limit`).
 
 **Hackathon judging promo, with a hard total budget of $10** (the user's call, 2026-10-24, may be raised later)
 - Qloo is free during the hackathon, so the budget is effectively all Claude cost, about 20 agent reports. Development and tuning runs are tracked separately and aren't part of this budget.

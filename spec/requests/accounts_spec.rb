@@ -237,8 +237,9 @@ RSpec.describe "Account" do
       expect(flash[:alert]).to eq("That code didn't work.")
     end
 
-    # Rack::Attack is off here: this is the controller's own limit (R83), which no spelling of the path gets around.
-    it "takes 5 tries an hour, then answers with the friendly 429, the right code included" do
+    # The per-user limit (R83), which no spelling of the path gets around. spec/requests/rate_limits_spec.rb has the
+    # per-IP one.
+    it "takes 5 tries an hour, then answers with the friendly 429, the right code included", :rate_limits do
       with_judge_code("sesame") do
         5.times do |n|
           post [ "/account/judge_code", "/account/judge_code.html", "/account//judge_code" ][n % 3], params: { code: "nope" }
@@ -258,10 +259,10 @@ RSpec.describe "Account" do
       expect(response.body).to include('target="flash"', ThrottledResponse::MESSAGE)
     end
 
-    it "counts each user's tries apart" do
+    it "counts each user's tries apart", :rate_limits do
       5.times { post "/account/judge_code", params: { code: "nope" } }
       sign_in create(:user)
-      post "/account/judge_code", params: { code: "nope" }
+      post "/account/judge_code", params: { code: "nope" }, env: { "REMOTE_ADDR" => "198.51.100.9" }
       expect(response).to redirect_to("/account")
     end
   end

@@ -1,18 +1,12 @@
-# The app's 429 (R69), from Rack::Attack (config/initializers/rack_attack.rb) and from controllers' rate_limit
-# (ApplicationController#render_throttled), shaped for whoever asked: a Turbo Stream request gets a stream that swaps
-# the page's flash for MESSAGE, a Turbo Frame request gets MESSAGE inside its frame, and anything else gets the static
-# public/429.html. Each carries Retry-After in seconds.
+# The app's 429 (R69, R84), for the controllers' rate_limit calls (ApplicationController#render_throttled), shaped for
+# whoever asked: a Turbo Stream request gets a stream that swaps the page's flash for MESSAGE, a Turbo Frame request
+# gets MESSAGE inside its frame, and anything else gets the static public/429.html. Each carries Retry-After in
+# seconds.
 class ThrottledResponse
   MESSAGE = "Too many requests. Try again in a few minutes.".freeze
   STATUS = 429
 
-  # For Rack::Attack: Retry-After is the time left in the throttle's window.
-  def self.call(request)
-    match = request.env["rack.attack.match_data"]
-    new(request, retry_after: match[:period] - (match[:epoch_time] % match[:period])).to_rack
-  end
-
-  # request is a Rack::Request (Rack::Attack's or ActionDispatch's).
+  # request is the controller's ActionDispatch::Request.
   def initialize(request, retry_after:)
     @request = request
     @retry_after = retry_after.to_i

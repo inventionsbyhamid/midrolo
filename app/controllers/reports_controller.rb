@@ -1,5 +1,7 @@
 class ReportsController < ApplicationController
   layout "app"
+  # Before sign-in is required, so a signed-out client is counted by IP.
+  rate_limit_report_starts only: :create
   before_action :authenticate_user!
   before_action :set_show
 

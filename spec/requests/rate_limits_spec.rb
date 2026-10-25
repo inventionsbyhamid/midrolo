@@ -1,14 +1,13 @@
 require "rails_helper"
 
-# Rack::Attack (config/initializers/rack_attack.rb, R69). It is off in every other spec; :rack_attack turns it on over
-# an empty store (spec/support/rack_attack.rb). Each example runs at a fixed time inside its windows, so no burst
-# straddles a window boundary.
-RSpec.describe "Rate limits", :rack_attack do
+# The app's rate limits (R69, R84): Rails' rate_limit on the controllers, counted in RATE_LIMIT_STORE. They're off in
+# every other spec; :rate_limits turns them on over an empty store (spec/support/rate_limits.rb). Each example runs at
+# a fixed time, so no burst straddles a window. A 429's Retry-After is the limit's whole window.
+RSpec.describe "Rate limits", :rate_limits do
   let(:user) { create(:user) }
   let(:message) { ThrottledResponse::MESSAGE }
   let(:turbo_stream) { { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" } }
 
-  # 1,230 seconds into the hour and 30 into the minute.
   before { travel_to Time.utc(2026, 10, 25, 10, 20, 30) }
 
   def from(ip) = { "REMOTE_ADDR" => ip }
@@ -36,6 +35,16 @@ RSpec.describe "Rate limits", :rack_attack do
     expect(response.body).to include("Wait a few minutes")
   end
 
+  def expect_flash_stream(retry_after:)
+    expect(response).to have_http_status(:too_many_requests)
+    expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+    expect(response.headers["Retry-After"]).to eq(retry_after.to_s)
+    stream = Nokogiri::HTML.fragment(response.body).at_css("turbo-stream")
+    expect(stream.attributes.transform_values(&:value)).to eq("action" => "replace", "target" => "flash")
+    flash = Nokogiri::HTML.fragment(stream.at_css("template").inner_html)
+    expect(flash.at_css("#flash [role='alert']").text.squish).to eq(message)
+  end
+
   describe "every request, per IP: 60 a minute" do
     it "answers the 61st with the friendly page, then lets the IP back in the next minute" do
       60.times do
@@ -43,7 +52,7 @@ RSpec.describe "Rate limits", :rack_attack do
         expect(response).to have_http_status(:ok)
       end
       get "/pricing"
-      expect_friendly_page(retry_after: 30)
+      expect_friendly_page(retry_after: 60)
 
       get "/pricing", env: from("203.0.113.9")
       expect(response).to have_http_status(:ok)
@@ -53,10 +62,16 @@ RSpec.describe "Rate limits", :rack_attack do
       expect(response).to have_http_status(:ok)
     end
 
-    it "counts a signed-in user's requests by IP too" do
+    it "counts every controller in one bucket, signed in or not" do
+      30.times { get "/pricing" }
       sign_in user
-      60.times { get "/pricing" }
+      29.times { get "/account" }
+      get "/about"
+      expect(response).to have_http_status(:ok)
+
       get "/account"
+      expect(response).to have_http_status(:too_many_requests)
+      get "/shows/search?q=money", headers: { "Turbo-Frame" => "search_results" }
       expect(response).to have_http_status(:too_many_requests)
     end
 
@@ -73,37 +88,47 @@ RSpec.describe "Rate limits", :rack_attack do
       expect(response).to have_http_status(:ok)
     end
 
-    it "never counts or blocks assets, the health check, Action Cable, Active Storage or webhooks" do
-      60.times { get "/pricing" }
+    # Rails::HealthController, Active Storage's controllers and Action Cable don't inherit ApplicationController;
+    # WebhooksController opts out, since providers retry.
+    it "never counts or blocks the health check, Active Storage, Action Cable or webhooks" do
+      61.times do
+        post "/webhooks/nobody"
+        expect(response).to have_http_status(:not_found)
+      end
+      59.times { get "/pricing" }
+      expect_uncounted_paths_open
 
+      get "/pricing"
+      expect(response).to have_http_status(:ok)
+      get "/pricing"
+      expect(response).to have_http_status(:too_many_requests)
+      expect_uncounted_paths_open
+    end
+
+    def expect_uncounted_paths_open
       get "/up"
       expect(response).to have_http_status(:ok)
-      get "/assets/application-missing.css"
+      get "/rails/active_storage/blobs/redirect/missing/file.png"
       expect(response).not_to have_http_status(:too_many_requests)
       get "/cable"
       expect(response).not_to have_http_status(:too_many_requests)
-      get "/rails/active_storage/blobs/redirect/missing/file.png"
-      expect(response).not_to have_http_status(:too_many_requests)
       post "/webhooks/nobody"
       expect(response).to have_http_status(:not_found)
-
-      get "/pricing"
-      expect(response).to have_http_status(:too_many_requests)
     end
   end
 
-  describe "report creates: 10 an hour per user" do
+  describe "report starts: 10 an hour per user" do
     let(:show) { create(:show, user: user) }
 
     before { sign_in user }
 
-    it "answers the 11th with the friendly page, and Retry-After at the end of the hour" do
+    it "answers the 11th with the friendly page and Retry-After of the hour" do
       10.times do
         post show_reports_path(show), params: { kind: "snapshot" }
         expect(response.location).to match(%r{/shows/#{show.id}/reports/\d+\z})
       end
       post show_reports_path(show), params: { kind: "snapshot" }
-      expect_friendly_page(retry_after: 3600 - 1230)
+      expect_friendly_page(retry_after: 3600)
     end
 
     it "answers a Turbo Stream request with a stream that replaces the flash" do
@@ -112,14 +137,7 @@ RSpec.describe "Rate limits", :rack_attack do
         expect(response.location).to match(%r{/reports/\d+\z})
       end
       post show_reports_path(show), params: { kind: "snapshot" }, headers: turbo_stream
-
-      expect(response).to have_http_status(:too_many_requests)
-      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      expect(response.headers["Retry-After"]).to eq("2370")
-      stream = Nokogiri::HTML.fragment(response.body).at_css("turbo-stream")
-      expect(stream.attributes.transform_values(&:value)).to eq("action" => "replace", "target" => "flash")
-      flash = Nokogiri::HTML.fragment(stream.at_css("template").inner_html)
-      expect(flash.at_css("#flash [role='alert']").text.squish).to eq(message)
+      expect_flash_stream(retry_after: 3600)
     end
 
     it "counts each signed-in user apart on one IP, and falls back to the IP when signed out" do
@@ -141,31 +159,69 @@ RSpec.describe "Rate limits", :rack_attack do
       post show_reports_path(show), params: { kind: "snapshot" }, env: from("198.51.100.21")
       expect(response).to redirect_to("/users/sign_in")
     end
+
+    it "counts re-runs from the needs-input form in the same bucket, and never a plain save" do
+      rerun = { show: { hints: { comparable_shows: [ "Acquired" ] } }, rerun: "snapshot" }
+      5.times { post show_reports_path(show), params: { kind: "snapshot" } }
+      5.times do
+        patch show_path(show), params: rerun
+        expect(response.location).to match(%r{/shows/#{show.id}/reports/\d+\z})
+      end
+
+      patch show_path(show), params: rerun
+      expect_friendly_page(retry_after: 3600)
+      post show_reports_path(show), params: { kind: "snapshot" }
+      expect(response).to have_http_status(:too_many_requests)
+
+      patch show_path(show), params: { show: { downloads_per_episode: "2500" } }
+      expect(response).to redirect_to(show_path(show))
+    end
+
+    it "counts the path however it is spelled: a format, doubled slashes or a trailing slash" do
+      requests = [ [ :post, "/shows/#{show.id}/reports.html" ], [ :post, "/shows//#{show.id}//reports" ],
+                   [ :post, "/shows/#{show.id}/reports/" ] ]
+      expect_all_counted(requests, limit: 10, params: { kind: "snapshot" })
+    end
   end
 
   describe "pitch creates: 30 an hour per user" do
     # A judge has unlimited pitches; after the first, each create shows the pitch still being written.
     let(:user) { create(:user, judge: true) }
-    let(:match) { create(:sponsor_match, report: create(:report, show: create(:show, user: user), kind: "agent", status: "done")) }
+    let(:match) { judge_match(user) }
 
     before { sign_in user }
 
-    it "answers the 31st with a 429" do
+    def judge_match(judge)
+      create(:sponsor_match, report: create(:report, show: create(:show, user: judge), kind: "agent", status: "done"))
+    end
+
+    it "answers the 31st with a stream that replaces the flash, and counts each user apart" do
       30.times do
         post sponsor_match_pitch_path(match), headers: turbo_stream
         expect(response).to have_http_status(:ok)
       end
       post sponsor_match_pitch_path(match), headers: turbo_stream
-      expect(response).to have_http_status(:too_many_requests)
-      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
+      expect_flash_stream(retry_after: 3600)
+
+      other = create(:user, judge: true)
+      sign_in other
+      post sponsor_match_pitch_path(judge_match(other)), headers: turbo_stream
+      expect(response).to have_http_status(:ok)
+    end
+
+    it "counts the path however it is spelled" do
+      requests = [ [ :post, "/sponsor_matches/#{match.id}/pitch.html" ], [ :post, "/sponsor_matches//#{match.id}//pitch" ],
+                   [ :post, "/sponsor_matches/#{match.id}/pitch/" ] ]
+      expect_all_counted(requests, limit: 30, headers: turbo_stream)
     end
   end
 
-  describe "show searches: 20 a minute per user" do
+  describe "show searches: 20 a minute per user, or per IP when signed out" do
+    let(:frame) { { "Turbo-Frame" => "search_results" } }
+
     before { sign_in user }
 
     it "answers the 21st inside the results frame, then lets the user search again the next minute" do
-      frame = { "Turbo-Frame" => "search_results" }
       20.times do
         get search_shows_path(q: "money"), headers: frame
         expect(response).to have_http_status(:ok)
@@ -173,13 +229,39 @@ RSpec.describe "Rate limits", :rack_attack do
       get search_shows_path(q: "money"), headers: frame
 
       expect(response).to have_http_status(:too_many_requests)
-      expect(response.headers["Retry-After"]).to eq("30")
+      expect(response.headers["Retry-After"]).to eq("60")
       frame_node = Nokogiri::HTML.fragment(response.body).at_css("turbo-frame#search_results")
       expect(frame_node.at_css("[role='alert']").text.squish).to eq(message)
 
       travel 1.minute
       get search_shows_path(q: "money"), headers: frame
       expect(response).to have_http_status(:ok)
+    end
+
+    it "counts each signed-in user apart on one IP, and falls back to the IP when signed out" do
+      21.times { get search_shows_path(q: "money"), headers: frame }
+      expect(response).to have_http_status(:too_many_requests)
+
+      other = create(:user)
+      sign_in other
+      get search_shows_path(q: "money"), headers: frame
+      expect(response).to have_http_status(:ok)
+
+      sign_out other
+      20.times do
+        get search_shows_path(q: "money"), env: from("198.51.100.30")
+        expect(response).to redirect_to("/users/sign_in")
+      end
+      get search_shows_path(q: "money"), env: from("198.51.100.30")
+      expect(response).to have_http_status(:too_many_requests)
+      get search_shows_path(q: "money"), env: from("198.51.100.31")
+      expect(response).to redirect_to("/users/sign_in")
+    end
+
+    it "counts the path however it is spelled, and HEAD as well as GET" do
+      requests = [ [ :head, "/shows/search?q=money" ], [ :get, "/shows/search.html?q=money" ],
+                   [ :get, "/shows//search?q=money" ], [ :head, "/shows/search/?q=money" ] ]
+      expect_all_counted(requests, limit: 20)
     end
   end
 
@@ -188,66 +270,36 @@ RSpec.describe "Rate limits", :rack_attack do
 
     before { sign_in user }
 
-    it "answers the 6th email send for a show with a 429, without touching another show or feed tokens" do
+    it "answers the 6th email send for a show with the friendly page, without touching another show or feed tokens" do
       5.times do
         post show_verification_path(show), params: { kind: "email" }
         expect(response).to have_http_status(:see_other)
       end
       post show_verification_path(show), params: { kind: "email" }
-      expect_friendly_page(retry_after: 2370)
+      expect_friendly_page(retry_after: 3600)
 
       post show_verification_path(show), params: { kind: "feed_token" }
       expect(response).to have_http_status(:see_other)
       post show_verification_path(create(:show, user: user)), params: { kind: "email" }
       expect(response).to have_http_status(:see_other)
     end
-  end
 
-  describe "other spellings of a throttled path, which reach the same action (R83)" do
-    before { sign_in user }
-
-    it "counts report creates with a format, doubled slashes or a trailing slash" do
-      show = create(:show, user: user)
-      requests = [ [ :post, "/shows/#{show.id}/reports.html" ], [ :post, "/shows//#{show.id}//reports" ],
-                   [ :post, "/shows/#{show.id}/reports/" ] ]
-      expect_all_counted(requests, limit: 10, params: { kind: "snapshot" })
-    end
-
-    it "counts pitch creates the same way" do
-      judge = create(:user, judge: true)
-      sign_in judge
-      match = create(:sponsor_match, report: create(:report, show: create(:show, user: judge), kind: "agent", status: "done"))
-      requests = [ [ :post, "/sponsor_matches/#{match.id}/pitch.html" ], [ :post, "/sponsor_matches//#{match.id}//pitch" ],
-                   [ :post, "/sponsor_matches/#{match.id}/pitch/" ] ]
-      expect_all_counted(requests, limit: 30, headers: turbo_stream)
-    end
-
-    it "counts show searches sent as HEAD as well as GET" do
-      requests = [ [ :head, "/shows/search?q=money" ], [ :get, "/shows/search.html?q=money" ],
-                   [ :get, "/shows//search?q=money" ], [ :head, "/shows/search/?q=money" ] ]
-      expect_all_counted(requests, limit: 20)
-    end
-
-    it "counts verification code sends the same way, however the show's id is spelled" do
-      show = create(:show, user: user)
+    it "counts the path however it is spelled, and however the show's id is spelled" do
       encoded_id = show.id.to_s.chars.map { |digit| format("%%%02X", digit.ord) }.join
       requests = [ [ :post, "/shows/#{show.id}/verification.html" ], [ :post, "/shows//#{show.id}/verification" ],
                    [ :post, "/shows/0#{show.id}/verification/" ], [ :post, "/shows/#{encoded_id}/verification" ] ]
       expect_all_counted(requests, limit: 5, params: { kind: "email" })
     end
 
-    it "counts judge code attempts per IP the same way" do
-      requests = [ [ :post, "/account/judge_code.html" ], [ :post, "/account//judge_code" ], [ :post, "/account/judge_code/" ] ]
-      5.times do |n|
-        sign_in create(:user)
-        post requests[n % 3].last, params: { code: "guess" }
-        expect(response).to redirect_to(account_path)
+    it "keeps the 10 tries a minute per user on create and update" do
+      10.times do
+        patch show_verification_path(show), params: { code: "000000" }
+        expect(response).to redirect_to(new_show_verification_path(show))
+        expect(flash[:alert]).to be_nil
       end
-      requests.each do |_method, path|
-        sign_in create(:user)
-        post path, params: { code: "guess" }
-        expect(response).to have_http_status(:too_many_requests), "expected POST #{path} to be throttled"
-      end
+      patch show_verification_path(show), params: { code: "000000" }
+      expect(response).to redirect_to(new_show_verification_path(show))
+      expect(flash[:alert]).to eq("Too many tries. Wait a minute, then try again.")
     end
   end
 
@@ -259,7 +311,7 @@ RSpec.describe "Rate limits", :rack_attack do
         expect(response).to redirect_to(account_path)
       end
       post judge_code_account_path, params: { code: "guess" }, env: from("192.0.2.99")
-      expect(response).to have_http_status(:too_many_requests)
+      expect_friendly_page(retry_after: 3600)
     end
 
     it "stops an IP after 5 tries, whoever is signed in" do
@@ -270,10 +322,24 @@ RSpec.describe "Rate limits", :rack_attack do
       end
       sign_in create(:user)
       post judge_code_account_path, params: { code: "guess" }, env: from("198.51.100.7")
-      expect(response).to have_http_status(:too_many_requests)
+      expect_friendly_page(retry_after: 3600)
 
       post judge_code_account_path, params: { code: "guess" }, env: from("198.51.100.8")
       expect(response).to redirect_to(account_path)
+    end
+
+    it "counts attempts per IP however the path is spelled" do
+      requests = [ "/account/judge_code.html", "/account//judge_code", "/account/judge_code/" ]
+      5.times do |n|
+        sign_in create(:user)
+        post requests[n % 3], params: { code: "guess" }
+        expect(response).to redirect_to(account_path)
+      end
+      requests.each do |path|
+        sign_in create(:user)
+        post path, params: { code: "guess" }
+        expect(response).to have_http_status(:too_many_requests), "expected POST #{path} to be throttled"
+      end
     end
   end
 end
