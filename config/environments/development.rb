@@ -45,6 +45,13 @@ Rails.application.configure do
   # else PORT, 3100 by default (lib/dev_url_options.rb).
   config.action_mailer.default_url_options = DevUrlOptions.call
 
+  # letter_opener_web styles and scripts its pages inline, which the Content Security Policy blocks
+  # (config/initializers/content_security_policy.rb): /letter_opener showed unstyled, with a sliver of each letter. Its
+  # controllers, here in development only, go without the policy.
+  config.to_prepare do
+    LetterOpenerWeb::ApplicationController.content_security_policy(false) if defined?(LetterOpenerWeb)
+  end
+
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
 

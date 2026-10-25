@@ -114,4 +114,15 @@ RSpec.describe "Content Security Policy" do
     expect(response).to have_http_status(:not_acceptable)
     expect(response.headers["Content-Security-Policy"]).to be_nil
   end
+
+  # letter_opener_web, the development mail viewer at /letter_opener, styles and scripts its own pages inline, so under
+  # the policy it showed unstyled, with a sliver of each letter (Task 23). The gem loads in development only, so this
+  # reads the switch that turns the policy off for its controllers, and checks nothing else turns it off.
+  it "goes without the policy for the development mail viewer's controllers only" do
+    development = Rails.root.join("config/environments/development.rb").read
+    elsewhere = Rails.root.glob("{app,lib}/**/*.rb") + Rails.root.glob("config/{initializers/*,environments/{production,test}}.rb")
+
+    expect(development).to include("LetterOpenerWeb::ApplicationController.content_security_policy(false)")
+    expect(elsewhere.select { |path| path.read.match?(/content_security_policy[ (]false/) }).to be_empty
+  end
 end
