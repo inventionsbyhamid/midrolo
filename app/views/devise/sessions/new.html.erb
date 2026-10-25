@@ -12,7 +12,7 @@
             <h2 class="font-semibold">Dev sign in</h2>
             <p class="text-sm text-ink-soft">Development only, with no Google keys set. Any name and email will do.</p>
           </div>
-          <%= form_with url: AuthConfig::DEVELOPER_CALLBACK_PATH, method: :post, local: true, data: { turbo: false },
+          <%= form_with url: ApplicationHelper::DEV_SIGN_IN_PATH, method: :post, local: true, data: { turbo: false },
                         class: "flex flex-col gap-3" do %>
             <div>
               <%= label_tag :dev_name, "Name", class: "label" %>

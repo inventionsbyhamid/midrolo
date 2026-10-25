@@ -58,7 +58,7 @@ RSpec.describe "Authentication" do
       end
       # Mounted under Devise's prefix, as config/initializers/devise.rb mounts it in development.
       strategy = OmniAuth::Strategies::Developer.new(app, **AuthConfig::DEVELOPER_OPTIONS, path_prefix: "/users/auth")
-      env = Rack::MockRequest.env_for(AuthConfig::DEVELOPER_CALLBACK_PATH, method: "POST",
+      env = Rack::MockRequest.env_for(ApplicationHelper::DEV_SIGN_IN_PATH, method: "POST",
                                                                          params: { name: "Ada Lovelace", email: "ada@example.com" })
       env["rack.session"] = {}
 
