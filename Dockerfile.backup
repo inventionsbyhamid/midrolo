@@ -1,0 +1,17 @@
+# syntax=docker/dockerfile:1
+# check=error=true
+
+# The compose stack's backup container (midrolo-backup in compose.yml): bin/backup with pg_dump and psql from the
+# same PostgreSQL 16 as the database (the app image's client is Debian's 15, which can't dump a 16 server), and
+# aws-cli for Cloudflare R2. Built on ioflood with the rest of the stack.
+FROM docker.io/library/postgres:16
+
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y awscli ca-certificates && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+COPY bin/backup /usr/local/bin/backup
+
+# Not root: the postgres image's own user, which needs nothing but /tmp.
+USER postgres
+CMD ["backup", "daily"]

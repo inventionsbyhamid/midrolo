@@ -1,4 +1,12 @@
 require "active_support/core_ext/integer/time"
+require_relative "../../lib/required_env"
+
+# Stop at boot, naming whatever is missing (lib/required_env.rb). The image build precompiles assets in production
+# with only SECRET_KEY_BASE_DUMMY set, so that boot is let through.
+RequiredEnv.check! unless ENV["SECRET_KEY_BASE_DUMMY"]
+
+# The site's public address (APP_URL, required above), for links in email.
+app_url = URI.parse(ENV["APP_URL"].presence || "https://midrolo.com")
 
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
@@ -21,18 +29,16 @@ Rails.application.configure do
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 
-  # Uploaded kit photos go to Cloudflare R2 (config/storage.yml): R2_ACCOUNT_ID, R2_ACCESS_KEY_ID,
-  # R2_SECRET_ACCESS_KEY and R2_BUCKET must be set. Image variants need libvips in the container.
-  config.active_storage.service = :r2
+  # Uploaded kit photos go to Cloudflare R2 (config/storage.yml, from the R2_* variables). Image variants need libvips
+  # in the container. Active Storage builds its service at boot, so the image build's asset precompile, which has no
+  # R2 settings, uses the disk instead.
+  config.active_storage.service = ENV["SECRET_KEY_BASE_DUMMY"] ? :local : :r2
 
-  # Assume all access to the app is happening through a SSL-terminating reverse proxy.
+  # TLS ends at Traefik (the Coolify proxy on ioflood), which sends plain http on the Docker network: assume every
+  # request came over https. Traefik redirects http to https itself, so force_ssl's redirect never fires (every
+  # request already counts as https), and what force_ssl adds is secure cookies and Strict-Transport-Security.
   config.assume_ssl = true
-
-  # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
   config.force_ssl = true
-
-  # Skip http-to-https redirect for the default health check endpoint.
-  # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
 
   # Log to STDOUT with the current request id as a default log tag.
   config.log_tags = [ :request_id ]
@@ -59,8 +65,8 @@ Rails.application.configure do
   config.action_mailer.delivery_method = :resend
   config.action_mailer.raise_delivery_errors = true
 
-  # Set host to be used by links generated in mailer templates.
-  config.action_mailer.default_url_options = { host: ENV.fetch("APP_HOST", "midrolo.com"), protocol: "https" }
+  # Links in mail point at APP_URL.
+  config.action_mailer.default_url_options = { host: app_url.host, protocol: app_url.scheme }
 
   # Specify outgoing SMTP server. Remember to add smtp/* credentials via bin/rails credentials:edit.
   # config.action_mailer.smtp_settings = {
@@ -81,12 +87,8 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # Answer only for the site's own names (DNS rebinding and Host header attacks): midrolo.com, and www, which Traefik
+  # redirects to the apex. The health check answers any host: Docker asks for http://localhost/up.
+  config.hosts = [ "midrolo.com", "www.midrolo.com", app_url.host ].uniq
+  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 end

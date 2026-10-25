@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# Database backups to Cloudflare R2 (docs/deploy.md). Runs in the compose stack's midrolo-backup container, which has
+# pg_dump and psql for PostgreSQL 16 and aws-cli. The database comes from the PG* variables (PGHOST, PGUSER,
+# PGPASSWORD, PGDATABASE); R2 from R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BACKUP_BUCKET.
+#
+#   backup                          dump the database, gzip it and stream it to R2, then delete backups over 14 days old
+#   backup daily                    do that every day at 03:00 UTC (the container's command)
+#   backup list                     the backups in R2, oldest first
+#   backup restore NAME [DATABASE]  load backup NAME (from list) into DATABASE (default PGDATABASE) in one transaction;
+#                                   the database must exist and be empty
+#   backup health                   fails when the last daily run failed (the container's health check)
+set -euo pipefail
+export TZ=UTC
+
+KEEP_DAYS=14
+PREFIX=midrolo/
+FAILED="${BACKUP_STATE_DIR:-/tmp}/midrolo-backup-failed"
+
+need_r2() {
+  : "${R2_ACCOUNT_ID:?set R2_ACCOUNT_ID}" "${R2_ACCESS_KEY_ID:?set R2_ACCESS_KEY_ID}"
+  : "${R2_SECRET_ACCESS_KEY:?set R2_SECRET_ACCESS_KEY}" "${R2_BACKUP_BUCKET:?set R2_BACKUP_BUCKET}"
+}
+
+# aws-cli against R2. R2 rejects the checksums newer aws-cli versions add by default, and has no instance metadata.
+r2() {
+  AWS_ACCESS_KEY_ID=$R2_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY=$R2_SECRET_ACCESS_KEY AWS_DEFAULT_REGION=auto \
+    AWS_EC2_METADATA_DISABLED=true AWS_REQUEST_CHECKSUM_CALCULATION=when_required \
+    AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \
+    aws --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" "$@"
+}
+
+# A failed dump or upload leaves no backup behind under a real backup's name, and deletes nothing.
+backup_once() {
+  local name url
+  need_r2
+  printf -v name 'midrolo-%(%Y-%m-%dT%H%M%SZ)T.sql.gz' "$EPOCHSECONDS"
+  url="s3://${R2_BACKUP_BUCKET}/${PREFIX}${name}"
+  if ! pg_dump --no-owner --no-privileges | gzip | r2 s3 cp - "$url"; then
+    r2 s3 rm "$url" >/dev/null 2>&1 || true
+    echo "backup: failed, nothing uploaded and nothing deleted" >&2
+    exit 1
+  fi
+  echo "backup: uploaded ${name}"
+  prune
+}
+
+# Deletes only this script's own backups (midrolo-<timestamp>.sql.gz) from before the cutoff.
+prune() {
+  local cutoff key name
+  printf -v cutoff 'midrolo-%(%Y-%m-%dT%H%M%SZ)T' $((EPOCHSECONDS - KEEP_DAYS * 86400))
+  r2 s3api list-objects-v2 --bucket "$R2_BACKUP_BUCKET" --prefix "$PREFIX" --query 'Contents[].Key' --output text |
+    tr '\t' '\n' | while read -r key; do
+      name=${key#"$PREFIX"}
+      if [[ $name =~ ^midrolo-[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{6}Z\.sql\.gz$ && $name < $cutoff ]]; then
+        r2 s3 rm "s3://${R2_BACKUP_BUCKET}/${key}"
+      fi
+    done
+}
+
+# Sleeps until 03:00 UTC, backs up, and again the next day. Each run is its own process, so set -e holds inside it.
+daily() {
+  local now next
+  rm -f "$FAILED"
+  while true; do
+    now=$EPOCHSECONDS
+    next=$((now - now % 86400 + 3 * 3600))
+    ((next > now)) || next=$((next + 86400))
+    sleep $((next - now))
+    if "${BASH_SOURCE[0]}"; then
+      rm -f "$FAILED"
+    else
+      touch "$FAILED"
+      echo "backup: failed, trying again tomorrow" >&2
+    fi
+  done
+}
+
+restore() {
+  local name=${1:?usage: backup restore NAME [DATABASE]} database=${2:-${PGDATABASE:?set PGDATABASE}}
+  need_r2
+  name=${name#"$PREFIX"}
+  r2 s3 cp "s3://${R2_BACKUP_BUCKET}/${PREFIX}${name}" - | gunzip |
+    psql --quiet --no-psqlrc --set ON_ERROR_STOP=1 --single-transaction --output /dev/null --dbname "$database"
+  echo "backup: restored ${name} into ${database}"
+}
+
+case "${1:-}" in
+  "") backup_once ;;
+  daily) daily ;;
+  list) need_r2 && r2 s3 ls "s3://${R2_BACKUP_BUCKET}/${PREFIX}" ;;
+  restore) shift && restore "$@" ;;
+  health) [[ ! -e $FAILED ]] ;;
+  *) echo "usage: backup [daily | list | restore NAME [DATABASE] | health]" >&2 && exit 64 ;;
+esac

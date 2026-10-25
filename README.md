@@ -19,6 +19,6 @@ Things you may want to cover:
 
 * Services (job queues, cache servers, search engines, etc.)
 
-* Deployment instructions
+* Deployment instructions: see [docs/deploy.md](docs/deploy.md) (the compose stack on ioflood)
 
 * ...

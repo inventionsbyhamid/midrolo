@@ -103,6 +103,8 @@ production:
     database: midrolo_production
     username: midrolo
     password: <%= ENV["MIDROLO_DATABASE_PASSWORD"] %>
+    # The compose stack's database container (compose.yml sets DB_HOST=midrolo-db).
+    host: <%= ENV["DB_HOST"] %>
   cache:
     <<: *primary_production
     database: midrolo_production_cache
