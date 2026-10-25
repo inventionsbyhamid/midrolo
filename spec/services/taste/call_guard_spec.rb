@@ -123,6 +123,62 @@ RSpec.describe Taste::CallGuard do
     end
   end
 
+  describe "waiting for the next minute in a background job (R109)" do
+    let(:sleeps) { [] }
+
+    before { ENV["QLOO_MAX_PER_MINUTE"] = "2" }
+
+    def waiting_guard(start)
+      time = start
+      described_class.new(store: store, clock: -> { time }, sleeper: ->(seconds) { sleeps << seconds; time += seconds })
+    end
+
+    it "waits for the next UTC minute when the minute cap is reached, then takes the slot" do
+      guard = waiting_guard(Time.utc(2026, 10, 25, 16, 20, 45))
+      2.times { guard.acquire! }
+      described_class.waiting { guard.acquire! }
+
+      expect(sleeps.size).to eq(1)
+      expect(sleeps.first).to be_within(0.5).of(15)
+      expect(guard.usage).to have_attributes(minute: 1, today: 3)
+    end
+
+    it "waits at most twice for one call, then refuses" do
+      ENV["QLOO_MAX_PER_MINUTE"] = "0"
+      guard = waiting_guard(Time.utc(2026, 10, 25, 16, 20, 45))
+
+      described_class.waiting { expect { guard.acquire! }.to raise_error(Taste::MinuteCapReached) }
+      expect(sleeps.size).to eq(2)
+    end
+
+    it "never waits outside a background job" do
+      guard = waiting_guard(Time.utc(2026, 10, 25, 16, 20, 45))
+      2.times { guard.acquire! }
+
+      expect(described_class).not_to be_waiting
+      expect { guard.acquire! }.to raise_error(Taste::MinuteCapReached) { |error| expect(error).to be_a(Taste::CallCapReached) }
+      expect(sleeps).to be_empty
+    end
+
+    it "never waits for the daily cap or the capped share, which refuse at once" do
+      AppSettings.set(:qloo_daily_call_limit, 1)
+      guard = waiting_guard(Time.utc(2026, 10, 25, 16, 20, 45))
+      guard.acquire!
+
+      described_class.waiting do
+        expect { guard.acquire! }.to raise_error(Taste::CallCapReached, /daily limit/)
+        AppSettings.set(:qloo_free_share, "0")
+        described_class.lane(:capped) { expect { guard.acquire! }.to raise_error(Taste::CallCapReached) }
+      end
+      expect(sleeps).to be_empty
+    end
+
+    it "turns waiting on for the block only" do
+      described_class.waiting { expect(described_class).to be_waiting }
+      expect(described_class).not_to be_waiting
+    end
+  end
+
   it "logs each refusal" do
     AppSettings.set(:qloo_daily_call_limit, 0)
     allow(Rails.logger).to receive(:warn)

@@ -14,6 +14,8 @@ module Taste
   class RateLimited < Error; end
   # Our own call guard (Taste::CallGuard, R92) refused a live request before it was made: a cap is reached.
   class CallCapReached < RateLimited; end
+  # The calls a minute are used up (R92). In a background job the guard first waits for the next minute (R109).
+  class MinuteCapReached < CallCapReached; end
   # A run by a free or promo user has used their share of today's calls (R95, R108).
   class FreeShareSpent < CallCapReached; end
   # 5xx, timeouts, connection failures or unparseable bodies.

@@ -16,6 +16,15 @@ RSpec.describe "Report jobs" do
         expect(report.finished_at).to be_present
       end
 
+      it "lets the research wait for the next minute when Qloo's minute cap is reached, and only there (R109)" do
+        waiting = nil
+        allow(Research::Run).to receive(:call) { waiting = Taste::CallGuard.waiting? }
+        job.perform_now(report.id)
+
+        expect(waiting).to be(true)
+        expect(Taste::CallGuard).not_to be_waiting
+      end
+
       it "fails with the friendly message and keeps saved sections when the engine raises" do
         allow(Research::Run).to receive(:call) do |r|
           r.save_section!(:summary, "Kept")

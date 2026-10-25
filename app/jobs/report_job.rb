@@ -8,7 +8,8 @@ class ReportJob < ApplicationJob
 
     begin
       report.mark_running!
-      Research::Run.call(report)
+      # A background job may wait out Qloo's minute cap instead of failing the report (R109); a web request never does.
+      Taste::CallGuard.waiting { Research::Run.call(report) }
       # The engine may have finished the report itself (for example as needs_input).
       report.mark_done! if report.reload.running?
     rescue StandardError, NotImplementedError => e

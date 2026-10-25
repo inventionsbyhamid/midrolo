@@ -9,15 +9,22 @@ module Taste
   # (default 0.4) of the daily limit, so they can't starve judges, paying users and sample generation, which use the
   # rest of the day.
   #
-  # Over a cap, acquire! gives back what it took and raises CallCapReached (FreeShareSpent for the free share) before
-  # any HTTP request is made. A store that can't count (increment returns nil) refuses too: the caps protect a hard
-  # daily allowance, so they fail closed.
+  # Over a cap, acquire! gives back what it took and raises CallCapReached (MinuteCapReached for the minute,
+  # FreeShareSpent for the share) before any HTTP request is made. Inside CallGuard.waiting (ReportJob: background jobs
+  # only, never a web request) a minute refusal first waits for the next UTC minute and tries again, at most
+  # MAX_MINUTE_WAITS times a call (R109): a full report makes about 30 calls and would trip the minute cap by itself.
+  # The daily limit and the share refuse at once. A store that can't count (increment returns nil) refuses too: the caps
+  # protect a hard daily allowance, so they fail closed.
   class CallGuard
     DEFAULT_PER_MINUTE = 30
     DEFAULT_DAILY_LIMIT = 100
     DEFAULT_FREE_SHARE = BigDecimal("0.4")
     LANES = [ nil, :capped ].freeze
     LANE_KEY = :taste_call_guard_lane
+    WAIT_KEY = :taste_call_guard_wait
+    MAX_MINUTE_WAITS = 2
+    # Past the minute boundary, so the next attempt lands in the new minute.
+    MINUTE_MARGIN = 0.5
     KEY_PREFIX = "taste:calls".freeze
     MINUTE_TTL = 2.minutes
     DAY_TTL = 2.days
@@ -30,7 +37,7 @@ module Taste
 
       def daily_limit = whole_number(AppSettings.get(:qloo_daily_call_limit), DEFAULT_DAILY_LIMIT)
 
-      # The free Snapshots' share of the daily limit, from 0 to 1; the default when unset or out of range.
+      # The free and promo users' share of the daily limit, from 0 to 1; the default when unset or out of range.
       def free_share
         share = BigDecimal(AppSettings.get(:qloo_free_share).to_s.strip)
         share.between?(0, 1) ? share : DEFAULT_FREE_SHARE
@@ -53,6 +60,17 @@ module Taste
 
       def current_lane = ActiveSupport::IsolatedExecutionState[LANE_KEY]
 
+      # Runs the block with minute refusals waiting for the next minute (R109), then restores the last setting.
+      def waiting
+        previous = ActiveSupport::IsolatedExecutionState[WAIT_KEY]
+        ActiveSupport::IsolatedExecutionState[WAIT_KEY] = true
+        yield
+      ensure
+        ActiveSupport::IsolatedExecutionState[WAIT_KEY] = previous
+      end
+
+      def waiting? = ActiveSupport::IsolatedExecutionState[WAIT_KEY] == true
+
       private
 
       # A whole number of 0 or more, else the default.
@@ -64,21 +82,25 @@ module Taste
       end
     end
 
-    def initialize(store: Rails.cache, clock: -> { Time.now.utc })
+    def initialize(store: Rails.cache, clock: -> { Time.now.utc }, sleeper: ->(seconds) { sleep(seconds) })
       @store = store
       @clock = clock
+      @sleeper = sleeper
     end
 
-    # Takes one slot from every counter, or raises CallCapReached having taken none.
+    # Takes one slot from every counter, or raises CallCapReached having taken none. Inside CallGuard.waiting, a full
+    # minute is waited out first, at most MAX_MINUTE_WAITS times.
     def acquire!
-      taken = []
-      counters(@clock.call).each do |counter|
-        count = @store.increment(counter.key, 1, expires_in: counter.expires_in)
-        refuse!(taken, "the call counter is unavailable", CallCapReached) if count.nil?
-        taken << counter
-        refuse!(taken, "#{counter.name} of #{counter.limit} calls is used up", counter.error) if count > counter.limit
+      waits = 0
+      begin
+        take_slot!
+      rescue MinuteCapReached
+        raise unless self.class.waiting? && waits < MAX_MINUTE_WAITS
+
+        waits += 1
+        wait_for_next_minute
+        retry
       end
-      nil
     end
 
     # Whether a capped run would be refused now: its share, or the whole day, is used up (R108: the run form asks first).
@@ -97,9 +119,20 @@ module Taste
 
     private
 
+    def take_slot!
+      taken = []
+      counters(@clock.call).each do |counter|
+        count = @store.increment(counter.key, 1, expires_in: counter.expires_in)
+        refuse!(taken, "the call counter is unavailable", CallCapReached) if count.nil?
+        taken << counter
+        refuse!(taken, "#{counter.name} of #{counter.limit} calls is used up", counter.error) if count > counter.limit
+      end
+      nil
+    end
+
     def counters(now)
       list = [ Counter.new(day_key(now), self.class.daily_limit, DAY_TTL, "the daily limit", CallCapReached),
-               Counter.new(minute_key(now), self.class.per_minute, MINUTE_TTL, "the limit a minute", CallCapReached) ]
+               Counter.new(minute_key(now), self.class.per_minute, MINUTE_TTL, "the limit a minute", MinuteCapReached) ]
       list << Counter.new(free_key(now), self.class.free_limit, DAY_TTL, "the free share", FreeShareSpent) if self.class.current_lane == :capped
       list
     end
@@ -109,6 +142,12 @@ module Taste
       message = "Qloo call guard: #{reason}"
       Rails.logger.warn("[Qloo] #{message}")
       raise error, message
+    end
+
+    def wait_for_next_minute
+      seconds = (60 - (@clock.call.to_f % 60) + MINUTE_MARGIN).round(1)
+      Rails.logger.info("[Qloo] call guard: waiting #{seconds}s for the next minute")
+      @sleeper.call(seconds)
     end
 
     def count(key) = @store.read(key).to_i
