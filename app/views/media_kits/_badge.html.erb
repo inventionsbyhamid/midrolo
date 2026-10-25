@@ -1,0 +1,7 @@
+<%# locals: (show:) -%>
+<%# Free plans carry the badge (Entitlements#kit_badge?); paid plans don't. %>
+<% if Entitlements.for(show.user).kit_badge? %>
+  <p class="kit-badge">
+    <%= link_to root_path, class: "kit-badge-link" do %><%= ui_logo(wordmark: false) %>Made with <%= APP_NAME %><% end %>
+  </p>
+<% end %>

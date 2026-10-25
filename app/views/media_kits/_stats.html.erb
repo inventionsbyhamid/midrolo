@@ -1,0 +1,15 @@
+<%# locals: (content:) -%>
+<% stats = kit_stats(content) %>
+<% if stats.any? %>
+  <section class="kit-section kit-keep" aria-label="Show stats">
+    <dl class="kit-stats">
+      <% stats.each do |value, label| %>
+        <div class="kit-stat">
+          <dt class="kit-stat-label"><%= label %></dt>
+          <dd class="kit-stat-value"><%= value %></dd>
+        </div>
+      <% end %>
+    </dl>
+    <p class="kit-note mt-4">Stats self-reported by the verified owner.</p>
+  </section>
+<% end %>

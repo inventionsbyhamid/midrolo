@@ -1,0 +1,8 @@
+<%# locals: (show:) -%>
+<header class="flex items-center gap-4">
+  <%= render "shows/artwork", show: show %>
+  <div class="min-w-0">
+    <p class="truncate text-sm font-semibold"><%= link_to show.title, show_path(show), class: "link" %></p>
+    <h1 class="type-h2">Verify you own this show</h1>
+  </div>
+</header>

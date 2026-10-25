@@ -7,6 +7,11 @@ module Pricing
       new(downloads: downloads, categories: categories).call
     end
 
+    # The bundle price for a mid-roll figure, whether suggested here or set by the owner on their media kit.
+    def self.bundle_price(midroll, config = Rails.application.config_for(:rate_card))
+      (midroll * config[:bundle_episodes] * (1 - config[:bundle_discount])).round
+    end
+
     def initialize(downloads:, categories:)
       @downloads = downloads.to_i
       @categories = Array(categories)
@@ -25,7 +30,7 @@ module Pricing
         midroll: midroll.to_i,
         preroll: scale(midroll, pre, flat),
         postroll: scale(midroll, post, flat),
-        bundle4: (midroll * @config[:bundle_episodes] * (1 - @config[:bundle_discount])).round,
+        bundle4: self.class.bundle_price(midroll, @config),
         basis: flat ? flat_basis : cpm_basis(niche, niche_key)
       )
     end

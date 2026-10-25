@@ -24,7 +24,15 @@ Rails.application.routes.draw do
   get "shows/search", to: "show_searches#show", as: :search_shows
   resources :shows, only: %i[index new create show edit update] do
     resources :reports, only: %i[create show]
+    # show is the private preview (always available); the public page is /k/:slug.
+    resource :media_kit, only: %i[show edit update] do
+      patch :publish
+      patch :unpublish
+    end
+    # create sends a code or issues a feed token; update checks the code or the feed.
+    resource :verification, only: %i[new create show update]
   end
+  get "k/:slug", to: "public_kits#show", as: :public_kit, format: false
   resources :sponsor_matches, only: :update do
     resource :pitch, only: %i[show create]
   end

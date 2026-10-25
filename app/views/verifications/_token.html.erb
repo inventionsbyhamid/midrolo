@@ -1,0 +1,20 @@
+<%# locals: (show:, verification:) -%>
+<%= render "components/card", title: "Add this line to your show description" do %>
+  <div class="verify-token" data-controller="clipboard">
+    <code class="verify-token-line" data-clipboard-target="source"><%= verification.token_line %></code>
+    <button type="button" class="btn btn-secondary btn-md" data-action="clipboard#copy">
+      <span data-clipboard-target="label" aria-live="polite">Copy</span>
+    </button>
+  </div>
+  <ol class="verify-steps">
+    <li>Open your show's settings at your podcast host, such as Buzzsprout, Transistor or Libsyn.</li>
+    <li>Paste the line anywhere in your show description and save. A <code>podcast:txt</code> tag works too, if your host offers one.</li>
+    <li>Come back here and check. Hosting providers can take a few minutes to update your feed, so give it a moment if it isn't found straight away.</li>
+  </ol>
+  <% if verification.expired? %>
+    <p class="field-error mt-4">That token has expired. <%= button_to "Get a new token", show_verification_path(show), params: { kind: "feed_token" }, class: "link-button", form_class: "inline" %></p>
+  <% else %>
+    <%= button_to "Check my feed", show_verification_path(show), method: :patch, class: "btn btn-primary btn-lg mt-5" %>
+    <p class="hint">We read your feed at <%= display_host(show.feed_url) %>. You can remove the line once you're verified; the token works for 7 days.</p>
+  <% end %>
+<% end %>

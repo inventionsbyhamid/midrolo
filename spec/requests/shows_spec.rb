@@ -188,7 +188,8 @@ RSpec.describe "Shows" do
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Hub Show", "Hosty", "Business", "1,200", "Edit", edit_show_path(show),
                                          "Get my free Snapshot", "Run full report",
-                                         "Media kit", "Coming soon")
+                                         "Media kit", edit_show_media_kit_path(show))
+        expect(response.body).not_to include("Coming soon")
       end
 
       it "returns 404 for another user's show" do

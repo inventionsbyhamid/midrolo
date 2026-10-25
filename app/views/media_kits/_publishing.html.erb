@@ -1,0 +1,23 @@
+<%# locals: (show:, kit:) -%>
+<%# Publishing needs a verified show; the controls live here, outside the kit form. %>
+<%= render "components/card", title: "Your public page", aside: (show.public_kit? ? ui_badge("Published", tone: :success) : ui_badge("Not published")) do %>
+  <% if !show.verified? %>
+    <p class="font-semibold"><%= MediaKit::VERIFY_TO_PUBLISH %></p>
+    <p class="mt-1 text-ink-soft">We'll email a code to the owner address in your RSS feed, or check for a short line you add to your feed. Your preview works either way.</p>
+    <%= ui_button "Verify ownership", new_show_verification_path(show), class: "mt-4" %>
+  <% elsif show.public_kit? %>
+    <div class="flex flex-col gap-3" data-controller="clipboard">
+      <p>Your kit is live at <%= link_to public_kit_url(show.slug), public_kit_path(show.slug), class: "link break-all", data: { clipboard_target: "source" } %></p>
+      <p class="text-sm text-ink-soft"><%= pluralize(number_with_delimiter(kit.views_count), "view") %> so far, not counting yours or bots'.</p>
+      <div class="flex flex-wrap gap-3">
+        <button type="button" class="btn btn-secondary btn-md" data-action="clipboard#copy">
+          <span data-clipboard-target="label" aria-live="polite">Copy link</span>
+        </button>
+        <%= button_to "Unpublish", unpublish_show_media_kit_path(show), method: :patch, class: "btn btn-ghost btn-md" %>
+      </div>
+    </div>
+  <% else %>
+    <p>You've verified this show. Publish to put your kit at <span class="font-semibold break-all"><%= public_kit_url(show.slug) %></span>.</p>
+    <%= button_to "Publish kit", publish_show_media_kit_path(show), method: :patch, class: "btn btn-primary btn-md mt-4" %>
+  <% end %>
+<% end %>

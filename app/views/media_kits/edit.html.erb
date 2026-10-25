@@ -1,0 +1,14 @@
+<% content_for :title, "#{@show.title} media kit" %>
+<div class="mx-auto flex max-w-3xl flex-col gap-6">
+  <header class="flex flex-wrap items-center gap-4">
+    <%= render "shows/artwork", show: @show %>
+    <div class="min-w-0 flex-1 basis-48">
+      <p class="truncate text-sm font-semibold"><%= link_to @show.title, show_path(@show), class: "link" %></p>
+      <h1 class="type-h2">Media kit</h1>
+    </div>
+    <%= ui_button "Preview", show_media_kit_path(@show), variant: :secondary %>
+  </header>
+
+  <%= render "media_kits/publishing", show: @show, kit: @kit %>
+  <%= render "media_kits/form", show: @show, kit: @kit, content: @content %>
+</div>

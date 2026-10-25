@@ -1,0 +1,32 @@
+<%# locals: (content:) -%>
+<%# The rate card on an episode timeline: pre-roll at the start, the host-read mid-roll lit in the middle,
+    post-roll at the end. The figures are the owner's where they set them, else the rate rule's. %>
+<% rates = content.rates %>
+<section class="kit-section kit-rates" aria-labelledby="kit-rates-title">
+  <h2 id="kit-rates-title" class="kit-h2">Rates</h2>
+  <div class="kit-timeline" aria-hidden="true">
+    <span class="kit-timeline-track"></span>
+    <span class="kit-marker kit-marker-pre"></span>
+    <span class="kit-marker kit-marker-mid"></span>
+    <span class="kit-marker kit-marker-post"></span>
+  </div>
+  <dl class="kit-slots">
+    <div class="kit-slot kit-slot-pre">
+      <dt class="kit-slot-name">Pre-roll</dt>
+      <dd class="kit-price"><%= kit_money(rates.preroll) %></dd>
+      <dd class="kit-slot-note">Before the episode starts</dd>
+    </div>
+    <div class="kit-slot kit-slot-mid">
+      <dt class="kit-slot-name">Mid-roll</dt>
+      <dd class="kit-price"><%= kit_money(rates.midroll) %></dd>
+      <dd class="kit-slot-note">Read by the host, mid-episode</dd>
+    </div>
+    <div class="kit-slot kit-slot-post">
+      <dt class="kit-slot-name">Post-roll</dt>
+      <dd class="kit-price"><%= kit_money(rates.postroll) %></dd>
+      <dd class="kit-slot-note">After the episode ends</dd>
+    </div>
+  </dl>
+  <p class="kit-bundle"><%= kit_bundle_line(rates) %></p>
+  <p class="kit-note"><%= kit_rate_note(content, rates) %> Per episode, in US dollars.</p>
+</section>

@@ -15,9 +15,7 @@
     <% else %>
       <%= button_to "Re-run", show_reports_path(@show, kind: @report.kind), method: :post, class: "btn btn-secondary btn-md" %>
     <% end %>
-    <div class="flex flex-col items-start">
-      <%= ui_button "Media kit — Coming soon", type: "button", variant: :ghost, disabled: true %>
-    </div>
+    <%= ui_button "Media kit", show_media_kit_path(@show), variant: :ghost %>
   </header>
 
   <% if @report.failed? %>

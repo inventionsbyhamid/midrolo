@@ -56,6 +56,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_020200) do
     t.index ["report_id"], name: "index_agent_steps_on_report_id"
   end
 
+  create_table "media_kits", force: :cascade do |t|
+    t.bigint "show_id", null: false
+    t.string "headline"
+    t.text "about"
+    t.jsonb "rate_card_overrides", default: {}, null: false
+    t.jsonb "hidden_brand_ids", default: [], null: false
+    t.datetime "published_at"
+    t.integer "views_count", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["show_id"], name: "index_media_kits_on_show_id", unique: true
+  end
+
   create_table "pitches", force: :cascade do |t|
     t.bigint "sponsor_match_id", null: false
     t.string "status", default: "queued", null: false
@@ -104,6 +117,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_020200) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_settings_on_key", unique: true
+  end
+
+  create_table "show_verifications", force: :cascade do |t|
+    t.bigint "show_id", null: false
+    t.string "kind", null: false
+    t.string "code_digest"
+    t.string "token"
+    t.string "sent_to"
+    t.integer "attempts", default: 0, null: false
+    t.datetime "expires_at", null: false
+    t.datetime "verified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["show_id", "created_at"], name: "index_show_verifications_on_show_id_and_created_at"
   end
 
   create_table "shows", force: :cascade do |t|
@@ -206,8 +233,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_25_020200) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "agent_steps", "reports"
+  add_foreign_key "media_kits", "shows"
   add_foreign_key "pitches", "sponsor_matches", on_delete: :cascade
   add_foreign_key "reports", "shows"
+  add_foreign_key "show_verifications", "shows"
   add_foreign_key "shows", "users"
   add_foreign_key "spend_entries", "reports", on_delete: :nullify
   add_foreign_key "spend_entries", "users"

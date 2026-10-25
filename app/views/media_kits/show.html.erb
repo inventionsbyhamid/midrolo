@@ -1,0 +1,22 @@
+<% content_for :title, "#{@show.title} media kit preview" %>
+<%# Private: no share tags, never indexed (the controller also sends X-Robots-Tag). %>
+<% content_for :meta, tag.meta(name: "robots", content: "noindex, nofollow") %>
+<div class="kit-watermark" aria-hidden="true"><span>Preview</span></div>
+<div class="kit-page">
+  <div class="kit-toolbar kit-toolbar-preview" role="region" aria-label="Preview">
+    <p class="min-w-0">
+      <strong>Preview.</strong> Only you can see this page.
+      <% if @show.public_kit? %>
+        It's published at <%= link_to public_kit_url(@show.slug), public_kit_path(@show.slug), class: "link" %>.
+      <% else %>
+        Brands see it once you publish it.
+      <% end %>
+    </p>
+    <div class="flex flex-wrap items-center gap-2">
+      <%= ui_button "Edit kit", edit_show_media_kit_path(@show), variant: :secondary, size: :sm %>
+      <%= render "media_kits/print_button" %>
+    </div>
+  </div>
+  <%= render "media_kits/kit", kit: @kit, content: @content, preview: true %>
+  <%= render "media_kits/badge", show: @show %>
+</div>

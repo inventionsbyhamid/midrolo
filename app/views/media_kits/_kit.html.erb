@@ -1,0 +1,19 @@
+<%# locals: (kit:, content:, preview: false) -%>
+<%# The kit itself, shared by the owner's preview and the public page. MediaKit::Content assembles the data:
+    audience taste only (never sponsor matches), and only from the show's latest done report. %>
+<article class="kit-sheet" aria-labelledby="kit-title">
+  <%= render "media_kits/hero", kit: kit, content: content %>
+  <%= render "media_kits/stats", content: content %>
+  <%= render "media_kits/about", kit: kit, content: content %>
+  <% if content.audience? %>
+    <%= render "media_kits/audience", content: content %>
+  <% elsif preview %>
+    <section class="kit-section kit-screen-only">
+      <%= render "components/empty_state", title: "Run a Snapshot to add audience data",
+            body: "A free Snapshot adds the brands, tastes and places your listeners share. Brands see it here once it's ready.",
+            action_label: "Go to your show", action_href: show_path(content.show) %>
+    </section>
+  <% end %>
+  <%= render "media_kits/rates", content: content %>
+  <%= render "media_kits/contact", content: content %>
+</article>

@@ -1,0 +1,69 @@
+<%# locals: (content:) -%>
+<% brands = content.brands %>
+<% tags = content.taste_tags %>
+<% lists = content.taste_lists %>
+<% leans = content.demographics %>
+<% heatmap = content.heatmap %>
+<% points = heatmap ? heatmap_points(heatmap) : [] %>
+<section class="kit-section" aria-labelledby="kit-audience-title">
+  <h2 id="kit-audience-title" class="kit-h2">Who listens</h2>
+  <p class="kit-note">What people with this audience's tastes love, modeled from Qloo taste data.</p>
+
+  <% if brands.any? %>
+    <div class="kit-block">
+      <h3 class="kit-h3">Brands our audience loves</h3>
+      <ul class="kit-brands">
+        <% brands.each do |brand| %>
+          <li class="kit-brand">
+            <span class="avatar size-10" aria-hidden="true" data-controller="logo">
+              <%= initials_for(brand["name"]) %>
+              <% if (src = safe_external_url(brand["image_url"])) %>
+                <img src="<%= src %>" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                     data-logo-target="image" data-action="error->logo#fallback">
+              <% end %>
+            </span>
+            <span class="kit-brand-name"><%= brand["name"] %></span>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <% if tags.any? %>
+    <div class="kit-block">
+      <h3 class="kit-h3">Their tastes</h3>
+      <ul class="kit-tags">
+        <% tags.each do |tag_name| %><li class="kit-tag"><%= tag_name %></li><% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <% if lists.any? %>
+    <div class="kit-block kit-lists">
+      <% lists.each do |label, names| %>
+        <div class="kit-keep">
+          <h3 class="kit-h3"><%= label %></h3>
+          <ol class="kit-list">
+            <% names.each do |name| %><li><%= name %></li><% end %>
+          </ol>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if leans %>
+    <div class="kit-block kit-keep">
+      <h3 class="kit-h3">Leans</h3>
+      <p class="kit-note">Modeled from Qloo taste data: how people with these tastes lean, not a headcount.</p>
+      <%= render "reports/lean_groups", demographics: leans, heading: :h4 %>
+    </div>
+  <% end %>
+
+  <% if points.any? %>
+    <div class="kit-block kit-map">
+      <h3 class="kit-h3">Where they live<% if (place = heatmap_place(heatmap)) %><span class="kit-h3-aside"><%= place %></span><% end %></h3>
+      <p class="kit-note">Modeled from Qloo taste data. Useful for regional and local sponsors.</p>
+      <%= render "reports/heatmap", id: "kit_heatmap", heatmap: heatmap, points: points, metros: top_metros(points), heading: :h4 %>
+    </div>
+  <% end %>
+</section>

@@ -3,12 +3,15 @@ class Show < ApplicationRecord
   HINT_KEYS = %w[comparable_shows topics].freeze
   HINT_LIMIT = 5
   HINT_LENGTH = 100
+  SLUG_LENGTH = 60
 
   belongs_to :user
   has_many :reports, dependent: :destroy
   # Preloadable (includes(:latest_report)) so lists don't N+1.
   has_one :latest_report, -> { order(created_at: :desc, id: :desc) }, class_name: "Report", inverse_of: :show
   has_many :sponsor_matches, dependent: :destroy
+  has_one :media_kit, dependent: :destroy
+  has_many :verifications, class_name: "ShowVerification", dependent: :destroy
 
   before_validation :normalize_hints
 
@@ -28,6 +31,15 @@ class Show < ApplicationRecord
     nil
   end
 
+  # The title as a slug no other show has: "the-founders-ledger", then "the-founders-ledger-2", and so on.
+  def self.free_slug(title)
+    base = title.to_s.parameterize.first(SLUG_LENGTH).delete_suffix("-").presence || "show"
+    taken = where(slug: base).or(where("slug LIKE ?", "#{sanitize_sql_like(base)}-%")).pluck(:slug).to_set
+    return base unless taken.include?(base)
+
+    (2..).lazy.map { |n| "#{base}-#{n}" }.find { |candidate| !taken.include?(candidate) }
+  end
+
   # Hints read back with symbol or string keys: show.hints[:comparable_shows].
   def hints
     (super || {}).with_indifferent_access
@@ -36,6 +48,25 @@ class Show < ApplicationRecord
   def verified?
     verified_at.present?
   end
+
+  # Marks this show (only this user's copy of the feed) as verified and reserves its public slug. The slug is kept
+  # once set. A savepoint lets a slug race with another verification (unique index) retry with the next free slug.
+  def verify!
+    tries = 0
+    begin
+      transaction(requires_new: true) do
+        self.slug = self.class.free_slug(title) if slug_in_database.blank?
+        self.verified_at ||= Time.current
+        save!
+      end
+    rescue ActiveRecord::RecordNotUnique
+      raise if (tries += 1) >= 3
+
+      retry
+    end
+  end
+
+  def public_kit? = verified? && slug.present? && media_kit&.published?
 
   # A queued or running report (only one may be active per show).
   def active_report

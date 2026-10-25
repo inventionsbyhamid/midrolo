@@ -60,7 +60,7 @@ RSpec.describe "Reports" do
                                          "Reading your last 15 episodes…", 'aria-live="polite"', "Show agent steps")
         Report::SECTIONS.each { |name| expect(response.body).to include(%(id="report_#{name}")) }
         expect(response.body.scan(/class="skeleton"/).size).to be >= 5
-        expect(response.body).to include("Media kit", "Coming soon", 'name="turbo-refresh-method" content="morph"')
+        expect(response.body).to include("Media kit", show_media_kit_path(show), 'name="turbo-refresh-method" content="morph"')
         expect(response.body).to match(/<details[^>]*id="agent_rail_report_#{report.id}"[^>]* open[ >]/)
         expect(response.body).to include(%(id="agent_steps_report_#{report.id}"))
       end

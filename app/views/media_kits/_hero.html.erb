@@ -1,0 +1,21 @@
+<%# locals: (kit:, content:) -%>
+<% show = content.show %>
+<% cover = kit_image_url(kit.cover, :hero) %>
+<div class="<%= class_names("kit-banner", "kit-banner-plain" => cover.nil?) %>">
+  <% if cover %>
+    <img src="<%= cover %>" alt="" class="kit-cover" decoding="async">
+  <% else %>
+    <%= kit_waveform(show.id) %>
+  <% end %>
+</div>
+<header class="kit-hero">
+  <%= render "shows/artwork", show: show, size: "kit-artwork" %>
+  <div class="kit-hero-text">
+    <h1 id="kit-title" class="kit-title"><%= show.title %></h1>
+    <% if show.author.present? %><p class="kit-byline">Hosted by <%= show.author %></p><% end %>
+    <% if show.categories.any? %><p class="kit-categories"><%= show.categories.to_sentence %></p><% end %>
+  </div>
+</header>
+<% if kit.headline.present? %>
+  <p class="kit-headline"><%= kit.headline %></p>
+<% end %>

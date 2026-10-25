@@ -33,3 +33,10 @@ en:
     attributes:
       sponsor_match:
         follow_up_on: "Follow-up date"
+      media_kit:
+        midroll_rate: "Mid-roll rate"
+        preroll_rate: "Pre-roll rate"
+        postroll_rate: "Post-roll rate"
+      # The kit form edits the show's contact email through nested attributes.
+      media_kit/show:
+        contact_email: "Contact email"

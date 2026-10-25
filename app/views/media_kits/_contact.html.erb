@@ -1,0 +1,19 @@
+<%# locals: (content:) -%>
+<%# "Work with us": the contact email the owner chose, else the show's website, else nothing. Never the feed's
+    owner address. The address shows as text too, for print and for brands who copy it rather than click. %>
+<% email = content.contact_email %>
+<% website = content.website %>
+<% if email || website %>
+  <section class="kit-section kit-contact kit-keep" aria-labelledby="kit-contact-title">
+    <div class="min-w-0">
+      <h2 id="kit-contact-title" class="kit-h2">Work with us</h2>
+      <p class="kit-contact-lead">Tell us about your brand and the dates you have in mind.</p>
+      <p class="kit-contact-address"><%= email || display_host(website) %></p>
+    </div>
+    <% if email %>
+      <%= mail_to email, "Email us", subject: "Sponsoring #{content.show.title}", class: "btn btn-lg kit-contact-button" %>
+    <% else %>
+      <%= link_to "Visit our website", website, class: "btn btn-lg kit-contact-button", rel: "noopener" %>
+    <% end %>
+  </section>
+<% end %>

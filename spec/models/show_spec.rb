@@ -70,6 +70,34 @@ RSpec.describe Show do
     end
   end
 
+  describe "#verify!" do
+    it "sets verified_at and a slug from the title, keeping both on a second verification" do
+      show = create(:show, title: "The Founder's Ledger")
+      show.verify!
+      first = [ show.reload.slug, show.verified_at ]
+
+      travel 1.day
+      show.verify!
+      expect([ show.reload.slug, show.verified_at ]).to eq(first)
+      expect(first.first).to eq("the-founder-s-ledger")
+    end
+
+    it "falls back to 'show' for a title with nothing to slug, then counts up" do
+      create(:show, title: "!!!").verify!
+      second = create(:show, title: "???")
+      second.verify!
+      expect(second.slug).to eq("show-2")
+    end
+
+    it "skips slugs taken by titles that end in a number" do
+      create(:show, title: "Ledger 2").verify!
+      create(:show, title: "Ledger").verify!
+      third = create(:show, title: "Ledger")
+      third.verify!
+      expect(third.slug).to eq("ledger-3")
+    end
+  end
+
   describe ".http_url" do
     it "keeps http(s) URLs with a host and drops everything else" do
       expect(described_class.http_url(" https://show.example.com/ ")).to eq("https://show.example.com/")
@@ -91,5 +119,13 @@ RSpec.describe Show do
   it "is destroyed with its user" do
     show = create(:show)
     expect { show.user.destroy }.to change(described_class, :count).by(-1)
+  end
+
+  it "takes its media kit and verifications with it" do
+    show = create(:show, owner_email: "jane@example.com")
+    create(:media_kit, show: show)
+    ShowVerification.start_feed_token!(show)
+
+    expect { show.destroy }.to change(MediaKit, :count).by(-1).and change(ShowVerification, :count).by(-1)
   end
 end

@@ -1,0 +1,805 @@
+/*
+ * Media kit pages (app/views/media_kits, public_kits) and the verification pages, imported from application.css.
+ *
+ * The kit is a one-sheet: a single white sheet on the page with a banner (the owner's cover, or the show's own
+ * waveform with its mid-roll bar lit), the show, its stats, the audience, the rate card on an episode timeline
+ * and a contact band. In print the sheet becomes the page: no toolbar, buttons or map canvas, blocks kept whole.
+ * Colours come from the @theme tokens in application.css.
+ */
+@layer components {
+  .kit-page {
+    padding-top: 1rem;
+
+    @media (width >= 40rem) {
+      padding: 1.5rem 1.5rem 0;
+    }
+  }
+
+  .kit-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    max-width: 64rem;
+    margin: 0 1rem 1rem;
+
+    @media (width >= 40rem) {
+      margin-inline: auto;
+    }
+  }
+
+  /* The owner's bar on the preview: the tally lamp on its edge says this isn't what brands see yet. */
+  .kit-toolbar-preview {
+    justify-content: space-between;
+    padding: 0.75rem 1rem 0.75rem 1.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    box-shadow: inset 4px 0 0 var(--color-tally), var(--shadow-edge);
+    font-size: 0.9375rem;
+  }
+
+  /* Over everything, never in the way. */
+  .kit-watermark {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .kit-watermark span {
+    transform: rotate(-24deg);
+    font-size: clamp(5rem, 22vw, 16rem);
+    font-weight: 900;
+    font-stretch: 125%;
+    letter-spacing: -0.04em;
+    color: var(--color-ink);
+    opacity: 0.06;
+    white-space: nowrap;
+  }
+
+  .kit-sheet {
+    max-width: 64rem;
+    margin-inline: auto;
+    overflow: hidden;
+    background: var(--color-surface);
+
+    @media (width >= 40rem) {
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-card);
+      box-shadow: 0 28px 56px -40px rgb(34 19 43 / 0.45);
+    }
+  }
+
+  /* ---- Banner and the show ---- */
+
+  .kit-banner {
+    position: relative;
+    height: clamp(8.5rem, 4rem + 16vw, 15rem);
+    overflow: hidden;
+    background: var(--color-ink);
+  }
+
+  .kit-cover {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .kit-wave {
+    position: absolute;
+    inset: 16% 0;
+    width: 100%;
+    height: 68%;
+  }
+
+  .kit-wave-bar {
+    fill: color-mix(in srgb, var(--color-plum-soft) 18%, transparent);
+  }
+
+  .kit-wave-mid {
+    fill: var(--color-tally);
+  }
+
+  /* The artwork rides up over the banner; the text starts below it, however many lines the title takes. */
+  .kit-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1rem 1.75rem;
+    padding: 0 1.25rem;
+
+    @media (width >= 40rem) {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  .kit-artwork {
+    position: relative;
+    width: 6.5rem;
+    height: 6.5rem;
+    margin-top: -3.25rem;
+    border: 4px solid var(--color-surface);
+    border-radius: 1.125rem;
+    box-shadow: 0 12px 24px -12px rgb(34 19 43 / 0.5);
+    font-size: 1.75rem;
+
+    @media (width >= 40rem) {
+      width: 10rem;
+      height: 10rem;
+      margin-top: -5rem;
+      border-radius: 1.375rem;
+      font-size: 2.5rem;
+    }
+  }
+
+  .kit-hero-text {
+    flex: 1 1 18rem;
+    min-width: 0;
+
+    @media (width >= 40rem) {
+      padding-top: 1.5rem;
+    }
+  }
+
+  .kit-title {
+    font-size: clamp(2.125rem, 1.4rem + 3.2vw, 3.75rem);
+    font-stretch: 125%;
+    font-weight: 820;
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+
+  .kit-byline {
+    margin-top: 0.75rem;
+    font-size: 1.0625rem;
+    font-weight: 650;
+  }
+
+  .kit-categories {
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+  }
+
+  .kit-headline {
+    max-width: 48rem;
+    padding: 1.5rem 1.25rem 0;
+    font-size: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+    font-weight: 500;
+    line-height: 1.38;
+    letter-spacing: -0.01em;
+    text-wrap: pretty;
+
+    @media (width >= 40rem) {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  /* ---- Sections ---- */
+
+  .kit-section {
+    padding: 2rem 1.25rem;
+
+    @media (width >= 40rem) {
+      padding: 2.5rem;
+    }
+  }
+
+  .kit-section + .kit-section {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .kit-h2 {
+    font-size: 1.5rem;
+    font-stretch: 112.5%;
+    font-weight: 740;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .kit-h3 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    font-size: 1.0625rem;
+    font-weight: 700;
+    font-stretch: 106%;
+  }
+
+  .kit-h3-aside {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-plum);
+  }
+
+  .kit-note {
+    max-width: 65ch;
+    margin-top: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+
+  .kit-block {
+    margin-top: 2.25rem;
+  }
+
+  /* ---- Stats: big wide numerals, each on its own rule ---- */
+
+  /* Capped columns, so a show with one or two stats doesn't stretch a rule across the sheet. */
+  .kit-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 17rem));
+    gap: 1.5rem 2rem;
+  }
+
+  .kit-stat {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    gap: 0.375rem;
+    padding-top: 0.875rem;
+    border-top: 3px solid var(--color-ink);
+  }
+
+  .kit-stat-value {
+    font-size: clamp(2rem, 1.5rem + 2vw, 2.875rem);
+    font-weight: 820;
+    font-stretch: 125%;
+    line-height: 1;
+    letter-spacing: -0.035em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kit-stat-label {
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* ---- About ---- */
+
+  .kit-about-with-photo {
+    display: grid;
+    gap: 1.75rem;
+
+    @media (width >= 48rem) {
+      grid-template-columns: minmax(0, 1fr) 15rem;
+      gap: 3rem;
+      align-items: start;
+    }
+  }
+
+  .kit-prose {
+    max-width: 62ch;
+    margin-top: 0.875rem;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+
+  .kit-prose p + p {
+    margin-top: 0.875em;
+  }
+
+  .kit-host {
+    margin: 0;
+  }
+
+  .kit-host-photo {
+    display: block;
+    width: 100%;
+    max-width: 15rem;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: var(--radius-card);
+    background: var(--color-plum-soft);
+  }
+
+  .kit-host-caption {
+    margin-top: 0.625rem;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* ---- Audience ---- */
+
+  .kit-brands {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+    gap: 0 1.5rem;
+    margin-top: 0.5rem;
+
+    @media (width >= 40rem) {
+      grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+    }
+  }
+
+  .kit-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    padding-block: 0.625rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .kit-brand-name {
+    min-width: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .kit-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .kit-tag {
+    padding: 0.3125rem 0.8125rem;
+    border-radius: 999px;
+    background: var(--color-plum-soft);
+    color: var(--color-plum);
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+
+  .kit-lists {
+    display: grid;
+    gap: 1.75rem 2rem;
+
+    @media (width >= 40rem) {
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    }
+  }
+
+  .kit-list {
+    margin-top: 0.5rem;
+  }
+
+  .kit-list li {
+    padding-block: 0.4375rem;
+    border-bottom: 1px solid var(--color-line);
+    font-size: 0.9375rem;
+  }
+
+  /* ---- Rates: the episode timeline ---- */
+
+  .kit-timeline {
+    position: relative;
+    display: none;
+    height: 1.75rem;
+    margin: 2rem 0.4375rem 1rem;
+
+    @media (width >= 40rem) {
+      display: block;
+    }
+  }
+
+  .kit-timeline-track {
+    position: absolute;
+    inset: 50% -0.4375rem auto;
+    height: 4px;
+    margin-top: -2px;
+    border-radius: 999px;
+    background: var(--color-plum-soft);
+  }
+
+  .kit-marker {
+    position: absolute;
+    top: 50%;
+    width: 0.875rem;
+    height: 0.875rem;
+    margin: -0.4375rem 0 0 -0.4375rem;
+    border-radius: 3px;
+    background: var(--color-plum);
+  }
+
+  .kit-marker-pre { left: 0; }
+  .kit-marker-post { left: 100%; }
+
+  .kit-marker-mid {
+    left: 50%;
+    width: 3rem;
+    height: 1.75rem;
+    margin: -0.875rem 0 0 -1.5rem;
+    border-radius: 999px;
+    background: var(--color-tally);
+    box-shadow: 0 0 0 5px var(--color-tally-soft);
+  }
+
+  /* A list of rows on a phone; three columns under the timeline from 40rem. */
+  .kit-slots {
+    display: grid;
+    margin-top: 1rem;
+
+    @media (width >= 40rem) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      margin-top: 0;
+    }
+  }
+
+  .kit-slot {
+    display: grid;
+    grid-template-areas: "name price" "note price";
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0 1rem;
+    padding: 0.875rem 0 0.875rem 1rem;
+    border-bottom: 1px solid var(--color-line);
+    box-shadow: inset 3px 0 0 var(--color-plum);
+
+    @media (width >= 40rem) {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.125rem;
+      padding: 0;
+      border: 0;
+      box-shadow: none;
+    }
+  }
+
+  .kit-slot-mid {
+    box-shadow: inset 3px 0 0 var(--color-tally);
+
+    @media (width >= 40rem) {
+      align-items: center;
+      text-align: center;
+      box-shadow: none;
+    }
+  }
+
+  .kit-slot-post {
+    @media (width >= 40rem) {
+      align-items: flex-end;
+      text-align: right;
+    }
+  }
+
+  .kit-slot-name {
+    grid-area: name;
+    font-size: 0.9375rem;
+    font-weight: 700;
+  }
+
+  .kit-price {
+    grid-area: price;
+    font-size: 1.75rem;
+    font-weight: 820;
+    font-stretch: 118%;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    font-variant-numeric: tabular-nums;
+
+    @media (width >= 40rem) {
+      font-size: clamp(1.75rem, 1rem + 2vw, 2.5rem);
+    }
+  }
+
+  .kit-slot-mid .kit-price {
+    @media (width >= 40rem) {
+      font-size: clamp(2.25rem, 1.2rem + 2.8vw, 3.5rem);
+    }
+  }
+
+  .kit-slot-note {
+    grid-area: note;
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+
+  .kit-bundle {
+    margin-top: 1.75rem;
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
+  }
+
+  /* ---- Contact: the one dark band ---- */
+
+  .kit-contact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem 2rem;
+    background: var(--color-ink);
+    color: var(--color-surface);
+  }
+
+  .kit-contact-lead {
+    margin-top: 0.375rem;
+    color: color-mix(in srgb, var(--color-surface) 78%, var(--color-ink));
+  }
+
+  .kit-contact-address {
+    margin-top: 0.875rem;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+
+  .kit-contact-button {
+    background: var(--color-tally);
+    color: var(--color-ink);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 1px 0 rgb(0 0 0 / 0.3);
+  }
+
+  .kit-contact-button:hover {
+    background: color-mix(in srgb, var(--color-tally) 82%, var(--color-surface));
+  }
+
+  .kit-contact-button:focus-visible {
+    outline-color: var(--color-surface);
+  }
+
+  /* ---- Badge ---- */
+
+  .kit-badge {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+
+  .kit-badge-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.875rem 0.375rem 0.5rem;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-size: 0.8125rem;
+    font-weight: 650;
+    text-decoration: none;
+  }
+
+  .kit-badge-link .logo-mark {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  /* ---- Kit editor ---- */
+
+  /* A submit button that reads as a link (the one-click owner-address helper, "Send a new code"). */
+  .link-button {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-plum);
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+  }
+
+  .link-button:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .kit-thumb {
+    display: block;
+    width: 6rem;
+    height: 6rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    object-fit: cover;
+  }
+
+  .kit-thumb-wide {
+    width: 100%;
+    max-width: 18rem;
+  }
+
+  .kit-file {
+    padding-block: 0.375rem;
+    font-size: 0.875rem;
+  }
+
+  .kit-file::file-selector-button {
+    margin-right: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 0.5rem;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .kit-hide-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 2.75rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .kit-hide-brand input {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex: none;
+    accent-color: var(--color-ink);
+  }
+
+  .kit-hide-brand label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+
+  .kit-hide-brand:has(:checked) label {
+    color: var(--color-ink-soft);
+    text-decoration: line-through;
+  }
+
+  /* ---- Verification ---- */
+
+  .verify-token {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 0.75rem 0.75rem 1rem;
+    border: 1px dashed var(--color-line-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
+  }
+
+  /* The exact text to paste, so it is set like code. */
+  .verify-token-line {
+    flex: 1 1 14rem;
+    min-width: 0;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 1rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .verify-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    padding-left: 1.25rem;
+    list-style: decimal;
+  }
+
+  .input.verify-code {
+    width: 11rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3em;
+    text-align: center;
+  }
+}
+
+/* ---- Print: the sheet becomes the page ---- */
+@media print {
+  .kit-page {
+    padding: 0;
+  }
+
+  .kit-toolbar,
+  .kit-print,
+  .kit-contact-button,
+  .kit-screen-only,
+  .flash,
+  .map-layout .map-frame {
+    display: none !important;
+  }
+
+  .kit-sheet {
+    max-width: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .kit-banner {
+    height: 30mm;
+  }
+
+  .kit-banner-plain {
+    background: var(--color-paper);
+  }
+
+  .kit-banner-plain .kit-wave-bar {
+    fill: var(--color-line);
+  }
+
+  .kit-hero,
+  .kit-headline,
+  .kit-section {
+    padding-inline: 0;
+  }
+
+  .kit-section {
+    padding-block: 7mm;
+  }
+
+  .kit-artwork {
+    width: 28mm;
+    height: 28mm;
+    margin-top: -14mm;
+    box-shadow: none;
+  }
+
+  /* The host photo stays beside the story instead of falling to a page of its own. */
+  .kit-about-with-photo {
+    grid-template-columns: minmax(0, 1fr) 42mm;
+    gap: 8mm;
+  }
+
+  .kit-host-photo {
+    max-width: 42mm;
+  }
+
+  /* Without the canvas, the metros list takes the whole row, in two columns. */
+  .map-layout {
+    display: block;
+  }
+
+  .map-layout [data-top-metros] ol {
+    display: block;
+    column-count: 2;
+    column-gap: 10mm;
+  }
+
+  .kit-keep,
+  .kit-stat,
+  .kit-brand,
+  .kit-rates,
+  .kit-block,
+  .kit-slot,
+  .lean,
+  .metro {
+    break-inside: avoid;
+  }
+
+  .kit-h2,
+  .kit-h3,
+  .kit-h2 + .kit-note {
+    break-after: avoid;
+  }
+
+  .kit-contact {
+    margin-top: 4mm;
+    padding: 6mm;
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-card);
+    background: none;
+    color: var(--color-ink);
+  }
+
+  .kit-contact-lead {
+    color: var(--color-ink-soft);
+  }
+
+  .kit-badge {
+    margin-top: 4mm;
+  }
+}

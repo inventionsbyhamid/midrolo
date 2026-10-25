@@ -1,0 +1,17 @@
+<%# locals: (kit:, content:) -%>
+<% photo = kit_image_url(kit.host_photo, :portrait) %>
+<% host = content.show.author.presence %>
+<% if content.about || photo %>
+  <section class="<%= class_names("kit-section kit-about", "kit-about-with-photo" => photo) %>" aria-labelledby="kit-about-title">
+    <div class="min-w-0">
+      <h2 id="kit-about-title" class="kit-h2">About the show</h2>
+      <% if content.about %><div class="kit-prose"><%= simple_format(content.about) %></div><% end %>
+    </div>
+    <% if photo %>
+      <figure class="kit-host">
+        <img src="<%= photo %>" alt="<%= host ? "#{host}, the host" : "The host" %>" class="kit-host-photo" decoding="async">
+        <% if host %><figcaption class="kit-host-caption">Your host, <%= host %></figcaption><% end %>
+      </figure>
+    <% end %>
+  </section>
+<% end %>
