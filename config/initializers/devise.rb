@@ -19,7 +19,7 @@ Devise.setup do |config|
                   access_type: "online"
 
   if AuthConfig.developer_strategy?
-    config.omniauth :developer, fields: %i[name email], uid_field: :email
+    config.omniauth :developer, **AuthConfig::DEVELOPER_OPTIONS
   end
 end
 

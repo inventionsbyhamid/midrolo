@@ -5,8 +5,26 @@
     <%= render "components/card", title: "Sign in to #{APP_NAME}", heading: :h1 do %>
       <p class="mb-6 text-ink-soft">One click and you're in. We never post to your account.</p>
       <% if AuthConfig.developer_strategy? %>
-        <%= button_to "Continue (dev sign in)", user_developer_omniauth_authorize_path,
-              method: :post, form: { data: { turbo: false } }, class: "btn btn-primary btn-lg w-full" %>
+        <%# Development without Google keys (R101): the developer strategy's callback takes a name and an email
+            straight from this form, so OmniAuth's own unstyled form is never shown. %>
+        <div class="flex flex-col gap-4 rounded-control border border-dashed border-line-strong p-4" data-dev-sign-in>
+          <div>
+            <h2 class="font-semibold">Dev sign in</h2>
+            <p class="text-sm text-ink-soft">Development only, with no Google keys set. Any name and email will do.</p>
+          </div>
+          <%= form_with url: AuthConfig::DEVELOPER_CALLBACK_PATH, method: :post, local: true, data: { turbo: false },
+                        class: "flex flex-col gap-3" do %>
+            <div>
+              <%= label_tag :dev_name, "Name", class: "label" %>
+              <%= text_field_tag :name, nil, id: "dev_name", class: "input", autocomplete: "name", required: true %>
+            </div>
+            <div>
+              <%= label_tag :dev_email, "Email", class: "label" %>
+              <%= email_field_tag :email, nil, id: "dev_email", class: "input", autocomplete: "email", required: true %>
+            </div>
+            <%= submit_tag "Sign in", name: nil, class: "btn btn-primary btn-lg w-full" %>
+          <% end %>
+        </div>
       <% else %>
         <%= button_to "Continue with Google", user_google_oauth2_omniauth_authorize_path,
               method: :post, data: { turbo: false }, class: "btn btn-primary btn-lg w-full" %>

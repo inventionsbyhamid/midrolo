@@ -16,6 +16,62 @@ RSpec.describe "Authentication" do
     expect(response.body).not_to include("dev sign in")
   end
 
+  describe "the dev sign in card (R101)" do
+    def page = Nokogiri::HTML(response.body)
+
+    it "posts a name and email straight to the developer callback, with a CSRF token, when the dev strategy is on" do
+      allow(AuthConfig).to receive(:developer_strategy?).and_return(true)
+      ActionController::Base.allow_forgery_protection = true
+
+      get "/users/sign_in"
+
+      card = page.at_css("[data-dev-sign-in]")
+      expect(card.text.squish).to include("Dev sign in")
+      form = card.at_css("form")
+      expect(form["action"]).to eq("/users/auth/developer/callback")
+      expect(form["method"]).to eq("post")
+      expect(form["data-turbo"]).to eq("false")
+      expect(form.css("input[name='name'], input[name='email']").size).to eq(2)
+      expect(form.at_css("input[name='authenticity_token']")["value"]).to be_present
+      # OmniAuth's own unstyled form (the request phase) is never linked, and Google isn't offered without its keys.
+      expect(page.css("[action='/users/auth/developer'], [href='/users/auth/developer']")).to be_empty
+      expect(response.body).not_to include("Continue with Google")
+    ensure
+      ActionController::Base.allow_forgery_protection = false
+    end
+
+    it "isn't there without the dev strategy: in production, with Google keys, and in test" do
+      expect(AuthConfig.developer_strategy?(env: "production", client_id: nil)).to be(false)
+      expect(AuthConfig.developer_strategy?(env: "development", client_id: "google-client-id")).to be(false)
+      expect(AuthConfig.developer_strategy?(env: "development", client_id: "")).to be(true)
+
+      get "/users/sign_in"
+      expect(page.at_css("[data-dev-sign-in]")).to be_nil
+      expect(response.body).not_to include("/users/auth/developer")
+    end
+
+    it "sends what OmniAuth's developer strategy reads: its callback takes name and email as the auth hash" do
+      auth = nil
+      app = lambda do |env|
+        auth = env["omniauth.auth"]
+        [ 200, {}, [ "" ] ]
+      end
+      # Mounted under Devise's prefix, as config/initializers/devise.rb mounts it in development.
+      strategy = OmniAuth::Strategies::Developer.new(app, **AuthConfig::DEVELOPER_OPTIONS, path_prefix: "/users/auth")
+      env = Rack::MockRequest.env_for(AuthConfig::DEVELOPER_CALLBACK_PATH, method: "POST",
+                                                                         params: { name: "Ada Lovelace", email: "ada@example.com" })
+      env["rack.session"] = {}
+
+      OmniAuth.config.test_mode = false
+      strategy.call(env)
+
+      expect(auth.uid).to eq("ada@example.com")
+      expect(auth.info.to_h).to include("name" => "Ada Lovelace", "email" => "ada@example.com")
+    ensure
+      OmniAuth.config.test_mode = true
+    end
+  end
+
   it "signs in with Google and lands on /shows" do
     get "/users/auth/google_oauth2/callback"
 
