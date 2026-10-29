@@ -23,13 +23,31 @@ RSpec.describe Brand do
       expect { described_class.resolve(name: "Squarespace") }.to change(described_class, :count).by(1)
     end
 
-    it "gives a brand found by name the domain it lacked, but keeps brands with other domains apart" do
+    # C1: a domain set on a brand found by name let anyone with a website of that name verify into it.
+    it "never gives a brand found by name a domain: a known domain makes its own brand" do
       mercury = described_class.resolve(name: "Mercury")
-      expect(described_class.resolve(name: "Mercury", domain: "mercury.com")).to eq(mercury)
-      expect(mercury.reload.domain).to eq("mercury.com")
+      at_domain = described_class.resolve(name: "Mercury", domain: "mercury.com")
+
+      expect(at_domain).not_to eq(mercury)
+      expect(at_domain).to have_attributes(name: "Mercury", domain: "mercury.com")
+      expect(at_domain.slug).not_to eq(mercury.slug)
+      expect(mercury.reload.domain).to be_nil
+      expect(described_class.resolve(name: "Mercury", domain: "mercury.com")).to eq(at_domain)
 
       other = described_class.resolve(name: "Mercury", domain: "mercuryinsurance.com")
-      expect(other).not_to eq(mercury)
+      expect([ mercury, at_domain ]).not_to include(other)
+    end
+
+    it "never renames a brand it finds, except to write a domain's name properly" do
+      acme = create(:brand, name: "Acme", domain: "acme.com")
+      expect(described_class.resolve(name: "Evil Corp", domain: "acme.com")).to eq(acme)
+      expect(acme.reload.name).to eq("Acme")
+
+      named_after_domain = described_class.resolve(name: "", domain: "manscaped.com")
+      expect(described_class.resolve(name: "Scam Shop", domain: "manscaped.com")).to eq(named_after_domain)
+      expect(named_after_domain.reload.name).to eq("manscaped.com")
+      described_class.resolve(name: "Manscaped", domain: "manscaped.com")
+      expect(named_after_domain.reload.name).to eq("Manscaped")
     end
 
     it "never takes free mail as a brand's domain" do
@@ -48,6 +66,46 @@ RSpec.describe Brand do
     it "needs a name or a domain" do
       expect { described_class.resolve(name: " ") }.to raise_error(ArgumentError)
     end
+  end
+
+  # "I'm a brand" (C1): the website decides. The brand already at it is joined as it is; otherwise a new brand is made,
+  # even when brands of that name exist, and none of them changes.
+  describe ".for_onboarding" do
+    it "joins the brand at the website's domain without changing its name or domain" do
+      acme = create(:brand, name: "Acme", domain: "acme.com")
+
+      expect(described_class.for_onboarding(name: "Not Acme", website: "https://www.acme.com/about")).to eq(acme)
+      expect(acme.reload).to have_attributes(name: "Acme", domain: "acme.com")
+    end
+
+    it "makes a new brand rather than giving a same-named brand the website" do
+      detected = create(:brand, name: "Acme", domain: nil)
+      create(:brand_member, brand: detected)
+
+      brand = described_class.for_onboarding(name: "Acme", website: "evil.example")
+
+      expect(brand).not_to eq(detected)
+      expect(brand).to have_attributes(name: "Acme", domain: "evil.example")
+      expect(brand.slug).not_to eq(detected.slug)
+      expect(detected.reload.domain).to be_nil
+      expect(described_class.where(name_key: "acme").count).to eq(2)
+    end
+
+    it "needs a website that isn't free mail" do
+      expect { described_class.for_onboarding(name: "Acme", website: "") }.to raise_error(ArgumentError)
+      expect { described_class.for_onboarding(name: "Acme", website: "gmail.com") }.to raise_error(ArgumentError)
+      expect(described_class.count).to eq(0)
+    end
+  end
+
+  # C1: a domain set after the fact is what let a stranger verify into a brand.
+  it "keeps a brand's domain as it was made" do
+    domainless = create(:brand, domain: nil)
+    acme = create(:brand, domain: "acme.com")
+
+    expect { domainless.update!(domain: "evil.example") }.to raise_error(ActiveRecord::ReadonlyAttributeError)
+    expect { acme.update!(domain: "evil.example") }.to raise_error(ActiveRecord::ReadonlyAttributeError)
+    expect([ domainless.reload.domain, acme.reload.domain ]).to eq([ nil, "acme.com" ])
   end
 
   it "counts its sponsor mentions" do

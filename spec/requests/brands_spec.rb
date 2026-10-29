@@ -40,23 +40,61 @@ RSpec.describe "Brand workspace" do
       expect(user.reload.last_role).to eq("brand")
     end
 
-    it "joins a brand the catalog already knows by its website as a member" do
+    it "joins a brand the catalog already knows by its website as a member, leaving its name as it is" do
       create(:brand_member, brand: brand)
 
       post brand_profile_path, params: { name: "Fieldnote", website: "fieldnote.example" }
 
-      expect(user.brand_members.sole).to have_attributes(brand: brand, role: "member")
+      expect(user.brand_members.sole).to have_attributes(brand: brand, role: "member", verified_at: nil)
+      expect(brand.reload.name).to eq("Fieldnote Coffee")
       expect(Brand.count).to eq(1)
     end
 
-    it "refuses a free email domain as the website, and a blank name" do
+    it "refuses a free email domain as the website, a blank name and a missing website" do
       post brand_profile_path, params: { name: "Fieldnote", website: "gmail.com" }
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("Use your company&#39;s website, not a free email provider.")
 
       post brand_profile_path, params: { name: " ", website: "fieldnote.example" }
       expect(response).to have_http_status(:unprocessable_content)
+
+      [ "", "not a website" ].each do |website|
+        post brand_profile_path, params: { name: "Fieldnote", website: website }
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Enter your company&#39;s website")
+      end
       expect(Brand.count).to eq(0)
+    end
+
+    # C1: typing a brand's name with your own website used to give that brand your domain, and a code at it made you a
+    # verified member who could read the brand's requests, saved shows and searches.
+    it "never gives a same-named brand the typed website, so a code at that website can't open its work" do
+      acme = create(:brand, name: "Acme", domain: nil)
+      colleague = create(:brand_member, brand: acme, verified_at: Time.current).user
+      podcast = claimed_podcast(title: "Deep Work Daily")
+      thread = start_request(podcast, BrandMember.find_by!(user: colleague))
+      create(:saved_podcast, brand: acme, podcast: create(:podcast, title: "Acme Shortlist Show"), user: colleague)
+      create(:fit_search, brand: acme, user: colleague, query: "Acme budget plans", status: "done")
+
+      post brand_profile_path, params: { name: "Acme", website: "evil.example" }
+      membership = user.brand_members.sole
+      expect(membership.brand).not_to eq(acme)
+      expect(membership.brand).to have_attributes(name: "Acme", domain: "evil.example")
+      expect(acme.reload.domain).to be_nil
+
+      perform_enqueued_jobs { post brand_verification_path, params: { email: "me@evil.example" } }
+      patch brand_verification_path, params: { code: last_code }
+      expect(membership.reload).to be_verified
+      expect(acme.reload.verified_at).to be_nil
+
+      get brand_inbox_path
+      expect(response.body).not_to include("Deep Work Daily")
+      get conversation_path(thread)
+      expect(response).to have_http_status(:not_found)
+      get brand_saved_podcasts_path
+      expect(response.body).not_to include("Acme Shortlist Show")
+      get brand_searches_path
+      expect(response.body).not_to include("Acme budget plans")
     end
 
     it "shows a Save link that starts a brand, from the save button's frame" do
