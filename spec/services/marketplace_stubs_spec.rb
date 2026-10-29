@@ -46,7 +46,8 @@ RSpec.describe "Marketplace stubs" do
     %w[numbers sponsors rates claim request save similar audience].each do |name|
       expect(ApplicationController.render(partial: "podcasts/#{name}", locals: { podcast: build(:podcast) }).strip).to eq("")
     end
-    Admin::DashboardController::PANELS.each do |name|
+    # The catalog panel is filled (lane L1).
+    (Admin::DashboardController::PANELS - %w[catalog]).each do |name|
       expect(ApplicationController.render(partial: "admin/dashboard/#{name}", locals: { stats: nil }).strip).to eq("")
     end
   end
