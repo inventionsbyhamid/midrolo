@@ -9,12 +9,17 @@ class ApplicationController < ActionController::Base
   # header the client could have written itself (config/initializers/client_ip.rb). A limit binds to its action, so a
   # format (.html), doubled slashes or HEAD for GET reach the same count.
   #
-  # Rails doesn't say how long a window has left, so the 429's Retry-After is always the whole window.
-  def self.throttle(to:, within:, **options)
-    rate_limit(to:, within:, store: RATE_LIMIT_STORE, with: -> { render_throttled(retry_after: within) }, **options)
+  # Rails doesn't say how long a window has left, so the 429's Retry-After is always the whole window. spare names a
+  # method asked only once a request is past the limit: when it's true the request goes on (it still counts).
+  def self.throttle(to:, within:, spare: nil, **options)
+    rate_limit(to:, within:, store: RATE_LIMIT_STORE, **options,
+               with: -> { render_throttled(retry_after: within) unless spare && send(spare) })
   end
 
-  throttle to: 60, within: 1.minute, by: -> { request.remote_ip }, scope: "global", unless: :exempt_from_global_rate_limit?
+  # Search engine crawlers past it are spared on GET and HEAD, once DNS confirms them (VerifiedCrawler: never on the
+  # user agent alone). Every other limit, the directory search's included, applies to them as to anyone.
+  throttle to: 60, within: 1.minute, by: -> { request.remote_ip }, scope: "global", unless: :exempt_from_global_rate_limit?,
+           spare: :verified_crawler?
 
   # Starting a report, from ReportsController#create or a re-run in ShowsController#update: one bucket for both.
   def self.rate_limit_report_starts(**options)
@@ -91,6 +96,9 @@ class ApplicationController < ActionController::Base
 
   # True for provider webhooks, which retry and must never be refused.
   def exempt_from_global_rate_limit? = false
+
+  # A GET or HEAD from Google's, Bing's or Apple's crawler, confirmed by reverse and forward DNS (cached per IP).
+  def verified_crawler? = VerifiedCrawler.verified?(request)
 
   def any_browser? = false
 

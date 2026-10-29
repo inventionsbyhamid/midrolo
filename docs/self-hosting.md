@@ -51,6 +51,9 @@ midrolo-web, midrolo-jobs, midrolo-backup ─ midrolo-net ─▶ midrolo-db:5432
 - The client's IP (`request.remote_ip`, which the rate limits use) comes from X-Forwarded-For, which Traefik and
   Thruster write. With Cloudflare's proxy on, it comes from CF-Connecting-IP, believed only from Cloudflare's own
   addresses (`config/initializers/client_ip.rb`). A Forwarded or Client-IP header a visitor sends never counts.
+- Every request counts against 60 a minute per IP. Search engine crawlers that DNS confirms (reverse, then forward)
+  may read past it on GET and HEAD, never on their user agent alone; deploy.md, "Rate limits", has the rule. The check
+  uses the web container's DNS resolver.
 - The database is on `midrolo-net` only, so no other stack can reach it. `midrolo-web` is also on `coolify`, which
   other stacks' web containers share, so network placement does not keep it off their ports. The code does (R131):
   every user-supplied URL (a feed, show artwork) is resolved once, refused if any address is internal (private,

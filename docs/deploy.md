@@ -45,6 +45,12 @@ midrolo, midrolo-worker ─ coolify network ─▶ midrolo-db:5432
 - Rails answers only for `midrolo.com` and `www.midrolo.com`; `/up`, the health check, answers any host.
 - The client's IP (`request.remote_ip`, which the rate limits use) comes from X-Forwarded-For, which Traefik and
   Thruster write. A Forwarded or Client-IP header a visitor sends never counts (`config/initializers/client_ip.rb`).
+- **Rate limits.** Every request counts against 60 a minute per IP (`ApplicationController`), with tighter limits on
+  forms, searches and report starts. Search engine crawlers past the 60 keep reading pages (GET and HEAD only) once
+  DNS confirms them (`VerifiedCrawler`): a Googlebot, Bingbot or Applebot user agent is only a reason to look; the
+  IP's reverse name must be in googlebot.com, google.com, search.msn.com or applebot.apple.com and resolve back to
+  the same IP. The answer is cached per IP for a day (15 minutes when it fails), and nothing is looked up below the
+  limit. A user agent alone never counts, and crawlers' writes and directory searches keep every limit.
 - Every container on the `coolify` network can reach every other one, so the network keeps nothing out. The code does
   (R131): every user-supplied URL (a feed, show artwork) is resolved once, refused if any address is internal
   (private, loopback, link-local, NAT64 and 6to4 ranges included), and fetched from the address that was checked,
