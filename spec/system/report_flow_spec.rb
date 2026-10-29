@@ -41,6 +41,7 @@ RSpec.describe "Report flow", :network do
     # Page loads and the debounced search can outlast Capybara's 2-second default under load.
     visit "/users/sign_in"
     click_button "Continue with Google"
+    click_button "I run a podcast" # a new account picks its side first (review G-1)
 
     fill_in "Podcast title", with: "Founder", wait: 10
     within("#search_results") { click_button "This is my show", wait: 10 }

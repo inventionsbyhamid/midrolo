@@ -52,7 +52,7 @@ RSpec.describe UserMailer do
 
     it "sends it once: on the first sign in, never on a later one" do
       expect { get "/users/auth/google_oauth2/callback" }.to have_enqueued_mail(described_class, :welcome).once
-      expect(response).to redirect_to("/shows")
+      expect(response).to redirect_to("/welcome") # a new account picks podcaster or brand first
       delete "/users/sign_out"
 
       expect { get "/users/auth/google_oauth2/callback" }.not_to have_enqueued_mail(described_class, :welcome)

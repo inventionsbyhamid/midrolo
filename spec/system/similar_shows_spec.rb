@@ -33,6 +33,7 @@ RSpec.describe "Similar shows in a report" do
   it "lists the shows with a similar audience and puts the sponsor proof on the brand's match" do
     visit "/users/sign_in"
     click_button "Continue with Google"
+    click_button "I run a podcast" # a new account picks its side first (review G-1)
     fill_in "Podcast title", with: "Founder"
     within("#search_results") { click_button "This is my show" }
     click_link "Skip for now"
