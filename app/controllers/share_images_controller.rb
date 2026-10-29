@@ -45,11 +45,12 @@ class ShareImagesController < ApplicationController
   end
 
   def podcast
-    serve ShareImages::PodcastCard.new(shared_podcast)
+    podcast = shared_podcast or return
+    serve ShareImages::PodcastCard.new(podcast)
   end
 
   def episode
-    podcast = shared_podcast
+    podcast = shared_podcast or return
     serve ShareImages::PodcastCard.new(podcast, episode: Episode.find_by!(podcast_id: podcast.id, slug: params[:episode_slug].to_s))
   end
 
@@ -115,12 +116,25 @@ class ShareImagesController < ApplicationController
   end
 
   # The podcast at :slug with what its card reads (artwork with its variants, readings, listing); a removed one is a
-  # 404. An earlier slug isn't followed: pages link the current one.
+  # 404. An earlier slug 301s to the current one's card, so links already shared keep working (code review L5); then
+  # it returns nil.
   def shared_podcast
-    podcast = Podcast.includes(ShareImages::StoredArtwork::PRELOAD, :stat_readings, :listing).find_by!(slug: params[:slug].to_s)
-    raise ActiveRecord::RecordNotFound if podcast.removed?
+    podcast = Podcast.includes(ShareImages::StoredArtwork::PRELOAD, :stat_readings, :listing).find_by(slug: params[:slug].to_s)
+    podcast ||= Podcast.find_by_slug_or_redirect(params[:slug]).tap { |moved| redirect_to_current_card(moved) }
+    raise ActiveRecord::RecordNotFound if podcast.nil? || podcast.removed?
 
-    podcast
+    podcast unless performed?
+  end
+
+  def redirect_to_current_card(podcast)
+    return if podcast.nil? || podcast.removed?
+
+    path = if params[:episode_slug]
+      podcast_episode_share_image_path(slug: podcast.slug, episode_slug: params[:episode_slug].to_s)
+    else
+      podcast_share_image_path(slug: podcast.slug)
+    end
+    redirect_to path, status: :moved_permanently
   end
 
   def serve_static(max_age)

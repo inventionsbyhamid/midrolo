@@ -76,6 +76,21 @@ RSpec.describe "Catalog share images" do
     expect(og_image).not_to eq(before)
   end
 
+  # Code review L5: links already shared keep working after a rename, as the pages do.
+  it "301s a podcast's or an episode's card at an earlier slug to the current one" do
+    old_slug = podcast.slug
+    episode_slug = episode.slug
+    podcast.update!(title: "Darknet Diaries Weekly")
+    expect(podcast.slug).not_to eq(old_slug)
+
+    get "/podcasts/#{old_slug}/og.png", params: { v: "000000000000" }
+    expect(response).to have_http_status(:moved_permanently)
+    expect(response).to redirect_to("/podcasts/#{podcast.slug}/og.png")
+
+    get "/podcasts/#{old_slug}/episodes/#{episode_slug}/og.png"
+    expect(response).to redirect_to("/podcasts/#{podcast.slug}/episodes/#{episode_slug}/og.png")
+  end
+
   describe "what has no card" do
     it "is a 404 for an unknown or removed podcast, an unknown episode, category or brand, and a brand with no listed show" do
       removed = create(:podcast, :with_artwork, status: "removed")
