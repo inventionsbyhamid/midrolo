@@ -10,6 +10,26 @@ RSpec.describe Brand do
       expect(described_class.normalize_domain("not a domain")).to be_nil
       expect(described_class.normalize_domain(nil)).to be_nil
     end
+
+    # Final review N3: the Public Suffix List, private suffixes included, so different companies never share a domain.
+    it "keeps companies apart on every public suffix, hosted platforms included, and has no domain for a bare suffix" do
+      expect(described_class.normalize_domain("https://shop.alpha.com.pl")).to eq("alpha.com.pl")
+      expect(described_class.normalize_domain("beta.com.pl")).to eq("beta.com.pl")
+      expect(described_class.normalize_domain("www.gamma.co.th/about")).to eq("gamma.co.th")
+      expect(described_class.normalize_domain("alpha.myshopify.com")).to eq("alpha.myshopify.com")
+      expect(described_class.normalize_domain("beta.myshopify.com")).to eq("beta.myshopify.com")
+      expect(described_class.normalize_domain("someone.github.io")).to eq("someone.github.io")
+      expect(described_class.normalize_domain("contoso.onmicrosoft.com")).to eq("contoso.onmicrosoft.com")
+      %w[com.pl co.uk myshopify.com github.io onmicrosoft.com com].each do |suffix|
+        expect(described_class.normalize_domain(suffix)).to be_nil
+      end
+    end
+
+    it "still treats a site on a platform that is itself a public suffix as that platform for sponsor detection" do
+      expect(Sponsors::Rules.platform_domain?(described_class.normalize_domain("https://myshow.blogspot.com/p/1"))).to be(true)
+      expect(Sponsors::Rules.platform_domain?(described_class.normalize_domain("myshow.carrd.co"))).to be(true)
+      expect(Sponsors::Rules.platform_domain?("acme.com")).to be(false)
+    end
   end
 
   describe ".resolve and .find_existing" do
@@ -71,6 +91,15 @@ RSpec.describe Brand do
   # "I'm a brand" (C1): the website decides. The brand already at it is joined as it is; otherwise a new brand is made,
   # even when brands of that name exist, and none of them changes.
   describe ".for_onboarding" do
+    it "puts two companies under one two-label suffix in two brands, and refuses a bare suffix (N3)" do
+      alpha = described_class.for_onboarding(name: "Alpha", website: "alpha.com.pl")
+      beta = described_class.for_onboarding(name: "Beta", website: "https://beta.com.pl")
+      expect([ alpha.domain, beta.domain ]).to eq(%w[alpha.com.pl beta.com.pl])
+      expect(described_class.for_onboarding(name: "Shop", website: "alpha.myshopify.com"))
+        .not_to eq(described_class.for_onboarding(name: "Other shop", website: "beta.myshopify.com"))
+      expect { described_class.for_onboarding(name: "Poland", website: "com.pl") }.to raise_error(ArgumentError)
+    end
+
     it "joins the brand at the website's domain without changing its name or domain" do
       acme = create(:brand, name: "Acme", domain: "acme.com")
 

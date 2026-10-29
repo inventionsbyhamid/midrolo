@@ -11,9 +11,8 @@ class Brand < ApplicationRecord
   include Workspace
 
   NAME_LIMIT = 120
-  # Public suffixes of two labels, so "shop.example.co.uk" keeps "example.co.uk" (no public suffix list in the app).
-  TWO_LABEL_SUFFIXES = %w[co.uk org.uk ac.uk gov.uk com.au net.au org.au co.nz co.jp co.in co.za com.br com.mx
-                          com.sg com.hk com.cn co.kr com.tr com.ar co.il].to_set.freeze
+  # Hosts that give every customer a subdomain but aren't on the Public Suffix List yet, kept apart the same way.
+  EXTRA_SUFFIXES = %w[onmicrosoft.com].freeze
 
   has_many :sponsor_mentions, dependent: :delete_all
   has_many :members, class_name: "BrandMember", dependent: :delete_all
@@ -37,15 +36,19 @@ class Brand < ApplicationRecord
   validate :domain_is_not_webmail
 
   # A website or address as the brand's domain: lowercase host, no scheme, path, port or "www.", cut to the
-  # registrable part ("https://shop.Notion.so/x" => "notion.so"). nil for anything that isn't a dotted host name.
+  # registrable part on the Public Suffix List, its private part included ("https://shop.Notion.so/x" => "notion.so",
+  # "a.alpha.com.pl" => "alpha.com.pl", "alpha.myshopify.com" stays), so two companies never share one (final review
+  # N3). nil for anything that isn't a dotted host name, and for a bare public suffix ("com.pl", "myshopify.com").
   def self.normalize_domain(value)
     host = value.to_s.strip.downcase.sub(%r{\A[a-z][a-z0-9+.-]*://}, "").sub(/\A[^@\/]*@/, "")
     host = host.split(%r{[/?#:]}).first.to_s.delete_suffix(".").delete_prefix("www.")
     labels = host.split(".")
     return nil if labels.size < 2 || labels.any? { |label| !label.match?(/\A[a-z0-9-]+\z/) }
 
-    keep = TWO_LABEL_SUFFIXES.include?(labels.last(2).join(".")) ? 3 : 2
-    labels.last(keep).join(".")
+    extra = EXTRA_SUFFIXES.find { |suffix| host == suffix || host.end_with?(".#{suffix}") }
+    return (host == extra ? nil : "#{host.delete_suffix(".#{extra}").split(".").last}.#{extra}") if extra
+
+    PublicSuffix.domain(host, ignore_private: false)
   end
 
   # The comparison key for brand names ("The Notion Co." and "notion co" are one).

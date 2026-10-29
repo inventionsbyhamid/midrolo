@@ -36,6 +36,19 @@ RSpec.describe Brands::WorkEmail do
     expect(ActionMailer::Base.deliveries).to be_empty
   end
 
+  it "compares the address's registrable domain on the Public Suffix List, so a neighbour under one suffix can't join (N3)" do
+    alpha = create(:brand, name: "Alpha", domain: "alpha.com.pl")
+    alpha_member = create(:brand_member, brand: alpha)
+
+    expect { described_class.request_code!(alpha_member, "bob@beta.com.pl") }
+      .to raise_error(described_class::Invalid, "Use an address at alpha.com.pl, your brand's website.")
+    expect { described_class.request_code!(alpha_member, "anna@mail.alpha.com.pl") }.not_to raise_error
+
+    shop = create(:brand, name: "Shop", domain: "alpha.myshopify.com")
+    expect { described_class.request_code!(create(:brand_member, brand: shop), "eve@beta.myshopify.com") }
+      .to raise_error(described_class::Invalid, /alpha\.myshopify\.com/)
+  end
+
   it "waits a minute between codes" do
     request
     expect { described_class.request_code!(member, "ada@fieldnote.example") }.to raise_error(described_class::Throttled)

@@ -42,6 +42,8 @@ gem "ruby_llm", "~> 2.1"
 gem "faraday"
 gem "faraday-retry"
 gem "feedjira"
+# Brand domains: the registrable part of a host on the Public Suffix List (Brand.normalize_domain).
+gem "public_suffix"
 # Pipeline CSV export. A bundled gem since Ruby 3.4, so it must be listed.
 gem "csv"
 gem "aws-sdk-s3", require: false
