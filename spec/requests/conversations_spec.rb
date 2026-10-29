@@ -115,6 +115,16 @@ RSpec.describe "Conversations" do
     expect(session["user_return_to"]).to eq(new_conversation_path(podcast: podcast.slug))
   end
 
+  it "comes back to the form once the brand is set up" do
+    sign_in create(:user)
+    get new_conversation_path(podcast: podcast.slug)
+    post brand_profile_path, params: { name: "Fieldnote Coffee", website: "fieldnote.example" }
+
+    expect(response).to redirect_to(new_conversation_path(podcast: podcast.slug))
+    follow_redirect!
+    expect(response.body).to include("Send request")
+  end
+
   it "sends the owner of the show to their inbox instead" do
     sign_in owner
     get new_conversation_path(podcast: podcast.slug)
@@ -163,6 +173,7 @@ RSpec.describe "Conversations" do
     it "keeps a third party out of every page and action" do
       stranger = create(:user)
       [ -> { get conversation_path(conversation) },
+        -> { get show_inbox_path(podcast.owner_show) },
         -> { patch accept_conversation_path(conversation) },
         -> { patch close_conversation_path(conversation) },
         -> { post report_conversation_path(conversation) },

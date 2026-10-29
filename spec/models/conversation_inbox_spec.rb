@@ -65,6 +65,7 @@ RSpec.describe Conversation do
 
   describe "answers" do
     it "accepts an open request, records the first reply and leaves the brand unread" do
+      conversation
       travel 2.hours
       conversation.accept!
 
