@@ -160,7 +160,7 @@ GEM
       responders
       warden (~> 1.2.3)
     diff-lcs (1.6.2)
-    dodopayments (2.34.0)
+    dodopayments (2.35.0)
       cgi
       connection_pool
       standardwebhooks
