@@ -103,7 +103,8 @@ class FitSearch
           subject_brand.store_qloo_profile!(@profile) if subject_brand && may_store_profile?(subject_brand)
           step.output_summary = profile_summary
         else
-          step.warn!("Qloo doesn't know #{query} by name, so this search uses your categories' tastes.")
+          step.warn!(brand_categories.any? ? "Qloo doesn't know #{query} by name, so this search uses your categories' tastes." :
+                                             "Qloo doesn't know #{query} by name, and no categories were picked to search by.")
         end
         search.update!(qloo_brand_entity_id: entity_id, categories: brand_categories)
       end

@@ -161,6 +161,7 @@ RSpec.describe FitSearch::Run do
 
     expect(unknown.reload).to have_attributes(status: "done", qloo_brand_entity_id: nil, summary: nil)
     expect(unknown.agent_steps.map(&:tool)).to eq(%w[find_brand])
+    expect(unknown.agent_steps.first.output_summary).to include("no categories were picked")
     expect(unknown.results).to be_empty
   end
 
