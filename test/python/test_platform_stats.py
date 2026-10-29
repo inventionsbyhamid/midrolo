@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime as dt
+import email.utils
 import importlib.util
 import io
 import json
@@ -39,7 +40,8 @@ SP_KEY = "11111111-2222-3333-4444-fakespkeySECRET"
 MYACINFO = "DAWTKNV2fakeMyacinfo|value=with|pipes-SECRET"
 ITCTX = "eyJmakeItctxSECRET0123456789"
 BEARER = "BQfakeBearerTokenSECRET-abcdefghijklmnop"
-ALL_SECRETS = (SP_DC, SP_KEY, MYACINFO, ITCTX, BEARER, "SECRET")
+CACHED = "BQcachedBearerSECRET-from-an-earlier-run"
+ALL_SECRETS = (SP_DC, SP_KEY, MYACINFO, ITCTX, BEARER, CACHED, "SECRET")
 
 
 def day_range(start: str, end: str):
@@ -162,11 +164,13 @@ APPLE_COUNTRIES = {"measure": "PLAYS", "dimension": "BY_COUNTRY",
 class FakeSpotify:
     """Spotify's sign in (requests.get, requests.post) and data calls (requests.Session.get)."""
 
-    def __init__(self, routes=None, auth="ok"):
+    def __init__(self, routes=None, auth="ok", bearers=(BEARER,)):
         self.routes = routes or {}
         self.auth = auth
         self.auth_calls = 0
         self.calls = []
+        self.bearers = set(bearers)  # the tokens Spotify still accepts; any other gets a 401
+        self.bearers_used = []
 
     def auth_get(self, url, params=None, cookies=None, timeout=None, **kwargs):
         assert url == "https://accounts.spotify.com/oauth2/v2/auth"
@@ -174,6 +178,8 @@ class FakeSpotify:
         assert cookies["sp_dc"] == SP_DC
         self.auth_calls += 1
         auth = self.auth(self.auth_calls) if callable(self.auth) else self.auth
+        if isinstance(auth, FakeResponse):
+            return auth
         if auth == "login_required":
             return FakeResponse(200, text='<script>const authorizationResponse = {type: "authorization_response", '
                                           'response: {error: "login_required", state: "x"}};</script>')
@@ -188,10 +194,13 @@ class FakeSpotify:
 
     def session_get(self, session, url, params=None, headers=None, cookies=None, timeout=None, allow_redirects=True):
         assert allow_redirects is False and timeout is not None
-        assert headers["Authorization"] == f"Bearer {BEARER}"
         assert url.startswith(f"{ps.SPOTIFY_BASE_URL}/shows/{SPOTIFY_SHOW}/")
         endpoint = url.rsplit("/", 1)[-1]
         self.calls.append((endpoint, dict(params or {})))
+        bearer = headers["Authorization"].removeprefix("Bearer ")
+        self.bearers_used.append(bearer)
+        if bearer not in self.bearers:
+            return FakeResponse(401, {"error": "token expired"})
         handler = self.routes.get(endpoint) or DEFAULT_SPOTIFY_ROUTES[endpoint]
         return handler(dict(params or {}))
 
@@ -274,7 +283,10 @@ def apple_request(**overrides):
 
 
 def invoke(request, argv=None):
-    """main() as Rails runs it: the request on stdin, stdout and stderr captured. Returns (code, result, out, err)."""
+    """main() as Rails runs it: the request on stdin, stdout and stderr captured. Returns (code, result, out, err).
+
+    A fresh bearer token is the one secret the helper may write: once, in result["token"]. `out` comes back with that
+    one occurrence taken out, so every test can still check stdout for secrets."""
     raw = request if isinstance(request, bytes) else json.dumps(request).encode()
     stdin = io.TextIOWrapper(io.BytesIO(raw), encoding="utf-8")
     out, err = io.StringIO(), io.StringIO()
@@ -283,7 +295,13 @@ def invoke(request, argv=None):
         code = ps.main(argv or [])
     lines = out.getvalue().splitlines()
     assert len(lines) == 1, f"stdout must be exactly one line, got {out.getvalue()!r}"
-    return code, json.loads(lines[0]), out.getvalue(), err.getvalue()
+    result = json.loads(lines[0])
+    stdout = out.getvalue()
+    if "token" in result:
+        value = result["token"]["value"]
+        assert stdout.count(value) == 1, "the bearer token appears once, in the token field"
+        stdout = stdout.replace(value, "", 1)
+    return code, result, stdout, err.getvalue()
 
 
 class SecretsCheck(unittest.TestCase):
@@ -631,6 +649,8 @@ class SpotifyFetchTest(SecretsCheck):
                 mock.patch.object(ps, "normalize_spotify", side_effect=KeyError(f"cookie {SP_DC}")):
             code, result, out, err = invoke(spotify_request())
         self.assertEqual(code, 1)
+        token = result.pop("token")  # it signed in before the crash: the token still saves the next run a sign in
+        self.assertEqual(token["value"], BEARER)
         self.assertEqual(result, {"ok": False, "error": "failed", "message": "Unexpected error in the stats helper "
                                                                              "(KeyError)."})
         self.assertNoSecrets(out, err)
@@ -708,6 +728,176 @@ class AppleFetchTest(SecretsCheck):
             code, result, out, err = invoke(apple_request())
         self.assertEqual((result["ok"], result["error"]), (False, "failed"))
         self.assertIn("no numbers", result["message"])
+
+
+def soon(seconds: float) -> str:
+    """An expires_at that many seconds from now, as Rails sends it."""
+    return ps.iso_utc(ps.utc_now() + dt.timedelta(seconds=seconds))
+
+
+def http_date(seconds_from_now: float) -> str:
+    return email.utils.format_datetime(ps.utc_now() + dt.timedelta(seconds=seconds_from_now), usegmt=True)
+
+
+def too_many(retry_after=None):
+    """Spotify's or Apple's 429, with or without a Retry-After header."""
+    return FakeResponse(429, {"error": "rate limited"}, headers={"Retry-After": retry_after} if retry_after else {})
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# Rate limits: a light client never pushes past a 429
+
+
+class RateLimitTest(SecretsCheck):
+    def test_a_429_the_retries_cannot_clear_is_rate_limited_with_the_wait_asked_for(self):
+        with FakeSpotify({"metadata": lambda params: too_many("5")}).installed() as fake, \
+                mock.patch.object(time, "sleep") as slept:
+            code, result, out, err = invoke(spotify_request())
+        self.assertEqual((code, result["ok"], result["error"], result["retry_after"]), (0, False, "rate_limited", 5))
+        self.assertIn("429", result["message"])
+        self.assertEqual([endpoint for endpoint, _ in fake.calls], ["metadata"] * 3)  # the call and its 2 retries
+        self.assertEqual([call.args[0] for call in slept.call_args_list], [5.0, 5.0])  # the wait asked for
+        self.assertNoSecrets(out, err)
+
+    def test_a_long_wait_is_not_waited_out_inside_the_run(self):
+        with FakeSpotify({"metadata": lambda params: too_many("120")}).installed() as fake, \
+                mock.patch.object(time, "sleep") as slept:
+            code, result, out, err = invoke(spotify_request())
+        self.assertEqual((result["error"], result["retry_after"]), ("rate_limited", 120))
+        self.assertEqual(len(fake.calls), 1)
+        slept.assert_not_called()
+
+    def test_retry_after_as_a_date(self):
+        with FakeSpotify({"metadata": lambda params: too_many(http_date(90))}).installed():
+            code, result, out, err = invoke(spotify_request())
+        self.assertEqual(result["error"], "rate_limited")
+        self.assertAlmostEqual(result["retry_after"], 90, delta=3)
+
+    def test_no_retry_after_is_null(self):
+        with FakeSpotify({"metadata": lambda params: too_many()}).installed(), mock.patch.object(time, "sleep"):
+            code, result, out, err = invoke(spotify_request())
+        self.assertEqual(result["error"], "rate_limited")
+        self.assertIsNone(result["retry_after"])
+        self.assertIn("retry_after", result)
+
+    def test_retries_stay_inside_the_time_budget(self):
+        # 20 s left can't hold a 8 s wait plus a 15 s read: no retry, the run ends at once.
+        with FakeSpotify({"metadata": lambda params: too_many("8")}).installed() as fake, \
+                mock.patch.object(ps, "TOTAL_TIMEOUT", 20.0), mock.patch.object(time, "sleep") as slept:
+            started = time.monotonic()
+            code, result, out, err = invoke(spotify_request())
+        self.assertEqual((result["error"], result["retry_after"]), ("rate_limited", 8))
+        self.assertEqual(len(fake.calls), 1)
+        slept.assert_not_called()
+        self.assertLess(time.monotonic() - started, 5)
+
+    def test_a_429_on_an_optional_call_ends_the_run_with_no_more_calls(self):
+        with FakeSpotify({"detailedStreams": lambda params: too_many("600")}).installed() as fake:
+            code, result, out, err = invoke(spotify_request())
+        self.assertEqual((result["ok"], result["error"], result["retry_after"]), (False, "rate_limited", 600))
+        self.assertEqual([endpoint for endpoint, _ in fake.calls], ["metadata", "detailedStreams"])
+        self.assertNoSecrets(out, err)
+
+    def test_a_429_on_sign_in_is_rate_limited_not_expired_and_not_retried(self):
+        with FakeSpotify(auth=too_many("300")).installed() as fake, mock.patch.object(time, "sleep"):
+            code, result, out, err = invoke(spotify_request())
+        self.assertEqual((result["error"], result["retry_after"]), ("rate_limited", 300))
+        self.assertEqual(fake.auth_calls, 1)
+        self.assertEqual(fake.calls, [])
+        self.assertNotIn("token", result)
+        self.assertNoSecrets(out, err)
+
+    def test_apple(self):
+        with FakeApple({"trends:LISTENERS": lambda params: too_many("60")}).installed() as fake:
+            code, result, out, err = invoke(apple_request())
+        self.assertEqual((code, result["error"], result["retry_after"]), (0, "rate_limited", 60))
+        self.assertEqual(len(fake.calls), 1)
+        self.assertNoSecrets(out, err)
+
+    def test_reading_retry_after(self):
+        self.assertEqual(ps.retry_after_seconds("30"), 30)
+        self.assertEqual(ps.retry_after_seconds(" 0 "), 0)
+        self.assertEqual(ps.retry_after_seconds("99999999999"), ps.MAX_RETRY_AFTER)
+        self.assertEqual(ps.retry_after_seconds(http_date(-60)), 0)  # a date already past
+        for unreadable in (None, "", "soon", "-5", "1.5"):
+            self.assertIsNone(ps.retry_after_seconds(unreadable), unreadable)
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# The cached bearer token: one Spotify sign in an hour, not one a fetch
+
+
+class BearerTokenTest(SecretsCheck):
+    def test_a_cached_token_skips_the_sign_in(self):
+        request = spotify_request(token={"value": CACHED, "expires_at": soon(1800)})
+        with FakeSpotify(bearers=(CACHED,)).installed() as fake:
+            code, result, out, err = invoke(request)
+        self.assertTrue(result["ok"])
+        self.assertEqual(fake.auth_calls, 0)
+        self.assertEqual(set(fake.bearers_used), {CACHED})
+        self.assertNotIn("token", result)  # nothing new to cache
+        self.assertNoSecrets(out, err)
+
+    def test_signing_in_returns_the_fresh_token_once(self):
+        with FakeSpotify().installed() as fake:
+            code, result, out, err = invoke(spotify_request())
+        self.assertTrue(result["ok"])
+        self.assertEqual(fake.auth_calls, 1)
+        self.assertEqual(set(result["token"]), {"value", "expires_at"})
+        self.assertEqual(result["token"]["value"], BEARER)
+        expires = dt.datetime.strptime(result["token"]["expires_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=dt.timezone.utc)
+        self.assertAlmostEqual((expires - ps.utc_now()).total_seconds(), 3600, delta=60)  # Spotify's expires_in
+        self.assertNotIn(BEARER, json.dumps({key: value for key, value in result.items() if key != "token"}))
+        self.assertNoSecrets(out, err)  # out has the token field's one occurrence taken out (invoke)
+
+    def test_a_token_about_to_expire_is_not_used(self):
+        request = spotify_request(token={"value": CACHED, "expires_at": soon(60)})
+        with FakeSpotify(bearers=(CACHED, BEARER)).installed() as fake:
+            code, result, out, err = invoke(request)
+        self.assertEqual(fake.auth_calls, 1)
+        self.assertNotIn(CACHED, fake.bearers_used)
+        self.assertEqual(result["token"]["value"], BEARER)
+        self.assertNoSecrets(out, err)
+
+    def test_a_refused_token_means_one_fresh_sign_in(self):
+        request = spotify_request(token={"value": CACHED, "expires_at": soon(1800)})
+        with FakeSpotify().installed() as fake:  # Spotify no longer takes CACHED
+            code, result, out, err = invoke(request)
+        self.assertTrue(result["ok"])
+        self.assertEqual(fake.auth_calls, 1)
+        self.assertEqual(fake.bearers_used[0], CACHED)
+        self.assertEqual(set(fake.bearers_used[1:]), {BEARER})
+        self.assertEqual(result["token"]["value"], BEARER)
+        self.assertNoSecrets(out, err)
+
+    def test_a_token_that_does_not_look_right_is_ignored(self):
+        for token in ({"value": CACHED, "expires_at": "tomorrow"}, {"value": CACHED + " x", "expires_at": soon(1800)},
+                      {"value": 42, "expires_at": soon(1800)}, {"value": CACHED}, CACHED):
+            with self.subTest(token=token), FakeSpotify().installed() as fake:
+                code, result, out, err = invoke(spotify_request(token=token))
+                self.assertEqual((result["ok"], fake.auth_calls), (True, 1))
+                self.assertNoSecrets(out, err)
+
+    def test_a_fresh_token_comes_back_with_a_failure_too(self):
+        with FakeSpotify({"metadata": lambda params: FakeResponse(403, {})}).installed():
+            code, result, out, err = invoke(spotify_request())
+        self.assertEqual((result["error"], result["token"]["value"]), ("forbidden", BEARER))
+        self.assertNoSecrets(out, err)
+
+    def test_never_after_an_expired_session(self):
+        routes = {"metadata": lambda params: FakeResponse(401, {})}
+        with FakeSpotify(routes).installed():
+            code, result, out, err = invoke(spotify_request())
+        self.assertEqual(result["error"], "expired")
+        self.assertNotIn("token", result)
+        self.assertNoSecrets(out, err)
+
+    def test_apple_ignores_a_token(self):
+        with FakeApple().installed():
+            code, result, out, err = invoke(apple_request(token={"value": CACHED, "expires_at": soon(1800)}))
+        self.assertTrue(result["ok"])
+        self.assertNotIn("token", result)
+        self.assertNoSecrets(out, err)
 
 
 class EntryPointTest(SecretsCheck):
