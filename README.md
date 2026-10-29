@@ -197,6 +197,10 @@ to backups and restores, is [docs/deploy.md](docs/deploy.md).
 - Taste data from [Qloo](https://www.qloo.com). Audiences are modeled from taste data, not measured. No Qloo response
   data is committed to this repo.
 - Podcast data from [Podcast Index](https://podcastindex.org).
+- Verified Spotify and Apple Podcasts stats are read with [Open Podcast](https://openpodcast.app)'s MIT licensed
+  connectors, [spotify-connector](https://github.com/openpodcast/spotify-connector) and
+  [apple-connector](https://github.com/openpodcast/apple-connector), signed in as Midrolo's own accounts, which
+  podcasters invite to their show.
 - Map tiles from [OpenFreeMap](https://openfreemap.org), drawn with MapLibre GL JS.
 
 ## License

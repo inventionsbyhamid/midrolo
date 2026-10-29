@@ -16,8 +16,9 @@ WORKDIR /rails
 #   They set text in the Archivo cuts in vendor/fonts (config/initializers/fonts.rb); fonts-dejavu-core gives real
 #   glyphs for characters Archivo lacks.
 # - curl: the web container's health check. postgresql-client: the jobs container's.
+# - python3 (3.11 on bookworm): runs bin/platform-stats, the Spotify and Apple stats helper, from /opt/stats-venv.
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips42 fonts-dejavu-core postgresql-client && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 libvips42 fonts-dejavu-core postgresql-client python3 && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
@@ -32,10 +33,17 @@ ENV RAILS_ENV="production" \
 # Throw-away build stage to reduce size of final image
 FROM base AS build
 
-# Install packages needed to build gems
+# Install packages needed to build gems, and python3-venv to build the stats helper's venv
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential libssl-dev zlib1g-dev libffi-dev libgmp-dev git libpq-dev libvips libyaml-dev pkg-config && \
+    apt-get install --no-install-recommends -y build-essential libssl-dev zlib1g-dev libffi-dev libgmp-dev git libpq-dev libvips libyaml-dev pkg-config python3-venv && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# The stats helper's Python libraries (openpodcast's connectors, every package hash pinned), in a venv the final stage
+# copies. pip and setuptools are only needed to install, so they don't ship.
+COPY requirements-stats.txt ./
+RUN python3 -m venv /opt/stats-venv && \
+    /opt/stats-venv/bin/pip install --no-cache-dir --require-hashes -r requirements-stats.txt && \
+    /opt/stats-venv/bin/pip uninstall --yes pip setuptools
 
 # Install application gems
 COPY vendor/* ./vendor/
@@ -70,6 +78,8 @@ USER 1000:1000
 # Copy built artifacts: gems, application
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
+# Root owned, so the app can run the stats helper but not change its libraries.
+COPY --from=build /opt/stats-venv /opt/stats-venv
 
 # Fontconfig keeps its font cache under XDG_CACHE_HOME, which the app's user must be able to write, or every process
 # rescans the fonts on its first share image.

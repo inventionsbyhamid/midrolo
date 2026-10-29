@@ -41,3 +41,5 @@
 # Recorded vendor responses must never be committed.
 /spec/fixtures/private/
 
+# Python bytecode from bin/platform-stats and its tests
+__pycache__/
