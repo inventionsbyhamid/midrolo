@@ -326,6 +326,9 @@ module Sponsors
         attach_link(owner, link)
         owner.units << unit.index unless owner.units.include?(unit.index)
       end
+      # A later sentence's code or offer for the show's own site or a plug of its own isn't the read's.
+      return if !lead && ((links.empty? && unit.text.match?(DOMAIN)) || unit.text.match?(SELF_PLUG))
+
       code_at = unit.text =~ CODE
       offer_at = unit.text =~ OFFER
       [ code_at, offer_at ].compact.each do |position|
@@ -348,8 +351,8 @@ module Sponsors
           attach_link(candidate, link)
           attach_code_and_offer(candidate, unit.text)
           following = @units[unit.index + 1]
-          if candidate.promo_code.nil? && following && following.line <= unit.line + 1 && external_links(following.text).empty? &&
-             (code = code_in(following.text))
+          if candidate.promo_code.nil? && following && following.line <= unit.line + 1 && !following.text.match?(DOMAIN) &&
+             !following.text.match?(SELF_PLUG) && (code = code_in(following.text))
             candidate.promo_code = code
             candidate.units << following.index
           end

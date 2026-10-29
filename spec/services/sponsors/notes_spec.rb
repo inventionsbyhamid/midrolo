@@ -86,6 +86,11 @@ RSpec.describe Sponsors::Notes do
       expect(names("Brought to you by our friends at Mercury.")).to eq([ "Mercury" ])
     end
 
+    it "keeps a later sentence's code for the show's own shop off the read" do
+      candidates = described_class.new("This episode is brought to you by Notion.\nUse code QUIET for 10% off our merch at quiethours.fm/shop.", context).candidates
+      expect(candidates.map { |c| [ c.name, c.promo_code, c.offer ] }).to eq([ [ "Notion", nil, nil ] ])
+    end
+
     it "ignores credits, listener thanks and the show's own plugs" do
       expect(names("Music by Blue Dot Sessions. Produced by Ivy Chen.")).to be_empty
       expect(names("This episode is brought to you by listeners like you. Become a patron!")).to be_empty
