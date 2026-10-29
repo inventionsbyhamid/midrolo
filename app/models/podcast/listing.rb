@@ -17,6 +17,30 @@ module Podcast::Listing
             [ 2_500...5_000, "2,500 to 5,000" ], [ 5_000...10_000, "5,000 to 10,000" ],
             [ 10_000.., "10,000 and up" ] ].freeze
 
+  # The trust levels a public downloads figure may have: read from the platforms, or given by the show.
+  PUBLIC_TRUSTS = %w[verified provided].freeze
+
+  # A podcast's downloads figure as public pages show it (Podcast#public_downloads): the number, or only its band when
+  # the owner chose ranges (value is then nil, so nothing can print the exact figure).
+  PublicDownloads = Data.define(:value, :trust, :band) do
+    def verified? = trust == "verified"
+
+    # A verified figure is Spotify and Apple plays (Podcast::Stats); the show's own figure is downloads.
+    def unit = verified? ? "plays" : "downloads"
+
+    def range = band&.first
+
+    # "2,140", "2.1K" (short), or the band: "1,000 to 2,500".
+    def amount(short: false)
+      return band.last if band
+
+      short ? value.to_fs(:human, format: "%n%u", units: { thousand: "K", million: "M" }) : value.to_fs(:delimited)
+    end
+
+    # "2,140 plays per episode", "1,000 to 2,500 downloads per episode".
+    def text(short: false) = "#{amount(short: short)} #{unit} per episode"
+  end
+
   included do
     scope :demo, -> { where(podcast_guid: DEMO_GUID) }
     # Everything but the demo show (podcast_guid is unique, so NULL guids stay in).
@@ -41,6 +65,16 @@ module Podcast::Listing
   end
 
   def demo? = podcast_guid == DEMO_GUID
+
+  # The downloads figure public pages show beside a podcast (directory cards, the page title, structured data, a brand's
+  # search results), from the columns refresh_listing! keeps: only for a claimed podcast (code review L8), verified or
+  # provided by the show, and as its band when the owner chose ranges (code review M3). nil otherwise.
+  def public_downloads
+    return nil unless claimed? && downloads_per_episode && downloads_trust.in?(PUBLIC_TRUSTS)
+
+    band = BANDS.find { |range, _| range.cover?(downloads_per_episode) } if downloads_bands_only?
+    PublicDownloads.new(value: (downloads_per_episode unless band), trust: downloads_trust, band: band)
+  end
 
   # The owner show's media kit when it's published: what the podcast page's Rates section shows. Reads the preloaded
   # owner show (Podcast.for_page) when there is one.

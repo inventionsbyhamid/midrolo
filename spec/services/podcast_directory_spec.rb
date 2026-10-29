@@ -40,9 +40,9 @@ RSpec.describe PodcastDirectory do
 
   describe "#podcasts" do
     let!(:big) do
-      create(:podcast, :active, title: "Big Verified", categories: [ "Technology" ], language: "en", downloads_per_episode: 6_000,
-                                downloads_trust: "verified", open_to_sponsors: true, min_price_cents: 20_000,
-                                last_published_at: 5.days.ago)
+      create(:podcast, :active, :claimed, title: "Big Verified", categories: [ "Technology" ], language: "en",
+                                          downloads_per_episode: 6_000, downloads_trust: "verified", open_to_sponsors: true,
+                                          min_price_cents: 20_000, last_published_at: 5.days.ago)
     end
     let!(:small) do
       create(:podcast, :active, title: "Small Provided", categories: [ "Comedy" ], language: "es-mx", downloads_per_episode: 300,
@@ -69,6 +69,9 @@ RSpec.describe PodcastDirectory do
       expect(titles({ price: "100" })).to eq([ "Small Provided" ])
       expect(titles({ open: "1" })).to eq([ "Big Verified" ])
       expect(titles({ verified: "1" })).to eq([ "Big Verified" ])
+      big.update!(claimed_at: nil) # numbers belong to a claim (code review L8)
+      expect(titles({ verified: "1" })).to eq([])
+      big.update!(claimed_at: 1.day.ago)
       create(:sponsor_mention, episode: create(:episode, podcast: quiet))
       expect(titles({ sponsored: "1" })).to eq([ "Quiet Show" ])
     end

@@ -201,16 +201,19 @@ class Podcast < ApplicationRecord
   end
 
   # The columns the directory filters on that come from the owner's workspace and the stats: whether it's open to
-  # sponsors and its lowest rate (a published kit's), and its best downloads figure. L4 calls it when a listing is
-  # saved, L5 after a sync or when readings expire, and Show when the owner show goes.
+  # sponsors and its lowest rate (a published kit's), and its best downloads figure with the owner's choice to show it
+  # as a range (the kit's bands_only). A podcast nobody owns has no figure: numbers belong to a claim (code review L8).
+  # L4 calls it when a listing is saved, L5 after a sync or when readings expire, and Show when the owner show goes.
   def refresh_listing!
-    kit = Show.where(podcast_id: id).where.not(verified_at: nil).first&.media_kit
-    kit = nil unless kit&.published?
-    rates = MediaKit::Content.new(kit).rates if kit
-    reading = best_downloads_reading
-    update!(open_to_sponsors: kit&.open_to_sponsors? || false,
+    owner = Show.includes(:media_kit).where(podcast_id: id).where.not(verified_at: nil).first
+    kit = owner&.media_kit
+    published = kit if kit&.published?
+    rates = MediaKit::Content.new(published).rates if published
+    reading = best_downloads_reading if claimed?
+    update!(open_to_sponsors: published&.open_to_sponsors? || false,
             min_price_cents: rates && [ rates.midroll, rates.preroll, rates.postroll ].compact.min&.*(100),
-            downloads_per_episode: reading&.value, downloads_trust: reading&.trust)
+            downloads_per_episode: reading&.value, downloads_trust: reading&.trust,
+            downloads_bands_only: reading.present? && (kit&.bands_only? || false))
   end
 
   # Links the podcast to its Qloo entity once. An id another podcast already holds stays with it (unique index).

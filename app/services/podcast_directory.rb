@@ -16,7 +16,9 @@ class PodcastDirectory
                   "2500-5000" => "2,500 to 5,000", "5000-10000" => "5,000 to 10,000", "10000" => "10,000 and up" }.freeze
   # The most a brand wants to pay per spot, in dollars.
   PRICES = [ 100, 250, 500, 1_000, 2_500 ].freeze
-  SORTS = { "relevance" => "Best match", "newest" => "Newest episode", "downloads" => "Most downloads" }.freeze
+  # The size filter and sort read downloads_per_episode: verified Spotify and Apple plays, or the show's own downloads.
+  SIZE_LABEL = "Plays or downloads per episode".freeze
+  SORTS = { "relevance" => "Best match", "newest" => "Newest episode", "downloads" => "Most plays or downloads" }.freeze
   TOGGLES = %w[open verified sponsored].freeze
   QUERY_LIMIT = 100
 
@@ -85,7 +87,7 @@ class PodcastDirectory
     relation = relation.where(downloads_per_episode: SIZES.fetch(size)) if size
     relation = relation.where(min_price_cents: ..(price * 100)) if price
     relation = relation.open_to_sponsors if open?
-    relation = relation.where(downloads_trust: "verified") if verified?
+    relation = relation.claimed.where(downloads_trust: "verified") if verified?
     relation = relation.where(SponsorMention.where("sponsor_mentions.podcast_id = podcasts.id").arel.exists) if sponsored?
     ordered(relation)
   end

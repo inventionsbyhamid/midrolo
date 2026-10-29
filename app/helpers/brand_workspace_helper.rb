@@ -33,11 +33,9 @@ module BrandWorkspaceHelper
     "From #{number_to_currency(cents / 100.0, precision: 0)} per episode" if cents
   end
 
-  # "2,140 per episode" from the show's best downloads number (verified Spotify and Apple plays, or the show's own).
-  def brand_downloads_text(podcast)
-    value = podcast.downloads_per_episode
-    "#{number_with_delimiter(value)} per episode" if value
-  end
+  # "2,140 plays per episode" (verified Spotify and Apple plays) or "1,000 to 2,500 downloads per episode" (the show's
+  # own, as a range when the owner chose ranges): Podcast#public_downloads, so only for a claimed show.
+  def brand_downloads_text(podcast) = podcast.public_downloads&.text
 
   # "Open for Nov, Dec and Jan" from a show's published listing.
   def brand_open_months_text(podcast)
