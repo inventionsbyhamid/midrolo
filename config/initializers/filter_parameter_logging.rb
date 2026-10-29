@@ -7,6 +7,8 @@
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc, :code
 ]
+# Stats connectors: pasted API keys, and whatever credentials a connector stores.
+Rails.application.config.filter_parameters += %i[api_key credentials]
 # Billing webhook bodies (Dodo's data object) carry the customer's details: name, phone, address, card, tax id and
 # what they wrote when cancelling. Dotted keys match only under data, so params elsewhere keep their names.
 Rails.application.config.filter_parameters += %w[

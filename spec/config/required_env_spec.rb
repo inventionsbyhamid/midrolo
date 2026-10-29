@@ -6,7 +6,9 @@ RSpec.describe RequiredEnv do
   let(:complete) do
     { "SECRET_KEY_BASE" => "s", "MIDROLO_DATABASE_PASSWORD" => "p", "APP_URL" => "https://midrolo.com",
       "RESEND_API_KEY" => "re_1", "R2_ACCOUNT_ID" => "a", "R2_ACCESS_KEY_ID" => "k", "R2_SECRET_ACCESS_KEY" => "s",
-      "R2_BUCKET" => "b", "QLOO_API_KEY" => "q", "PODCAST_INDEX_KEY" => "k", "PODCAST_INDEX_SECRET" => "s" }
+      "R2_BUCKET" => "b", "QLOO_API_KEY" => "q", "PODCAST_INDEX_KEY" => "k", "PODCAST_INDEX_SECRET" => "s",
+      "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" => "p", "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY" => "d",
+      "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT" => "s" }
   end
 
   def names(env) = described_class.missing(env).map(&:first)

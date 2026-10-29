@@ -22,7 +22,10 @@ module RequiredEnv
     [ %w[R2_BUCKET], "Cloudflare R2: the bucket for uploads" ],
     [ %w[QLOO_API_KEY], "taste data from Qloo (production has no demo data)" ],
     [ %w[PODCAST_INDEX_KEY], "the podcast directory, Podcast Index (production has no demo data)" ],
-    [ %w[PODCAST_INDEX_SECRET], "the podcast directory, Podcast Index" ]
+    [ %w[PODCAST_INDEX_SECRET], "the podcast directory, Podcast Index" ],
+    [ %w[ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY], "encrypts feed owner emails and connector credentials (bin/rails db:encryption:init)" ],
+    [ %w[ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY], "encrypts verification addresses so they can still be looked up" ],
+    [ %w[ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT], "derives the encryption keys" ]
   ].freeze
 
   module_function

@@ -56,6 +56,11 @@ Rails.application.configure do
   config.active_support.deprecation = :log
 
   # Raise an error on page load if there are pending migrations.
+  # Active Record encryption keys when ENV has none (config/application.rb): fixed, development-only ones.
+  config.active_record.encryption.primary_key ||= "development-primary-key-midrolo-0000000"
+  config.active_record.encryption.deterministic_key ||= "development-deterministic-key-midrolo-00"
+  config.active_record.encryption.key_derivation_salt ||= "development-key-derivation-salt-midrolo"
+
   config.active_record.migration_error = :page_load
 
   # Highlight code that triggered database queries in logs.

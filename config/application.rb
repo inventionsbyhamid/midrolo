@@ -48,5 +48,18 @@ module Midrolo
     # ClientIp::RejectConflictingHeaders (config/initializers/client_ip.rb) answers it before Rails' request log can
     # raise it outside ShowExceptions; this covers it anywhere else.
     config.action_dispatch.rescue_responses["ActionDispatch::RemoteIp::IpSpoofAttackError"] = :bad_request
+
+    # Active Record encryption: feed owner emails (Podcast), verification addresses (ShowVerification, deterministic so
+    # the per-address caps can query them) and stats connector credentials (StatConnection). The keys come from ENV
+    # (make a set with bin/rails db:encryption:init); production requires them (RequiredEnv), and development and test
+    # fall back to fixed keys of their own.
+    config.active_record.encryption.primary_key = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].presence
+    config.active_record.encryption.deterministic_key = ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].presence
+    config.active_record.encryption.key_derivation_salt = ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].presence
+
+    # Active Storage's analysis and variant jobs run on the artwork queue (config/queue.yml), with the artwork fetches:
+    # catalog artwork brings many at once, and they mustn't hold up reports or mail.
+    config.active_storage.queues.analysis = :artwork
+    config.active_storage.queues.transform = :artwork
   end
 end

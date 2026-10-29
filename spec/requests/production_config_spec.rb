@@ -12,7 +12,9 @@ RSpec.describe "Production configuration" do
     "RAILS_ENV" => "production", "SECRET_KEY_BASE" => "0" * 64, "MIDROLO_DATABASE_PASSWORD" => "dummy",
     "DB_HOST" => "db.invalid", "APP_URL" => "https://midrolo.com", "RESEND_API_KEY" => "re_dummy",
     "R2_ACCOUNT_ID" => "acct", "R2_ACCESS_KEY_ID" => "key", "R2_SECRET_ACCESS_KEY" => "secret", "R2_BUCKET" => "kits",
-    "QLOO_API_KEY" => "dummy", "PODCAST_INDEX_KEY" => "dummy", "PODCAST_INDEX_SECRET" => "dummy", "VIPS_WARNING" => "0"
+    "QLOO_API_KEY" => "dummy", "PODCAST_INDEX_KEY" => "dummy", "PODCAST_INDEX_SECRET" => "dummy", "VIPS_WARNING" => "0",
+    "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" => "dummy", "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY" => "dummy",
+    "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT" => "dummy"
   }
 
   def facts_script = <<~'RUBY'
