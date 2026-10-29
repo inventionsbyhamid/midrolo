@@ -243,12 +243,12 @@ module ReportsHelper
     label == label.downcase ? label.split.map { |word| word == "and" ? word : word.capitalize }.join(" ") : label
   end
 
-  # At most three: "Shares 6 tastes", "Sponsors <em>Show X</em>" (the newest), "+2 more shows" (other shows among the
+  # At most three: "6 shared tastes", "Sponsors <em>Show X</em>" (the newest), "+2 more shows" (other shows among the
   # sponsorships found, not episodes). No scores (R99).
   def evidence_chips(match)
     chips = []
     shared = shared_tastes(match)
-    chips << "Shares #{pluralize(shared.size, 'taste')}" if shared.any?
+    chips << pluralize(shared.size, "shared taste") if shared.any?
     items = Matching::Evidence.items(proven_evidence(match))
     if items.any?
       chips << safe_join([ "Sponsors ", tag.em(Matching::Evidence.value(items.first, :show).presence || "a similar show") ])

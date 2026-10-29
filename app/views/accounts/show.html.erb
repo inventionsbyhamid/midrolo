@@ -37,7 +37,7 @@
         <% Billing.prices.each do |price| %>
           <li class="flex flex-wrap items-center justify-between gap-3 py-3">
             <span><strong><%= price_plan_name(price) %></strong> <span class="text-ink-soft"><%= price_label(price) %></span></span>
-            <%= render "billing/plan_button", price_key: price.key, note: false %>
+            <%= render "billing/plan_button", price_key: price.key, note: false, quiet: true %>
           </li>
         <% end %>
       </ul>

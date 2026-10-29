@@ -27,7 +27,7 @@
     <% if @users.empty? %>
       <p class="text-ink-soft"><%= @query.present? ? "No one matches that." : "No sign-ups yet." %></p>
     <% else %>
-      <div class="overflow-x-auto">
+      <div class="relative overflow-x-auto">
         <table class="w-full text-left text-sm">
           <thead>
             <tr>

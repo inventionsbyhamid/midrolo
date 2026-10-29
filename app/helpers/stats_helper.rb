@@ -184,14 +184,19 @@ module StatsHelper
 
   def stats_country_name(code) = code.to_s == "other" ? "Elsewhere" : COUNTRY_NAMES.fetch(code.to_s.upcase, code.to_s.upcase)
 
-  # The share rows of an audience breakdown, largest first, for meters: [[label, share, scaled], ...], where scaled is
-  # the share against the largest (so the longest bar fills the track).
-  def stats_share_rows(shares, limit: 8, &label)
+  # The share rows of an audience breakdown for meters: [[label, share, scaled], ...], where scaled is the share against
+  # the largest (so the longest bar fills the track). Largest first, with "Elsewhere" (other) always last; by: :age puts
+  # age bands in age order with Unknown last (review ST-4).
+  def stats_share_rows(shares, limit: 8, by: :share, &label)
     rows = shares.to_h.reject { |key, share| share.to_f <= 0 || (key == "unknown" && share.to_f < 0.01) }
                  .sort_by { |_key, share| -share.to_f }.first(limit)
-    top = rows.first&.last.to_f
+    rows = rows.sort_by { |key, share| by == :age ? stats_age_rank(key) : [ key.to_s.in?(%w[other unknown]) ? 1 : 0, -share.to_f ] }
+    top = rows.map { |_key, share| share.to_f }.max.to_f
     rows.map { |key, share| [ label.call(key), share.to_f, top.positive? ? share.to_f / top : 0 ] }
   end
+
+  # Where an age band sits: by its first year, Unknown after every band.
+  def stats_age_rank(key) = key.to_s[/\A\d+/]&.to_i || 999
 
   def stats_percent(share) = share < 0.01 ? "<1%" : "#{(share * 100).round}%"
 

@@ -140,7 +140,7 @@ class ConversationsController < ApplicationController
   def list_for(side)
     scope = side == :podcaster ? Conversation.for_podcaster(current_user) : Conversation.for_brand_user(current_user)
     scope = scope.where(podcast_id: @show.podcast_id) if @show
-    scope.includes(:brand, started_by: :brand_members, podcast: { artwork_image: { file_attachment: :blob } })
+    scope.includes(:brand, :messages, started_by: :brand_members, podcast: { artwork_image: { file_attachment: :blob } })
          .latest_first.limit(LIST_LIMIT).to_a
   end
 

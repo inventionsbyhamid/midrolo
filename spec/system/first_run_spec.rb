@@ -81,7 +81,9 @@ RSpec.describe "First run" do
     click_button "Save and continue"
 
     expect(page).to have_text("Details saved.")
-    expect_primary_action("Get my free Snapshot")
+    # The workspace leads with claiming the show (review PO-1); the free Snapshot is the next card.
+    expect_primary_action("Verify you own it")
+    expect(page).to have_button("Get my free Snapshot")
     screenshot("show")
     # A keyboard reaches the next action, and the focus ring shows on it.
     30.times do
@@ -115,10 +117,10 @@ RSpec.describe "First run" do
     within("#report_summary") { click_button "Run full report" }
 
     # A free plan has no full reports: the show page says why, with the way on.
-    prompt = find(".upgrade-prompt", text: "Full agent reports are on Creator and up")
-    expect(prompt).to have_link("See plans")
+    prompt = find(".upgrade-prompt", text: "Full reports open with paid plans soon")
+    expect(prompt).to have_link("Join the waitlist")
     screenshot("upgrade-prompt")
-    within(prompt) { click_link "See plans" }
+    within(prompt) { click_link "Join the waitlist" }
 
     expect(page).to have_current_path("/pricing")
     within(".plan-card[data-plan='creator']") do

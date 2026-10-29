@@ -1,16 +1,19 @@
-<%# locals: (show:) -%>
+<%# locals: (show:, primary: true) -%>
+<%# primary: false when the workspace leads with a listing step instead, so the page has one primary button. %>
 <% active = show.active_report %>
 <% paused = AppSettings.runs_paused? %>
+<% snapshot_class = primary ? "btn btn-primary btn-md" : "btn btn-secondary btn-md" %>
 <%= render "components/card", title: "Find sponsors" do %>
+  <p class="mb-4 max-w-prose text-ink-soft">Brands your listeners already love, ranked with taste data from Qloo. Start with a free Snapshot.</p>
   <% if paused %>
     <div class="mb-4"><%= render "shared/runs_paused" %></div>
   <% end %>
   <div class="flex flex-wrap gap-3">
     <% if active || paused %>
-      <%= ui_button "Get my free Snapshot", type: "button", disabled: true %>
+      <%= ui_button "Get my free Snapshot", type: "button", variant: (primary ? :primary : :secondary), disabled: true %>
       <%= ui_button "Run full report", type: "button", variant: :secondary, disabled: true %>
     <% else %>
-      <%= button_to "Get my free Snapshot", show_reports_path(show, kind: "snapshot"), method: :post, class: "btn btn-primary btn-md" %>
+      <%= button_to "Get my free Snapshot", show_reports_path(show, kind: "snapshot"), method: :post, class: snapshot_class %>
       <%= button_to "Run full report", show_reports_path(show, kind: "agent"), method: :post, class: "btn btn-secondary btn-md" %>
     <% end %>
   </div>

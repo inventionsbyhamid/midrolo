@@ -30,11 +30,11 @@ RSpec.describe "Shows" do
         create(:show, title: "Someone Else's")
         get "/shows"
 
-        expect(response.body).to include("My Great Show", "No report yet", "Add another show", show_path(show))
+        expect(response.body).to include("My Great Show", "Get my free Snapshot", "Add another show", show_path(show))
         expect(response.body).not_to include("Someone Else")
       end
 
-      it "ends each card on its next step: a first Snapshot, or the latest report (Task 20)" do
+      it "ends each card on its next step, with the Snapshot or the latest report beside it (review PO-1)" do
         fresh = create(:show, user: user, title: "Fresh Show")
         done = create(:show, user: user, title: "Done Show")
         report = create(:report, show: done, status: "done")
@@ -42,14 +42,15 @@ RSpec.describe "Shows" do
         cards = Nokogiri::HTML(response.body).css("main li.card")
 
         fresh_card = cards.find { |card| card.text.include?("Fresh Show") }
-        expect(fresh_card.at_css("form[action='#{show_reports_path(fresh, kind: 'snapshot')}'] button.btn-primary").text)
+        expect(fresh_card.at_css("a.btn-primary[href='#{new_show_verification_path(fresh)}']").text).to eq("Verify you own it")
+        expect(fresh_card.at_css("form[action='#{show_reports_path(fresh, kind: 'snapshot')}'] button").text)
           .to eq("Get my free Snapshot")
         done_card = cards.find { |card| card.text.include?("Done Show") }
         expect(done_card.at_css("a[href='#{show_report_path(done, report)}']").text.squish).to eq("Latest report: Report ready")
         expect(done_card.at_css("form")).to be_nil
       end
 
-      it "says which shows are claimed, which are drafts and which another account manages (lane L4)" do
+      it "shows each show's claim, listing and stats steps (review PO-1)" do
         claimed = create(:show, user: user, title: "Claimed Show")
         claimed.verify!(via: "admin")
         draft = create(:show, user: user, title: "Draft Show")
@@ -58,12 +59,14 @@ RSpec.describe "Shows" do
         get "/shows"
         cards = Nokogiri::HTML(response.body).css("main li.card").index_by { |card| card.at_css(".type-h3").text }
 
-        expect(cards["Claimed Show"].text.squish).to include("Claimed Your listing")
-        expect(cards["Claimed Show"].at_css("a[href='#{edit_show_media_kit_path(claimed)}']")).to be_present
-        expect(cards["Draft Show"].text.squish).to include("Draft Verify you own it")
-        expect(cards["Draft Show"].at_css("a[href='#{new_show_verification_path(draft)}']")).to be_present
-        expect(cards["Taken Show"].text.squish).to include("Managed by someone else Ask for access")
-        expect(cards["Taken Show"].at_css("a[href='#{new_podcast_claim_path(elsewhere.podcast)}']")).to be_present
+        expect(cards["Claimed Show"].at_css(".badge").text).to eq("Claimed")
+        expect(cards["Claimed Show"].css(".step-title").map { |t| t.text.squish })
+          .to eq([ "Claim (done)", "List (next)", "Verify stats" ])
+        expect(cards["Claimed Show"].at_css("a.btn-primary[href='#{edit_show_media_kit_path(claimed)}']").text).to eq("Set up your listing")
+        expect(cards["Draft Show"].text.squish).to include("Draft", "Prove it's yours")
+        expect(cards["Draft Show"].at_css("a.btn-primary[href='#{new_show_verification_path(draft)}']")).to be_present
+        expect(cards["Taken Show"].text.squish).to include("Managed by someone else", "Another account manages this show")
+        expect(cards["Taken Show"].at_css("a[href='#{new_podcast_claim_path(elsewhere.podcast)}']").text).to eq("Ask for access")
       end
     end
 
@@ -256,12 +259,13 @@ RSpec.describe "Shows" do
         get "/shows/#{show.public_id}"
 
         expect(response).to have_http_status(:ok)
-        expect(response.body).to include("Hub Show", "Hosty", "Business", "1,200", "Edit", edit_show_path(show),
+        expect(response.body).to include("Hub Show", "Hosty", "Business", "Edit", edit_show_path(show),
                                          "Get my free Snapshot", "Run full report",
-                                         "Media kit", edit_show_media_kit_path(show))
+                                         "Set up your listing", edit_show_media_kit_path(show), show_stats_path(show))
         expect(response.body).not_to include("Coming soon")
-        # The next action comes before the details, so a phone shows it without scrolling (Task 20).
+        # The marketplace steps lead, then the reports, then the details (review PO-1; Task 20).
         titles = Nokogiri::HTML(response.body).css("main .card h2, main .card h3, main .card p.type-h3").map { |t| t.text.squish }
+        expect(titles.index("Get booked by brands")).to be < titles.index("Find sponsors")
         expect(titles.index("Find sponsors")).to be < titles.index("Details")
       end
 

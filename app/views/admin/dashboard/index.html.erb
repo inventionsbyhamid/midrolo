@@ -34,6 +34,12 @@
     <% end %>
   <% end %>
 
+  <%# The marketplace first (review AD-2): catalog, sponsors, stats and requests, one panel per lane, each in its own
+      partial the lane fills (build spec section 10). Budgets and the go live check follow. %>
+  <% Admin::DashboardController::PANELS.each do |panel| %>
+    <%= render "admin/dashboard/#{panel}", stats: @stats %>
+  <% end %>
+
   <%= render "components/card", title: "Budgets" do %>
     <div class="flex flex-col gap-3">
       <%= admin_budget_meter("Promo", budgets[:promo]) %>
@@ -75,7 +81,7 @@
       <%= admin_percent(Billing::Margins::MIN_MARGIN) %> or more at its caps.
       <%= margins.ready? ? "Both hold now." : "Not yet: #{margins.blockers.join('; ')}." %>
     </p>
-    <div class="overflow-x-auto">
+    <div class="relative overflow-x-auto">
       <table class="w-full text-left text-sm tabular-nums">
         <thead>
           <tr>
@@ -115,7 +121,7 @@
   <% end %>
 
   <%= render "components/card", title: "Totals" do %>
-    <div class="overflow-x-auto">
+    <div class="relative overflow-x-auto">
       <table class="w-full text-left text-sm tabular-nums">
         <thead>
           <tr>
@@ -193,7 +199,7 @@
     <% if failed.empty? %>
       <p class="text-ink-soft">No failed reports.</p>
     <% else %>
-      <div class="overflow-x-auto">
+      <div class="relative overflow-x-auto">
         <table class="w-full text-left text-sm">
           <thead>
             <tr>
@@ -218,8 +224,4 @@
     <% end %>
   <% end %>
 
-  <%# One panel per marketplace lane (build spec section 10), each in its own partial the lane fills. %>
-  <% Admin::DashboardController::PANELS.each do |panel| %>
-    <%= render "admin/dashboard/#{panel}", stats: @stats %>
-  <% end %>
 </div>

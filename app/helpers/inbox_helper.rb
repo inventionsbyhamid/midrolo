@@ -43,6 +43,52 @@ module InboxHelper
     ui_badge("Unverified brand", tone: :warning) unless conversation.from_verified_brand?
   end
 
+  # The other party's tile: the brand's monogram for a podcaster (never the podcaster's own artwork, review IN-1), the
+  # show's artwork for a brand.
+  def inbox_party_tile(conversation, side, css: "size-12")
+    return podcast_artwork_tag(conversation.podcast, size: :thumb, class: css) unless side == :podcaster
+
+    tag.span(Podcast.initials_for(conversation.brand.name), class: class_names("brand-mono", css), aria: { hidden: true })
+  end
+
+  # "Verified brand" (a member confirmed a work email at the brand's domain) or "Unverified brand".
+  def inbox_brand_badge(conversation)
+    return inbox_unverified_badge(conversation) unless conversation.from_verified_brand?
+
+    tag.span(class: "badge badge-success") { safe_join([ stats_badge_icon("verified", :success), "Verified brand" ]) }
+  end
+
+  # The opening message's first words, for an inbox row: what the brand actually wrote.
+  def inbox_preview(conversation)
+    first = conversation.messages.first
+    first&.body.to_s.squish.truncate(140).presence
+  end
+
+  # The ask against the show's own published rate for that spot (review IN-2): { rate:, note:, tone: }, or nil when
+  # the request names no spot, gives no budget or the listing isn't published.
+  def inbox_rate_check(conversation)
+    slot = conversation.format.to_s
+    kit = conversation.podcast.listing
+    return unless MediaKit::RATE_SLOTS.key?(slot) && conversation.budget_cents && kit&.published?
+
+    rate = MediaKit::Content.new(kit, podcast: conversation.podcast).rates.public_send(slot).to_i
+    return unless rate.positive?
+
+    gap = rate - (conversation.budget_cents / 100)
+    note, tone = if gap <= 0 then [ "At or above your rate", :success ]
+    else [ "#{number_to_currency(gap, precision: 0)} under your rate", :warning ]
+    end
+    { rate: "Your #{MediaKit::RATE_SLOTS.fetch(slot).downcase}: #{number_to_currency(rate, precision: 0)}", note:, tone: }
+  end
+
+  # "Midroll, Oct 2026, $300": the request in one line, for the top of a thread on a phone (review IN-3).
+  def inbox_request_line(conversation)
+    parts = [ MediaKit::RATE_SLOTS.fetch(conversation.format.to_s, "Any spot") ]
+    parts << Copy.and_list(conversation.months.map { |month| inbox_month_label(month) }) if conversation.months.any?
+    parts << "#{inbox_budget(conversation.budget_cents)} budget" if conversation.budget_cents
+    parts.join(", ")
+  end
+
   # Who's on the other end, as this side sees it: the brand for a podcaster, the show for a brand.
   def inbox_counterparty(conversation, side)
     side == :podcaster ? conversation.brand.name : conversation.podcast.title

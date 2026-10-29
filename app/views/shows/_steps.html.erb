@@ -1,0 +1,24 @@
+<%# locals: (show:, steps: workspace_steps(show), compact: false) -%>
+<%# The three steps to being bookable (WorkspaceHelper): a rail across the workspace, a short list on a Your shows
+    card. The next step is lit like a tally lamp; its action is the page's primary button. %>
+<ol class="<%= class_names("steps", "steps-compact" => compact) %>" aria-label="Steps to get booked: <%= workspace_progress(steps) %>">
+  <% steps.each_with_index do |step, index| %>
+    <li class="step step-<%= step.state %>" <%= "aria-current=step" if step.next? %>>
+      <%= workspace_step_mark(step, index) %>
+      <div class="step-text">
+        <p class="step-title">
+          <%= step.title %>
+          <span class="sr-only"><%= { done: "(done)", next: "(next)", blocked: "(blocked)" }[step.state] %></span>
+        </p>
+        <p class="step-status"><%= step.status %></p>
+        <% if !compact && step.action %>
+          <% if step.next? %>
+            <%= ui_button step.action, step.path, class: "mt-3" %>
+          <% else %>
+            <%= link_to step.action, step.path, class: "link mt-2 inline-block text-sm" %>
+          <% end %>
+        <% end %>
+      </div>
+    </li>
+  <% end %>
+</ol>

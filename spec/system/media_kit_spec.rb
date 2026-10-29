@@ -70,13 +70,13 @@ RSpec.describe "Media kit" do
     click_button "Verify"
     expect(page).to have_text("You're verified.")
 
-    click_button "Publish listing"
+    click_button "Save and publish"
     expect(page).to have_text("Published.")
     expect(page).to have_link(href: "/podcasts/#{podcast.reload.slug}#rates")
 
     visit show_media_kit_path(podcast)
     expect(page).to have_css("h1", text: "The Founder's Ledger")
-    expect(page).to have_text("Stats as reported by the verified owner.")
+    expect(page).to have_text("RSS feed")
     expect(page).to have_text("Fieldnote Coffee")
     expect(page).to have_no_text("Rival Pods")
     expect(page).to have_css("img.kit-host-photo")

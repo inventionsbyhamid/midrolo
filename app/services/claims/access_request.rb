@@ -10,6 +10,17 @@ module Claims
 
     def self.call(user:, podcast:, store: Rails.cache) = new(user:, podcast:, store:).call
 
+    # When user asked about podcast within WINDOW, or nil: the claim page then says so instead of offering the button
+    # again (review PO-3). An ask stored before this kept `true`, which reads as "recently".
+    def self.asked_at(user:, podcast:, store: Rails.cache)
+      value = store.read(new(user:, podcast:, store:).send(:key))
+      return if value.nil?
+
+      Time.zone.parse(value.to_s) || true
+    rescue ArgumentError
+      true
+    end
+
     def initialize(user:, podcast:, store:)
       @user = user
       @podcast = podcast
@@ -20,7 +31,7 @@ module Claims
       owner_show = @podcast.owner_show
       return :unclaimed unless owner_show
       return :owner if owner_show.user_id == @user.id
-      return :already_sent unless @store.write(key, true, expires_in: WINDOW, unless_exist: true)
+      return :already_sent unless @store.write(key, Time.current.iso8601, expires_in: WINDOW, unless_exist: true)
 
       ClaimMailer.with(podcast: @podcast, requester: @user).access_request.deliver_later
       :sent

@@ -33,7 +33,7 @@
             <span class="flex size-11 flex-none items-center justify-center rounded-lg bg-plum-soft text-sm font-bold text-plum" aria-hidden="true"><%= Podcast.initials_for(item.name) %></span>
           <% end %>
           <div class="min-w-0">
-            <p class="font-semibold">
+            <p class="line-clamp-2 font-semibold" title="<%= item.podcast&.title || item.name %>">
               <% if item.podcast %>
                 <%= link_to item.podcast.title, match_podcast_path(item.podcast), class: "link" %>
               <% else %>
@@ -57,11 +57,24 @@
       <section class="mt-6" aria-labelledby="<%= dom_id(report, :similar_sponsors) %>">
         <h3 id="<%= dom_id(report, :similar_sponsors) %>" class="report-subsection-title">Brands that already sponsor shows like <%= read_only ? "this one" : "yours" %></h3>
         <p class="report-section-note">Sponsor reads found in these shows' episode notes.</p>
-        <ul class="mt-3 grid gap-2" data-similar-brands>
+        <%# One row per brand (review RP-1): its monogram, how much it sponsors here, the shows as chips. %>
+        <ul class="mt-3 flex flex-col divide-y divide-line rounded-[var(--radius-card)] border border-line bg-surface" data-similar-brands>
           <% similar.sponsors.first(MatchingHelper::TOP_SPONSORS).each do |sponsor| %>
-            <li class="text-[0.9375rem]">
-              <%= link_to sponsor.brand.name, match_brand_path(sponsor.brand), class: "link font-semibold" %>
-              <span class="text-ink-soft">sponsored <%= pluralize(sponsor.episodes, "episode") %> of <%= and_list(sponsor.podcasts.map { |podcast| match_podcast_link(podcast) }) %></span>
+            <% shows = sponsor.podcasts.first(3) %>
+            <li class="flex items-start gap-3 p-3 sm:items-center">
+              <span class="brand-mono size-10 text-sm" aria-hidden="true"><%= Podcast.initials_for(sponsor.brand.name) %></span>
+              <div class="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p class="min-w-0 sm:w-56 sm:flex-none">
+                  <%= link_to sponsor.brand.name, match_brand_path(sponsor.brand), class: "font-semibold underline-offset-4 hover:underline" %>
+                  <span class="block text-sm text-ink-soft"><%= pluralize(sponsor.episodes, "episode") %> across <%= pluralize(sponsor.podcasts.size, "similar show") %></span>
+                </p>
+                <p class="flex flex-wrap gap-1.5 sm:justify-end">
+                  <% shows.each do |podcast| %>
+                    <%= link_to podcast.title.truncate(28), match_podcast_path(podcast), class: "chip no-underline hover:border-line-strong", title: podcast.title %>
+                  <% end %>
+                  <% if sponsor.podcasts.size > shows.size %><span class="chip">+<%= sponsor.podcasts.size - shows.size %> more</span><% end %>
+                </p>
+              </div>
             </li>
           <% end %>
         </ul>

@@ -6,25 +6,36 @@
     <%= render "components/card", title: "Ask the owner for access" do %>
       <p>Each show on <%= APP_NAME %> has one owner account, and someone has already proved they run <span class="font-semibold"><%= @podcast.title %></span>.</p>
       <p class="mt-3">If you work on the show, ask them for access. We'll email the owner your name and email address so they can reply to you. We don't share who they are.</p>
-      <%= button_to "Ask the owner for access", podcast_claim_access_path(@podcast), class: "btn btn-primary btn-md mt-5" %>
+      <% if @asked_at %>
+        <p class="waiting-line mt-5" role="status">
+          <%= @asked_at.is_a?(Time) ? "You asked on #{@asked_at.strftime('%b %-d')}." : "You asked recently." %>
+          If the owner knows you, they'll reply to your email.
+        </p>
+      <% else %>
+        <%= button_to "Ask the owner for access", podcast_claim_access_path(@podcast), class: "btn btn-primary btn-md mt-5" %>
+      <% end %>
       <p class="hint mt-4">Own the show and can't reach whoever claimed it? Write to <%= mail_to "hello@midrolo.com", nil, class: "link" %> with a link to your show and we'll sort it out.</p>
     <% end %>
   <% else %>
     <%= render "claims/header", podcast: @podcast, title: @show ? "Finish claiming this show" : "Claim this show" %>
-    <p class="type-lead">Claiming is free. It's how you set your rates, mark the months you're open, verify your numbers and answer brands.</p>
+    <p class="type-lead">Claiming is free. Set your rates and open months, verify your numbers and answer brands.</p>
 
     <% if (waiting = @podcast.waiting_requests_count).positive? %>
-      <p class="flash flash-notice"><%= pluralize(waiting, "brand") %> asked about sponsoring this show. You'll see <%= waiting == 1 ? "its request" : "their requests" %> once it's yours.</p>
+      <p class="waiting-line"><%= pluralize(waiting, "brand") %> asked about sponsoring this show. You'll see <%= waiting == 1 ? "its request" : "their requests" %> once it's yours.</p>
     <% end %>
+
+    <%# The button first (review PO-2): on a phone it sits above the fold, the steps under it. %>
+    <div class="flex flex-col items-start gap-3">
+      <%= button_to (@show ? "Continue" : "Claim this show"), podcast_claim_path(@podcast), class: "btn btn-primary btn-lg" %>
+      <div class="hint mt-0">Signed in as <span class="font-semibold break-all"><%= current_user.email %></span>. Not you? <%= button_to "Sign out", destroy_user_session_path, method: :delete, class: "link-button", form_class: "inline" %></div>
+    </div>
 
     <%= render "components/card", title: "How it works" do %>
       <ol class="verify-steps mt-0">
-        <li>We read your RSS feed. If its owner email is <span class="font-semibold break-all"><%= current_user.email %></span>, the address you signed in with, the show is yours at once.</li>
-        <li>If not, prove it with a 6-digit code sent to the feed's owner email, or a short line you add to your show description. No owner email in your feed? The line works on every host, Spotify for Creators included.</li>
-        <li>Set up your listing while you wait. It goes live on your show's page once the show is verified.</li>
+        <li><span class="font-semibold">We read your feed.</span> If its owner email is the address you signed in with, the show is yours at once.</li>
+        <li><span class="font-semibold">Prove it otherwise.</span> A 6-digit code to the feed's owner email, or a short line in your show description. The line works on every host, Spotify for Creators included.</li>
+        <li><span class="font-semibold">Set up your listing.</span> It goes live on your show's page once the show is verified.</li>
       </ol>
-      <%= button_to (@show ? "Continue" : "Claim this show"), podcast_claim_path(@podcast), class: "btn btn-primary btn-lg mt-6" %>
-      <div class="hint mt-3">Not you? <%= button_to "Sign out", destroy_user_session_path, method: :delete, class: "link-button", form_class: "inline" %> and sign in with the account you use for the show.</div>
     <% end %>
   <% end %>
 </div>

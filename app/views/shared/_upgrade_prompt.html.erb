@@ -4,5 +4,16 @@
 <div class="upgrade-prompt" role="status" data-upgrade-reason="<%= prompt.fetch(:reason) %>">
   <p class="font-semibold"><%= copy.message %></p>
   <% if copy.detail %><p class="text-[0.9375rem] text-ink-soft"><%= copy.detail %></p><% end %>
-  <% if copy.action %><%= link_to copy.action, pricing_path, class: "btn btn-primary btn-md self-start" %><% end %>
+  <% if copy.action == PlansHelper::SNAPSHOT_ACTION %>
+    <%# Paid plans only take waitlist sign ups (review PO-12): the free Snapshot when the show hasn't had one, else the waitlist. %>
+    <% if @show.is_a?(Show) && !AppSettings.runs_paused? && !@show.reports.exists?(kind: "snapshot") %>
+      <p class="text-[0.9375rem] text-ink-soft">Run a free Snapshot now: it ranks the brands your listeners already love.</p>
+      <%= button_to copy.action, show_reports_path(@show, kind: "snapshot"), class: "btn btn-primary btn-md", form: { class: "self-start" } %>
+    <% else %>
+      <p class="text-[0.9375rem] text-ink-soft">Join the waitlist and we'll email you when they open.</p>
+      <%= link_to "Join the waitlist", pricing_path, class: "btn btn-primary btn-md self-start" %>
+    <% end %>
+  <% elsif copy.action %>
+    <%= link_to copy.action, pricing_path, class: "btn btn-primary btn-md self-start" %>
+  <% end %>
 </div>

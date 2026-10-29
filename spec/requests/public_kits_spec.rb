@@ -64,7 +64,7 @@ RSpec.describe "Public media kits" do
       visit_kit
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Stats as reported by the verified owner.", "4,200", "148", "Weekly",
+      expect(response.body).to include("Downloads per episode as reported by the show.", "RSS feed", "4,200", "148", "Weekly",
                                        "Fieldnote Coffee", "Personal finance", "Plain-English money lessons")
       expect(response.body).not_to include("Rival Pods")
     end
@@ -165,7 +165,7 @@ RSpec.describe "Public media kits" do
     create(:report, show: show, status: "running", audience: audience)
     visit_kit
 
-    expect(response.body).to include("Stats as reported by the verified owner.", "Every week we sit down")
+    expect(response.body).to include("RSS feed", "Every week we sit down")
     expect(response.body).not_to include("Fieldnote Coffee")
   end
 end

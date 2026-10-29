@@ -23,7 +23,7 @@
             <% [ [ "Age", breakdown["age"], method(:stats_age_label) ],
                  [ "Gender", breakdown["gender"], method(:stats_gender_label) ],
                  [ "Top countries", breakdown["country"], method(:stats_country_name) ] ].each do |title, shares, namer| %>
-              <% rows = stats_share_rows(shares, limit: title == "Top countries" ? 5 : 8) { |key| namer.call(key) } %>
+              <% rows = stats_share_rows(shares, limit: title == "Top countries" ? 5 : 8, by: title == "Age" ? :age : :share) { |key| namer.call(key) } %>
               <% next if rows.empty? %>
               <div class="flex min-w-0 flex-col gap-2">
                 <p class="text-sm font-semibold"><%= title %></p>

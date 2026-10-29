@@ -26,4 +26,16 @@ RSpec.describe InboxHelper do
     expect(helper.inbox_unread_count(membership.user)).to eq(0)
     expect(helper.inbox_unread_count(nil)).to eq(0)
   end
+
+  it "puts a request's budget next to the show's own rate for that spot (review IN-2, IN-3)" do
+    podcast = claimed_podcast(owner: create(:user))
+    MediaKit.find_or_initialize_by(show: podcast.owner_show).update!(published_at: Time.current, rate_card_overrides: { "midroll" => 180 })
+    under = build(:conversation, podcast: podcast, format: "midroll", months: %w[2026-11], budget_cents: 12_000)
+    over = build(:conversation, podcast: podcast, format: "midroll", budget_cents: 30_000)
+
+    expect(helper.inbox_rate_check(under)).to eq(rate: "Your midroll: $180", note: "$60 under your rate", tone: :warning)
+    expect(helper.inbox_rate_check(over)).to include(note: "At or above your rate", tone: :success)
+    expect(helper.inbox_rate_check(build(:conversation, podcast: podcast, format: nil, budget_cents: 30_000))).to be_nil
+    expect(helper.inbox_request_line(under)).to eq("Midroll, Nov 2026, $120 budget")
+  end
 end

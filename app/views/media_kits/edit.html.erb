@@ -4,10 +4,23 @@
     <%= render "shows/artwork", show: @show %>
     <div class="min-w-0 flex-1 basis-48">
       <p class="truncate text-sm font-semibold"><%= link_to @show.title, show_path(@show), class: "link" %></p>
-      <h1 class="type-h2">Listing and media kit</h1>
+      <h1 class="type-h2">Your listing</h1>
     </div>
-    <%= ui_button "Preview", show_media_kit_path(@show), variant: :secondary %>
+    <%= ui_button "Preview media kit", show_media_kit_path(@show), variant: :ghost, size: :sm %>
   </header>
+
+  <%# Brands that asked before (held for the claim) or since: the best reason to finish the listing (review PO-11). %>
+  <% if @show.verified? && (waiting = workspace_requests_line(@show)) %>
+    <section class="card border-tally" aria-label="Requests from brands">
+      <div class="card-body flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="waiting-line"><%= waiting %></p>
+          <p class="mt-1 text-sm text-ink-soft">Brands asked about sponsoring <%= @show.title %>. Answer from your inbox.</p>
+        </div>
+        <%= ui_button "Read requests", show_inbox_path(@show), variant: :secondary, size: :sm %>
+      </div>
+    </section>
+  <% end %>
 
   <%= render "media_kits/publishing", show: @show, kit: @kit %>
   <%= render "media_kits/form", show: @show, kit: @kit, content: @content %>

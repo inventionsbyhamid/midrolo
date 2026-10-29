@@ -55,7 +55,13 @@ class VerificationsController < ApplicationController
       @show.reload.sync_listing!
       redirect_to edit_show_media_kit_path(@show), notice: VERIFIED, status: :see_other
     else
-      redirect_to show_verification_path(@show), alert: failure_message(verification), status: :see_other
+      # A wrong code or a token not in the feed yet is said in the card, next to what to do (review PO-4, PO-5).
+      if verification.failure.in?(%i[wrong_code not_found])
+        flash[:verify_note] = failure_message(verification)
+        redirect_to show_verification_path(@show), status: :see_other
+      else
+        redirect_to show_verification_path(@show), alert: failure_message(verification), status: :see_other
+      end
     end
   rescue Show::AlreadyClaimed => e
     # The claim page offers to ask the owner for access.
@@ -88,8 +94,7 @@ class VerificationsController < ApplicationController
     when :wrong_code then "That code didn't match. You have #{helpers.pluralize(verification.attempts_left, 'try')} left."
     when :locked then ShowVerification::LOCKED_MESSAGE
     when :not_found
-      "We couldn't find #{verification.token_line} in your feed yet. Hosting providers can take a few minutes " \
-        "to update your feed, so try again shortly."
+      "Not in your feed yet. Your host may not have updated it, so give it a few minutes and check again."
     when :unreadable then "We couldn't read your feed just now. Check that it's online, then try again in a few minutes."
     else verification.email? ? ShowVerification::EXPIRED_CODE_MESSAGE : "That token has expired. Get a new one below."
     end

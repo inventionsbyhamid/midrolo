@@ -19,7 +19,7 @@ class StatConnectionsController < ApplicationController
     return redirect_to(show_stats_path(@show), alert: CLAIMED_ELSEWHERE, status: :see_other) if claimed_elsewhere?
 
     show_id = Stats.show_id_from(provider, params[:show_link])
-    return redirect_to(show_stats_path(@show), alert: bad_link(provider), status: :see_other) unless show_id
+    return bad_link_redirect(provider) unless show_id
 
     existing = @podcast.stat_connections.find_by(provider: provider)
     if existing && !replaceable?(existing)
@@ -93,6 +93,13 @@ class StatConnectionsController < ApplicationController
     else
       "Saved. Claim the show, and its #{Stats.platform_name(provider)} numbers count once the invite is accepted."
     end
+  end
+
+  # The card itself says what's wrong, under the field, with what was typed still in it (review ST-3).
+  def bad_link_redirect(provider)
+    flash[:stats_bad_link] = { "provider" => provider, "message" => bad_link(provider),
+                               "link" => params[:show_link].to_s.strip.first(300) }
+    redirect_to show_stats_path(@show, anchor: provider), status: :see_other
   end
 
   def bad_link(provider)

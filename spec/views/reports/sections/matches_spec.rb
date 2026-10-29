@@ -132,7 +132,7 @@ RSpec.describe "reports/sections/_matches" do
 
     it "shows at most 3 evidence chips, with no scores: shared tastes, the newest proven show and how many other shows" do
       chips = card.css(".match-chips .chip").map { |chip| chip.text.squish }
-      expect(chips).to eq([ "Shares 6 tastes", "Sponsors Harbor Lights", "+1 more show" ])
+      expect(chips).to eq([ "6 shared tastes", "Sponsors Harbor Lights", "+1 more show" ])
       expect(card.at_css(".chip em").text).to eq("Harbor Lights")
       expect(card.at_css(".match-chips").text).not_to include("0.82", "Affinity")
     end

@@ -4,19 +4,19 @@
 <% counts = inbox_workspace_counts(show) %>
 <% if show.verified? %>
   <%= render "components/card", title: "Requests from brands", aside: link_to("Open inbox", show_inbox_path(show), class: "link") do %>
-    <p>
-      <% if counts[:unread].positive? %>
-        <strong><%= pluralize(counts[:unread], "conversation") %></strong> with something new.
-      <% elsif counts[:open].positive? %>
-        <%= pluralize(counts[:open], "open request") %> to answer.
-      <% else %>
-        No new requests. Brands find you through your listing.
-      <% end %>
-    </p>
+    <% if (line = workspace_requests_line(show, counts)) %>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="waiting-line"><%= line %></p>
+        <%= ui_button "Read requests", show_inbox_path(show), variant: :secondary, size: :sm %>
+      </div>
+    <% else %>
+      <p class="text-ink-soft">No new requests. Brands find you through your listing and ask from your page.</p>
+    <% end %>
   <% end %>
 <% elsif counts[:waiting].positive? %>
   <%= render "components/card", title: "Requests from brands" do %>
-    <p><strong><%= pluralize(counts[:waiting], "brand") %></strong> asked about sponsoring this show. Verify that it's yours to read their requests.</p>
-    <%= ui_button "Verify ownership", new_show_verification_path(show), class: "mt-4" %>
+    <p class="waiting-line"><%= pluralize(counts[:waiting], "brand") %> asked about sponsoring this show</p>
+    <p class="mt-1 text-ink-soft">Verify that it's yours to read their requests.</p>
+    <%= ui_button "Verify ownership", new_show_verification_path(show), variant: :secondary, class: "mt-4" %>
   <% end %>
 <% end %>

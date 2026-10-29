@@ -10,6 +10,7 @@ module PlansHelper
             snapshot: { noun: "Snapshot", label: "Snapshots" },
             pitch: { noun: "pitch", label: "Pitches" } }.freeze
   PAUSED_MESSAGE = "New reports are paused for a little while. Please try again later.".freeze
+  SNAPSHOT_ACTION = "Get my free Snapshot".freeze
   PITCH_PACK = "Each one is an email ready to send, three ad read angles, an offer priced from your rate card and " \
                "a follow up email.".freeze
 
@@ -33,8 +34,14 @@ module PlansHelper
     when :busy
       UpgradePrompt.new(Research::Run.busy_message(kind), nil, nil)
     else
-      kind == :pitch ? UpgradePrompt.new("Pitch packs are on Creator and up", PITCH_PACK, "See plans")
-                     : UpgradePrompt.new("Full agent reports are on Creator and up", nil, "See plans")
+      if kind == :pitch
+        UpgradePrompt.new("Pitch packs are on Creator and up", PITCH_PACK, "See plans")
+      elsif plans_on_waitlist?
+        # Nothing can be bought yet (review PO-12): no dead end at the pricing page, the free Snapshot instead.
+        UpgradePrompt.new("Full reports open with paid plans soon", nil, SNAPSHOT_ACTION)
+      else
+        UpgradePrompt.new("Full agent reports are on Creator and up", nil, "See plans")
+      end
     end
   end
 
@@ -52,6 +59,14 @@ module PlansHelper
 
     { reason: reason, kind: kind, bucket: upgrade["bucket"].presence&.to_sym, used: counts[0], in_flight: counts[1],
       limit: counts[2], period: upgrade["period"].presence }
+  end
+
+  # True while paid plans only take waitlist sign ups for this user (Billing.mode :waitlist, no test checkout).
+  def plans_on_waitlist?
+    return false unless Billing.mode == :waitlist
+
+    viewer = current_user if request&.env&.key?("warden") # a page rendered outside a request has no viewer
+    !Billing.checkout_open?(viewer)
   end
 
   # The account page's line about the plan.

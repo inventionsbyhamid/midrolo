@@ -83,11 +83,22 @@ RSpec.describe "Reports" do
       end
 
       it "tells a free user full reports are on Creator and up" do
+        allow(Billing).to receive(:mode).and_return(:test)
         sign_in(free_user = create(:user))
         post show_reports_path(create(:show, user: free_user)), params: { kind: "agent" }
         follow_redirect!
         expect(Nokogiri::HTML(response.body).at_css(".upgrade-prompt").text.squish)
           .to include("Full agent reports are on Creator and up", "See plans")
+      end
+
+      it "offers a free user the Snapshot while paid plans only take the waitlist (review PO-12)" do
+        sign_in(free_user = create(:user))
+        show = create(:show, user: free_user)
+        post show_reports_path(show), params: { kind: "agent" }
+        follow_redirect!
+        prompt = Nokogiri::HTML(response.body).at_css(".upgrade-prompt")
+        expect(prompt.text.squish).to include("Full reports open with paid plans soon", "Run a free Snapshot now")
+        expect(prompt.at_css("form[action='#{show_reports_path(show, kind: 'snapshot')}'] button").text).to eq("Get my free Snapshot")
       end
 
       it "404s for another user's show" do

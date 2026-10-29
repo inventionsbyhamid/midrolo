@@ -2,5 +2,7 @@
 <div class="mx-auto flex max-w-2xl flex-col gap-6">
   <%= render "verifications/header", show: @show %>
   <%= render(@verification.email? ? "verifications/code" : "verifications/token", show: @show, verification: @verification) %>
-  <p class="text-sm"><%= link_to "Choose another way to verify", new_show_verification_path(@show), class: "link" %></p>
+  <% unless @verification.email? %>
+    <p class="text-sm"><%= link_to "Choose another way to verify", new_show_verification_path(@show), class: "link" %></p>
+  <% end %>
 </div>
