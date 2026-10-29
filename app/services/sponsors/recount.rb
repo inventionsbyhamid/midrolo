@@ -1,8 +1,8 @@
 module Sponsors
   # Puts brands.sponsor_mentions_count right for every brand whose count drifted. Sponsors::Record recounts the brands a
   # scan touches, but deleting a podcast or an episode removes its mentions with delete_all, which skips the counter
-  # cache (code review L9). One UPDATE; returns how many brands it corrected. `bin/rails sponsors:recount` runs it, and
-  # the daily sponsors sweep should too.
+  # cache (code review L9). One UPDATE; returns how many brands it corrected. The daily sponsors sweep
+  # (Sponsors::SweepJob) runs it, and so does `bin/rails sponsors:recount`.
   module Recount
     module_function
 
