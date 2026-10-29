@@ -64,6 +64,8 @@ Rails.application.configure do
   # Errors raise, so a missing key or a rejected send fails the mail job visibly instead of vanishing.
   config.action_mailer.delivery_method = :resend
   config.action_mailer.raise_delivery_errors = true
+  # Every message takes a slot from the daily and monthly mail budget first (R143: Resend's free tier).
+  config.action_mailer.interceptors = %w[MailBudget]
 
   # Links in mail point at APP_URL.
   config.action_mailer.default_url_options = { host: app_url.host, protocol: app_url.scheme }

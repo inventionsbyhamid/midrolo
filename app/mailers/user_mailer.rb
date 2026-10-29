@@ -13,6 +13,7 @@ class UserMailer < ApplicationMailer
     return if user.email.blank?
 
     @first_name = user.name.to_s.split.first
+    headers[MailBudget::PRIORITY_HEADER] = "low"
     mail to: user.email, subject: "Welcome to #{APP_NAME}"
   end
 
@@ -34,6 +35,7 @@ class UserMailer < ApplicationMailer
   end
 
   def runs_resumed(entry)
+    headers[MailBudget::PRIORITY_HEADER] = "low"
     mail to: entry.email, subject: "New reports are back on #{APP_NAME}"
   end
 end

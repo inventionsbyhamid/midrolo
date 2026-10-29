@@ -12,6 +12,9 @@ class VerificationsController < ApplicationController
   # its id is spelled ("01", "%31") it is the same show, and only its owner's requests count.
   throttle to: 5, within: 1.hour, only: :create, if: -> { params[:kind] == "email" }, by: -> { @show.id },
            name: "code_sends"
+  # And per user across all their shows, so one account can't spend the day's mail on owner addresses (R143).
+  throttle to: 10, within: 1.day, only: :create, if: -> { params[:kind] == "email" }, by: -> { current_user.id },
+           name: "code_sends_per_user"
 
   VERIFIED = "You're verified. Publish your media kit when it's ready.".freeze
   ALREADY_VERIFIED = "You've already verified this show, so there's nothing to send.".freeze

@@ -316,6 +316,22 @@ RSpec.describe "Rate limits", :rate_limits do
       expect_friendly_page(retry_after: 3600)
     end
 
+    it "caps one user at 10 email sends a day across all their shows (R143)" do
+      shows = create_list(:show, 11, user: user)
+      shows.first(10).each do |each_show|
+        post show_verification_path(each_show), params: { kind: "email" }
+        expect(response).to have_http_status(:see_other)
+        travel 7.minutes # past the 10 a minute tries limit
+      end
+      post show_verification_path(shows.last), params: { kind: "email" }
+      expect_friendly_page(retry_after: 86_400)
+
+      sign_in create(:user)
+      get account_path
+      post show_verification_path(create(:show, user: User.last)), params: { kind: "email" }
+      expect(response).to have_http_status(:see_other)
+    end
+
     it "counts the path however it is spelled, and however the show's id is spelled" do
       encoded_id = show.id.to_s.chars.map { |digit| format("%%%02X", digit.ord) }.join
       requests = [ [ :post, "/shows/#{show.id}/verification.html" ], [ :post, "/shows//#{show.id}/verification" ],
