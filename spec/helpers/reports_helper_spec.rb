@@ -92,7 +92,7 @@ RSpec.describe ReportsHelper do
                            { show: "Harbor Lights" } ], count: 7 }
       })
       expect(helper.evidence_chips(match).map { |chip| Nokogiri::HTML5.fragment(chip).text })
-        .to eq([ "Shares 1 taste", "Sponsors Harbor Lights", "+1 more show" ]) # shows, not the 7 episodes
+        .to eq([ "1 shared taste", "Sponsors Harbor Lights", "+1 more show" ]) # shows, not the 7 episodes
     end
 
     it "leaves out the count when every sponsorship is on the same show" do

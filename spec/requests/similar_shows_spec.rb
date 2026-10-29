@@ -45,7 +45,7 @@ RSpec.describe "Similar shows on reports" do
 
       brands = section.at_css("[data-similar-brands]")
       expect(section.text).to include("Brands that already sponsor shows like yours")
-      expect(brands.text.squish).to eq("Notion sponsored 1 episode of Index Fund Mornings")
+      expect(brands.text.squish).to eq("N Notion 1 episode across 1 similar show Index Fund Mornings")
       expect(brands.at_css("a")["href"]).to eq("/brands/#{notion.slug}")
     end
 
@@ -54,7 +54,7 @@ RSpec.describe "Similar shows on reports" do
 
       notion_row = row("Notion")
       expect(notion_row.css(".match-chips li").map { |chip| chip.text.squish })
-        .to eq([ "Shares 3 tastes", "Sponsors 1 show with your audience" ])
+        .to eq([ "3 shared tastes", "Sponsors 1 show with your audience" ])
       proof = notion_row.at_css("[data-similar-proof]")
       expect(proof.at_css("dt").text).to eq("Sponsors shows like yours")
       expect(proof.text.squish).to include("1 episode of Index Fund Mornings")
