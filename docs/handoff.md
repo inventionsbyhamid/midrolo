@@ -31,8 +31,8 @@ Every variable is in [.env.example](../.env.example), with what it does.
   | `pro_yearly` | Pro, $490 a year | `DODO_PRODUCT_PRO_YEARLY` |
   | `sprint` | Sprint, $49 once (Pro for 30 days) | `DODO_PRODUCT_SPRINT` |
 
-- [x] **Your own values:** `ADMIN_EMAIL` (optional), `JUDGE_CODE` (never in the repo:
-      `docs/devpost.md` keeps `<<JUDGE_CODE>>`), `PROMO_PRO_UNTIL=2026-11-06`.
+- [x] **Your own values:** `ADMIN_EMAIL` (optional), `PROMO_PRO_UNTIL=2026-11-06`. (`JUDGE_CODE`
+      is no longer read: R151 gives every account the trial.)
 - [x] **In Coolify** (deploy.md, Settings): every value above on both apps, runtime only, plus `SECRET_KEY_BASE`,
       `APP_URL=https://midrolo.com`, `DB_HOST` and `MIDROLO_DATABASE_PASSWORD` (the database resource's). Google and
       Resend go in when they arrive (Resend holds a placeholder so production boots), then redeploy both apps.
@@ -83,8 +83,8 @@ Production refuses to boot without `QLOO_API_KEY`, `PODCAST_INDEX_KEY`, `PODCAST
 - [ ] Billing stays on the founding member waitlist (`BILLING_MODE` unset or `waitlist`). Live billing stays refused
       until the go-live guard (R94) passes with a real Qloo price: an admin enters Qloo's cost per call, and every
       paid plan keeps a 60% margin with every cap used (`app/services/billing/margins.rb`).
-- [ ] The Devpost testing instructions say billing is in test mode for judges. That line holds only if production
-      has the Dodo keys in test mode (step 1). Set them, or cut the line from `docs/devpost.md` before submitting.
+- [ ] The Devpost testing instructions say billing shows the waitlist (R151: judges get the trial, not a test
+      checkout). Admins can still try the test checkout with the Dodo test keys.
 - [ ] Keep the site up through judging: check `/admin` and the project in Coolify once a day. Last year's winning demo
       is dead now; ours must stay up.
 

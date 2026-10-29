@@ -132,8 +132,8 @@ Open http://localhost:3100 (bin/dev's default port; `PORT=3200 bin/dev` picks an
 - **Sign in.** With `GOOGLE_CLIENT_ID` unset, the sign in page shows a **Dev sign in** card. Any name and email will
   do. It exists only in development.
 - **Try it.** Add a show from the demo catalog (try "Index Fund Mornings") and run a free Snapshot.
-- **A full report.** A new account is on the free plan. Start the server with `PROMO_PRO_UNTIL=2026-11-06` for one
-  promo report, or with `JUDGE_CODE=letmein` and enter that code on the account page for judge access.
+- **A full report.** A new account is on the free plan. Start the server with `PROMO_PRO_UNTIL=2026-11-06` for the
+  hackathon trial: 3 shows, each with a Snapshot and a full report.
 - **Sample reports.** `bin/rails samples:generate` runs the reports in `config/samples.yml` for `/samples`. With no
   keys set (demo mode) it uses the Fakes and costs $0. The file names demo catalog shows (`fake-1` to `fake-3`) until
   real Podcast Index ids replace them.
@@ -158,7 +158,7 @@ Each key you add swaps one Fake for the real service.
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign in | Dev sign in |
 | `BILLING_MODE` | `waitlist`, `test` or `live` | `waitlist` |
 | `DODO_API_KEY`, `DODO_WEBHOOK_SECRET` | Dodo checkout and webhooks | The Fake checkout |
-| `JUDGE_CODE`, `PROMO_PRO_UNTIL` | Judge access, the hackathon promo | Neither |
+| `PROMO_PRO_UNTIL` | The hackathon trial's last day | No trial |
 
 Production has no demo mode. It refuses to boot without `QLOO_API_KEY`, `PODCAST_INDEX_KEY`, `PODCAST_INDEX_SECRET`,
 an absolute `APP_URL` and the rest of the required set ([docs/deploy.md](docs/deploy.md)).

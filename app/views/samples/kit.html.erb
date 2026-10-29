@@ -1,0 +1,21 @@
+<% content_for :title, "Sample media kit for #{@show.title}" %>
+<% content_for :meta, safe_join([
+     social_meta(description: "A sample #{APP_NAME} media kit for #{@show.title}: the page a podcaster sends to brands, built from a sponsor report.",
+                 image: sample_share_image_url(@report.sample_slug, v: ShareImages::SampleCard.new(@report).version),
+                 image_alt: "Sample media kit for #{@show.title}"),
+     tag.meta(name: "robots", content: "noindex")
+   ]) %>
+<%# A public sample (R152): the kit as brands would see it, labelled, with no contact section and no owner controls. %>
+<div class="kit-page">
+  <div class="kit-toolbar kit-toolbar-preview" role="region" aria-label="Sample">
+    <p class="min-w-0">
+      <strong>Sample media kit. Not affiliated with the show.</strong>
+      This is the page a podcaster sends to brands, built by <%= APP_NAME %> from the sample report.
+    </p>
+    <div class="flex flex-wrap items-center gap-2">
+      <%= ui_button "See the sample report", sample_path(@report.sample_slug), variant: :secondary, size: :sm %>
+      <%= ui_button "Make yours free", snapshot_start_path, size: :sm %>
+    </div>
+  </div>
+  <%= render "media_kits/kit", kit: @kit, content: @content, contact: false %>
+</div>

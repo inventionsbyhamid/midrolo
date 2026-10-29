@@ -21,13 +21,13 @@ RSpec.describe "layouts/app" do
   it "shows a signed-out visitor no promo banner, without resolving a plan" do
     render_layout(signed_in: false)
     expect(rendered).to include('id="main"')
-    expect(rendered).not_to include("promo-banner", "Free Pro access")
+    expect(rendered).not_to include("promo-banner", "Free Pro trial")
     expect(plan_resolved).to be_empty
   end
 
   it "shows it to a signed-in user on the promo" do
     render_layout(signed_in: true)
     expect(Nokogiri::HTML(rendered).at_css(".promo-banner").text.squish)
-      .to eq("Free Pro access during the Qloo hackathon judging, through #{Entitlements.promo_until.strftime('%b %-d')}.")
+      .to eq("Free Pro trial for the Qloo hackathon judging, through #{Entitlements.promo_until.strftime('%b %-d')}: up to 3 shows, each with a Snapshot and a full report.")
   end
 end

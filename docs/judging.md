@@ -13,18 +13,18 @@ Work top to bottom. Deploy steps themselves are in [deploy.md](deploy.md).
 
 ## 2. Production settings
 
-- [ ] `JUDGE_CODE` is set in the server's `.env`. Redeem it once on a throwaway account to prove it works.
-- [ ] `PROMO_PRO_UNTIL=2026-11-06` is set, so the promo covers judging.
+- [ ] `PROMO_PRO_UNTIL=2026-11-06` is set, so the trial covers judging. Every account is on it (R151): 3 shows,
+      each with a Snapshot and a full report. There is no judge code.
 - [ ] Ask Qloo what daily allowance the hackathon key has. Then set `qloo_daily_call_limit` in `/admin` within it.
-      One judge's three full reports make about 60 to 90 calls, 120 at most (40 a report), and the default cap is 100
-      a day. How high to go is your call.
+      One account's three full reports make about 60 to 90 calls, 120 at most (40 a report). Trial users share
+      `qloo_free_share` of the day, so raise the share too (0.8 leaves a fifth for samples). How high to go is your
+      call.
 - [ ] The LLM budgets have room: `LLM_DAILY_BUDGET_USD`, `PROMO_BUDGET_USD` and `JUDGE_RESERVE_USD` (5, 10 and 5 at
       launch; editable in `/admin`).
 - [ ] The Google OAuth consent screen is published, so any Google account can sign in, not only test users.
 - [ ] `BILLING_MODE` is unset or `waitlist`.
 - [ ] Dodo is set up in test mode (`DODO_API_KEY`, `DODO_ENVIRONMENT=test_mode`, the webhook secret and the five
-      product ids), so a judge sees "Try checkout in test mode" on the pricing page. If it isn't, delete the billing
-      line from the Devpost testing instructions.
+      product ids), so an admin can try the test checkout. Judges see the waitlist like everyone else.
 
 ## 3. Sample reports
 
@@ -43,7 +43,6 @@ Work top to bottom. Deploy steps themselves are in [deploy.md](deploy.md).
 - [ ] No secrets: `git ls-files | grep -E '(^|/)\.env'` prints only `.env.example`, and no key or `JUDGE_CODE` value
       appears in `git log -p`.
 - [ ] No Qloo data: `git ls-files spec/fixtures/private` prints nothing.
-- [ ] `docs/devpost.md` still says `<<JUDGE_CODE>>`, not the real code.
 
 ## 5. Screenshots
 
@@ -57,7 +56,6 @@ Work top to bottom. Deploy steps themselves are in [deploy.md](deploy.md).
 ## 6. The Devpost form
 
 - [ ] Paste each section from [devpost.md](devpost.md) into its field.
-- [ ] Replace `<<JUDGE_CODE>>` with the real code in Devpost's testing instructions only.
 - [ ] Links: the live site and the public repo.
 - [ ] Built with: copy the list from devpost.md.
 - [ ] Read every field once more for em or en dashes. The spec guards the files in the repo, not what's pasted.
@@ -66,11 +64,12 @@ Work top to bottom. Deploy steps themselves are in [deploy.md](deploy.md).
 ## 7. The judge's walk, in a private window
 
 - [ ] Open a sample report without signing in.
-- [ ] Sign in with Google, open Account and redeem the judge code.
+- [ ] Sign in with Google with a new account: the banner names the trial (3 shows, each with a Snapshot and a full
+      report).
 - [ ] Add a show, run a full report and watch the trace fill in.
 - [ ] Write a pitch for a match.
 - [ ] Edit and preview the media kit.
-- [ ] Open Pricing: the waitlist buttons show, and "Try checkout in test mode" if Dodo is set up.
+- [ ] Open Pricing: the waitlist buttons show.
 - [ ] Afterwards, check `/admin` for errors and the calls that walk used.
 
 ## 8. During judging (Nov 2 to 5)

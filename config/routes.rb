@@ -31,6 +31,8 @@ Rails.application.routes.draw do
   resources :samples, only: %i[index show], param: :slug, format: false
   # Share images (og:image) for the sample reports and the public media kits: 1200x630 PNGs drawn by ShareImages.
   get "samples/:slug/og.png", to: "share_images#sample", as: :sample_share_image, format: false
+  # A sample's media kit (R152): what a published kit looks like, for visitors whose own show isn't verified.
+  get "samples/:slug/kit", to: "samples#kit", as: :sample_kit, format: false
   get "k/:slug/og.png", to: "share_images#kit", as: :kit_share_image, format: false
   # The blog (R148): Markdown posts from content/blog, an Atom feed and a share image for each post.
   get "blog", to: "blog#index", as: :blog, format: false
@@ -38,9 +40,8 @@ Rails.application.routes.draw do
   get "blog/:slug", to: "blog#show", as: :blog_post, format: false
   get "blog/:slug/og.png", to: "share_images#blog_post", as: :blog_post_share_image, format: false
 
-  resource :account, only: %i[show destroy] do
-    post :judge_code
-  end
+  # R151: no judge code route; everyone gets the hackathon trial (plans.yml promo).
+  resource :account, only: %i[show destroy]
   get "shows/search", to: "show_searches#show", as: :search_shows
   resources :shows, only: %i[index new create show edit update] do
     resources :reports, only: %i[create show]

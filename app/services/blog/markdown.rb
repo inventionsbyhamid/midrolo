@@ -7,13 +7,17 @@ module Blog
   #
   # Then, with Nokogiri: an h1 becomes an h2 (the page's h1 is the post's title), every h2 and h3 gets an id and (on the
   # page, not in the feed) a # link to itself, images load lazily, a table scrolls in its own box on a phone, and
-  # commonmarker's "raw HTML omitted" comments go.
+  # commonmarker's "raw HTML omitted" comments go. An image on a line of its own becomes a figure, its title
+  # (![alt](src "title")) the caption, and one whose src is a local .mp4 or .webm becomes a video with controls, so a
+  # post can show the product moving without raw HTML.
   module Markdown
     OPTIONS = { parse: { smart: false },
                 render: { unsafe: false, hardbreaks: false },
                 extension: { table: true, strikethrough: true, autolink: true, tasklist: true, footnotes: true,
                              header_ids: nil, shortcodes: false } }.freeze
     PLUGINS = { syntax_highlighter: nil }.freeze
+    # A video is a file on this site (the CSP allows no other), never a link elsewhere.
+    VIDEO_SOURCE = %r{\A/[^\s?#]+\.(?:mp4|webm)\z}i
 
     Heading = Data.define(:level, :id, :text)
     # html is safe to render and feed_html is the same without the # links; headings are the h2s and h3s in order;
@@ -29,6 +33,7 @@ module Blog
       fragment.css("h1").each { |heading| heading.name = "h2" }
       named = name_headings(fragment)
       fragment.css("img").each { |image| image["loading"] = "lazy" }
+      fragment.css("img").each { |image| figure(image) }
       feed_html = fragment.to_html
       named.each { |node, heading| link_heading(node, heading.id) }
       fragment.css("table").each { |table| table.wrap(%(<div class="post-table" role="region" aria-label="Table" tabindex="0"></div>)) }
@@ -48,6 +53,39 @@ module Blog
         heading["id"] = id
         [ heading, Heading.new(level: heading.name[1].to_i, id: id, text: text) ]
       end
+    end
+
+    # An image alone in its paragraph becomes <figure>: the image (or the video a local .mp4 or .webm makes) and, from
+    # its title, a <figcaption>. An image inside a sentence stays as it is.
+    def figure(image)
+      paragraph = image.parent
+      return unless paragraph&.name == "p" && paragraph.children.all? { |node| node == image || node.text.strip.empty? }
+
+      document = image.document
+      caption = image.remove_attribute("title")&.value.to_s.squish.presence
+      media = VIDEO_SOURCE.match?(image["src"].to_s) ? video(image) : image
+      figure = Nokogiri::XML::Node.new("figure", document)
+      figure["class"] = "post-figure"
+      paragraph.replace(figure)
+      figure.add_child(media)
+      return unless caption
+
+      figcaption = Nokogiri::XML::Node.new("figcaption", document)
+      figcaption.content = caption
+      figure.add_child(figcaption)
+    end
+
+    # The image's alt labels the video. It starts muted and still: the reader presses play. A poster (the same path as a
+    # .jpg, in public/) shows until then when there is one.
+    def video(image)
+      src = image["src"]
+      video = Nokogiri::XML::Node.new("video", image.document)
+      { "src" => src, "controls" => "", "muted" => "", "loop" => "", "playsinline" => "", "preload" => "metadata",
+        "aria-label" => image["alt"].to_s }.each { |name, value| video[name] = value }
+      poster = src.sub(/\.\w+\z/, ".jpg")
+      video["poster"] = poster if Rails.public_path.join(poster.delete_prefix("/")).file?
+      image.replace(video)
+      video
     end
 
     # A # link to the heading, after its text. It is for the pointer only (hidden from screen readers, out of the tab

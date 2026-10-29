@@ -13,7 +13,10 @@
           Sample sponsor report<% if @show.author.present? %>, a public show by <%= @show.author %><% end %>
         </p>
       </div>
-      <%= ui_button "Get my free Snapshot", snapshot_start_path %>
+      <div class="flex flex-wrap gap-2">
+        <%= ui_button "See the sample media kit", sample_kit_path(@report.sample_slug), variant: :secondary %>
+        <%= ui_button "Get my free Snapshot", snapshot_start_path %>
+      </div>
     </header>
 
     <div class="sample-banner" role="note">

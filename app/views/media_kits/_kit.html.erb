@@ -1,4 +1,4 @@
-<%# locals: (kit:, content:, preview: false) -%>
+<%# locals: (kit:, content:, preview: false, contact: true) -%>
 <%# The kit itself, shared by the owner's preview and the public page. MediaKit::Content assembles the data:
     audience taste only (never sponsor matches), and only from the show's latest done report. %>
 <article class="kit-sheet" aria-labelledby="kit-title">
@@ -15,5 +15,5 @@
     </section>
   <% end %>
   <%= render "media_kits/rates", content: content %>
-  <%= render "media_kits/contact", content: content, preview: preview %>
+  <%= render "media_kits/contact", content: content, preview: preview if contact %>
 </article>

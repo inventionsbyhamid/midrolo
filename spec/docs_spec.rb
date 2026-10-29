@@ -36,13 +36,14 @@ RSpec.describe "Docs" do
     expect(doc("docs/how-we-use-qloo.md")).to include("## Limitations", "does not establish")
   end
 
-  it "has the Devpost sections and testing instructions with the judge code placeholder" do
+  it "has the Devpost sections and testing instructions for the open trial (R151)" do
     devpost = doc("docs/devpost.md")
 
     [ "## Inspiration", "## What it does", "## How we built it", "## Challenges we ran into",
       "## Accomplishments that we're proud of", "## What we learned", "## What's next", "## Testing instructions" ]
       .each { |heading| expect(devpost).to include(heading), "devpost.md lacks #{heading}" }
-    expect(devpost).to include("<<JUDGE_CODE>>", "waitlist")
+    expect(devpost).to include("3 shows", "waitlist", "sample media kit")
+    expect(devpost).not_to include("JUDGE_CODE", "Judge code")
   end
 
   it "has a live pitch, a demo script and Q&A on the four likely questions" do

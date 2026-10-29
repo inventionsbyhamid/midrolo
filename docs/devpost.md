@@ -1,7 +1,6 @@
 # Midrolo: Devpost submission
 
-Paste each section into its Devpost field. Replace `<<JUDGE_CODE>>` with the real code before submitting, and never
-commit the real code to this file.
+Paste each section into its Devpost field.
 
 **Name:** Midrolo
 
@@ -86,7 +85,7 @@ report.
   coordinate spellings.
 - **A small call allowance.** A full report makes about 20 to 30 Qloo calls (40 at most), and the key's allowance is
   limited. We added a shared cache, a per minute and daily call guard, a per report cap, and a lane that holds free and
-  promo users to 40% of the day, so judges and paying users keep most of each day's calls.
+  trial users to a share of the day, so paying users and the sample reports always keep some of each day's calls.
 - **Small shows aren't on Qloo.** When a show isn't in the graph, the agent builds a **proxy** profile from comparable
   shows and topics, and the report says so. With too little to go on, it asks the host for comparable shows instead of
   showing an empty page.
@@ -130,15 +129,13 @@ report.
 - **No sign in needed:** the sample reports at https://midrolo.com/samples. Each is labeled "Sample report. Not
   affiliated with the show."
 - **Sign in** with any Google account. We never post to it.
-- **Judge code:** open https://midrolo.com/account, enter `<<JUDGE_CODE>>` under Judge code and press Unlock. That
-  gives Pro features with 3 full agent reports and unlimited pitches, free.
-- **Try the flow:** add a show, run a full report and watch the agent work, open a brand and press Write my pitch, then
-  edit and preview the media kit. Publishing a kit needs proof of ownership (a code sent to the owner email in the
-  show's RSS feed), so use the preview if the show isn't yours.
-- **Billing is in test mode for judges.** Everyone else sees the founding member waitlist. With the judge code entered,
-  the pricing page also shows Try checkout in test mode. Use Dodo's test card. Nothing is charged.
-- **Without the code,** any signed in account can run a free Snapshot, and until Nov 6 one full report while the
-  promo budget lasts.
+- **Free trial, no code or card:** every new account gets Pro features through Nov 6: up to 3 shows, each with a
+  Snapshot and a full agent report, plus 60 pitches.
+- **Try the flow:** add any podcast (it doesn't have to be yours), run a full report and watch the agent work, open a
+  brand and press Write my pitch, then edit and preview the media kit. Publishing a kit needs proof of ownership (a code
+  sent to the owner email in the show's RSS feed), so use the preview, or open a finished one from any sample report
+  (See the sample media kit).
+- **Billing** shows the founding member waitlist. Nothing can be bought during judging.
 
 ## Known limitations
 

@@ -127,6 +127,44 @@ RSpec.describe "Sample reports" do
     end
   end
 
+  # R152: the sample's media kit, for visitors with no verified show of their own.
+  describe "GET /samples/:slug/kit" do
+    before do
+      show.update!(website: "https://founders-ledger.example.com")
+      report.update!(audience: { "tags" => [ { "id" => "t1", "name" => "Personal Finance", "score" => 0.9 } ],
+                                 "brands" => [ { "id" => "b1", "name" => "Fieldnote Coffee", "affinity" => 0.8 } ] })
+    end
+
+    it "shows the kit brands would see, labelled as a sample, without the show's contact and unindexed" do
+      get "/samples/#{Samples.slugs[0]}/kit"
+
+      expect(response).to have_http_status(:ok)
+      expect(response.headers["X-Robots-Tag"]).to eq("noindex")
+      expect(page.at_css("meta[name='robots']")["content"]).to eq("noindex")
+      text = page.at_css("main").text.squish
+      expect(text).to include("Sample media kit. Not affiliated with the show.", "The Founder's Ledger", "Personal Finance",
+                              "Rates")
+      expect(text).not_to include("Work with us", "Preview.")
+      expect(page.at_css("a[href='https://founders-ledger.example.com']")).to be_nil
+      expect(page.at_css("a[href='/samples/#{Samples.slugs[0]}']")).to be_present
+      expect(MediaKit.count).to eq(0)
+    end
+
+    it "is linked from the sample report" do
+      get "/samples/#{Samples.slugs[0]}"
+      expect(page.at_css("a[href='/samples/#{Samples.slugs[0]}/kit']").text).to eq("See the sample media kit")
+    end
+
+    it "is a 404 for an unknown or unfinished sample" do
+      get "/samples/not-a-sample/kit"
+      expect(response).to have_http_status(:not_found)
+
+      report.update!(status: "failed")
+      get "/samples/#{Samples.slugs[0]}/kit"
+      expect(response).to have_http_status(:not_found)
+    end
+  end
+
   describe "GET /samples" do
     it "lists the done samples, in samples.yml order" do
       other = create(:show, user: owner, title: "Code & Coffee Weekly")

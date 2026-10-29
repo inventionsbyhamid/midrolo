@@ -3,25 +3,28 @@ require "rails_helper"
 RSpec.describe "Account" do
   let(:user) { create(:user, name: "Ada Lovelace") }
 
-  def with_judge_code(code)
-    original = ENV["JUDGE_CODE"]
-    ENV["JUDGE_CODE"] = code
-    yield
-  ensure
-    ENV["JUDGE_CODE"] = original
-  end
-
   it "requires sign-in" do
     get "/account"
     expect(response).to redirect_to("/users/sign_in")
   end
 
-  it "renders plan, usage, judge code, billing and delete sections" do
+  it "renders plan, usage, billing and delete sections" do
     sign_in user
     get "/account"
 
     expect(response).to have_http_status(:ok)
-    expect(response.body).to include("Free", "Usage", "Judge code", "Billing", "Delete account", "Sign out", user.email, "AL")
+    expect(response.body).to include("Free", "Usage", "Billing", "Delete account", "Sign out", user.email, "AL")
+  end
+
+  # R151: everyone gets the hackathon trial, so there is no judge code to enter.
+  it "has no judge code form or route" do
+    sign_in user
+    get "/account"
+    expect(response.body).not_to include("Judge code")
+
+    post "/account/judge_code", params: { code: "anything" }
+    expect(response).to have_http_status(:not_found)
+    expect(user.reload.judge).to be false
   end
 
   describe "plan and usage" do
@@ -95,8 +98,11 @@ RSpec.describe "Account" do
       sign_in user
       get "/account"
 
-      expect(card("Plan").text.squish).to include("Hackathon promo", "Free Pro access during the Qloo hackathon judging")
-      expect(card("Usage").css("li").first.text.squish).to eq("Full reports: 0 of 1 used")
+      expect(card("Plan").text.squish)
+        .to include("Hackathon trial", "Free Pro trial for the Qloo hackathon judging",
+                    "up to 3 shows, each with a Snapshot and a full report")
+      expect(card("Usage").css("li").map { |li| li.text.squish })
+        .to eq([ "Full reports: 0 of 3 used", "Snapshots: 0 of 3 used this month", "Pitches: 0 of 60 used this month" ])
     end
   end
 
@@ -208,63 +214,6 @@ RSpec.describe "Account" do
     sign_in create(:user, avatar_url: "https://example.com/a.png")
     get "/account"
     expect(response.body).to include("https://example.com/a.png")
-  end
-
-  describe "POST /account/judge_code" do
-    before { sign_in user }
-
-    it "grants judge access for the right code" do
-      with_judge_code("sesame") { post "/account/judge_code", params: { code: "sesame" } }
-
-      expect(user.reload.judge).to be true
-      expect(response).to redirect_to("/account")
-      expect(flash[:notice]).to eq("Judge access unlocked. Enjoy full Pro features.")
-    end
-
-    it "rejects a wrong code" do
-      with_judge_code("sesame") { post "/account/judge_code", params: { code: "nope" } }
-
-      expect(user.reload.judge).to be false
-      expect(flash[:alert]).to eq("That code didn't work.")
-    end
-
-    it "never matches when the configured code is blank" do
-      with_judge_code("") { post "/account/judge_code", params: { code: "" } }
-      expect(user.reload.judge).to be false
-
-      with_judge_code(nil) { post "/account/judge_code", params: {} }
-      expect(user.reload.judge).to be false
-      expect(flash[:alert]).to eq("That code didn't work.")
-    end
-
-    # The per-user limit (R83), which no spelling of the path gets around. spec/requests/rate_limits_spec.rb has the
-    # per-IP one.
-    it "takes 5 tries an hour, then answers with the friendly 429, the right code included", :rate_limits do
-      with_judge_code("sesame") do
-        5.times do |n|
-          post [ "/account/judge_code", "/account/judge_code.html", "/account//judge_code" ][n % 3], params: { code: "nope" }
-          expect(response).to redirect_to("/account")
-        end
-        post "/account/judge_code/", params: { code: "sesame" }
-      end
-
-      expect(response).to have_http_status(:too_many_requests)
-      expect(response.headers["Retry-After"]).to eq("3600")
-      expect(Nokogiri::HTML(response.body).at_css("h1").text).to eq("Too many requests")
-      expect(user.reload.judge).to be false
-
-      post "/account/judge_code", params: { code: "nope" }, headers: { "Accept" => "text/vnd.turbo-stream.html, text/html" }
-      expect(response).to have_http_status(:too_many_requests)
-      expect(response.media_type).to eq("text/vnd.turbo-stream.html")
-      expect(response.body).to include('target="flash"', ThrottledResponse::MESSAGE)
-    end
-
-    it "counts each user's tries apart", :rate_limits do
-      5.times { post "/account/judge_code", params: { code: "nope" } }
-      sign_in create(:user)
-      post "/account/judge_code", params: { code: "nope" }, env: { "REMOTE_ADDR" => "198.51.100.9" }
-      expect(response).to redirect_to("/account")
-    end
   end
 
   describe "DELETE /account" do

@@ -74,6 +74,6 @@
 
   <%= test_payments_note %>
   <% if Entitlements.promo_active? %>
-    <p class="pricing-promo"><%= promo_offer %>. Every account gets Pro features with <%= pluralize(Entitlements.limits(:promo)[:agent_reports], "full report") %>, while the promo budget lasts.</p>
+    <p class="pricing-promo"><%= promo_offer %>. Every account gets Pro features for <%= promo_allowance %>, while the trial budget lasts.</p>
   <% end %>
 </div>

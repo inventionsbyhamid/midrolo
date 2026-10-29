@@ -57,7 +57,9 @@ shared:
     duration_days: 30
     price_keys:
       once: sprint
-  # Derived plans, never sold (R59): judge access (JUDGE_CODE) and the hackathon promo (promo_pro_until).
+  # Derived plans, never sold (R59): judge access (users.judge, set by an admin) and the hackathon trial
+  # (promo_pro_until). R151: the trial is every signed-in account's plan while it runs: 3 shows, each with a Snapshot
+  # and a full report.
   judge:
     name: Judge access
     grants_plan: pro
@@ -67,13 +69,13 @@ shared:
     agent_reports_total: true
     pitches: unlimited
   promo:
-    name: Hackathon promo
+    name: Hackathon trial
     grants_plan: pro
-    shows: 1
-    snapshots_per_month: 1
-    agent_reports: 1
+    shows: 3
+    snapshots_per_month: 3
+    agent_reports: 3
     agent_reports_total: true
-    pitches: 20
+    pitches: 60
   # provider name => price_key => that provider's product id, from ENV (blank until set). Billing reads the chosen
   # provider's (Billing::Provider, R145); a new provider adds its own block. It sits under shared because config_for
   # loads nothing outside shared and the environment sections.

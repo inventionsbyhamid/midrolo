@@ -2,7 +2,7 @@ require "rails_helper"
 
 # The hackathon promo's banner shows only to signed-in users on the promo plan (R63).
 RSpec.describe "Promo banner" do
-  let(:copy) { "Free Pro access during the Qloo hackathon judging, through Nov 6." }
+  let(:copy) { "Free Pro trial for the Qloo hackathon judging, through Nov 6: up to 3 shows, each with a Snapshot and a full report." }
 
   def banner = Nokogiri::HTML(response.body).at_css(".promo-banner")
 
@@ -33,6 +33,6 @@ RSpec.describe "Promo banner" do
 
   it "doesn't show signed out" do
     get "/users/sign_in"
-    expect(response.body).not_to include("Free Pro access")
+    expect(response.body).not_to include("Free Pro trial")
   end
 end

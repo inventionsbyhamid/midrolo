@@ -40,6 +40,15 @@ module UiHelper
     defined?(DemoMode) ? DemoMode.active? : Rails.configuration.x.demo_mode.present?
   end
 
+  # A nav link's aria-current: "page" on its own page, "true" anywhere inside its section (a blog post under /blog,
+  # a sample under /samples), so the section stays marked. Anchors ("/#how-it-works") mark nothing.
+  def nav_current(href)
+    return "page" if current_page?(href)
+    return nil unless href.start_with?("/") && !href.include?("#") && href != "/"
+
+    "true" if request.path.start_with?("#{href}/")
+  end
+
   def page_title
     content_for?(:title) ? safe_join([ content_for(:title), " | ", APP_NAME ]) : SocialMetaHelper::DEFAULT_TITLE
   end

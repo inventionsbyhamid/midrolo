@@ -353,45 +353,6 @@ RSpec.describe "Rate limits", :rate_limits do
     end
   end
 
-  describe "judge code attempts: 5 an hour per user and 5 an hour per IP" do
-    it "stops a user after 5 tries, whatever IP they come from" do
-      sign_in user
-      5.times do |n|
-        post judge_code_account_path, params: { code: "guess-#{n}" }, env: from("192.0.2.#{n + 1}")
-        expect(response).to redirect_to(account_path)
-      end
-      post judge_code_account_path, params: { code: "guess" }, env: from("192.0.2.99")
-      expect_friendly_page(retry_after: 3600)
-    end
-
-    it "stops an IP after 5 tries, whoever is signed in" do
-      5.times do
-        sign_in create(:user)
-        post judge_code_account_path, params: { code: "guess" }, env: from("198.51.100.7")
-        expect(response).to redirect_to(account_path)
-      end
-      sign_in create(:user)
-      post judge_code_account_path, params: { code: "guess" }, env: from("198.51.100.7")
-      expect_friendly_page(retry_after: 3600)
-
-      post judge_code_account_path, params: { code: "guess" }, env: from("198.51.100.8")
-      expect(response).to redirect_to(account_path)
-    end
-
-    it "counts attempts per IP however the path is spelled" do
-      requests = [ "/account/judge_code.html", "/account//judge_code", "/account/judge_code/" ]
-      5.times do |n|
-        sign_in create(:user)
-        post requests[n % 3], params: { code: "guess" }
-        expect(response).to redirect_to(account_path)
-      end
-      requests.each do |path|
-        sign_in create(:user)
-        post path, params: { code: "guess" }
-        expect(response).to have_http_status(:too_many_requests), "expected POST #{path} to be throttled"
-      end
-    end
-  end
 end
 
 # Every other spec: RATE_LIMIT_STORE counts nowhere (config/initializers/rate_limit_store.rb), so however many requests

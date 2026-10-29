@@ -54,7 +54,7 @@ apps hold the same values; the worker adds `MIDROLO_PROCESS=jobs` and `RAILS_MAX
 - `DB_HOST` is the database resource's container name, `MIDROLO_DATABASE_PASSWORD` its password (user `midrolo`).
 - `APP_URL=https://midrolo.com`; `SECRET_KEY_BASE` was made with `bin/rails secret`.
 - The rest are the service keys: Qloo, Podcast Index, OpenRouter, Resend, Google OAuth, Cloudflare R2 (uploads),
-  the admin login, `JUDGE_CODE` and `PROMO_PRO_UNTIL`.
+  the admin login and `PROMO_PRO_UNTIL` (the hackathon trial's last day).
 
 Production stops at boot, naming the variable, when a required one is blank (`lib/required_env.rb`). After changing a
 variable, redeploy (or restart) both apps.
@@ -63,8 +63,8 @@ variable, redeploy (or restart) both apps.
 
 Billing goes through one adapter per payment provider (`app/services/billing/provider.rb`); nothing else in the app
 names a vendor. Production runs Dodo Payments, in Midrolo's own Dodo business, in **test mode**: `BILLING_MODE` is
-unset, so everyone sees the founding member waitlist, and only judges (with the judge code) and admins see "Try
-checkout in test mode" (test card 4242 4242 4242 4242).
+unset, so everyone sees the founding member waitlist, and only admins (and accounts an admin flags as judges) see
+"Try checkout in test mode" (test card 4242 4242 4242 4242).
 
 - **Test mode settings:** `DODO_API_KEY` (a `dodo_test_` key), `DODO_ENVIRONMENT=test_mode`, `DODO_WEBHOOK_SECRET`
   (the test webhook to `https://midrolo.com/webhooks/dodo`, which is enabled) and the five `DODO_PRODUCT_*` test ids.

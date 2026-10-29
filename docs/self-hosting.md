@@ -143,7 +143,7 @@ refuses to start the backup container without its own:
 
 Then uncomment and fill what you use: `OPENROUTER_API_KEY` (reports and pitches), `GOOGLE_CLIENT_ID` and
 `GOOGLE_CLIENT_SECRET` (sign in), `ADMIN_USERNAME` and `ADMIN_PASSWORD` (/admin), `ADMIN_EMAIL` (error mail),
-`JUDGE_CODE`, `PROMO_PRO_UNTIL=2026-11-06`, and the `DODO_*` keys when billing goes beyond the waitlist. Leave the rest
+`PROMO_PRO_UNTIL=2026-11-06`, and the `DODO_*` keys when billing goes beyond the waitlist. Leave the rest
 commented out: a variable set to nothing is an empty string, not unset.
 
 ### 6. Build and start

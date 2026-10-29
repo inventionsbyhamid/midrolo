@@ -106,4 +106,26 @@ RSpec.describe UiHelper do
       expect(helper.demo_mode?).to be(true)
     end
   end
+
+  describe "#nav_current" do
+    def at(path) = controller.request.path = path
+
+    it "marks the link's own page" do
+      at("/blog")
+      expect(helper.nav_current("/blog")).to eq("page")
+    end
+
+    it "marks the section on a page inside it" do
+      at("/blog/finding-sponsors")
+      expect(helper.nav_current("/blog")).to eq("true")
+      expect(helper.nav_current("/samples")).to be_nil
+    end
+
+    it "never marks an anchor link or the home page for a prefix" do
+      at("/samples/darknet-diaries")
+      expect(helper.nav_current("/#how-it-works")).to be_nil
+      expect(helper.nav_current("/")).to be_nil
+      expect(helper.nav_current("/sample")).to be_nil
+    end
+  end
 end

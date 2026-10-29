@@ -6,7 +6,7 @@
 
     <nav aria-label="Main" class="hidden items-center gap-1 md:flex">
       <% links.each do |label, href| %>
-        <%= link_to label, href, class: "nav-link", aria: { current: ("page" if current_page?(href)) } %>
+        <%= link_to label, href, class: "nav-link", aria: { current: nav_current(href) } %>
       <% end %>
       <% if cta %>
         <%= ui_button cta.first, cta.last, size: :sm, class: "ml-3" %>
@@ -24,7 +24,7 @@
       <%= render "components/dialog", title: "Menu", id: "nav-menu", sheet: true do %>
         <nav aria-label="Main menu">
           <% links.each do |label, href| %>
-            <%= link_to label, href, class: "nav-sheet-link", aria: { current: ("page" if current_page?(href)) } %>
+            <%= link_to label, href, class: "nav-sheet-link", aria: { current: nav_current(href) } %>
           <% end %>
         </nav>
         <% if cta %>

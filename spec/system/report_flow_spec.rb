@@ -25,7 +25,7 @@ RSpec.describe "Report flow", :network do
   before do
     OmniAuth.config.test_mode = true
     OmniAuth.config.mock_auth[:google_oauth2] = mock_google_auth
-    # A new account during the hackathon promo gets one full report (spec §11).
+    # A new account during the hackathon trial gets a full report on each of its 3 shows (R151).
     AppSettings.set(:promo_pro_until, 1.week.from_now.to_date.to_s)
   end
 

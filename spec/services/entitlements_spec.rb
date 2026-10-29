@@ -231,14 +231,15 @@ RSpec.describe Entitlements do
   describe "promo" do
     before { AppSettings.set(:promo_pro_until, "2026-11-06") }
 
-    it "gives Pro features with 1 agent report in total, then reason :limit" do
+    # R151: the trial is 3 shows, each with a Snapshot and a full report.
+    it "gives Pro features with 3 shows, 3 Snapshots and 3 agent reports in total, then reason :limit" do
       travel_to Time.zone.local(2026, 10, 25, 12) do
         plan = described_class.for(user)
-        expect(plan).to have_attributes(key: :promo, max_shows: 1, pipeline?: true, csv_export?: true, kit_badge?: false,
-                                        scan_limit: 12, visible_matches_limit: 50, pitches_left: 20, snapshots_left: 1,
+        expect(plan).to have_attributes(key: :promo, max_shows: 3, pipeline?: true, csv_export?: true, kit_badge?: false,
+                                        scan_limit: 12, visible_matches_limit: 50, pitches_left: 60, snapshots_left: 3,
                                         spend_bucket: :promo)
         expect(plan.can_run?(:agent)).to be true
-        report("agent", bucket: "promo", at: 1.month.ago)
+        3.times { report("agent", bucket: "promo", at: 1.month.ago) }
         expect(plan.agent_reports_left).to eq(0)
         expect(reason(plan, :agent)).to eq(:limit)
       end
@@ -247,7 +248,7 @@ RSpec.describe Entitlements do
     it "counts only promo-bucket agent reports toward the promo" do
       travel_to Time.zone.local(2026, 10, 25, 12) do
         report("agent", bucket: "judge")
-        expect(described_class.for(user).agent_reports_left).to eq(1)
+        expect(described_class.for(user).agent_reports_left).to eq(3)
       end
     end
 
@@ -389,9 +390,9 @@ RSpec.describe Entitlements do
 
       travel_to(Time.zone.local(2026, 10, 25, 12)) do
         AppSettings.set(:promo_pro_until, "2026-11-06")
-        report("agent", bucket: "promo")
+        3.times { report("agent", bucket: "promo") }
         expect { described_class.for(user).authorize!(:agent) }.to raise_error(Entitlements::NotAllowed) { |error|
-          expect(error.details).to include(reason: :limit, used: 1, limit: 1, period: nil, bucket: :promo)
+          expect(error.details).to include(reason: :limit, used: 3, limit: 3, period: nil, bucket: :promo)
         }
       end
     end

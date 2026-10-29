@@ -58,7 +58,7 @@ module PlansHelper
   def plan_summary(plan)
     case plan.key
     when :judge then "Judge access is on: Pro features with #{pluralize(plan.limit(:agent), 'full report')} and unlimited pitches."
-    when :promo then "#{promo_offer}, with #{pluralize(plan.limit(:agent), 'full report')}."
+    when :promo then "#{promo_offer}: #{promo_allowance}."
     when :sprint then "You're on the #{plan.name} plan: Pro features for #{plan.duration_days} days."
     else "You're on the #{plan.name} plan."
     end
@@ -76,9 +76,15 @@ module PlansHelper
     "#{label}: #{plan.used(kind)} of #{limit} used#{" this #{period}" if period}#{", #{in_flight} in progress" if in_flight.positive?}"
   end
 
-  # "Free Pro access during the Qloo hackathon judging, through Nov 6"
+  # "Free Pro trial for the Qloo hackathon judging, through Nov 6"
   def promo_offer
-    "Free Pro access during the Qloo hackathon judging, through #{Entitlements.promo_until&.strftime('%b %-d')}"
+    "Free Pro trial for the Qloo hackathon judging, through #{Entitlements.promo_until&.strftime('%b %-d')}"
+  end
+
+  # "up to 3 shows, each with a Snapshot and a full report", from plans.yml (R151).
+  def promo_allowance
+    shows = Entitlements.limits(:promo)[:shows]
+    "up to #{pluralize(shows, 'show')}, each with a Snapshot and a full report"
   end
 
   private

@@ -68,6 +68,29 @@ RSpec.describe Blog::Markdown do
     expect(box.at_css("table")).to be_present
   end
 
+  it "makes an image on its own line a figure with its title as the caption, and leaves an inline image alone" do
+    doc = fragment(%(![Fit scores by brand](/blog/a/chart.png "Each bar is one brand")\n\nSee ![icon](/i.png "Icon") here.\n))
+
+    figure = doc.at_css("figure.post-figure")
+    expect(figure.at_css("img").to_h).to include("src" => "/blog/a/chart.png", "alt" => "Fit scores by brand")
+    expect(figure.at_css("img")["title"]).to be_nil
+    expect(figure.at_css("figcaption").text).to eq("Each bar is one brand")
+    expect(doc.css("figure").size).to eq(1)
+    expect(doc.at_css("p img").to_h).to include("src" => "/i.png", "title" => "Icon")
+  end
+
+  it "makes a local .mp4 or .webm a video with controls, labelled by its alt, and never a remote one" do
+    doc = fragment(%(![The agent at work](/blog/a/run.mp4 "A report filling in")\n\n![Remote](https://example.com/x.mp4)\n))
+
+    video = doc.at_css("figure video")
+    expect(video.to_h).to include("src" => "/blog/a/run.mp4", "aria-label" => "The agent at work", "preload" => "metadata")
+    expect(video.keys).to include("controls", "muted", "loop", "playsinline")
+    expect(video["autoplay"]).to be_nil
+    expect(doc.at_css("figure figcaption").text).to eq("A report filling in")
+    expect(doc.css("video").size).to eq(1)
+    expect(doc.at_css("img")["src"]).to eq("https://example.com/x.mp4")
+  end
+
   it "counts the words a reader reads" do
     expect(render("## Two words\n\nAnd three more.").words).to eq(5)
   end
