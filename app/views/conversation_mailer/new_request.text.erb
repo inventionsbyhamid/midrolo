@@ -1,0 +1,11 @@
+<%= @brand_name %> would like to sponsor <%= @title %>.
+<% unless @conversation.from_verified_brand? -%>
+
+Unverified brand: nobody has confirmed a work email at this company's domain yet.
+<% end -%>
+
+They asked for: <%= inbox_request_summary(@conversation) %>.
+
+Read and reply: <%= conversation_url(@conversation) %>
+
+You get this because you claimed <%= @title %> on <%= APP_NAME %>. Brands can only write to shows that claimed their page.

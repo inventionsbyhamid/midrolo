@@ -1,0 +1,7 @@
+<% if @from_brand %>
+  <p style="margin:0;"><strong><%= @brand_name %></strong> sent you a new message about <strong><%= @title %></strong>.</p>
+<% else %>
+  <p style="margin:0;"><strong><%= @title %></strong> replied to your request.</p>
+<% end %>
+<%= mail_button "Read it", conversation_url(@conversation) %>
+<%= mail_footnote "We email once when a conversation has something new for you, not for every message." %>

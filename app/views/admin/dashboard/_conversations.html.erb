@@ -1,1 +1,52 @@
-<%# Lane L7 fills this admin dashboard panel (locals: stats, an Admin::Stats). Empty until then. %>
+<%# locals: (stats:) -%>
+<%# Requests (lane L7): today's count, every conversation by status, blocks, and the reported ones to look at. stats
+    is the dashboard's Admin::Stats; this panel reads its own query object. %>
+<% summary = Conversations::AdminSummary.new %>
+<%= render "components/card", title: "Requests" do %>
+  <dl class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div>
+      <dt class="text-sm text-ink-soft">Today</dt>
+      <dd class="text-lg font-semibold tabular-nums"><%= number_with_delimiter(summary.requests_today) %></dd>
+    </div>
+    <% summary.by_status.each do |status, count| %>
+      <div>
+        <dt class="text-sm text-ink-soft"><%= InboxHelper::STATUS_LABELS.fetch(status) %></dt>
+        <dd class="text-lg font-semibold tabular-nums"><%= number_with_delimiter(count) %></dd>
+      </div>
+    <% end %>
+    <div>
+      <dt class="text-sm text-ink-soft">Blocks</dt>
+      <dd class="text-lg font-semibold tabular-nums"><%= number_with_delimiter(summary.blocks) %></dd>
+    </div>
+  </dl>
+
+  <h3 class="mt-6 font-semibold">Reported</h3>
+  <% if summary.reported.any? %>
+    <div class="mt-2 overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr>
+            <th scope="col" class="py-2 pr-4 font-semibold">Brand</th>
+            <th scope="col" class="py-2 pr-4 font-semibold">Show</th>
+            <th scope="col" class="py-2 pr-4 font-semibold">Status</th>
+            <th scope="col" class="py-2 pr-4 font-semibold">Reported (UTC)</th>
+            <th scope="col" class="py-2 font-semibold">Conversation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% summary.reported.each do |conversation| %>
+            <tr class="border-t border-line">
+              <td class="py-2 pr-4"><%= conversation.brand.name %><span class="block text-ink-soft"><%= conversation.brand.domain %></span></td>
+              <td class="py-2 pr-4"><%= conversation.podcast.title %></td>
+              <td class="py-2 pr-4"><%= InboxHelper::STATUS_LABELS.fetch(conversation.status) %></td>
+              <td class="py-2 pr-4 whitespace-nowrap tabular-nums"><%= conversation.reported_at.utc.strftime("%b %-d %H:%M") %></td>
+              <td class="py-2 font-mono text-xs"><%= conversation.public_id %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="mt-2 text-sm text-ink-soft">Nothing reported.</p>
+  <% end %>
+<% end %>

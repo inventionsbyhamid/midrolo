@@ -1,0 +1,8 @@
+<% if @conversation.accepted? %>
+  <p style="margin:0;"><strong><%= @title %></strong> accepted your request. Agree the dates, the read and the price in the conversation.</p>
+<% else %>
+  <p style="margin:0 0 16px;"><strong><%= @title %></strong> declined your request.</p>
+  <p style="margin:0;">Their reason: <%= @conversation.decline_reason %></p>
+<% end %>
+<%= mail_button "Open the conversation", conversation_url(@conversation) %>
+<%= mail_footnote "We email when a show answers a request you sent." %>

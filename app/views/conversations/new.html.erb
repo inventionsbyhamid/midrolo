@@ -1,0 +1,26 @@
+<% content_for :title, "Request a spot on #{@podcast.title}" %>
+<% viewer = @facts.viewer %>
+<div class="mx-auto flex w-full max-w-2xl flex-col gap-6">
+  <header class="flex items-center gap-4">
+    <%= podcast_artwork_tag @podcast, size: :thumb, class: "size-16" %>
+    <div class="min-w-0">
+      <h1 class="type-h2">Request a spot</h1>
+      <p class="text-ink-soft">On <%= link_to @podcast.title, inbox_podcast_path(@podcast), class: "link" %></p>
+    </div>
+  </header>
+
+  <% if viewer.state == :blocked %>
+    <%= render "components/empty_state", title: Conversations::Start::BLOCKED,
+          body: "Find other shows that fit your brand.", action_label: "Find podcasts", action_href: ApplicationController::BRAND_HOME %>
+  <% else %>
+    <% if (membership = viewer.membership) %>
+      <% left = Conversations::Start.remaining_today(membership) %>
+      <p class="text-sm text-ink-soft">
+        <%= left.zero? ? "You've used today's requests." : "You can send #{pluralize(left, 'more request')} today." %>
+      </p>
+    <% end %>
+    <%= render "components/card" do %>
+      <%= render "conversations/form", podcast: @podcast, form: @form, facts: @facts, error: @error %>
+    <% end %>
+  <% end %>
+</div>

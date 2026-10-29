@@ -1,0 +1,24 @@
+<%# locals: (conversation:, side:) -%>
+<%# Where the request stands, in a line, for the side reading it. %>
+<% title = conversation.podcast.title %>
+<div class="rounded-xl border border-line bg-surface p-4 text-sm" id="<%= dom_id(conversation, :status_note) %>">
+  <% case conversation.status %>
+  <% when "waiting_for_claim" %>
+    <p><strong>Waiting for the show.</strong> <%= title %> hasn't claimed its <%= APP_NAME %> page yet. Your request reaches them when they do. We never email shows that haven't joined.</p>
+  <% when "open" %>
+    <% if side == :podcaster %>
+      <p><strong>New request.</strong> Accept it, decline it with a reason, or reply with questions first.</p>
+    <% else %>
+      <p><strong>Sent.</strong> <%= title %> has your request. We email you when they answer.</p>
+    <% end %>
+  <% when "accepted" %>
+    <p><strong>Accepted.</strong> Agree the dates, the read and the price here.</p>
+  <% when "declined" %>
+    <p><strong>Declined.</strong> Reason: <%= conversation.decline_reason %></p>
+  <% when "closed" %>
+    <p><strong>Closed<%= " #{conversation.closed_at.strftime('%b %-d')}" if conversation.closed_at %>.</strong> No new messages can be sent.</p>
+  <% end %>
+  <% if side == :podcaster && !conversation.from_verified_brand? %>
+    <p class="mt-2 text-warning">Unverified brand: nobody has confirmed a work email at <%= conversation.brand.domain.presence || "this company's domain" %> yet.</p>
+  <% end %>
+</div>

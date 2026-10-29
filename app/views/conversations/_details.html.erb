@@ -1,0 +1,27 @@
+<%# locals: (conversation:) -%>
+<%= render "components/card", title: "The request" do %>
+  <dl class="flex flex-col gap-3">
+    <div>
+      <dt class="text-sm text-ink-soft">Spot</dt>
+      <dd class="font-semibold"><%= MediaKit::RATE_SLOTS.fetch(conversation.format.to_s, "Any spot") %></dd>
+    </div>
+    <div>
+      <dt class="text-sm text-ink-soft">Months</dt>
+      <dd class="font-semibold"><%= conversation.months.any? ? Copy.and_list(conversation.months.map { |month| inbox_month_label(month) }) : "Flexible" %></dd>
+    </div>
+    <div>
+      <dt class="text-sm text-ink-soft">Budget</dt>
+      <dd class="font-semibold"><%= inbox_budget(conversation.budget_cents) || "Not given" %></dd>
+    </div>
+    <div>
+      <dt class="text-sm text-ink-soft">Sent</dt>
+      <dd class="font-semibold"><%= inbox_time(conversation.created_at) %></dd>
+    </div>
+    <% if conversation.brand.domain.present? %>
+      <div>
+        <dt class="text-sm text-ink-soft">Brand website</dt>
+        <dd class="font-semibold"><%= conversation.brand.domain %></dd>
+      </div>
+    <% end %>
+  </dl>
+<% end %>

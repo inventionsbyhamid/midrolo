@@ -1,0 +1,55 @@
+<% heading = @show ? "Requests to #{@show.title}" : (@sides == [ :brand ] ? "Your brand's requests" : "Inbox") %>
+<% content_for :title, heading %>
+<% content_for :head, turbo_refreshes_with(method: :morph, scroll: :preserve) %>
+<% inbox_streams(@sides, show: @show).each do |stream| %>
+  <%= turbo_stream_from stream %>
+<% end %>
+<div class="flex flex-col gap-8">
+  <header class="flex flex-col gap-1">
+    <% if @show %>
+      <p class="text-sm"><%= link_to "Back to #{@show.title}", show_path(@show), class: "link" %></p>
+    <% end %>
+    <h1 class="type-h1"><%= heading %></h1>
+  </header>
+
+  <% if @sides.empty? %>
+    <%= render "components/empty_state", title: "Nothing here yet",
+          body: "Podcasters: verify your show and brands can ask you for a spot. Brands: set up your brand to ask shows for one." %>
+    <div class="flex flex-wrap gap-3">
+      <%= ui_button "Your shows", shows_path, variant: :secondary %>
+      <%= ui_button "Set up your brand", ApplicationController::BRAND_HOME, variant: :secondary %>
+    </div>
+  <% end %>
+
+  <% @sides.each do |side| %>
+    <% conversations = @lists.fetch(side) %>
+    <section class="flex flex-col gap-4" aria-labelledby="inbox-<%= side %>">
+      <% if @sides.size > 1 %>
+        <h2 id="inbox-<%= side %>" class="type-h2"><%= side == :podcaster ? "Requests to your shows" : "Your brand's requests" %></h2>
+      <% else %>
+        <h2 id="inbox-<%= side %>" class="sr-only"><%= side == :podcaster ? "Requests" : "Your brand's requests" %></h2>
+      <% end %>
+
+      <% if conversations.any? %>
+        <ul class="flex flex-col gap-3">
+          <%= render partial: "conversations/conversation", collection: conversations, locals: { side: side, show_podcast: @show.nil? } %>
+        </ul>
+        <% if conversations.size >= ConversationsController::LIST_LIMIT %>
+          <p class="text-sm text-ink-soft">Showing the latest <%= ConversationsController::LIST_LIMIT %>.</p>
+        <% end %>
+      <% elsif side == :podcaster && @show && !@show.verified? %>
+        <% waiting = Conversation.waiting_for_claim.where(podcast_id: @show.podcast_id).count %>
+        <%= render "components/empty_state", title: "Verify this show to read its requests",
+              body: waiting.positive? ? "#{pluralize(waiting, 'brand')} asked about sponsoring it. Their requests open as soon as you verify that it's yours." : "Once it's verified, brands can ask you for a spot and their requests land here.",
+              action_label: "Verify ownership", action_href: new_show_verification_path(@show) %>
+      <% elsif side == :podcaster %>
+        <%= render "components/empty_state", title: "No requests yet",
+              body: "When a brand asks about sponsoring your show, the request lands here and we email you. An open listing with a rate card helps brands find you." %>
+      <% else %>
+        <%= render "components/empty_state", title: "No requests yet",
+              body: "Find shows that fit your brand and ask for a spot. Their replies land here.",
+              action_label: "Find podcasts", action_href: ApplicationController::BRAND_HOME %>
+      <% end %>
+    </section>
+  <% end %>
+</div>

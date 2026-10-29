@@ -1,0 +1,10 @@
+<%# locals: (message:, conversation:, brand_user_ids:, viewer: nil) -%>
+<%# One message. The viewer's own are tinted and say "You"; the text is plain (escaped), its line breaks kept. %>
+<% own = viewer && message.user_id == viewer.id %>
+<li class="<%= class_names("rounded-xl border p-4", own ? "border-plum-soft bg-plum-soft" : "border-line bg-surface") %>">
+  <p class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+    <span class="font-semibold"><%= own ? "You" : inbox_author(message, conversation, brand_user_ids) %></span>
+    <span class="text-ink-soft"><%= inbox_time(message.created_at) %></span>
+  </p>
+  <p class="mt-2 whitespace-pre-line break-words"><%= message.body %></p>
+</li>

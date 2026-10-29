@@ -1,0 +1,24 @@
+<%# locals: (conversation:, side:, show_podcast: true) -%>
+<%# One row of an inbox. The podcaster sees the brand (and which show, across shows); the brand sees the show. %>
+<% unread = conversation.unread_for?(side) %>
+<li>
+  <%= link_to conversation_path(conversation), class: "card flex items-center gap-4 p-4 hover:border-line-strong" do %>
+    <%= podcast_artwork_tag conversation.podcast, size: :thumb, class: "size-12" %>
+    <span class="flex min-w-0 flex-1 flex-col gap-1">
+      <span class="flex flex-wrap items-center gap-2">
+        <% if unread %>
+          <span class="size-2.5 flex-none rounded-full bg-plum" aria-hidden="true"></span><span class="sr-only">New:</span>
+        <% end %>
+        <span class="<%= class_names("truncate", "font-bold" => unread, "font-semibold" => !unread) %>"><%= inbox_counterparty(conversation, side) %></span>
+        <%= inbox_unverified_badge(conversation) if side == :podcaster %>
+      </span>
+      <span class="truncate text-sm text-ink-soft">
+        <% if side == :podcaster && show_podcast %>For <%= conversation.podcast.title %>: <% end %><%= inbox_request_summary(conversation).upcase_first %>
+      </span>
+    </span>
+    <span class="flex flex-none flex-col items-end gap-1">
+      <%= inbox_status_badge(conversation) %>
+      <span class="text-xs text-ink-soft"><%= inbox_time(conversation.last_message_at || conversation.created_at) %></span>
+    </span>
+  <% end %>
+</li>
