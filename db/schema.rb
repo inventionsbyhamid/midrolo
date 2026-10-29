@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_30_130100) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_161500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -433,6 +433,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_130100) do
     t.datetime "expires_hint"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "next_run_at"
+    t.datetime "queued_until"
+    t.datetime "cooldown_until"
+    t.integer "rate_limits_in_a_row", default: 0, null: false
+    t.datetime "last_rate_limited_at"
+    t.integer "failures_in_a_row", default: 0, null: false
+    t.jsonb "run_log", default: [], null: false
     t.index ["platform"], name: "index_service_sessions_on_platform", unique: true
   end
 
