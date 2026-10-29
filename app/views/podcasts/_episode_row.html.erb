@@ -1,0 +1,16 @@
+<%# locals: (item:, podcast:) -%>
+<%# One episode in the podcast page's list: date, title linking to its page, number and length, sponsors found. %>
+<% episode = item.episode %>
+<li class="ep-row">
+  <p class="ep-date"><% if episode.published_at %><time datetime="<%= episode.published_at.iso8601 %>"><%= episode.published_at.strftime("%b %-d") %><br><%= episode.published_at.year %></time><% end %></p>
+  <div class="min-w-0">
+    <h3 class="ep-title"><%= link_to episode.title, podcast_episode_path(podcast, episode) %></h3>
+    <% meta = [ pages_episode_number(episode), pages_duration(episode.duration_seconds) ].compact %>
+    <% if meta.any? || item.brands.any? %>
+      <p class="ep-meta">
+        <% meta.each do |text| %><span><%= text %></span><% end %>
+        <% item.brands.first(3).each do |brand| %><span class="ep-sponsor"><span class="sr-only">Sponsor: </span><%= brand.name %></span><% end %>
+      </p>
+    <% end %>
+  </div>
+</li>

@@ -1,0 +1,1126 @@
+/*
+ * The public catalog (lane L3), imported from application.css: the directory and its cards (dir-), a podcast's page
+ * (pod-), an episode's page (ep-) and the facts strip every number sits in (fact-). Built from the kit's language: an
+ * ink banner with the show's own waveform and its mid-roll lit, artwork riding over it, big wide numerals on a rule,
+ * and sections split by hairlines. Mobile first; colours are the @theme tokens in application.css.
+ */
+@layer components {
+  /* ---------- Shared ---------- */
+
+  .crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+
+  .crumbs a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .crumbs a:hover {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .crumbs li + li::before {
+    content: "/" / "";
+    margin-right: 0.5rem;
+    color: var(--color-line-strong);
+  }
+
+  .eyebrow {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    font-stretch: 112.5%;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-plum);
+  }
+
+  /* A note with the tally lamp on its edge: a show being read, a feed that failed, a claim box. */
+  .lamp-note {
+    padding: 1rem 1.125rem 1rem 1.375rem;
+    border-radius: var(--radius-control);
+    background: var(--color-tally-soft);
+    box-shadow: inset 4px 0 0 var(--color-tally);
+    font-size: 0.9375rem;
+  }
+
+  .busy-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    flex: none;
+    border-radius: 999px;
+    background: var(--color-tally);
+    animation: var(--animate-breathe);
+  }
+
+  /* ---------- Directory ---------- */
+
+  .dir-head {
+    padding-block: 2rem 1.5rem;
+
+    @media (width >= 40rem) {
+      padding-block: 3.5rem 2rem;
+    }
+  }
+
+  .dir-search {
+    display: flex;
+    gap: 0.5rem;
+    max-width: 44rem;
+    margin-top: 1.5rem;
+  }
+
+  .dir-search-field {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dir-search-field svg {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: -0.5625rem;
+    color: var(--color-ink-soft);
+    pointer-events: none;
+  }
+
+  .dir-search .input {
+    min-height: 3rem;
+    padding-left: 2.625rem;
+    font-size: 1.0625rem;
+    box-shadow: var(--shadow-edge);
+  }
+
+  .dir-categories {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1.25rem -1rem 0;
+    padding: 0 1rem 0.25rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    @media (width >= 40rem) {
+      flex-wrap: wrap;
+      margin-inline: 0;
+      padding-inline: 0;
+      overflow: visible;
+    }
+  }
+
+  .dir-category {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2.25rem;
+    padding: 0.25rem 0.875rem;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+    background: var(--color-surface);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .dir-category:hover {
+    border-color: var(--color-ink);
+  }
+
+  .dir-category[aria-current="page"] {
+    border-color: var(--color-ink);
+    background: var(--color-ink);
+    color: #fff;
+  }
+
+  .dir-category-count {
+    font-weight: 500;
+    color: var(--color-ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dir-category[aria-current="page"] .dir-category-count {
+    color: color-mix(in srgb, #fff 75%, var(--color-ink));
+  }
+
+  /* Filters: a disclosure on a phone, open from 64rem (responsive-details). */
+  .dir-filters {
+    border-block: 1px solid var(--color-line);
+  }
+
+  .dir-filters-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 3.25rem;
+    font-weight: 650;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .dir-filters-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .dir-filters-summary::after {
+    content: "+" / "";
+    font-size: 1.375rem;
+    font-weight: 400;
+    color: var(--color-plum);
+  }
+
+  .dir-filters[open] > .dir-filters-summary::after {
+    content: "\2212" / "";
+  }
+
+  .dir-filters-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.875rem 1rem;
+    padding-bottom: 1.25rem;
+
+    @media (width >= 48rem) {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    @media (width >= 64rem) {
+      grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+      align-items: end;
+    }
+  }
+
+  .dir-filters-form .input {
+    min-height: 2.5rem;
+    padding-block: 0.375rem;
+    font-size: 0.9375rem;
+  }
+
+  .dir-filters-form .label {
+    margin-bottom: 0.25rem;
+    font-size: 0.8125rem;
+  }
+
+  .dir-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    grid-column: 1 / -1;
+    gap: 0.5rem;
+  }
+
+  /* A checkbox drawn as a pill: the native box stays for keyboards and screen readers. */
+  .toggle-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    padding: 0.25rem 0.875rem 0.25rem 0.625rem;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 999px;
+    background: var(--color-surface);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .toggle-chip input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--color-ink);
+  }
+
+  .toggle-chip:has(input:checked) {
+    border-color: var(--color-ink);
+    background: var(--color-plum-soft);
+  }
+
+  .toggle-chip:has(input:focus-visible) {
+    outline: 3px solid var(--color-tally);
+    outline-offset: 2px;
+  }
+
+  .dir-results-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-top: 1.75rem;
+  }
+
+  .dir-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+
+    @media (width >= 48rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    @media (width >= 72rem) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* A podcast card: the whole card is the link (the title's ::after covers it), so the focus ring is drawn on it. */
+  .dir-card {
+    position: relative;
+    display: flex;
+    gap: 1rem;
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-edge);
+    transition: border-color 120ms ease;
+
+    @media (width >= 40rem) {
+      padding: 1.125rem;
+    }
+  }
+
+  .dir-card:hover {
+    border-color: var(--color-ink);
+  }
+
+  .dir-card:has(.dir-card-link:focus-visible) {
+    outline: 3px solid var(--color-tally);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--color-ink);
+  }
+
+  .dir-card-art {
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 0.75rem;
+    font-size: 1.25rem;
+
+    @media (width >= 40rem) {
+      width: 5.5rem;
+      height: 5.5rem;
+    }
+  }
+
+  .dir-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .dir-card-title {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    font-stretch: 106%;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .dir-card-link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .dir-card-link:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
+  .dir-card-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .dir-card:hover .dir-card-link {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .dir-card-by {
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dir-card-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    margin-top: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+
+  .dir-card-facts strong {
+    font-weight: 700;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dir-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+  }
+
+  .dir-card-badges .badge {
+    height: 1.375rem;
+    font-size: 0.75rem;
+  }
+
+  /* A show still being read: its card breathes. */
+  .dir-card-adding {
+    border-style: dashed;
+    border-color: var(--color-line-strong);
+    box-shadow: inset 4px 0 0 var(--color-tally);
+  }
+
+  .dir-adding {
+    margin-top: 1.5rem;
+  }
+
+  .dir-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-line);
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* ---------- Podcast page: hero ---------- */
+
+  .pod-banner {
+    position: relative;
+    height: clamp(6rem, 3rem + 12vw, 11rem);
+    overflow: hidden;
+    background: var(--color-ink);
+  }
+
+  .pod-banner .kit-wave {
+    inset: 18% 0;
+    height: 64%;
+  }
+
+  .pod-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1rem 2rem;
+  }
+
+  .pod-art {
+    position: relative;
+    width: 7rem;
+    height: 7rem;
+    margin-top: -3.5rem;
+    border: 4px solid var(--color-surface);
+    border-radius: 1.125rem;
+    background: var(--color-surface);
+    box-shadow: 0 16px 32px -16px rgb(34 19 43 / 0.55);
+    font-size: 2rem;
+
+    @media (width >= 48rem) {
+      width: 12rem;
+      height: 12rem;
+      margin-top: -6rem;
+      border-radius: 1.5rem;
+      font-size: 3rem;
+    }
+  }
+
+  .pod-hero-text {
+    flex: 1 1 20rem;
+    min-width: 0;
+
+    @media (width >= 48rem) {
+      padding-top: 1.25rem;
+    }
+  }
+
+  .pod-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .pod-title {
+    font-size: clamp(2rem, 1.3rem + 3vw, 3.5rem);
+    font-stretch: 125%;
+    font-weight: 820;
+    line-height: 1;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+
+  .pod-byline {
+    margin-top: 0.75rem;
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+
+  .pod-byline a {
+    color: var(--color-plum);
+    text-decoration: none;
+  }
+
+  .pod-byline a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .pod-byline-soft {
+    font-weight: 500;
+    color: var(--color-ink-soft);
+  }
+
+  .pod-rhythm {
+    margin-top: 0.25rem;
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+  }
+
+  .pod-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+  }
+
+  /* ---------- The facts strip: big wide numerals, each on its own rule ---------- */
+
+  .fact-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem 1.5rem;
+    margin-top: 2rem;
+
+    @media (width >= 48rem) {
+      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+      gap: 1.5rem 2rem;
+      margin-top: 2.5rem;
+    }
+  }
+
+  .fact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+    padding-top: 0.75rem;
+    border-top: 3px solid var(--color-ink);
+  }
+
+  /* The value reads first; the markup keeps the term first, as a <dl> should. */
+  .fact-value {
+    order: -1;
+    font-size: clamp(1.625rem, 1.2rem + 1.6vw, 2.375rem);
+    font-weight: 820;
+    font-stretch: 125%;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  .fact-label {
+    font-size: 0.875rem;
+    line-height: 1.35;
+    color: var(--color-ink);
+  }
+
+  .fact-source {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--color-ink-soft);
+  }
+
+  .fact-source .badge {
+    height: 1.25rem;
+    padding-inline: 0.5rem;
+    font-size: 0.6875rem;
+  }
+
+  /* ---------- Tabs as anchored sections, under the sticky site header ---------- */
+
+  .pod-tabs {
+    position: sticky;
+    top: 4rem;
+    z-index: 30;
+    margin-top: 2rem;
+    background: rgb(246 242 244 / 0.94);
+    backdrop-filter: blur(8px);
+    border-block: 1px solid var(--color-line);
+  }
+
+  .pod-tabs-list {
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .pod-tab {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    height: 3rem;
+    padding-inline: 0.75rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-ink-soft);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .pod-tab:hover {
+    color: var(--color-ink);
+    box-shadow: inset 0 -2px 0 var(--color-tally);
+  }
+
+  .pod-tab-count {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Main column and sidebar ---------- */
+
+  .pod-layout {
+    display: grid;
+    gap: 2rem;
+    padding-top: 0.5rem;
+
+    @media (width >= 64rem) {
+      grid-template-columns: minmax(0, 1fr) 21rem;
+      gap: 3rem;
+      align-items: start;
+    }
+  }
+
+  .pod-main {
+    min-width: 0;
+  }
+
+  .pod-section {
+    padding-block: 2rem;
+    scroll-margin-top: 7.5rem;
+
+    @media (width >= 48rem) {
+      padding-block: 2.5rem;
+    }
+  }
+
+  .pod-section + .pod-section {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .pod-h2 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    font-size: 1.5rem;
+    font-stretch: 112.5%;
+    font-weight: 740;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .pod-h2-aside {
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    font-stretch: 100%;
+    color: var(--color-ink-soft);
+  }
+
+  .pod-note {
+    max-width: 65ch;
+    margin-top: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+  }
+
+  .pod-prose {
+    max-width: 65ch;
+    margin-top: 1rem;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+  }
+
+  .pod-prose p + p {
+    margin-top: 0.875em;
+  }
+
+  /* A long description: the short version gives way to the whole one when Read more opens. */
+  .pod-about:has(.pod-more[open]) .pod-about-short {
+    display: none;
+  }
+
+  .pod-more > summary {
+    display: inline-flex;
+    margin-top: 0.75rem;
+    font-weight: 650;
+    color: var(--color-plum);
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .pod-more > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .pod-more[open] > summary {
+    display: none;
+  }
+
+  /* The owner's own words: "Who we're looking for". */
+  .pod-owner-note {
+    max-width: 65ch;
+    margin-top: 1.5rem;
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    box-shadow: inset 4px 0 0 var(--color-plum), var(--shadow-edge);
+  }
+
+  /* ---------- Episodes ---------- */
+
+  .ep-list {
+    margin-top: 1rem;
+    border-top: 1px solid var(--color-line);
+  }
+
+  .ep-row {
+    display: grid;
+    grid-template-columns: 4.25rem minmax(0, 1fr);
+    gap: 0.25rem 1rem;
+    padding-block: 0.875rem;
+    border-bottom: 1px solid var(--color-line);
+
+    @media (width >= 40rem) {
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+    }
+  }
+
+  .ep-date {
+    padding-top: 0.125rem;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    color: var(--color-ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ep-title {
+    font-weight: 650;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .ep-title a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .ep-title a:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .ep-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+
+  .ep-sponsor {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 600;
+    color: var(--color-plum);
+  }
+
+  .ep-sponsor::before {
+    content: "";
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 2px;
+    background: var(--color-tally);
+  }
+
+  /* ---------- People ---------- */
+
+  .people {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .person {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+  }
+
+  .person-photo {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    object-fit: cover;
+    background: var(--color-plum-soft);
+    color: var(--color-plum);
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  .person-name {
+    font-weight: 650;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .person-role {
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* ---------- Sidebar ---------- */
+
+  .pod-side {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    @media (width >= 64rem) {
+      position: sticky;
+      top: 8rem;
+      padding-top: 2rem;
+    }
+  }
+
+  .pod-side .card-header {
+    padding: 1rem 1.25rem 0;
+  }
+
+  .pod-side .card-body {
+    padding: 0.875rem 1.25rem 1.25rem;
+  }
+
+  /* Request a spot (lane L7's form): fit results link here, so it clears the sticky header and tabs. */
+  .pod-request {
+    scroll-margin-top: 8rem;
+  }
+
+  /* Until the form renders, the anchor stays (links still land here) without adding a gap to the sidebar. */
+  .pod-request:empty {
+    margin-bottom: -1rem;
+  }
+
+  .details-list {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0;
+    font-size: 0.875rem;
+  }
+
+  .details-list dt,
+  .details-list dd {
+    padding-block: 0.4375rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .details-list dt {
+    padding-right: 1rem;
+    color: var(--color-ink-soft);
+  }
+
+  .details-list dd {
+    min-width: 0;
+    text-align: right;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .details-list dt:last-of-type,
+  .details-list dd:last-of-type {
+    border-bottom: 0;
+  }
+
+  .listing-price {
+    font-size: 2rem;
+    font-weight: 820;
+    font-stretch: 125%;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .month-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-top: 0.5rem;
+  }
+
+  .similar-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .similar-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-block: 0.5rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .similar-item:last-child {
+    border-bottom: 0;
+  }
+
+  .similar-art {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .similar-title {
+    font-size: 0.9375rem;
+    font-weight: 650;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .similar-title a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .similar-title a::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .similar-item:hover .similar-title a {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .fine-print {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* ---------- Teasers and empty sections ---------- */
+
+  .pod-empty {
+    margin-top: 1rem;
+    padding: 1.25rem 1.375rem;
+    border: 1px dashed var(--color-line-strong);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+
+  .pod-empty-title {
+    font-weight: 700;
+  }
+
+  .pod-empty p + p,
+  .pod-empty p + .btn,
+  .pod-empty p + form {
+    margin-top: 0.5rem;
+  }
+
+  /* ---------- Episode page ---------- */
+
+  .ep-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-block: 1.5rem 0.5rem;
+
+    @media (width >= 40rem) {
+      padding-block: 2.5rem 1rem;
+    }
+  }
+
+  .ep-show {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 650;
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .ep-show:hover span {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .ep-h1 {
+    max-width: 48rem;
+    font-size: clamp(1.75rem, 1.3rem + 2vw, 2.75rem);
+    font-stretch: 118%;
+    font-weight: 780;
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+
+  .mention-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .mention {
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: inset 4px 0 0 var(--color-tally), var(--shadow-edge);
+  }
+
+  .mention-brand {
+    font-size: 1.0625rem;
+    font-weight: 700;
+  }
+
+  .mention-evidence {
+    margin-top: 0.5rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--color-line);
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+    overflow-wrap: anywhere;
+  }
+
+  .ep-nav {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+
+    @media (width >= 40rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .ep-nav-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+
+  .ep-nav-link:hover {
+    border-color: var(--color-ink);
+  }
+
+  .ep-nav-next {
+    text-align: right;
+  }
+
+  .ep-nav-label {
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* ---------- Brand page ---------- */
+
+  .brand-mark {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 1rem;
+    background: var(--color-ink);
+    color: var(--color-tally);
+    font-size: 1.375rem;
+    font-weight: 820;
+    font-stretch: 125%;
+  }
+
+  .sponsored-list {
+    margin-top: 1rem;
+    border-top: 1px solid var(--color-line);
+  }
+
+  .sponsored-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-block: 0.875rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .sponsored-row:hover .dir-card-link {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+}

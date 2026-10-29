@@ -1,0 +1,17 @@
+<%# locals: (directory:, path:) -%>
+<%# Previous and next pages of a listing (path builds a page's URL from params); offset paging stops at MAX_PAGE. %>
+<% if directory.previous_page? || directory.next_page? %>
+  <nav class="dir-pager" aria-label="Pages">
+    <span>
+      <% if directory.previous_page? %>
+        <%= link_to "Previous", path.call(directory.to_params(page: (directory.page - 1 if directory.page > 2))), class: "btn btn-secondary btn-md", rel: "prev" %>
+      <% end %>
+    </span>
+    <span>Page <%= directory.page %></span>
+    <span>
+      <% if directory.next_page? %>
+        <%= link_to "Next", path.call(directory.to_params(page: directory.page + 1)), class: "btn btn-secondary btn-md", rel: "next" %>
+      <% end %>
+    </span>
+  </nav>
+<% end %>

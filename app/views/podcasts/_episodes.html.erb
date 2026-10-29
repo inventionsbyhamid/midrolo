@@ -1,0 +1,21 @@
+<%# locals: (podcast:, episodes:) -%>
+<%# Episodes (plan 4.1): the newest first, each linking to its own page, with its length and the sponsors found in its
+    notes; the rest wait behind a disclosure. episodes is PodcastsController#page_episodes. %>
+<% first, rest = episodes.first(10), episodes.drop(10) %>
+<section id="episodes" class="pod-section" aria-labelledby="episodes_title">
+  <h2 id="episodes_title" class="pod-h2">
+    Episodes
+    <% if podcast.episode_count.to_i.positive? %><span class="pod-h2-aside"><%= pluralize(number_with_delimiter(podcast.episode_count), "episode") %> in the feed</span><% end %>
+  </h2>
+  <% if episodes.any? %>
+    <ol class="ep-list"><%= render partial: "podcasts/episode_row", collection: first, as: :item, locals: { podcast: podcast } %></ol>
+    <% if rest.any? %>
+      <details class="pod-more">
+        <summary>Show <%= pluralize(rest.size, "older episode") %></summary>
+        <ol class="ep-list"><%= render partial: "podcasts/episode_row", collection: rest, as: :item, locals: { podcast: podcast } %></ol>
+      </details>
+    <% end %>
+  <% else %>
+    <div class="pod-empty"><p class="pod-empty-title">No episodes read yet.</p><p class="text-ink-soft">They appear after the next check of the show's feed.</p></div>
+  <% end %>
+</section>
