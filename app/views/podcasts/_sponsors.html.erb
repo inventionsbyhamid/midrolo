@@ -1,1 +1,30 @@
-<%# Podcast page: Sponsors section (Sponsors::History.for). Lane L2 fills it; lane L3's page renders it with podcast: (from Podcast.for_page). %>
+<%# locals: (podcast:) -%>
+<%#
+  Podcast page: the body of the Sponsors section (lane L2), from Sponsors::History.for (one query). The page (lane L3,
+  podcasts/_sponsors_section) gives the section its heading and #sponsors anchor. With no sponsor reads it renders
+  nothing, so the page's empty state shows instead.
+%>
+<% rows = Sponsors::History.for(podcast) %>
+<% if rows.any? %>
+  <div data-testid="sponsor-history">
+    <p class="pod-note">
+      <%= pluralize(rows.size, "brand") %> found in this show's episode notes, newest first.
+      Ads added when an episode plays aren't in the notes, so they aren't listed.
+    </p>
+    <ul class="sponsored-list" role="list">
+      <% rows.first(SponsorsHelper::SHOWN).each do |row| %>
+        <%= render "sponsors/brand_row", row: row, podcast: podcast %>
+      <% end %>
+    </ul>
+    <% if rows.size > SponsorsHelper::SHOWN %>
+      <details class="mt-3">
+        <summary class="disclosure disclosure-sm"><span>Show <%= pluralize(rows.size - SponsorsHelper::SHOWN, "more brand") %></span></summary>
+        <ul class="sponsored-list" role="list">
+          <% rows.drop(SponsorsHelper::SHOWN).each do |row| %>
+            <%= render "sponsors/brand_row", row: row, podcast: podcast %>
+          <% end %>
+        </ul>
+      </details>
+    <% end %>
+  </div>
+<% end %>

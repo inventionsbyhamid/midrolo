@@ -1,0 +1,28 @@
+<%# locals: (brand:, rows: nil) -%>
+<%#
+  Public brand page (lane L3's brands/show, under "Shows it sponsored"): the listed podcasts this brand sponsored, from
+  Sponsors::History.for_brand (one query, plus one for the artwork), the most recent first, each with its codes and the
+  read itself. rows: takes Sponsors::History rows the page already has. Renders nothing for a brand with none.
+%>
+<% rows ||= Sponsors::History.for_brand(brand, podcasts: Podcast.listed) %>
+<% if rows.any? %>
+  <% ActiveRecord::Associations::Preloader.new(records: rows.map(&:podcast), associations: { artwork_image: { file_attachment: :blob } }).call %>
+  <div data-testid="sponsored-shows">
+    <ul class="sponsored-list" role="list">
+      <% rows.each do |row| %>
+        <% podcast = row.podcast %>
+        <li class="sponsored-row items-start">
+          <%= link_to sponsors_podcast_path(podcast), class: "shrink-0", tabindex: -1, aria: { hidden: true } do %>
+            <%= podcast_artwork_tag(podcast, size: :thumb, class: "size-14") %>
+          <% end %>
+          <div class="flex min-w-0 flex-1 flex-col gap-1">
+            <h3 class="dir-card-title"><%= link_to podcast.title, sponsors_podcast_path(podcast), class: "link" %></h3>
+            <%= render "sponsors/meta", row: row %>
+            <%= render "sponsors/evidence", row: row, podcast: podcast %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+    <p class="pod-note">From sponsor reads in each episode's show notes. Dates are the episodes' publish dates.</p>
+  </div>
+<% end %>

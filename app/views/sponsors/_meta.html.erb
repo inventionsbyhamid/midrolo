@@ -1,0 +1,8 @@
+<%# locals: (row:) -%>
+<%# How often and when a sponsor was seen, its promo codes and its listener offer, as the show's notes gave them. %>
+<p class="ep-meta">
+  <span><strong class="text-ink"><%= pluralize(row.episodes_count, "episode") %></strong></span>
+  <% if (period = sponsors_period(row)) %><span class="tabular-nums"><%= period %></span><% end %>
+  <% row.promo_codes.each do |code| %><span class="chip">Code <%= code %></span><% end %>
+  <% if row.offer.present? %><span><%= row.offer.upcase_first %></span><% end %>
+</p>
