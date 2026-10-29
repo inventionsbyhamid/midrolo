@@ -5,30 +5,30 @@
     <h1 class="type-h1">Privacy</h1>
     <p class="prose-date">Last updated: October 2026</p>
     <p class="type-lead">
-      <%= APP_NAME %> helps podcasters find sponsors. This page says what we collect, why, who helps us run the service, and
-      how to delete it. Questions go to <%= contact_mail_to class: "link" %>.
+      <%= APP_NAME %> is where independent podcasts get sponsored. This page says what we collect, why, who helps us run the
+      service, and how to delete it. Questions go to <%= contact_mail_to class: "link" %>.
     </p>
 
     <h2>What we collect</h2>
     <ul>
       <li><strong>Your Google account basics.</strong> When you sign in with Google we get your name, email address and profile picture. We never see your password, and we never post anything to your account.</li>
-      <li><strong>What you add.</strong> Your shows and the optional details you give them (downloads, country, comparable shows, topics, a contact email), your media kit's text and images, and the statuses, notes and follow up dates in your pipeline.</li>
-      <li><strong>What we make for you.</strong> Reports, sponsor matches and pitch packs.</li>
-      <li><strong>Public podcast data.</strong> Show details from Podcast Index and your show's public RSS feed. We use the owner email in your feed only to send a code that proves you own the show.</li>
+      <li><strong>What you add.</strong> Your shows and the optional details you give them (downloads, country, comparable shows, topics, a contact email), your listing and media kit's text and images, and the statuses, notes and follow up dates in your pipeline.</li>
+      <li><strong>What we make for you.</strong> Reports, sponsor matches, pitch packs and, for brands, fit searches and their results.</li>
+      <li><strong>Brand accounts.</strong> If you use <%= APP_NAME %> as a brand: the brand's name and website, your saved shows, and the work email address you verify.</li>
+      <li><strong>Requests and messages.</strong> What a brand and a show write to each other about a sponsorship. Both sides of that conversation can read it, and nobody else. Our alert emails never copy a brand's message; a decline includes the show's reason.</li>
+      <li><strong>Verified stats.</strong> When you invite <%= APP_NAME %> to your show in Spotify for Creators or Apple Podcasts Connect, the numbers we read there (such as streams, plays, listeners, followers, and listeners' age, gender and country as shares) and when we read them. We never ask for your password. Our own sign in for those services is stored encrypted.</li>
+      <li><strong>Public podcast data.</strong> Show details from Podcast Index and each show's public RSS feed, which we use to build the show's public page and to find the sponsor reads in its episode notes. We use the owner email in a feed only to prove ownership when someone claims the show; it's stored encrypted and never shown.</li>
       <li><strong>Sign in history.</strong> When you last signed in, how many times, and the IP address used, to spot misuse.</li>
       <li><strong>The waitlist.</strong> If you join the founding member waitlist, your email and the plan you picked.</li>
       <li><strong>Payments.</strong> Card details go to Dodo Payments, never to us. We keep your plan, its status and the ids Dodo gives us for your subscription.</li>
     </ul>
-    <p>
-      Media kit views are counted without storing who viewed them: we keep a scrambled fingerprint of the visitor for 30
-      minutes so a refresh doesn't count twice.
-    </p>
-
     <h2>How we use it</h2>
     <p>
-      To run <%= APP_NAME %>: research your show, show you the results, send the emails you ask for (like verification
-      codes), take payments when paid plans open, and keep the service safe from abuse. We don't sell your data, we don't
-      use it for advertising, and nobody else sees your shows, reports or notes unless you publish a media kit.
+      To run <%= APP_NAME %>: build podcast pages, research your show or your brand, show you the results, pass requests
+      between brands and shows, send the emails you ask for (like verification codes and request alerts), take payments
+      when paid plans open, and keep the service safe from abuse. We don't sell your data, we don't use it for
+      advertising, and nobody else sees your reports, searches or notes. Your listing, once you publish it, and the
+      numbers you verify appear on your show's public page.
     </p>
 
     <h2>Who helps us run it</h2>
@@ -37,9 +37,10 @@
       <li><strong>Google</strong> signs you in.</li>
       <li><strong>Qloo</strong> provides the taste data. We send it show names, comparable shows, topics and the brands or places we look up, never your personal details.</li>
       <li><strong>Podcast Index</strong> provides podcast search and show details.</li>
-      <li><strong>OpenRouter</strong> passes our requests to the AI model that researches your show and writes reasons and pitches. OpenRouter picks the company that runs the model for each request, and we ask it to use only ones that don't store or train on what we send. They receive your show's public details, your optional hints, episode notes from public feeds and the research results.</li>
-      <li><strong>Cloudflare</strong> provides our DNS and stores the images you upload (Cloudflare R2), and may carry traffic to the site.</li>
-      <li><strong>Resend</strong> sends our emails, such as verification codes.</li>
+      <li><strong>Spotify and Apple</strong>, only when you invite <%= APP_NAME %> to your show there: we read your show's numbers with our own account.</li>
+      <li><strong>OpenRouter</strong> passes our requests to the AI models that research your show, check sponsor reads in public episode notes, and write reasons, pitches and brand briefs. OpenRouter picks the company that runs the model for each request, and we ask it to use only ones that don't store or train on what we send. They receive shows' public details, your optional hints, episode notes from public feeds, a brand's name and website, and the research results.</li>
+      <li><strong>Cloudflare</strong> provides our DNS, carries traffic to the site (caching public images on the way), and stores images (Cloudflare R2).</li>
+      <li><strong>Resend</strong> sends our emails, such as verification codes and request alerts.</li>
       <li><strong>Dodo Payments</strong> is the merchant of record for paid plans: it takes the payment and handles tax and invoices.</li>
     </ul>
     <p>
@@ -55,15 +56,19 @@
 
     <h2>What's public</h2>
     <p>
-      Only what you publish: a media kit you choose to make public, at its own address. Sample reports are about public
-      podcasts and contain no one's account data.
+      Each podcast in the directory has a public page built from its own public feed: its details, episodes, the people
+      the feed names and the sponsors its notes mention. A claimed show adds what its owner publishes: the listing and
+      the numbers they verify. No page shows contact details, and anyone can ask to remove a page (see
+      <%= link_to "data sources and your rights", data_sources_path, class: "link" %>). Brand pages list the shows a
+      brand has sponsored, from those feeds. Sample reports are about public podcasts and contain no one's account data.
     </p>
 
     <h2>Deleting your data</h2>
     <p>
       Delete your account from your account page and we delete your account and everything in it right away: shows,
-      reports, matches, pitches, notes, media kits and uploaded images. If your plan renews, cancel it in Manage billing
-      first. To ask for a copy of your data, or anything else about it, email <%= contact_mail_to class: "link" %>.
+      reports, matches, pitches, notes, media kits, uploaded images, brand memberships and searches. Messages you sent
+      stay in the other side's copy of the conversation, from a deleted account. A show's public page stays, since it's
+      built from the show's own feed; use "Remove this page" on it to take it down. If your plan renews, cancel it in Manage billing first. To ask for a copy of your data, or anything else about it, email <%= contact_mail_to class: "link" %>.
     </p>
 
     <h2>Changes</h2>

@@ -1,12 +1,13 @@
 <%# locals: (links: [], cta: nil, sign_out: false) -%>
-<%# links is a list of [label, href] pairs; cta is one [label, href] pair or nil. %>
+<%# links is a list of [label, href] or [label, href, count] (NavigationHelper); cta is one [label, href] pair or nil.
+    The full row shows from 64rem: a signed-in nav carries up to six links, too many for a tablet. %>
 <header class="site-header">
   <div class="wrap flex h-16 items-center justify-between gap-4">
     <%= link_to brand_logo, "/", class: "logo", aria: { label: "#{APP_NAME} home" } %>
 
-    <nav aria-label="Main" class="hidden items-center gap-1 md:flex">
-      <% links.each do |label, href| %>
-        <%= link_to label, href, class: "nav-link", aria: { current: nav_current(href) } %>
+    <nav aria-label="Main" class="hidden items-center gap-1 lg:flex">
+      <% links.each do |label, href, count| %>
+        <%= link_to nav_label(label, count), href, class: "nav-link", aria: { current: nav_current(href) } %>
       <% end %>
       <% if cta %>
         <%= ui_button cta.first, cta.last, size: :sm, class: "ml-3" %>
@@ -16,15 +17,15 @@
       <% end %>
     </nav>
 
-    <div class="md:hidden" data-controller="dialog">
+    <div class="lg:hidden" data-controller="dialog">
       <button type="button" class="btn btn-secondary btn-sm" data-action="dialog#open" aria-haspopup="dialog">
         <svg viewBox="0 0 20 20" class="size-4" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        Menu
+        Menu<% if (waiting = links.sum { |link| link[2].to_i }).positive? %> <span class="nav-count" aria-hidden="true"><%= waiting > 99 ? "99+" : waiting %></span> <span class="sr-only"><%= waiting %> unread</span><% end %>
       </button>
       <%= render "components/dialog", title: "Menu", id: "nav-menu", sheet: true do %>
         <nav aria-label="Main menu">
-          <% links.each do |label, href| %>
-            <%= link_to label, href, class: "nav-sheet-link", aria: { current: nav_current(href) } %>
+          <% links.each do |label, href, count| %>
+            <%= link_to nav_label(label, count), href, class: "nav-sheet-link", aria: { current: nav_current(href) } %>
           <% end %>
         </nav>
         <% if cta %>

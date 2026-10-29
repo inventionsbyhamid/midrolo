@@ -2,8 +2,10 @@
 <% podcasts = @rows.map(&:podcast) %>
 <% episodes = @rows.sum(&:episodes_count) %>
 <% content_for :title, "Podcasts #{brand.name} sponsors" %>
+<% card = ShareImages::ListCard.brand(brand, podcasts: podcasts) %>
 <% content_for :meta, pages_meta(description: "#{brand.name} sponsored #{pluralize(episodes, 'episode')} across #{pluralize(@rows.size, 'podcast')}, found in each episode's show notes. See the shows, the dates and the promo codes, and shows like them.".truncate(PodcastPagesHelper::DESCRIPTION_LIMIT, separator: " "),
-                                  url: public_brand_url(brand.slug)) %>
+                                  url: public_brand_url(brand.slug),
+                                  image: brand_share_image_url(brand.slug, v: card.version), image_alt: card.alt) %>
 <% content_for :head, pages_list_json_ld(name: "Podcasts #{brand.name} sponsors", url: public_brand_url(brand.slug), podcasts: podcasts,
                                           trail: [ [ "Podcasts", podcasts_url ], [ brand.name, public_brand_url(brand.slug) ] ]) %>
 <%#

@@ -17,10 +17,12 @@ module ShareImages
 
     module_function
 
-    # PNG bytes, RGB. artwork is an RGBA Vips::Image whose top-left corner goes at at: [x, y].
-    def png(svg, artwork: nil, at: nil)
+    # PNG bytes, RGB. artwork is an RGBA Vips::Image whose top-left corner goes at at: [x, y]; overlays are more of
+    # them, as [image, x, y] (a strip of artwork tiles).
+    def png(svg, artwork: nil, at: nil, overlays: [])
       image = load_svg(svg)
       image = image.composite2(artwork, :over, x: at.first, y: at.last) if artwork
+      overlays.each { |picture, x, y| image = image.composite2(picture, :over, x: x, y: y) }
       image.flatten(background: PAPER).cast(:uchar).write_to_buffer(".png")
     end
 

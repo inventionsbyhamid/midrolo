@@ -1,14 +1,19 @@
-<%# locals: (samples:, sample:, matches:) -%>
-<%# The hero: the promise, the two calls to action, and an episode waveform whose lit midroll slot holds a brand
-    match. The match card is the first sample's real top matches (or an illustration until a sample is done). %>
+<%# locals: (sample:, matches:) -%>
+<%# The hero: the Creator Lab news, the promise, one call to action for each side, and an episode waveform whose lit
+    midroll slot holds a brand match. The match card is the first sample's real top matches (or an illustration until
+    a sample is done). %>
 <section id="hero" class="hero" aria-labelledby="hero-title">
   <div class="wrap hero-grid">
     <div class="hero-copy">
-      <h1 id="hero-title" class="hero-title">Find sponsors who already love your listeners</h1>
-      <p class="hero-lead">An AI agent uses Qloo taste data to rank brands your audience will likely love.</p>
+      <%= link_to "#creator-lab", class: "hero-news" do %>
+        <span class="hero-news-lamp" aria-hidden="true"></span>
+        <span><%= landing_creator_lab_line %> <strong>List your show free.</strong></span>
+      <% end %>
+      <h1 id="hero-title" class="hero-title">Where independent podcasts get sponsored</h1>
+      <p class="hero-lead">Brands find shows their customers love, with verified numbers and real sponsor history.</p>
       <div class="hero-actions">
-        <%= ui_button "Get my free Snapshot", snapshot_start_path, size: :lg %>
-        <%= ui_button "See a sample report", sample_start_path(samples), variant: :secondary, size: :lg %>
+        <%= ui_button "Find podcasts your customers love", new_brand_search_path, size: :lg %>
+        <%= ui_button "Get your show sponsored", "#for-podcasters", variant: :secondary, size: :lg %>
       </div>
     </div>
 

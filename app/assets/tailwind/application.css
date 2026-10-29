@@ -595,6 +595,24 @@
     text-decoration: none;
   }
 
+  /* What waits behind a nav link (the Inbox's unread conversations): the tally lamp, lit. */
+  .nav-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    margin-left: 0.375rem;
+    padding-inline: 0.375rem;
+    border-radius: 999px;
+    background: var(--color-tally);
+    color: var(--color-ink);
+    font-size: 0.75rem;
+    font-weight: 750;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
   /* Footer: a timeline rule with the mid-roll marked. */
   .midroll-rule {
     position: relative;
