@@ -20,6 +20,8 @@
   <% when :ongoing %>
     <%= ui_button "Open your request", conversation_path(viewer.conversation), variant: :secondary %>
     <p class="text-sm text-ink-soft">You asked on <%= viewer.conversation.created_at.strftime("%b %-d") %>.</p>
+  <% when :colleague_asked %>
+    <p class="text-sm text-ink-soft"><%= Conversations::Start::COLLEAGUE_ASKED %></p>
   <% when :owner %>
     <%= ui_button "Requests to your show", inbox_path, variant: :secondary %>
   <% when :blocked %>

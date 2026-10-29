@@ -12,6 +12,9 @@ module Conversations
     OWN_SHOW = "This is your show. Requests to it arrive in your inbox.".freeze
     BLOCKED = "This show isn't taking requests from your brand.".freeze
     UNAVAILABLE = "This show isn't taking requests.".freeze
+    # An unverified member whose colleague's request is running: they may not open it (Conversation.for_brand_user),
+    # so they learn only that it exists (review M1).
+    COLLEAGUE_ASKED = "Someone at your brand already asked this show. Verify your work email to see their request.".freeze
 
     # conversation is the new one, or the ongoing one asked for again (existing true); error is a sentence for the
     # person, nil on success. A form error leaves error as the form's first message.
@@ -51,7 +54,7 @@ module Conversations
       return failure(BLOCKED) if Block.exists?(podcast_id: @podcast.id, brand_id: @brand.id)
 
       existing = ongoing
-      return Result.new(conversation: existing, error: nil, existing: true) if existing
+      return asked_already(existing) if existing
 
       conversation = create
       return failure(self.class.limit_message(@membership)) unless conversation
@@ -61,12 +64,19 @@ module Conversations
     rescue ActiveRecord::RecordNotUnique
       # A parallel request for the same show and brand made it first.
       existing = ongoing
-      existing ? Result.new(conversation: existing, error: nil, existing: true) : raise
+      existing ? asked_already(existing) : raise
     end
 
     private
 
     def failure(message) = Result.new(conversation: nil, error: message, existing: false)
+
+    # The brand's running request: handed back to its asker or a verified member, never to an unverified colleague.
+    def asked_already(conversation)
+      return failure(COLLEAGUE_ASKED) unless conversation.started_by_id == @user.id || @membership.verified?
+
+      Result.new(conversation: conversation, error: nil, existing: true)
+    end
 
     def owner? = Show.where(podcast_id: @podcast.id, user_id: @user.id).where.not(verified_at: nil).exists?
 
