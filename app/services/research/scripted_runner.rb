@@ -2,8 +2,11 @@ module Research
   # The research playbook without an LLM: the same services in the agent's order, saving through the same
   # tools, with deterministic choices (Seeds.deterministic, config/category_map.yml, the top candidates).
   #   with_reasons: true  — a full report in fake-LLM mode: every section, templated reasons and summary.
-  #   with_reasons: false — a free Snapshot (R36): seeds, taste tags, the map and unreasoned matches only; no
-  #                         demographics, no proven-sponsor scan (scan_limit 0), no summary, and no Llm at all.
+  #   with_reasons: false — a free Snapshot (R36): seeds, taste tags, the map, shows with a similar audience and
+  #                         unreasoned matches only; no demographics, no proven-sponsor scan (scan_limit 0), no summary,
+  #                         and no Llm at all.
+  # Both save the shows with a similar audience (SimilarPodcasts) right after the audience profile, as the agent's
+  # build_audience_profile does.
   # Raises NeedsInput when fewer than 2 seeds are found, or when the seeds find no sponsor candidates (Review
   # Focus #1: never an empty report). Returns the toolkit.
   class ScriptedRunner
@@ -21,6 +24,7 @@ module Research
 
       AudienceProfile.build(toolkit, seed_entity_ids: toolkit.seed_entity_ids, seed_tag_ids: toolkit.seed_tag_ids,
                                      country: show.country, include_demographics: @with_reasons, entities: @with_reasons)
+      SimilarPodcasts.call(toolkit)
       scored = SponsorCandidates.find(toolkit, seed_entity_ids: toolkit.seed_entity_ids, seed_tag_ids: toolkit.seed_tag_ids,
                                                categories: CategoryMap.for(show.categories), scan_limit: scan_limit)
       raise NeedsInput, "no sponsor candidates for these seeds" if scored.empty?

@@ -160,6 +160,23 @@ RSpec.describe Research::Tools do
     it "asks for seeds first when there are none" do
       expect(run("build_audience_profile")).to include("Save taste seeds first")
     end
+
+    it "saves the shows with a similar audience once, and again only when the seeds it asks with change (build spec L8)" do
+      seed!
+      out = run("build_audience_profile")
+      expect(out).to include("Shows with a similar audience (saved): ")
+      expect(report.reload.similar_podcasts.size).to eq(10)
+
+      run("build_audience_profile")
+      expect(report.agent_steps.where(tool: "similar_podcasts").count).to eq(1) # the show itself is the signal both times
+
+      toolkit.show.podcast.update!(qloo_entity_id: nil) # the show isn't on Qloo after all: a proxy profile
+      toolkit.lookup_sources.clear
+      run("save_taste_seeds", entity_ids: [ "fake:podcast:index-fund-mornings" ], tag_ids: [ "urn:tag:genre:media:business" ],
+                              profile_kind: "proxy")
+      run("build_audience_profile")
+      expect(report.agent_steps.where(tool: "similar_podcasts").count).to eq(2)
+    end
   end
 
   describe "find_sponsor_candidates" do
