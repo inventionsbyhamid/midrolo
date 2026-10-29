@@ -1,8 +1,11 @@
 <% content_for :title, "Find your show" %>
 <div class="mx-auto flex max-w-2xl flex-col gap-8">
   <header>
+    <% if @onboarding %><p class="text-sm font-semibold text-plum">Step 1 of 2</p><% end %>
     <h1 class="type-h1">Find your show</h1>
-    <p class="type-lead mt-2 text-ink-soft">Search by name and we'll pull in your artwork and details.</p>
+    <p class="type-lead mt-2 text-ink-soft">
+      <%= @onboarding ? "Welcome to #{APP_NAME}. Add your podcast and we'll find brands your listeners love, starting with a free Snapshot." : "Search by name and we'll pull in your artwork and details." %>
+    </p>
   </header>
 
   <% if @at_limit %>

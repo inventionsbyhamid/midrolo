@@ -12,6 +12,7 @@ class ShowsController < ApplicationController
 
   def new
     @at_limit = at_limit?
+    @onboarding = current_user.shows.none?
   end
 
   def create
@@ -108,6 +109,7 @@ class ShowsController < ApplicationController
   def render_new(status:, error: nil, at_limit: false)
     @error = error
     @at_limit = at_limit
+    @onboarding = current_user.shows.none?
     @feed_url = params[:feed_url]
     render :new, status: status
   end
