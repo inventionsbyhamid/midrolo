@@ -360,3 +360,14 @@
     text-wrap: balance;
   }
 }
+
+@layer components {
+  /* The landing's pricing in one line with a link to the full page (L-1). */
+  .landing-pricing {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.25rem 2rem;
+  }
+}

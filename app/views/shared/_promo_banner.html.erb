@@ -1,6 +1,17 @@
-<%# The hackathon promo's banner (R63): only for a signed-in user whose plan is the promo. %>
+<%# The hackathon promo's banner (R63): only for a signed-in user whose plan is the promo. It speaks to the side you're
+    on (UX review G-5): the brand workspace hears about brand features, not Snapshots, and a phone gets one short line. %>
 <% if user_signed_in? && current_plan.key == :promo %>
+  <% through = Entitlements.promo_until&.strftime("%b %-d") %>
   <div class="promo-banner" role="note">
-    <p class="wrap py-2"><%= promo_offer %>: <%= promo_allowance %>.</p>
+    <p class="wrap py-2">
+      <span class="sm:hidden">Free during the Qloo hackathon judging<%= ", through #{through}" if through %>.</span>
+      <span class="max-sm:hidden">
+        <% if controller_path.start_with?("brands/") %>
+          Free for brands during the Qloo hackathon judging<%= ", through #{through}" if through %>: fit searches, saved shows and requests.
+        <% else %>
+          <%= promo_offer %>: <%= promo_allowance %>.
+        <% end %>
+      </span>
+    </p>
   </div>
 <% end %>

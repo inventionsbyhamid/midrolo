@@ -31,7 +31,7 @@ module PricingHelper
     when :free then free_features(limits)
     when :creator then creator_features(limits)
     when :pro then pro_features(limits)
-    when :sprint then [ "Everything in #{Entitlements.limits(:pro)[:name]} for #{limits[:duration_days]} days",
+    when :sprint then [ "#{limits[:duration_days]} days of #{Entitlements.limits(:pro)[:name]}, no subscription to cancel",
                         "One payment, no renewal", "Good for a new season's launch" ]
     end
   end

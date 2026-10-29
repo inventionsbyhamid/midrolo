@@ -1,8 +1,12 @@
 <% content_for :title, "Sign in" %>
-<% content_for :meta, social_meta(description: "Sign in to Midrolo with Google to research sponsors for your podcast.") %>
+<% content_for :meta, social_meta(description: "Sign in to Midrolo with Google to list your podcast or find podcasts for your brand.") %>
+<%# Where you were going, said plainly as the title (G-3); Devise's red "sign in first" alert stays out when this says it. The view
+    renders before the layout, so the flash is gone by the time the layout draws it. %>
+<% context = sign_in_context %>
+<% flash.delete(:alert) if sign_in_unauthenticated_alert? %>
 <section class="wrap flex justify-center py-16 sm:py-24">
   <div class="w-full max-w-md">
-    <%= render "components/card", title: "Sign in to #{APP_NAME}", heading: :h1 do %>
+    <%= render "components/card", title: context || "Sign in to #{APP_NAME}", heading: :h1 do %>
       <p class="mb-6 text-ink-soft">One click and you're in. We never post to your account.</p>
       <% if AuthConfig.developer_strategy? %>
         <%# Development without Google keys (R101): the developer strategy's callback takes a name and an email

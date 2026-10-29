@@ -9,9 +9,9 @@
 <% items = report ? match_page_similar(report) : [] %>
 <% if items.any? %>
   <%= render "components/card", title: "Similar shows", heading: :h2 do %>
-    <ul class="grid gap-3" data-match-similar>
+    <ul class="grid grid-cols-[minmax(0,1fr)] gap-3" data-match-similar>
       <% items.each do |item| %>
-        <li class="flex items-center gap-3">
+        <li class="flex min-w-0 items-center gap-3">
           <% if item.podcast %>
             <%= podcast_artwork_tag(item.podcast, class: "size-10") %>
           <% else %>

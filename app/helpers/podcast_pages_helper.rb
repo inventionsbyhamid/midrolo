@@ -19,7 +19,8 @@ module PodcastPagesHelper
   # Another lane's partial (podcasts/_numbers and the rest), or the block's fallback when it renders nothing yet.
   def pages_slot(partial, **locals, &fallback)
     html = render(partial, **locals)
-    return html if html.to_s.strip.present?
+    # Development wraps every partial in <!-- BEGIN ... --> comments; an empty partial is still empty.
+    return html if html.to_s.gsub(/<!--.*?-->/m, "").strip.present?
 
     fallback ? capture(&fallback) : nil
   end
@@ -63,10 +64,52 @@ module PodcastPagesHelper
   # The hero's rhythm line: "New episode weekly, latest 9 days ago, since Sep 2017".
   def pages_rhythm(podcast)
     cadence = pages_cadence(podcast)
+    # A dormant show speaks in the past tense: "Published weekly until Aug 2025, since Jan 2023" (PP-5).
+    if podcast.dormant? && podcast.last_published_at
+      until_month = podcast.last_published_at.strftime("%b %Y")
+      parts = [ (cadence ? "published #{cadence.downcase} until #{until_month}" : "last episode #{until_month}"),
+                ("since #{podcast.first_published_at.strftime('%b %Y')}" if podcast.first_published_at) ].compact
+      return parts.join(", ").upcase_first
+    end
+
     parts = [ (cadence == "Daily" ? "New episodes daily" : "New episode #{cadence.downcase}" if cadence),
               ("latest #{pages_ago(podcast.last_published_at)}" if podcast.last_published_at),
               ("since #{podcast.first_published_at.strftime('%b %Y')}" if podcast.first_published_at) ].compact
     parts.join(", ").upcase_first.presence
+  end
+
+  # The deal in one line under the hero's title (PP-3): the from price and the open months still ahead (short names,
+  # "Oct" or "Oct 2026" once they span a year), from the published listing. nil when the show lists neither.
+  def pages_deal(podcast)
+    listing = podcast.listing if podcast.claimed? && podcast.listing&.published?
+    current = Date.current.strftime("%Y-%m")
+    months = Array(listing&.open_months).map(&:to_s).select { |month| month >= current }.sort.first(4)
+    years = months.map { |month| month.first(4) }.uniq
+    labels = months.filter_map do |month|
+      date = Date.strptime(month, "%Y-%m") rescue nil
+      date&.strftime(years.size > 1 ? "%b %Y" : "%b")
+    end
+    from = pages_money(podcast.min_price_cents) if podcast.min_price_cents
+    return nil if from.nil? && labels.empty?
+
+    { from:, months: labels }
+  end
+
+  # A long title steps the hero's display size down so it never runs to six lines (PP-4).
+  def pages_title_size(title)
+    length = title.to_s.length
+    if length > 90 then "pod-title-long"
+    elsif length > 50 then "pod-title-mid"
+    end
+  end
+
+  # Podcast#stats_verified? for a whole list of cards in one query: the ids of the claimed podcasts among them with a
+  # fresh verified reading. The "Stats verified" chip on a card says what the page header says.
+  def pages_verified_ids(podcasts)
+    ids = podcasts.select(&:claimed?).map(&:id)
+    return Set.new if ids.empty?
+
+    StatReading.unexpired.trust_verified.where(podcast_id: ids).distinct.pluck(:podcast_id).to_set
   end
 
   def pages_date(time) = time&.strftime("%b %-d, %Y")

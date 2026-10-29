@@ -87,9 +87,14 @@ class PodcastDirectory
     relation = relation.where(downloads_per_episode: SIZES.fetch(size)) if size
     relation = relation.where(min_price_cents: ..(price * 100)) if price
     relation = relation.open_to_sponsors if open?
-    relation = relation.claimed.where(downloads_trust: "verified") if verified?
+    relation = relation.claimed.where(verified_readings.arel.exists) if verified?
     relation = relation.where(SponsorMention.where("sponsor_mentions.podcast_id = podcasts.id").arel.exists) if sponsored?
     ordered(relation)
+  end
+
+  # Podcast#stats_verified? as SQL: a fresh verified reading of the podcast's own, as the page header counts it.
+  def verified_readings
+    StatReading.unexpired.trust_verified.where("stat_readings.podcast_id = podcasts.id")
   end
 
   def ordered(relation)

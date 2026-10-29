@@ -14,7 +14,7 @@
 %>
 <% request_form = pages_slot("podcasts/request", podcast: podcast) unless podcast.pending? %>
 <article class="pb-10" aria-labelledby="podcast_title">
-  <%= render "podcasts/hero", podcast: podcast, actions: !podcast.pending?, requestable: request_form.present? %>
+  <%= render "podcasts/hero", podcast: podcast, actions: !podcast.pending?, request_form: request_form %>
 
   <% if podcast.pending? %>
     <div class="wrap pod-layout">
@@ -52,7 +52,7 @@
         <%= render "podcasts/rates_section", podcast: podcast %>
         <%= render "podcasts/people", podcast: podcast %>
       </div>
-      <%= render "podcasts/sidebar", podcast: podcast, similar: @similar, request_form: request_form %>
+      <%= render "podcasts/sidebar", podcast: podcast, similar: @similar, requestable: request_form.present? %>
     </div>
   <% end %>
 </article>

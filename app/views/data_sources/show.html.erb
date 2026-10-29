@@ -10,13 +10,14 @@
     </p>
 
     <h2>Where the facts come from</h2>
-    <ul>
-      <li><strong>The show's own RSS feed.</strong> Title, description, artwork, episodes and their notes, categories, language, how often it publishes, and the people the feed names (hosts and guests). We read the feed itself, not a copy from a directory, and each page says when it was last checked.</li>
-      <li><strong>Sponsors.</strong> Sponsor reads, promo codes and offers found in the show notes of each episode, by pattern matching and an AI model. Each one links to the episode it came from.</li>
+    <%# The same chips the podcast pages put beside each fact (X-2), so a visitor can match them up. %>
+    <ul class="source-list">
+      <li><strong>The show's own RSS feed.</strong> <%= trust_badge("feed") %> Title, description, artwork, episodes and their notes, categories, language, how often it publishes, and the people the feed names (hosts and guests). We read the feed itself, not a copy from a directory, and each page says when it was last checked.</li>
+      <li><strong>Sponsors.</strong> <%= trust_badge("feed") %> Sponsor reads, promo codes and offers found in the show notes of each episode, by pattern matching and an AI model. Each one links to the episode it came from.</li>
       <li><strong>Hosting and measurement.</strong> Which company hosts the show and which measurement services count its downloads, read from the audio file addresses in the feed.</li>
       <li><strong>Discovery.</strong> We find shows through Podcast Index, Qloo and what people search for here, then read each show's own feed.</li>
-      <li><strong>Numbers from the show.</strong> Listener and play numbers appear only once the show's owner claims the page and either invites <%= APP_NAME %> to read them from Spotify for Creators or Apple Podcasts Connect (marked verified) or types them in (marked provided by the show). Every number says where it came from and when.</li>
-      <li><strong>Audience taste.</strong> What a show's listeners also like comes from Qloo, only after the owner or a <%= APP_NAME %> member runs a report, and is shown only to signed in members, labelled as Qloo's.</li>
+      <li><strong>Numbers from the show.</strong> <%= trust_badge("verified") %> <%= trust_badge("provided") %> Listener and play numbers appear only once the show's owner claims the page and either invites <%= APP_NAME %> to read them from Spotify for Creators or Apple Podcasts Connect (marked verified) or types them in (marked provided by the show). Every number says where it came from and when.</li>
+      <li><strong>Audience taste.</strong> <%= ui_badge "Taste data from Qloo", tone: :accent %> What a show's listeners also like comes from Qloo, only after the owner or a <%= APP_NAME %> member runs a report, and is shown only to signed in members, labelled as Qloo's.</li>
     </ul>
 
     <h2>What we never show</h2>

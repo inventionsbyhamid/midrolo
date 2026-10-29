@@ -121,6 +121,12 @@ RSpec.describe "Podcast pages" do
       expect(cards["Unclaimed Show"]).not_to include("per episode")
       expect(response.body).not_to include("9,999")
       expect(doc.css(".dir-card").find { |card| card.text.include?("Unclaimed Show") }.text).not_to include("Stats verified")
+      # The chip is Podcast#stats_verified?, as on the page: a fresh verified reading, not the column alone.
+      chip = -> { doc.css(".dir-card").find { |card| card.text.include?("Verified Show") }.text.include?("Stats verified") }
+      expect(chip.call).to be(false)
+      create(:stat_reading, podcast: Podcast.find_by!(title: "Verified Show"), source: "spotify", metric: "listeners_30d", trust: "verified")
+      visit "/podcasts"
+      expect(chip.call).to be(true)
       expect(doc.at_css("label[for='size']").text).to eq("Plays or downloads per episode")
       expect(doc.css("select#sort option").map(&:text)).to include("Most plays or downloads")
 
