@@ -130,6 +130,43 @@ RSpec.describe Research::SimilarPodcasts do
     end
   end
 
+  describe ".backfill (a report that finished before the step existed)" do
+    let(:seeds) do
+      { "entities" => [ { "id" => own_id, "name" => "The Founder's Ledger", "type" => "podcast", "source" => Research::Seeds::SHOW_SOURCE },
+                        { "id" => "fake:podcast:index-fund-mornings", "name" => "Index Fund Mornings", "type" => "podcast", "source" => "You listed it" } ],
+        "tags" => [ { "id" => "urn:tag:genre:media:business", "name" => "Business", "source" => "Show category: Business" } ] }
+    end
+
+    before { Taste::Provider.reset! }
+
+    it "runs the step from the seeds the report saved, asking with the show itself when one of them was the show" do
+      report.update!(status: "done", seeds: seeds)
+      allow(Taste::Provider.current).to receive(:recommend).and_call_original
+
+      entries = described_class.backfill(report)
+
+      expect(Taste::Provider.current).to have_received(:recommend).with(type: :podcast, entity_ids: [ own_id ], tag_ids: [], take: 10)
+      expect(entries.size).to eq(10)
+      expect(report.reload.similar_podcasts).to eq(entries)
+      expect(report.agent_steps.pluck(:tool, :status)).to eq([ %w[similar_podcasts ok] ])
+    end
+
+    it "asks with the saved seeds when none of them was the show" do
+      seeds["entities"].shift
+      report.update!(status: "done", seeds: seeds)
+      allow(Taste::Provider.current).to receive(:recommend).and_call_original
+
+      described_class.backfill(report)
+      expect(Taste::Provider.current).to have_received(:recommend)
+        .with(type: :podcast, entity_ids: [ "fake:podcast:index-fund-mornings" ], tag_ids: [ "urn:tag:genre:media:business" ], take: 10)
+    end
+
+    it "does nothing for a report with no seeds" do
+      expect(described_class.backfill(report)).to be_nil
+      expect(report.agent_steps).to be_empty
+    end
+  end
+
   context "when the show isn't on Qloo (a proxy profile)" do
     let(:seed) { taste.search(query: "Index Fund Mornings", types: [ :podcast ]).first }
     let(:tag) { taste.find_tags(query: "Business").first }

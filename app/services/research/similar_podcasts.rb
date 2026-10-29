@@ -19,6 +19,26 @@ module Research
 
     def self.call(toolkit) = new(toolkit).call
 
+    # The step for a report that finished before it existed (the sample reports: rake matching:similar_backfill), from
+    # the seeds that report saved; its trace gains the step. A background run, so the call guard may wait out the
+    # minute cap (R109). Returns what #call does.
+    def self.backfill(report)
+      toolkit = Toolkit.new(report)
+      saved = report.seeds.is_a?(Hash) ? report.seeds : {}
+      entities = Array(saved["entities"]).select { |e| e.is_a?(Hash) && e["id"].present? }.map do |e|
+        Taste::Entity.new(id: e["id"], name: e["name"], type: e["type"]&.to_sym, popularity: nil, affinity: nil,
+                          image_url: nil, description: nil, website: nil, tags: [], properties: {})
+      end
+      tags = Array(saved["tags"]).select { |t| t.is_a?(Hash) && t["id"].present? }
+                                 .map { |t| Taste::Tag.new(id: t["id"], name: t["name"], type: nil, score: nil) }
+      toolkit.record_lookup({ entities: entities, tags: tags, sources: entities.to_h { |e| [ e.id, saved_source(saved, e.id) ] } })
+      toolkit.seeds = { entities: entities, tags: tags }
+      Taste::CallGuard.waiting { call(toolkit) }
+    end
+
+    def self.saved_source(saved, id) = Array(saved["entities"]).find { |e| e.is_a?(Hash) && e["id"] == id }&.dig("source")
+    private_class_method :saved_source
+
     # The Qloo signals the step asks with: the show's own entity when it is on Qloo, else the saved seeds; nil with
     # neither. The agent's tool runs the step again only when these change.
     def self.signals(toolkit)
