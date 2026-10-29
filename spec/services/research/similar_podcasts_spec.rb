@@ -23,6 +23,8 @@ RSpec.describe Research::SimilarPodcasts do
 
     it "asks Qloo once with the show itself and saves the shows, most similar first, never the show" do
       allow(taste).to receive(:recommend).and_call_original
+      # The directory has none of the others (the demo directory would add them).
+      allow(Catalog::LazyAdd).to receive(:call).and_return(Catalog::LazyAdd::Result.new(found: [], added: []))
       linked = in_catalog(qloo_similar.second)
 
       entries = described_class.call(toolkit)
@@ -50,11 +52,14 @@ RSpec.describe Research::SimilarPodcasts do
 
     it "adds a show the catalog lacks through Catalog::LazyAdd and links it to its Qloo entity" do
       first = qloo_similar.first
-      added = create(:podcast, title: first.name, status: "pending")
       other = create(:podcast, title: "#{first.name} Extra")
-      allow(Catalog::LazyAdd).to receive(:call).and_call_original
-      allow(Catalog::LazyAdd).to receive(:call).with(first.name)
-                                               .and_return(Catalog::LazyAdd::Result.new(found: [ other ], added: [ added ]))
+      added = nil
+      # The directory has only the first show; LazyAdd adds it as it answers (before, the catalog lacks it).
+      allow(Catalog::LazyAdd).to receive(:call).and_return(Catalog::LazyAdd::Result.new(found: [], added: []))
+      allow(Catalog::LazyAdd).to receive(:call).with(first.name) do
+        added = create(:podcast, title: first.name, status: "pending")
+        Catalog::LazyAdd::Result.new(found: [ other ], added: [ added ])
+      end
 
       entries = described_class.call(toolkit)
 
@@ -78,8 +83,12 @@ RSpec.describe Research::SimilarPodcasts do
     it "adds at most the configured number of shows a run" do
       stub_const("#{described_class}::MAX_ADDS", 2)
       allow(Catalog::LazyAdd).to receive(:call).and_call_original
+      allow(Catalog::QlooMatch).to receive(:call).and_call_original
       described_class.call(toolkit)
       expect(Catalog::LazyAdd).to have_received(:call).twice
+      # The catalog lookup never reaches the directory itself, so MAX_ADDS bounds the step's outside calls.
+      expect(Catalog::QlooMatch).to have_received(:call).with(anything, directory: false).at_least(:once)
+      expect(Catalog::QlooMatch).not_to have_received(:call).with(anything)
     end
 
     it "stops adding once the directory is down, keeping every show and saying so" do
