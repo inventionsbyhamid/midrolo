@@ -59,22 +59,31 @@ class Brand < ApplicationRecord
     domain ? named.find_by(domain: nil) : named.first
   end
 
-  # find_existing, or a new brand. A brand found by name gains the domain when it had none. Raises ArgumentError
-  # without a name or a domain.
+  # find_existing, or a new brand (named after its domain when no name is given). A brand found by name gains the
+  # domain it lacked, and one still named after its domain ("shopify.com") takes the first real name it's given.
+  # Raises ArgumentError without a name or a domain. Safe inside a transaction, and against a parallel resolve: a
+  # domain or slug taken meanwhile (the unique index, or the uniqueness check) means one more look before giving up.
   def self.resolve(name:, domain: nil)
     domain = normalize_domain(domain)
     domain = nil if domain && webmail?(domain)
-    raise ArgumentError, "a brand needs a name or a domain" if name.to_s.strip.empty? && domain.nil?
+    name = name.to_s.squish
+    raise ArgumentError, "a brand needs a name or a domain" if name.empty? && domain.nil?
 
-    brand = find_existing(name: name, domain: domain)
-    return create!(name: name.to_s.strip.presence || domain, domain: domain) unless brand
+    attempts = 0
+    begin
+      brand = find_existing(name: name, domain: domain)
+      brand ? brand.adopt!(name: name, domain: domain) : transaction(requires_new: true) { create!(name: name.presence || domain, domain: domain) }
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+      raise if e.is_a?(ActiveRecord::RecordInvalid) && %i[domain slug].none? { |field| e.record.errors.of_kind?(field, :taken) }
 
-    brand.update!(domain: domain) if domain && brand.domain.nil?
-    brand
-  rescue ActiveRecord::RecordNotUnique
-    # A parallel resolve made it first.
-    find_existing(name: name, domain: domain) || raise
+      attempts += 1
+      retry if attempts < 2
+      raise
+    end
   end
+
+  # A name like "shopify.com", which only a domain gave the brand.
+  def self.domain_like?(name) = name.to_s.match?(/\A[\w-]+(?:\.[\w-]+)+\z/)
 
   # Free mail (the webmail list in config/proven_scan.yml) can't be a brand's domain.
   def self.webmail?(domain)
@@ -83,6 +92,15 @@ class Brand < ApplicationRecord
   end
 
   def verified? = verified_at.present?
+
+  # Brand.resolve's update of a brand it found: the domain it lacked, and a real name for one named after its domain.
+  def adopt!(name:, domain:)
+    changes = {}
+    changes[:domain] = domain if domain && self.domain.nil?
+    changes[:name] = name if name.present? && self.name == self.domain && !self.class.domain_like?(name)
+    self.class.transaction(requires_new: true) { update!(changes) } if changes.any?
+    self
+  end
 
   private
 
