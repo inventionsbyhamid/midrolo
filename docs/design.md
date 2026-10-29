@@ -80,6 +80,7 @@ The user's call is to build it **production-ready, not as a demo**: Google login
 - **Landing page (`/`).** Hero: "Find sponsors who already love your listeners." The problem in the hosts' own words, how it works in 3 steps, a live sample report, a comparison with the old way (guessing, generic kits, marketplaces that shut down), pricing, an FAQ (including "where does the data come from" and "what this doesn't prove") and a footer with Podcast Index attribution.
 - **Sample reports (`/samples/:slug`).** 2–3 fully run reports on real, well-known indie shows, viewable without login. Each is labeled "Sample — not affiliated with the show." This is the path for judges who don't sign in.
 - **Media kit (`/k/:slug`).** The public page a podcaster sends to brands (§5.6).
+- **Blog (`/blog`, R148).** The SEO growth channel: guides for the questions independent podcasters search, each ending in a free Snapshot. Posts are Markdown files in `content/blog` with front matter, so a post ships like code; each gets its own share image, article tags, JSON-LD, a sitemap entry and a place in the Atom feed. The blog is linked from the header, footer and sitemap only once a post is published.
 - Pricing, privacy, terms and a contact page.
 
 ### 5.2 Sign-in
