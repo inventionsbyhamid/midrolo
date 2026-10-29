@@ -23,8 +23,14 @@ module StatsPayloads
       "breakdowns" => { "country" => { "US" => 0.7, "AU" => 0.3 }, "country_rank" => %w[US AU] } }
   end
 
-  def fetch_error(code, message = "plain words")
-    { "ok" => false, "error" => code, "message" => message }
+  def fetch_error(code, message = "plain words", retry_after: nil)
+    Stats::PlatformFetch.failure(code, message, retry_after: retry_after)
+  end
+
+  # Lets every helper run through Stats::Throttle at once, for specs that run syncs back to back but aren't about the
+  # throttle (Throttle.track still records each outcome).
+  def allow_stats_runs
+    allow(Stats::Throttle).to receive(:reserve) { Stats::Throttle::Slot.new(allowed: true, at: Time.current) }
   end
 end
 

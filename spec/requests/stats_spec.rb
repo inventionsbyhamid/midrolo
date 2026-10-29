@@ -172,6 +172,20 @@ RSpec.describe "Stats screen" do
         expect(response).to redirect_to(show_stats_path(show, anchor: "spotify"))
       end
 
+      it "says when a check will run while Midrolo's limits make it wait" do
+        travel_to(Time.utc(2026, 10, 30, 14, 0, 10)) do
+          create(:service_session, platform: "spotify").update_columns(next_run_at: 10.minutes.from_now)
+          expect { post check_show_stat_connection_path(show, connection) }.to have_enqueued_job(Stats::SyncJob)
+          expect(flash[:notice]).to eq("Checking soon, around 14:10 UTC. Refresh then to see what we found.")
+        end
+      end
+
+      it "says it checks now when the limits allow a run now" do
+        create(:service_session, platform: "spotify")
+        post check_show_stat_connection_path(show, connection)
+        expect(flash[:notice]).to eq("Checking now. Refresh in a minute to see what we found.")
+      end
+
       it "disconnects: the connection and its numbers go" do
         Stats::Record.call(connection, spotify_result)
         delete show_stat_connection_path(show, connection)

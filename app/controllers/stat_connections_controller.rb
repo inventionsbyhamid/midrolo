@@ -45,10 +45,16 @@ class StatConnectionsController < ApplicationController
     redirect_to show_stats_path(@show), alert: alert, status: :see_other
   end
 
+  # The sync waits its turn under Stats::Throttle (Midrolo's platform accounts are kept light), so say when.
   def check
     Stats::SyncJob.perform_later(@connection.id)
-    redirect_to show_stats_path(@show, anchor: @connection.provider),
-                notice: "Checking now. Refresh in a minute to see what we found.", status: :see_other
+    at = Stats::Throttle.next_free_at(@connection.provider)
+    notice = if at > Time.current
+      "Checking soon, around #{at.utc.strftime('%H:%M')} UTC. Refresh then to see what we found."
+    else
+      "Checking now. Refresh in a minute to see what we found."
+    end
+    redirect_to show_stats_path(@show, anchor: @connection.provider), notice: notice, status: :see_other
   end
 
   def destroy

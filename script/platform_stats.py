@@ -11,9 +11,16 @@ appleconnector 0.4.1 (https://github.com/openpodcast). Their sign in code, endpo
 is. Their HTTP loop (`_request`) is replaced in a subclass: as published it has no request timeout, retries any
 error (a 403, 404 or 500 included) six times with waits of up to a minute, and on errors logs the request headers
 (Apple's carry the session cookies). The replacement makes one GET with a 5 s connect and 15 s read timeout and maps
-the answer to an error code. Required calls retry a 429 or 502 to 504 at most twice inside the time budget; optional
-calls get one attempt. Spotify's sign in keeps the connector's code, with its requests held to the same timeouts and
-a shorter retry policy (3 tries within 20 s, waits of 1 and 2 s, no retry on a 4xx answer).
+the answer to an error code. Required calls retry a 429 or 502 to 504 at most twice inside the time budget, and only
+when the platform asks for a wait of 10 s or less (or names none); optional calls get one attempt. Spotify's sign in
+keeps the connector's code, with its requests held to the same timeouts and a shorter retry policy (3 tries within
+20 s, waits of 1 and 2 s, no retry on a 4xx answer, a 429 included).
+
+Being a light client (Midrolo's own service accounts must never look abusive): the helper identifies itself as the
+requests library always does and never imitates a browser. A 429 the helper can't wait out inside the run ends the
+whole run as "rate_limited" with the platform's Retry-After, so Rails pauses every fetch for that platform
+(Stats::Throttle) instead of asking again. Spotify's bearer token (valid an hour) can be passed back in, so a run
+signs in only when the last token is about to expire.
 
 Request, one JSON object on stdin (at most 64 KB):
 
@@ -21,7 +28,11 @@ Request, one JSON object on stdin (at most 64 KB):
      "session": {...},              spotify: sp_dc; sp_key optional (may be "" or left out); optionally base_url,
                                     client_id. apple: myacinfo, itctx
      "show_id": "...",              Spotify show id (22 letters and digits) or Apple podcast id (digits)
-     "start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}    inclusive window, at most 366 days
+     "start": "YYYY-MM-DD", "end": "YYYY-MM-DD",    inclusive window, at most 366 days
+     "token": {"value": "...", "expires_at": "YYYY-MM-DDTHH:MM:SSZ"}}
+                                    optional, Spotify only: the bearer token an earlier run returned. Used while it
+                                    has more than TOKEN_MIN_LIFE left; one that doesn't look right is ignored (the
+                                    helper signs in). A token the platform refuses (401) means one fresh sign in.
 
 Spotify windows: Spotify hasn't computed today's numbers, and its detailedStreams and listeners calls answer 500 for a
 window that ends today. So the window keeps its length but ends at most yesterday (UTC): a request for Oct 1 to Oct
@@ -38,7 +49,11 @@ Success, one JSON object on stdout, exit code 0:
                 "all_time": {"start", "end"}},             spotify only: show.release_date (or null) to today (UTC)
      "metrics": {...}, "breakdowns": {...},
      "unavailable": ["metric or breakdown keys the platform didn't give this time"],
-     "notes": ["plain words on anything left out"]}
+     "notes": ["plain words on anything left out"],
+     "token": {"value": "...", "expires_at": "YYYY-MM-DDTHH:MM:SSZ"}}
+                                                           spotify only, and only when this run signed in: the
+                                                           fresh bearer token for Rails to cache (encrypted) and pass
+                                                           back next time. Also on a failure, except "expired"
 
 Metric keys (whole numbers; a key is left out when the platform doesn't give it, never guessed):
 
@@ -75,16 +90,22 @@ Breakdown keys (shares from 0 to 1, rounded to 4 places, summing to about 1):
 
 Failure, exit code 0 when handled:
 
-    {"ok": false, "error": "expired" | "forbidden" | "not_found" | "failed", "message": "plain words, no secrets"}
+    {"ok": false, "error": "expired" | "forbidden" | "not_found" | "rate_limited" | "failed",
+     "message": "plain words, no secrets",
+     "retry_after": 120}            rate_limited only: the seconds the platform asked for (Retry-After, seconds or
+                                    an HTTP date), or null when it didn't say
 
-    expired    the service session no longer works: Spotify asked to sign in again (CredentialsExpired), its sign in
-               answered 4xx, or a platform answered 401 (after one fresh Spotify sign in) or redirected to sign in
-    forbidden  403 on a required call: the service account has no access to this show
-    not_found  404 on a required call: no such show for this account
-    failed     anything else: timeouts, 5xx on a required call, an answer that isn't JSON, no numbers, a bad request
+    expired       the service session no longer works: Spotify asked to sign in again (CredentialsExpired), its sign
+                  in answered 4xx (not 429), or a platform answered 401 (after one fresh Spotify sign in) or
+                  redirected to sign in
+    forbidden     403 on a required call: the service account has no access to this show
+    not_found     404 on a required call: no such show for this account
+    rate_limited  429 on any call or on Spotify's sign in, after the retries above: the platform wants fewer requests
+    failed        anything else: timeouts, 5xx on a required call, an answer that isn't JSON, no numbers, a bad request
 
 Only the first call is required (Spotify metadata, Apple's LISTENERS trends). Any other call that fails (other than
-an expired session) or runs out of time leaves its keys out, lists them in "unavailable" and says why in "notes".
+an expired session or a rate limit) or runs out of time leaves its keys out, lists them in "unavailable" and says
+why in "notes".
 
 Exit codes: 0 handled (ok true or false), 1 crash (a sanitized JSON failure is still printed), 2 bad arguments,
 3 the Python libraries are missing (development).
@@ -92,7 +113,7 @@ Exit codes: 0 handled (ok true or false), 1 crash (a sanitized JSON failure is s
 Secrets: session values are never printed or logged. Stdin is never echoed. Loguru is set to ERROR on stderr through
 a sink that writes only the message, scrubbed of every session value and the Spotify bearer token. Exceptions are
 reported by class name only, so a traceback or an exception message can't carry a cookie. Everything written to
-stdout and stderr goes through the same scrubber.
+stdout and stderr goes through the same scrubber; the one exception is the result's "token" field, added after.
 
 Time: everything, sign in included, must finish within TOTAL_TIMEOUT (50 s; the Rails caller allows 60 s). A
 SIGALRM timer enforces it, each request has its own timeout, and optional calls are skipped when time runs short.
@@ -104,6 +125,7 @@ runs the normalization on the built in sample payloads below, offline. It prints
 from __future__ import annotations
 
 import datetime as dt
+import email.utils
 import json
 import math
 import re
@@ -120,6 +142,9 @@ READ_TIMEOUT = 15.0  # seconds, per request
 SIGN_IN_BUDGET = 20.0  # seconds, all of Spotify's sign in tries together
 TRANSIENT_STATUSES = (429, 502, 503, 504)
 TRANSIENT_RETRIES = 2  # required calls only
+IN_RUN_WAIT_LIMIT = 10.0  # seconds: a retry inside the run only when the platform asks for this little wait or less
+MAX_RETRY_AFTER = 7 * 24 * 3600  # seconds: a longer Retry-After is reported as this
+TOKEN_MIN_LIFE = 120.0  # seconds a cached bearer token must have left to be used (Rails passes it with 5 minutes)
 OPTIONAL_CALL_MIN_SECONDS = 6.0  # optional calls are skipped with less time than this left
 MAX_STDIN_BYTES = 64 * 1024
 MAX_WINDOW_DAYS = 366
@@ -181,14 +206,18 @@ ISO_NUMERIC = dict(
 class PlatformError(Exception):
     """A handled failure, printed as {"ok": false, "error": code, "message": message}."""
 
-    def __init__(self, code: str, message: str, status: int | None = None):
+    def __init__(self, code: str, message: str, status: int | None = None, retry_after: int | None = None):
         super().__init__(message)
         self.code = code
         self.message = message
         self.status = status
+        self.retry_after = retry_after
 
     def to_result(self) -> dict:
-        return failure(self.code, self.message)
+        result = failure(self.code, self.message)
+        if self.code == "rate_limited":
+            result["retry_after"] = self.retry_after
+        return result
 
 
 class LibrariesMissing(Exception):
@@ -245,6 +274,35 @@ def utc_today() -> dt.date:
     return dt.datetime.now(dt.timezone.utc).date()
 
 
+def utc_now() -> dt.datetime:
+    return dt.datetime.now(dt.timezone.utc)
+
+
+def iso_utc(moment: dt.datetime) -> str:
+    return moment.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+class Bearer:
+    """Spotify's bearer token for this run: the one Rails cached from an earlier run (used while it has more than
+    TOKEN_MIN_LIFE left), and whether this run had to sign in for a fresh one (then it goes back to Rails)."""
+
+    def __init__(self, cached: tuple | None = None):
+        self.value, self.expires_at = cached if cached else (None, None)
+        self.fresh = False
+
+    def usable(self) -> bool:
+        return self.value is not None and (self.expires_at - utc_now()).total_seconds() > TOKEN_MIN_LIFE
+
+    def renewed(self, value, expires_at: dt.datetime) -> None:
+        self.value, self.expires_at, self.fresh = value, expires_at, True
+
+    def result(self) -> dict | None:
+        """The fresh token for Rails, or None when this run used the cached one (or never signed in)."""
+        if not self.fresh or not isinstance(self.value, str):
+            return None
+        return {"value": self.value, "expires_at": iso_utc(self.expires_at)}
+
+
 @contextmanager
 def time_limit(seconds: float):
     """SIGALRM after `seconds`, raising OutOfTime wherever the code is (a blocking socket read included)."""
@@ -283,6 +341,9 @@ def parse_request(raw: bytes, secrets: Secrets) -> dict:
     if isinstance(session, dict):
         for value in session.values():  # scrub every session value, even ones we don't use, from here on
             secrets.add(value)
+    token = request.get("token")
+    if isinstance(token, dict):
+        secrets.add(token.get("value"))
 
     platform = request.get("platform")
     if platform not in REQUIRED_SESSION_KEYS:
@@ -312,11 +373,28 @@ def parse_request(raw: bytes, secrets: Secrets) -> dict:
     if (end - start).days + 1 > MAX_WINDOW_DAYS:
         raise PlatformError("failed", f"Invalid request: the window is longer than {MAX_WINDOW_DAYS} days.")
 
-    parsed = {"platform": platform, "show_id": show_id, "start": start, "end": end, "session": cookies}
+    parsed = {"platform": platform, "show_id": show_id, "start": start, "end": end, "session": cookies, "token": None}
     if platform == "spotify":
         parsed["base_url"] = spotify_base_url(session.get("base_url"))
         parsed["client_id"] = spotify_client_id(session.get("client_id"))
+        parsed["token"] = parse_token(token)
     return parsed
+
+
+def parse_token(token) -> tuple | None:
+    """A cached bearer token: (value, expires_at in UTC), or None when there is none or it doesn't look right. A bad
+    one isn't an error: the helper just signs in, as it would without one."""
+    if not isinstance(token, dict):
+        return None
+    value, expires = token.get("value"), token.get("expires_at")
+    if not isinstance(value, str) or not Secrets.MIN_LENGTH <= len(value) <= 4096 or re.search(r"[\s\x00-\x1f\x7f]", value):
+        return None
+    if not isinstance(expires, str) or not re.match(r"\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\Z", expires):
+        return None
+    try:
+        return value, dt.datetime.fromisoformat(expires[:-1]).replace(tzinfo=dt.timezone.utc)
+    except ValueError:
+        return None
 
 
 def parse_date(value, name: str) -> dt.date:
@@ -442,12 +520,17 @@ class Http:
                 raise PlatformError("failed", f"{self.name} request for {label} failed ({type(error).__name__}).") from None
 
             status = response.status_code
+            asked = retry_after_seconds(response.headers.get("Retry-After"))
             if status in TRANSIENT_STATUSES and retries < self.retries_allowed:
-                wait = retry_after(response.headers.get("Retry-After"), default=2.0 * (retries + 1))
-                if self.clock.remaining() > wait + READ_TIMEOUT + 2:
+                # Only a short wait is waited out here, and only inside the time budget. A longer one is the
+                # platform asking Midrolo to stay away: that ends the run, and Rails keeps away (Stats::Throttle).
+                wait = float(asked) if asked is not None else 2.0 * (retries + 1)
+                if wait <= IN_RUN_WAIT_LIMIT and self.clock.remaining() > wait + READ_TIMEOUT + 2:
                     retries += 1
                     time.sleep(wait)
                     continue
+            if status == 429:
+                raise rate_limited(self.name, label, asked)
             if status == 401 and reauthenticate is not None and not reauthenticated:
                 reauthenticated = True
                 reauthenticate()
@@ -471,11 +554,30 @@ class Http:
                 raise PlatformError("failed", f"{self.name} answered {label} with something that is not JSON.") from None
 
 
-def retry_after(value, default: float) -> float:
-    try:
-        return min(10.0, max(0.0, float(value)))
-    except (TypeError, ValueError):
-        return default
+def retry_after_seconds(value) -> int | None:
+    """The wait a platform asked for in a Retry-After header (seconds, or an HTTP date), in whole seconds from now and
+    at most MAX_RETRY_AFTER; None when it didn't say or said something unreadable."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if re.match(r"\A\d{1,12}\Z", text):
+        seconds = int(text)
+    else:
+        try:
+            when = email.utils.parsedate_to_datetime(text)
+        except (TypeError, ValueError, IndexError, OverflowError):
+            return None
+        if when is None:
+            return None
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=dt.timezone.utc)
+        seconds = math.ceil((when - utc_now()).total_seconds())
+    return max(0, min(MAX_RETRY_AFTER, seconds))
+
+
+def rate_limited(name: str, label: str, asked: int | None) -> PlatformError:
+    wait = f" It asked for a wait of {asked} seconds." if asked is not None else ""
+    return PlatformError("rate_limited", f"{name} answered 429 on {label}: too many requests.{wait}", 429, asked)
 
 
 def redirect_error(name: str, label: str, status: int, location: str) -> PlatformError:
@@ -509,20 +611,23 @@ class BoundedRequests:
         return getattr(self._requests, name)
 
 
-def build_spotify(libs: dict, request: dict, http: Http):
-    """openpodcast's SpotifyConnector with Midrolo's HTTP loop and a sign in that fits the time budget."""
+def build_spotify(libs: dict, request: dict, http: Http, bearer: Bearer | None = None):
+    """openpodcast's SpotifyConnector with Midrolo's HTTP loop, a sign in that fits the time budget, and the cached
+    bearer token (bearer): it signs in only when that token is missing or about to expire, or Spotify refuses it."""
     requests = libs["requests"]
     tenacity = libs["tenacity"]
     connector_module = libs["spotifyconnector"].connector
     CredentialsExpired, SpotifyConnector = connector_module.CredentialsExpired, connector_module.SpotifyConnector
     connector_module.requests = BoundedRequests(requests, http.clock)
+    bearer = bearer or Bearer(request.get("token"))
 
     def transient(error) -> bool:
         if isinstance(error, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
             return True
         if isinstance(error, requests.exceptions.HTTPError):
+            # Not a 429: signing in again a second later is exactly what a rate limit asks us not to do.
             status = getattr(getattr(error, "response", None), "status_code", None)
-            return status is not None and (status == 429 or status >= 500)
+            return status is not None and status >= 500
         return False
 
     class MidroloSpotifyConnector(SpotifyConnector):
@@ -540,7 +645,11 @@ def build_spotify(libs: dict, request: dict, http: Http):
                 raise PlatformError("expired", "Spotify asked the Midrolo account to sign in again: paste a fresh "
                                                "sp_dc.") from None
             except requests.exceptions.HTTPError as error:
-                status = getattr(getattr(error, "response", None), "status_code", None)
+                response = getattr(error, "response", None)
+                status = getattr(response, "status_code", None)
+                if status == 429:
+                    headers = getattr(response, "headers", None) or {}
+                    raise rate_limited("Spotify", "its sign in", retry_after_seconds(headers.get("Retry-After"))) from None
                 if status is not None and 400 <= status < 500:
                     raise PlatformError("expired", f"Spotify's sign in answered {status}: the service session has "
                                                    "expired.", status) from None
@@ -553,9 +662,15 @@ def build_spotify(libs: dict, request: dict, http: Http):
                 raise PlatformError("failed", f"Spotify's sign in failed ({type(error).__name__}): the session may "
                                               "have expired, or Spotify changed its sign in page.") from None
             http.secrets.add(self._bearer)
+            # The connector keeps the expiry as local wall time; Rails gets it in UTC.
+            expires = self._bearer_expires
+            left = expires - dt.datetime.now() if isinstance(expires, dt.datetime) else dt.timedelta(0)
+            bearer.renewed(self._bearer, utc_now() + left)
 
+        # Not the connector's own check, which renews a token only once it is 5 minutes past its expiry.
         def _ensure_auth(self) -> None:
-            self._signed_in(super()._ensure_auth)
+            if not bearer.usable():
+                self._signed_in(self._authenticate)
 
         def _request(self, url, *, params=None):
             self._ensure_auth()
@@ -563,8 +678,12 @@ def build_spotify(libs: dict, request: dict, http: Http):
                                  reauthenticate=lambda: self._signed_in(self._authenticate))
 
     session = request["session"]
-    return MidroloSpotifyConnector(request["base_url"], request["client_id"], request["show_id"],
-                                   session["sp_dc"], session["sp_key"])
+    connector = MidroloSpotifyConnector(request["base_url"], request["client_id"], request["show_id"],
+                                        session["sp_dc"], session["sp_key"])
+    if bearer.usable():
+        http.secrets.add(bearer.value)
+        connector._bearer = bearer.value
+    return connector
 
 
 def build_apple(libs: dict, request: dict, http: Http):
@@ -596,8 +715,8 @@ class Fetch:
 
     def optional(self, what: str, keys: list, call, window=None, fallback=None):
         """call(*window) with one attempt. A 5xx is tried once more with the fallback window. Returns (answer,
-        window used), or (None, None) with a note and the keys marked unavailable. An expired session still ends
-        the fetch."""
+        window used), or (None, None) with a note and the keys marked unavailable. An expired session or a rate
+        limit still ends the fetch (no more calls once the platform asks for fewer)."""
         attempts = [window] + ([fallback] if fallback else [])
         for index, dates in enumerate(attempts):
             if self.clock.remaining() < OPTIONAL_CALL_MIN_SECONDS:
@@ -607,7 +726,7 @@ class Fetch:
                 with self.http.single_attempt():
                     return (call(*dates) if dates else call()), dates
             except PlatformError as error:
-                if error.code == "expired":
+                if error.code in ("expired", "rate_limited"):
                     raise
                 retry = error.status is not None and error.status >= 500 and index + 1 < len(attempts)
                 if not retry:
@@ -620,15 +739,15 @@ class Fetch:
         self.unavailable += [key for key in keys if key not in self.unavailable]
 
 
-def fetch(libs: dict, request: dict, clock: Clock, secrets: Secrets) -> dict:
+def fetch(libs: dict, request: dict, clock: Clock, secrets: Secrets, bearer: Bearer | None = None) -> dict:
     http = Http(libs, request["platform"], clock, secrets)
     if request["platform"] == "spotify":
-        return fetch_spotify(libs, request, http)
+        return fetch_spotify(libs, request, http, bearer or Bearer(request.get("token")))
     return fetch_apple(libs, request, http)
 
 
-def fetch_spotify(libs: dict, request: dict, http: Http) -> dict:
-    connector = build_spotify(libs, request, http)
+def fetch_spotify(libs: dict, request: dict, http: Http, bearer: Bearer) -> dict:
+    connector = build_spotify(libs, request, http, bearer)
     run = Fetch(http)
     today = utc_today()
     window, fallback = spotify_windows(request["start"], request["end"], today)
@@ -1178,22 +1297,30 @@ def read_stdin() -> bytes:
 
 
 def run(raw: bytes, secrets: Secrets) -> tuple[dict, int]:
-    """The result and exit code for one request. Every path returns sanitized JSON; nothing here prints."""
+    """The result and exit code for one request. Every path returns sanitized JSON; nothing here prints. When the run
+    signed in, the fresh bearer token rides along (result["token"]) on every result but "expired", so the next run
+    can skip the sign in even after this one failed."""
     clock = Clock(TOTAL_TIMEOUT)
+    bearer = Bearer()
     try:
         with time_limit(TOTAL_TIMEOUT):
             libs = import_libraries()
             configure_logging(libs["logger"], secrets)
             request = parse_request(raw, secrets)
-            return fetch(libs, request, clock, secrets), 0
+            bearer = Bearer(request.get("token"))
+            result, code = fetch(libs, request, clock, secrets, bearer), 0
     except PlatformError as error:
-        return error.to_result(), 0
+        result, code = error.to_result(), 0
     except OutOfTime:
-        return failure("failed", f"Timed out: the helper stops after {int(TOTAL_TIMEOUT)} seconds."), 0
+        result, code = failure("failed", f"Timed out: the helper stops after {int(TOTAL_TIMEOUT)} seconds."), 0
     except LibrariesMissing as error:
-        return failure("failed", str(error)), 3
+        result, code = failure("failed", str(error)), 3
     except Exception as error:  # noqa: BLE001 (class name only: a message or traceback could carry a cookie)
-        return failure("failed", f"Unexpected error in the stats helper ({type(error).__name__})."), 1
+        result, code = failure("failed", f"Unexpected error in the stats helper ({type(error).__name__})."), 1
+    token = bearer.result()
+    if token and result.get("error") != "expired":
+        result["token"] = token
+    return result, code
 
 
 def main(argv=None) -> int:
@@ -1221,7 +1348,13 @@ def main(argv=None) -> int:
             result, code = run(read_stdin(), secrets)
     finally:
         sys.stdout = real_stdout
-    real_stdout.write(secrets.scrub(json.dumps(result, ensure_ascii=True, separators=(",", ":"))) + "\n")
+    # Everything is scrubbed of every secret, then the fresh bearer token (if any) is put back in its own field: the
+    # one place a secret is written, for Rails to cache encrypted.
+    token = result.pop("token", None)
+    line = secrets.scrub(json.dumps(result, ensure_ascii=True, separators=(",", ":")))
+    if token:
+        line = json.dumps({**json.loads(line), "token": token}, ensure_ascii=True, separators=(",", ":"))
+    real_stdout.write(line + "\n")
     real_stdout.flush()
     return code
 

@@ -9,7 +9,10 @@ RSpec.describe Stats::SyncJob do
   let!(:session) { create(:service_session, platform: "spotify") }
   let(:connection) { create(:stat_connection, podcast: podcast, show: owner_show, user: owner, provider: "spotify") }
 
-  before { podcast.update!(claimed_at: 1.day.ago) }
+  before do
+    podcast.update!(claimed_at: 1.day.ago)
+    allow_stats_runs # back-to-back runs here; "the throttle" below uses the real one
+  end
 
   def stub_fetch(*results)
     allow(Stats::PlatformFetch).to receive(:call).and_return(*results)
@@ -234,31 +237,78 @@ RSpec.describe Stats::SyncJob do
   end
 
   describe "the audience" do
-    it "asks for the last 12 months when 30 days had no breakdown" do
-      longer = spotify_result(days: 365, breakdowns: { "age" => { "28-34" => 0.6, "35-44" => 0.4 } })
-      stub_fetch(spotify_result(breakdowns: {}), longer)
-      run
-
-      expect(Stats::PlatformFetch).to have_received(:call).with(connection, session: session, days: 365)
-      audience = readings["spotify_audience"]
-      expect(audience.breakdown).to eq("age" => { "28-34" => 0.6, "35-44" => 0.4 })
-      expect(audience.period_days).to eq(365)
-      expect(audience.evidence["period_start"]).to eq((Time.now.utc.to_date - 365).iso8601)
+    def audience_reading(captured_at)
+      create(:stat_reading, podcast: podcast, source: "spotify", metric: "spotify_audience", trust: "verified", value: 900,
+                            period_days: 365, breakdown: { "age" => { "28-34" => 1.0 } }, captured_at: captured_at)
     end
 
-    it "saves an empty audience when 12 months have none either" do
-      stub_fetch(spotify_result(breakdowns: {}), spotify_result(breakdowns: {}, days: 365))
-      run
-      expect(readings["spotify_audience"]).to have_attributes(breakdown: {}, period_days: 365)
-    end
+    it "keeps the last audience when 30 days had no breakdown, and asks for 12 months in a run of its own" do
+      audience_reading(8.days.ago)
+      stub_fetch(spotify_result(breakdowns: {}))
 
-    it "keeps the last audience when the 12-month call fails" do
-      create(:stat_reading, podcast: podcast, source: "spotify", metric: "spotify_audience", trust: "verified",
-                            breakdown: { "age" => { "28-34" => 1.0 } }, captured_at: 2.days.ago)
-      stub_fetch(spotify_result(breakdowns: {}), fetch_error("failed", "Timed out"))
-      run
+      expect { run }.to have_enqueued_job(Stats::AudienceJob).with(connection.id)
+      expect(Stats::PlatformFetch).to have_received(:call).once # not a second run straight after the first
       expect(connection.reload.status).to eq("active")
-      expect(readings["spotify_audience"].breakdown).to eq("age" => { "28-34" => 1.0 })
+      expect(readings["spotify_audience"]).to have_attributes(breakdown: { "age" => { "28-34" => 1.0 } }, period_days: 365)
+    end
+
+    it "asks for 12 months at most once a week" do
+      audience_reading(2.days.ago)
+      stub_fetch(spotify_result(breakdowns: {}))
+      expect { run }.not_to have_enqueued_job(Stats::AudienceJob)
+      expect(readings["spotify_audience"].captured_at).to be < 1.day.ago # kept, not emptied
+    end
+
+    it "saves the 30 days' breakdown when there is one, and asks nothing more" do
+      audience_reading(8.days.ago)
+      stub_fetch(spotify_result)
+      expect { run }.not_to have_enqueued_job(Stats::AudienceJob)
+      expect(readings["spotify_audience"]).to have_attributes(period_days: 30, breakdown: include("age", "gender", "country"))
+    end
+  end
+
+  # Midrolo's own platform accounts stay light: every run goes through Stats::Throttle.
+  describe "the throttle" do
+    before { allow(Stats::Throttle).to receive(:reserve).and_call_original }
+
+    def scheduled_syncs = enqueued_jobs.select { |job| job["job_class"] == "Stats::SyncJob" }
+
+    it "records each run, and waits its turn after one: enqueued again for the time it's given, nothing fetched" do
+      stub_fetch(spotify_result)
+      run
+      expect(session.reload.run_log.size).to eq(1)
+      expect(session.next_run_at).to be_between(29.seconds.from_now, 46.seconds.from_now)
+
+      checked = connection.reload.last_checked_at
+      expect { run } # Check now, right after
+        .to have_enqueued_job(described_class).with(connection.id, anything).at(a_value_within(1.second).of(session.next_run_at))
+      expect(Stats::PlatformFetch).to have_received(:call).once
+      expect(connection.reload.last_checked_at).to eq(checked)
+    end
+
+    it "never waits less than a few seconds, so the copy running now has let go of the connection" do
+      session.update_columns(next_run_at: 1.second.from_now)
+      expect { run }.to have_enqueued_job(described_class).at(a_value_within(1.second).of(described_class::MIN_WAIT.from_now))
+    end
+
+    it "keeps the sync after a rate limit: the platform cools down, the connection is left as it was, and it asks again after" do
+      stub_fetch(fetch_error("rate_limited", "Spotify answered 429.", retry_after: 600))
+      requested = 1.minute.ago
+      expect { described_class.perform_now(connection.id, requested) }
+        .to have_enqueued_job(described_class).with(connection.id, a_value_within(0.001).of(requested))
+                                              .at(a_value_within(1.second).of(600.seconds.from_now))
+
+      expect(session.reload).to have_attributes(status: "ok", rate_limits_in_a_row: 1)
+      expect(session.cooldown_until).to be_within(1.second).of(600.seconds.from_now)
+      expect(connection.reload).to have_attributes(status: "pending_invite", last_error: nil, last_checked_at: nil)
+    end
+
+    it "has nothing to do once the connection was checked after the sync was asked for" do
+      connection.update!(last_checked_at: 1.minute.ago)
+      allow(Stats::PlatformFetch).to receive(:call)
+      described_class.perform_now(connection.id, 5.minutes.ago)
+      expect(Stats::PlatformFetch).not_to have_received(:call)
+      expect(session.reload.run_log).to be_empty
     end
   end
 

@@ -45,6 +45,24 @@
           <% if session.last_error.present? %><p class="field-error mt-0"><%= session.last_error %></p><% end %>
         <% end %>
 
+        <% if (throttle = @throttles[platform]) %>
+          <% at = ->(time) { time.utc.strftime(time.to_date == Time.current.utc.to_date ? "%H:%M:%S UTC" : "%b %-d, %H:%M UTC") } %>
+          <div class="flex flex-col gap-2" id="<%= platform %>_throttle">
+            <p class="flex flex-wrap items-center gap-2 text-sm font-semibold">Limits
+              <% if throttle.cooldown_until %><%= ui_badge "Cooling down", tone: :warning %><% end %>
+              <% if throttle.paused %><%= ui_badge "Paused after failures", tone: :warning %><% end %>
+            </p>
+            <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+              <div><dt class="text-ink-soft">Runs in the last hour</dt><dd class="tabular-nums"><%= throttle.runs_this_hour %> of <%= throttle.limits.per_hour %></dd></div>
+              <div><dt class="text-ink-soft">Runs in the last 24 hours</dt><dd class="tabular-nums"><%= throttle.runs_today %> of <%= throttle.limits.per_day %></dd></div>
+              <div><dt class="text-ink-soft">Next run allowed</dt><dd><%= throttle.next_run_at > Time.current ? at.call(throttle.next_run_at) : "Now" %></dd></div>
+              <div><dt class="text-ink-soft">Cooldown until</dt><dd><%= throttle.cooldown_until ? at.call(throttle.cooldown_until) : "None" %></dd></div>
+              <div><dt class="text-ink-soft">Failed runs in a row</dt><dd class="tabular-nums"><%= throttle.failures_in_a_row %></dd></div>
+              <div><dt class="text-ink-soft">Last rate limited</dt><dd><%= throttle.last_rate_limited_at ? at.call(throttle.last_rate_limited_at) : "Never" %></dd></div>
+            </dl>
+          </div>
+        <% end %>
+
         <%= form_with url: admin_service_session_path(platform), method: :patch, class: "flex flex-col gap-3", autocomplete: "off" do |f| %>
           <p class="text-sm font-semibold"><%= session ? "Replace the session" : "Enter the session" %></p>
           <% info[:session_keys].each do |key| %>
@@ -77,9 +95,36 @@
             </div>
             <%= f.submit "Test fetch", class: "btn btn-secondary btn-md" %>
           <% end %>
-          <p class="hint mt-0">A test fetch can take up to a minute. It saves no numbers.</p>
+          <p class="hint mt-0">A test fetch can take up to a minute. It saves no numbers. It counts as a run, so it waits for the limits below.</p>
         <% end %>
       </div>
     <% end %>
   <% end %>
+
+  <div id="limits" class="scroll-mt-6">
+    <%= render "components/card", title: "Limits" do %>
+      <p class="max-w-prose text-ink-soft">
+        These keep Midrolo's stats accounts light, so the platforms never see them as abusive. Each platform counts its own runs.
+        After a run, the next one waits the gap plus a random extra. After a rate limit, fetching pauses for the platform's
+        wait, or an hour, doubling while it repeats, up to a day. After 5 failed runs in a row, it pauses an hour.
+      </p>
+      <% if @limits.errors.any? %>
+        <div class="flash flash-alert mt-4" role="alert">
+          <ul><% @limits.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul>
+        </div>
+      <% end %>
+      <%= form_with model: @limits, scope: :limits, url: limits_admin_service_sessions_path, method: :patch, class: "mt-4 flex flex-col gap-4" do |f| %>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <% Stats::Limits::RANGES.each do |key, range| %>
+            <div class="flex flex-col gap-1">
+              <%= f.label key, Stats::Limits.human_attribute_name(key), class: "label" %>
+              <%= f.number_field key, class: "input", min: range.min, max: range.max, step: 1, required: true,
+                    aria: { invalid: @limits.errors.include?(key) } %>
+            </div>
+          <% end %>
+        </div>
+        <div><%= f.submit "Save limits", class: "btn btn-primary btn-md" %></div>
+      <% end %>
+    <% end %>
+  </div>
 </div>
