@@ -171,7 +171,7 @@ module StatsHelper
     label, tone = case connection.status
     when "pending_invite" then [ "Waiting for access", :warning ]
     when "active" then [ "Connected", :success ]
-    when "mismatch" then [ "Doesn't match", :danger ]
+    when "mismatch" then ::Stats::Ownership.needs_review?(connection) ? [ "Being checked", :warning ] : [ "Doesn't match", :danger ]
     when "failed" then [ "Couldn't connect", :danger ]
     else [ "Access removed", :danger ]
     end

@@ -19,7 +19,7 @@ RSpec.describe "rake demo:setup" do
     ENV.delete("DEMO_OWNER_EMAIL")
     create(:user, admin: true, email: "admin@example.com")
 
-    expect { task.invoke }.to output(%r{Demo show ready: http://example.com/podcasts/midrolo-demo-show-\w+ \(owner admin@example.com\)}).to_stdout
+    expect { task.invoke }.to output(%r{Demo show ready: http://example.com/podcasts/midrolo-demo-show \(owner admin@example.com\)}).to_stdout
     task.reenable
     expect { task.invoke }.to output(/Demo show ready/).to_stdout
     expect(Podcast.demo.count).to eq(1)

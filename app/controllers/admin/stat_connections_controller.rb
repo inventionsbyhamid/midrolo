@@ -24,5 +24,15 @@ module Admin
       log_change("asked for a sync of stats connection #{connection.id}")
       redirect_to admin_stat_connections_path, notice: "Sync queued for #{connection.podcast.title}.", status: :see_other
     end
+
+    # The admin checked by hand that this platform show is this podcast (another catalog podcast has the same name):
+    # its numbers may count from the next sync, queued now.
+    def approve
+      connection = StatConnection.find(params[:id])
+      connection.update!(approved_at: Time.current)
+      ::Stats::SyncJob.perform_later(connection.id)
+      log_change("approved stats connection #{connection.id} (#{connection.provider} #{connection.external_id}) for podcast #{connection.podcast_id}")
+      redirect_to admin_stat_connections_path, notice: "Approved. Syncing #{connection.podcast.title} now.", status: :see_other
+    end
   end
 end

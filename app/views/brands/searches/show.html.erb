@@ -23,7 +23,11 @@
   <% elsif @search.failed? %>
     <%= render "components/card", title: "This search didn't finish" do %>
       <p><%= @search.error_message.presence || FitSearch::Run::FAILURE_MESSAGE %></p>
-      <%= ui_button "Try again", new_brand_search_path, class: "mt-3" %>
+      <div class="mt-3 flex flex-wrap items-center gap-3">
+        <%= button_to "Run it again", brand_searches_path, params: { fit_search: @search.rerun_params },
+              class: "btn btn-primary btn-md", form_class: "contents" %>
+        <%= ui_button "Change the search", new_brand_search_path, variant: :secondary %>
+      </div>
     <% end %>
   <% else %>
     <% bullets = brand_summary_bullets(@search) %>

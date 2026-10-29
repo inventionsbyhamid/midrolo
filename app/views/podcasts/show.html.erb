@@ -40,6 +40,8 @@
       <div class="pod-main">
         <% if podcast.failed? %>
           <p class="lamp-note mt-6" role="note">We couldn't read this show's feed on our last try, so what's here may be out of date.</p>
+        <% elsif podcast.feed_unreachable? %>
+          <p class="lamp-note mt-6" role="note">We couldn't read this show's feed recently, so what's here may be out of date.</p>
         <% end %>
         <%= render "podcasts/about", podcast: podcast %>
         <% cache [ podcast, "episodes" ] do %>

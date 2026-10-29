@@ -18,6 +18,38 @@
     <% end %>
   </ul>
 
+  <% seed = Catalog::SeedProgress.current %>
+  <h3 class="mt-6 font-semibold">Paced seed</h3>
+  <% if seed %>
+    <% when_utc = ->(time) { time&.utc&.strftime("%b %-d %H:%M") } %>
+    <p class="mt-2 flex flex-wrap items-center gap-2 text-sm" data-seed-progress>
+      <% if seed.stalled? %>
+        <%= ui_badge "Stalled", tone: :danger %>
+        <span>The next page was due <%= when_utc.(seed.next_run_at) %> UTC. Run the seed again to restart it.</span>
+      <% elsif seed.running? %>
+        <%= ui_badge "Running", tone: :accent %>
+        <span>Next page <%= when_utc.(seed.next_run_at) %> UTC, about every <%= pluralize((seed.interval.to_i / 60.0).round, "minute") %>, aiming to end by <%= when_utc.(seed.finish_by) %> UTC.</span>
+      <% else %>
+        <%= ui_badge "Ended", tone: :neutral %>
+        <span>Ended <%= when_utc.(seed.last_run_at) %> UTC: <%= seed.stop_reason %>.</span>
+      <% end %>
+    </p>
+    <dl class="mt-2 grid grid-cols-2 gap-x-6 gap-y-2 text-sm tabular-nums sm:grid-cols-4">
+      <% [ [ "Pages read", seed.pages ], [ "Linked so far", "#{number_with_delimiter(seed.linked.to_i)} of #{number_with_delimiter(seed.target.to_i)}" ],
+           [ "Matched this seed", seed.matched ], [ "New podcasts", seed.added ] ].each do |label, value| %>
+        <div class="flex flex-col">
+          <dt class="text-ink-soft"><%= label %></dt>
+          <dd class="font-semibold"><%= value.is_a?(String) ? value : number_with_delimiter(value.to_i) %></dd>
+        </div>
+      <% end %>
+    </dl>
+    <% if seed.error.present? %>
+      <p class="mt-2 text-sm text-ink-soft">Last error: <%= seed.error %></p>
+    <% end %>
+  <% else %>
+    <p class="mt-2 text-sm text-ink-soft">No paced seed yet.</p>
+  <% end %>
+
   <h3 class="mt-6 font-semibold">Latest feed errors</h3>
   <% if catalog.errors.empty? %>
     <p class="mt-2 text-ink-soft">No feed errors.</p>
@@ -51,6 +83,7 @@
   <% end %>
   <p class="mt-3 text-sm text-ink-soft">
     Feeds are read every hour for claimed shows, then less often the older the last episode (6 hours to 7 days).
-    Each failure in a row doubles the wait, up to 7 days. Seed with <code>bin/rails catalog:seed[1000]</code> in the worker.
+    Each failure in a row doubles the wait, up to 7 days. Seed with <code>bin/rails "catalog:seed_paced[1000,6]"</code> in
+    the worker: one Qloo page at a time, spread over about 6 hours. <code>bin/rails catalog:seed_stop</code> stops it.
   </p>
 <% end %>

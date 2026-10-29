@@ -103,10 +103,8 @@ module InboxHelper
     end
   end
 
-  # The podcast's public page (lane L3's /podcasts/:slug), before and after that route exists.
-  def inbox_podcast_path(podcast)
-    respond_to?(:podcast_path) ? podcast_path(podcast) : "/podcasts/#{podcast.to_param}"
-  end
+  # The podcast's public page (lane L3's /podcasts/:slug).
+  def inbox_podcast_path(podcast) = podcast_path(podcast)
 
   # The inbox a side's list lives in.
   def inbox_path_for(side, show: nil)

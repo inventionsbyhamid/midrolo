@@ -8,6 +8,13 @@ RSpec.describe Podcast::Pages do
       create(:podcast, status: "dormant", categories: [ "True Crime" ], language: "es")
       create(:podcast, status: "removed", categories: [ "Comedy" ], language: "fr")
       create(:podcast, status: "pending", categories: [ "Comedy" ])
+      # The demo show (lane L4) is active, but never listed.
+      create(:podcast, :active, podcast_guid: Podcast::DEMO_GUID, categories: [ "Technology", "Kids" ], language: "de")
+    end
+
+    it "lists active and dormant podcasts, never the demo show" do
+      expect(Podcast.listed.pluck(:status)).to contain_exactly("active", "active", "dormant")
+      expect(Podcast.listed.demo).to be_empty
     end
 
     it "counts the categories of listed podcasts, the biggest first" do

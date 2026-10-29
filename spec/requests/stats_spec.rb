@@ -83,6 +83,34 @@ RSpec.describe "Stats screen" do
         expect(podcast.stat_connections.sole).to have_attributes(status: "pending_invite", external_id: "2nel53b14wqMRDx2toN28f")
       end
 
+      it "refuses a platform show another page's connection holds, without naming that page" do
+        other = create(:podcast, title: "Someone Else's Pod")
+        create(:stat_connection, podcast: other, provider: "spotify", external_id: "2nel53b14wqMRDx2toN28f", status: "active")
+
+        post show_stat_connections_path(show), params: { provider: "spotify", show_link: spotify_link }
+        expect(flash[:alert]).to eq("This show is already connected to another Midrolo page.")
+        expect(flash[:alert]).not_to include("Someone Else")
+        expect(podcast.stat_connections).to be_empty
+      end
+
+      it "takes the platform show over from a draft's connection on another page that never counted, which says why it stopped" do
+        squatter = create(:user)
+        other = create(:podcast, title: "Someone Else's Pod")
+        draft = create(:stat_connection, podcast: other, user: squatter, show: create(:show, user: squatter, podcast: other),
+                                         provider: "spotify", external_id: "2nel53b14wqMRDx2toN28f", status: "mismatch")
+
+        post show_stat_connections_path(show), params: { provider: "spotify", show_link: spotify_link }
+        expect(podcast.stat_connections.sole).to have_attributes(status: "pending_invite", external_id: "2nel53b14wqMRDx2toN28f")
+        expect(draft.reload).to have_attributes(status: "disconnected", last_error: StatConnection::RELEASED_MESSAGE)
+      end
+
+      it "says a connection held for a name check is being checked" do
+        create(:stat_connection, podcast: podcast, show: show, user: user, status: "mismatch",
+                                 last_error: Stats::Ownership::NEEDS_REVIEW)
+        get show_stats_path(show)
+        expect(response.body).to include("Being checked", "Midrolo will check it by hand")
+      end
+
       it "replaces a connection another account left on the owner's podcast" do
         stranger = create(:user)
         create(:stat_connection, podcast: podcast, user: stranger, show: create(:show, user: stranger, podcast: podcast))
@@ -154,9 +182,9 @@ RSpec.describe "Stats screen" do
       end
 
       it "explains a mismatch in plain words" do
-        connection.update!(status: "mismatch", last_error: "The Spotify show we can see is called \"Other\", which isn't The Founder's Ledger.")
+        connection.update!(status: "mismatch", last_error: "The Spotify show at that link isn't The Founder's Ledger. Check the link you pasted.")
         get show_stats_path(show)
-        expect(response.body).to include("Doesn&#39;t match").and include("we can see is called")
+        expect(response.body).to include("Doesn&#39;t match").and include("at that link isn&#39;t")
       end
     end
 

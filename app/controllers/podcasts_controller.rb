@@ -39,7 +39,8 @@ class PodcastsController < ApplicationController
     return render_removed if @podcast.removed?
 
     noindex! unless @podcast.page_indexable?
-    return if fresh_for_visitors(etag: page_etag, last_modified: @podcast.updated_at)
+    # Only a visitor's page is conditional, so a signed-in page skips the ETag's queries.
+    return if !user_signed_in? && fresh_for_visitors(etag: page_etag, last_modified: @podcast.updated_at)
 
     @similar = @podcast.similar_podcasts
     @sponsors_90_days = SponsorMention.where(podcast_id: @podcast.id, published_at: 90.days.ago..).distinct.count(:brand_id)
@@ -80,11 +81,12 @@ class PodcastsController < ApplicationController
     end
   end
 
-  # What the page shows beyond the podcast row: its listing and owner, its readings, and requests from brands
-  # (Request a spot counts them), whose changes don't touch the podcast.
+  # What the page shows beyond the podcast row: its listing and owner, its readings, requests from brands (Request a
+  # spot counts them) and the report its Audience and Qloo similar shows read (Podcast#taste_report, lane L8), whose
+  # changes don't touch the podcast.
   def page_etag
     [ @podcast, @podcast.owner_show, @podcast.listing, @podcast.stat_readings.map(&:updated_at).max,
-      Conversation.where(podcast_id: @podcast.id).maximum(:updated_at) ]
+      Conversation.where(podcast_id: @podcast.id).maximum(:updated_at), @podcast.taste_report&.cache_key_with_version ]
   end
 
   # Podcasts LazyAdd added for this search (or added earlier and still pending), not already in the results. Crawlers

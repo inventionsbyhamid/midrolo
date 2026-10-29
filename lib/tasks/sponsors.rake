@@ -3,9 +3,7 @@ namespace :sponsors do
        "for the catalog budget). LIMIT podcasts at most (default 200)."
   task :scan, [ :limit ] => :environment do |_, args|
     limit = (args[:limit] || ENV["LIMIT"] || 200).to_i
-    podcasts = Podcast.where.not(status: "removed").where(id: Episode.where(sponsor_scanned_at: nil).select(:podcast_id))
-                      .order(:id).limit(limit)
-    queued = podcasts.count { |podcast| podcast.scan_sponsors_later }
+    queued = Sponsors::SweepJob.new.perform(limit)
     puts "Queued sponsor scans for #{queued} #{'podcast'.pluralize(queued)}"
   end
 

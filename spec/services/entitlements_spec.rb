@@ -253,8 +253,8 @@ RSpec.describe Entitlements do
     end
 
     it "runs through Nov 6 inclusive; after Nov 6, 2026 the plan is free" do
-      travel_to Time.zone.local(2026, 11, 6, 23, 59) { expect(described_class.for(user).key).to eq(:promo) }
-      travel_to Time.zone.local(2026, 11, 7, 0, 1) { expect(described_class.for(user).key).to eq(:free) }
+      travel_to(Time.zone.local(2026, 11, 6, 23, 59)) { expect(described_class.for(user).key).to eq(:promo) }
+      travel_to(Time.zone.local(2026, 11, 7, 0, 1)) { expect(described_class.for(user).key).to eq(:free) }
     end
 
     it "refuses with reason :budget once the promo pool is spent" do

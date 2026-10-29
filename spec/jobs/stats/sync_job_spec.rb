@@ -82,8 +82,67 @@ RSpec.describe Stats::SyncJob do
       stub_fetch(spotify_result(show_name: "Someone Else's Pod"))
       run
       expect(connection.reload.status).to eq("mismatch")
-      expect(connection.last_error).to include("Someone Else's Pod").and include("Check the link")
+      expect(connection.last_error).to include("Check the link")
+      expect(connection.last_error).not_to include("Someone Else") # never names a show that isn't theirs
       expect(readings).to be_empty
+    end
+
+    # Review H3: Spotify's metadata usually has no RSS URL, so the title is the only check. A clone that copies a real
+    # show's title and points its connection at the real show's id must never get the real show's verified numbers.
+    describe "a same-titled clone of a real show" do
+      let(:attacker) { create(:user) }
+      let(:clone) { create(:podcast, title: "The Founder's Ledger", feed_url: "https://evil.example.com/ledger.xml", claimed_at: 1.day.ago) }
+      let(:clone_show) { create(:show, user: attacker, podcast: clone, verified_at: 1.day.ago) }
+      let(:clone_connection) do
+        create(:stat_connection, podcast: clone, show: clone_show, user: attacker, provider: "spotify", external_id: "4rOoJ6Egrf8K2IrywzwOMk")
+      end
+      let(:clone_readings) { clone.stat_readings.where(source: "spotify") }
+
+      it "copies no numbers onto the clone by the title alone, and leaves it for a person to check" do
+        stub_fetch(spotify_result)
+        described_class.perform_now(clone_connection.id)
+
+        expect(clone_connection.reload).to have_attributes(status: "mismatch", last_error: Stats::Ownership::NEEDS_REVIEW)
+        expect(clone_readings).to be_empty
+      end
+
+      it "leaves the real show held for review too while the names collide, and verifies whichever an admin approves" do
+        stub_fetch(spotify_result)
+        clone # the clone exists, so the real show's title is no longer unique
+        run
+        expect(connection.reload).to have_attributes(status: "mismatch", last_error: Stats::Ownership::NEEDS_REVIEW)
+        expect(readings).to be_empty
+
+        connection.update!(approved_at: Time.current)
+        run
+        expect(connection.reload).to have_attributes(status: "active", last_error: nil)
+        expect(readings).not_to be_empty
+      end
+
+      it "still verifies by the feed, which a clone can't copy" do
+        stub_fetch(spotify_result(rss_url: "https://feeds.example.com/ledger.xml"))
+        clone
+        run
+        expect(connection.reload.status).to eq("active")
+      end
+
+      it "keeps a show verified before the clone appeared" do
+        stub_fetch(spotify_result)
+        run
+        expect(connection.reload.status).to eq("active")
+
+        clone
+        run
+        expect(connection.reload.status).to eq("active")
+      end
+
+      it "can't point a second podcast at a platform show another podcast's connection holds, in any state but disconnected" do
+        connection.update!(external_id: "4rOoJ6Egrf8K2IrywzwOMk", status: "failed")
+        expect { clone_connection }.to raise_error(ActiveRecord::RecordInvalid, /already connected to another Midrolo page/)
+
+        connection.update!(status: "disconnected")
+        expect(clone_connection).to be_persisted
+      end
     end
 
     it "matches on the feed URL when the names differ" do

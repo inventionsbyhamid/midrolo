@@ -30,3 +30,8 @@ production:
   expire_stat_readings:
     class: Stats::ExpireReadingsJob
     schedule: every day at 3:20am
+  # Episodes whose sponsor check waited for the catalog budget (or were missed), a modest batch at a quiet hour.
+  sweep_sponsors:
+    class: Sponsors::SweepJob
+    schedule: every day at 4:10am
+  # The paced seed (catalog:seed_paced) schedules itself (Catalog::SeedStepJob); nothing recurs for it.

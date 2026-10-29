@@ -167,6 +167,45 @@ RSpec.describe Catalog::Ingest do
       expect([ podcast.reload.status, podcast.fetch_failures, podcast.last_error ]).to eq([ "active", 0, nil ])
     end
 
+    # Review M7: a claimed show's host having a bad day (or a CDN refusing bots) mustn't take it out of the directory.
+    it "keeps a claimed show listed when its feed fails, notes it, and mails the owner once after 3 in a row" do
+      owner = create(:user, email: "host@example.com")
+      create(:show, user: owner, podcast: podcast, verified_at: 1.day.ago)
+      podcast.update!(status: "active", last_published_at: 2.days.ago, feed_sha256: "x", claimed_at: 1.day.ago)
+      stub_request(:get, url).to_return(status: 403)
+
+      expect { 2.times { described_class.call(podcast) } }.not_to have_enqueued_mail(ClaimMailer, :feed_unreachable)
+      expect(podcast.reload).not_to be_feed_unreachable
+      stamp = podcast.updated_at
+      travel 1.minute
+      expect { described_class.call(podcast) }.to have_enqueued_mail(ClaimMailer, :feed_unreachable).exactly(:once)
+      expect { described_class.call(podcast) }.not_to have_enqueued_mail(ClaimMailer, :feed_unreachable)
+
+      podcast.reload
+      expect([ podcast.status, podcast.fetch_failures, podcast.last_error ]).to eq([ "active", 4, "feed_forbidden" ])
+      expect(podcast).to be_feed_unreachable
+      expect(podcast.updated_at).to be > stamp # the page's note shows, so its caches change
+      expect(Podcast.listed).to include(podcast)
+
+      feed_with(xml)
+      described_class.call(podcast)
+      expect(podcast.reload).not_to be_feed_unreachable
+    end
+
+    it "brings back a claimed show that had failed, as active or dormant, while an unclaimed one stays failed" do
+      podcast.update!(status: "failed", last_published_at: 200.days.ago, fetch_failures: 3, claimed_at: 1.day.ago)
+      unclaimed = create(:podcast, feed_url: "https://feeds.example.com/other.xml", status: "active", last_published_at: 2.days.ago,
+                                   fetch_failures: 2)
+      stub_request(:get, url).to_return(status: 500)
+      stub_request(:get, unclaimed.feed_url).to_return(status: 500)
+
+      described_class.call(podcast)
+      described_class.call(unclaimed)
+      expect(podcast.reload.status).to eq("dormant")
+      expect(unclaimed.reload.status).to eq("failed")
+      expect(Podcast.listed).to contain_exactly(podcast)
+    end
+
     it "records broken XML as unparseable" do
       feed_with(Rails.root.join("spec/fixtures/feeds/catalog_broken.xml").binread)
       expect(described_class.call(podcast).error).to eq("feed_unparseable")

@@ -221,6 +221,37 @@ RSpec.describe "Brand workspace" do
         expect(body.scan("<li>").size).to be >= 3 # the three summary bullets
       end
 
+      it "fails a search stuck queued or running for 15 minutes, says so plainly and offers to run it again" do
+        stuck = create(:fit_search, user: user, brand: brand, status: "running", started_at: 16.minutes.ago,
+                                    query: "Fieldnote Coffee", website: "fieldnote.example", categories: [ "Food & Beverage" ],
+                                    budget_cents: 80_000)
+        lost = create(:fit_search, user: user, brand: brand, status: "queued", created_at: 20.minutes.ago)
+        fresh = create(:fit_search, user: user, brand: brand, status: "running", started_at: 2.minutes.ago)
+
+        get brand_searches_path
+        expect([ stuck, lost, fresh ].map { |search| search.reload.status }).to eq(%w[failed failed running])
+        expect(lost.error_message).to eq(FitSearch::STALE_MESSAGE)
+
+        get brand_search_path(stuck)
+        page = Nokogiri::HTML(response.body)
+        expect(response.body).to include("This search didn&#39;t finish", "This search stopped before it finished. Run it again.")
+        form = page.at_css("form[action='#{brand_searches_path}']")
+        expect(form.at_css("button").text).to eq("Run it again")
+        fields = form.css("input[type=hidden]").to_h { |input| [ input["name"], input["value"] ] }
+        expect(fields).to include("fit_search[query]" => "Fieldnote Coffee", "fit_search[website]" => "fieldnote.example",
+                                  "fit_search[categories][]" => "Food & Beverage", "fit_search[budget]" => "800")
+
+        expect { post brand_searches_path, params: { fit_search: stuck.rerun_params } }.to have_enqueued_job(FitSearchJob)
+        expect(FitSearch.order(:id).last).to have_attributes(query: "Fieldnote Coffee", categories: [ "Food & Beverage" ],
+                                                             budget_cents: 80_000, status: "queued")
+      end
+
+      it "fails a stale search shown on the brand's dashboard too" do
+        stuck = create(:fit_search, user: user, brand: brand, status: "queued", created_at: 1.hour.ago)
+        get brand_root_path
+        expect(stuck.reload).to have_attributes(status: "failed", error_message: FitSearch::STALE_MESSAGE)
+      end
+
       it "404s for another user's search, and for an unverified teammate's" do
         stranger = create(:fit_search)
         teammate = create(:fit_search, brand: brand, user: create(:brand_member, brand: brand).user)

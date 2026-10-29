@@ -61,10 +61,7 @@ module BrandWorkspaceHelper
   end
 
   # Where a podcast's public page is (lane L3's /podcasts/:slug).
-  def brand_podcast_href(podcast, anchor: nil)
-    path = respond_to?(:podcast_path) ? podcast_path(podcast) : "/podcasts/#{ERB::Util.url_encode(podcast.to_param)}"
-    anchor ? "#{path}##{anchor}" : path
-  end
+  def brand_podcast_href(podcast, anchor: nil) = podcast_path(podcast, anchor: anchor)
 
   def brand_summary_bullets(search) = search.summary.to_s.lines.map(&:strip).compact_blank
 

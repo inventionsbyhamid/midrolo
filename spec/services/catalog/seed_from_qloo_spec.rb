@@ -74,4 +74,52 @@ RSpec.describe Catalog::SeedFromQloo do
     allow(Taste::Provider.current).to receive(:recommend).and_raise(Taste::CallCapReached, "the daily limit")
     expect(seed(target: 1000).stopped).to eq("qloo_limit")
   end
+
+  describe "one page at a time (the paced seed)" do
+    def read(cursor, **options) = described_class.read_page(cursor, sleeper: sleeper, clock: clock, **options)
+
+    it "reads the tags round robin, each at one offset before the next, dropping the ones that ran out" do
+      cursor = described_class::Cursor.start(3)
+      expect(cursor.to_h).to eq("tag_index" => 0, "offset" => 0, "exhausted" => [])
+
+      cursor = cursor.advance(3, ran_out: false)
+      expect(cursor.to_h).to eq("tag_index" => 1, "offset" => 0, "exhausted" => [])
+      cursor = cursor.advance(3, ran_out: true)
+      expect(cursor.to_h).to eq("tag_index" => 2, "offset" => 0, "exhausted" => [ 1 ])
+      cursor = cursor.advance(3, ran_out: false)
+      expect(cursor.to_h).to eq("tag_index" => 0, "offset" => 50, "exhausted" => [ 1 ])
+      cursor = cursor.advance(3, ran_out: true).advance(3, ran_out: true)
+      expect(cursor).to be_finished
+      expect(described_class::Cursor.from_h(cursor.to_h.merge("offset" => "100"))).to have_attributes(offset: 100, finished?: true)
+      expect(described_class::Cursor.start(0)).to be_finished
+    end
+
+    it "makes one Qloo call a page and links the same podcasts as the seed in one go" do
+      allow(Taste::Provider.current).to receive(:recommend).and_call_original
+      cursor = described_class::Cursor.start(described_class::TAGS.size)
+      steps = []
+      until (step = read(cursor, target: 1000)).stopped
+        steps << step
+        cursor = step.cursor
+      end
+      steps << step
+
+      expect(Taste::Provider.current).to have_received(:recommend).exactly(steps.size).times
+      expect(step).to have_attributes(stopped: "exhausted", linked: 16)
+      expect(steps.sum(&:matched)).to eq(16)
+      expect(steps.sum(&:added)).to eq(16)
+      expect(steps.first.tag).to eq("urn:tag:genre:media:business")
+      expect(Podcast.where.not(qloo_entity_id: nil).count).to eq(16)
+    end
+
+    it "stops at the target mid page, and keeps the cursor on a Qloo cap so that page is read later" do
+      step = read(described_class::Cursor.start(described_class::TAGS.size), target: 1)
+      expect(step).to have_attributes(stopped: "target", linked: 1)
+
+      allow(Taste::Provider.current).to receive(:recommend).and_raise(Taste::CallCapReached, "the daily limit")
+      at = step.cursor
+      capped = read(at, target: 1000)
+      expect(capped).to have_attributes(stopped: "qloo_limit", cursor: at)
+    end
+  end
 end
