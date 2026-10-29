@@ -59,6 +59,30 @@ apps hold the same values; the worker adds `MIDROLO_PROCESS=jobs` and `RAILS_MAX
 Production stops at boot, naming the variable, when a required one is blank (`lib/required_env.rb`). After changing a
 variable, redeploy (or restart) both apps.
 
+## The stats helper (Spotify and Apple Podcasts)
+
+"Invite Midrolo" reads verified Spotify and Apple Podcasts numbers through `bin/platform-stats`, a small Python
+program (`script/platform_stats.py`) that `Stats::PlatformFetch` runs with the request on stdin. It uses
+openpodcast's MIT licensed connectors, `spotifyconnector` 0.8.3 and `appleconnector` 0.4.1, pinned with every
+package's hashes in `requirements-stats.txt`.
+
+- **No settings.** The helper reads no environment variables and no files. Midrolo's service sessions (Spotify
+  `sp_dc`, Apple `myacinfo` and `itctx`) are pasted by an admin in /admin, stored encrypted in the database, and handed
+  to the helper on stdin for each fetch. They never go in job arguments, logs or the helper's output.
+- **In the image.** The `Dockerfile` installs bookworm's `python3` (3.11) and builds `/opt/stats-venv` in the build
+  stage, then copies it into the final image without pip (about 35 MB in all). `bin/platform-stats` uses that venv.
+- **Time.** The helper stops itself after 50 seconds; Rails waits 60. Spotify windows end yesterday at the latest,
+  because Spotify hasn't counted today yet.
+- **Check it.** `bin/platform-stats --self-test` (in the app's Terminal) prints `{"ok":true,"self_test":true}`, offline.
+  `bin/platform-stats --help` documents every request and result key.
+- **Develop and test.** `python3 -m venv ~/.venvs/midrolo-stats`, then
+  `~/.venvs/midrolo-stats/bin/pip install -r requirements-stats.txt`. Run the tests with
+  `~/.venvs/midrolo-stats/bin/python -m unittest discover -s test/python`, and the helper with
+  `PLATFORM_STATS_PYTHON=~/.venvs/midrolo-stats/bin/python bin/platform-stats`. CI runs both on Python 3.11.
+- **Upgrading a connector.** Change its pin and hashes (from `https://pypi.org/pypi/<name>/<version>/json`) and
+  `PINNED` in the script. The helper replaces the connectors' HTTP loop, so read their changes first, then run the
+  tests and a live fetch from /admin.
+
 ## Payments
 
 Billing goes through one adapter per payment provider (`app/services/billing/provider.rb`); nothing else in the app
@@ -123,6 +147,7 @@ docker exec -it "$(docker ps -q --filter label=coolify.projectName=midrolo --fil
    `200 image/png`.
 5. **Jobs.** Run a Snapshot from the site and see it finish; the worker's logs show no errors.
 6. **A backup.** The database's Backups tab in Coolify lists a recent successful run.
+7. **The stats helper.** `bin/platform-stats --self-test` in the app's Terminal prints `{"ok":true,"self_test":true}`.
 
 ## Backups
 
