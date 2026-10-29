@@ -32,11 +32,11 @@ RSpec.describe Catalog::FeedFetcher do
 
   it "cuts a feed over the cap after its last whole episode, and refuses one without a whole episode" do
     stub_const("#{described_class}::MAX_BYTES", 2_500)
-    stub_request(:get, url).to_return(status: 200, body: xml)
+    stub_request(:get, url).to_return(status: 200, body: xml, headers: { "ETag" => %("big") })
     result = described_class.call(url)
 
     expect(result).to be_ok
-    expect(result.truncated).to be(true)
+    expect([ result.truncated, result.etag ]).to eq([ true, %("big") ])
     expect(result.body).to end_with("</item></channel></rss>")
     expect(Catalog::FeedParser.call(result.body).episodes.map(&:guid)).to eq([ "tide-1" ])
 
@@ -91,6 +91,11 @@ RSpec.describe Catalog::FeedFetcher do
     expect(described_class.call(url).error).to eq("feed_unreachable")
     stub_request(:get, url).to_return(status: 200, body: "   ")
     expect(described_class.call(url).error).to eq("feed_empty")
+  end
+
+  it "keeps a header the database couldn't store out" do
+    stub_request(:get, url).to_return(status: 200, body: xml, headers: { "ETag" => "\"v\xFF\x01\"".b })
+    expect(described_class.call(url).etag).to eq(%("v"))
   end
 
   it "gives up at the deadline" do

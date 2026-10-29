@@ -222,13 +222,15 @@ module Catalog
 
     # ---- XML ----
 
-    # The element children of node called name in namespace ns (:itunes, :podcast, :content, or nil for none).
+    # The element children of node called name in namespace ns (:itunes, :podcast, :content), or with ns nil in no
+    # namespace or a default one (an old feed's <rss xmlns="http://backend.userland.com/rss2">), never a prefixed one
+    # (atom:link isn't the channel's link).
     def children(node, name, ns = nil)
       prefixed = "#{ns}:#{name}" if ns
       node.element_children.select do |child|
         if child.name == name
-          href = child.namespace&.href
-          ns ? href.to_s.match?(NAMESPACES.fetch(ns)) : href.nil?
+          namespace = child.namespace
+          ns ? namespace&.href.to_s.match?(NAMESPACES.fetch(ns)) : namespace.nil? || namespace.prefix.nil?
         else
           prefixed && child.namespace.nil? && child.name.casecmp?(prefixed)
         end

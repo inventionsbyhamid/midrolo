@@ -89,6 +89,13 @@ RSpec.describe Catalog::FeedParser do
     expect(feed.cadence_days).to be_nil
   end
 
+  it "reads an old feed whose elements sit in a default namespace" do
+    xml = %(<rss version="2.0" xmlns="http://backend.userland.com/rss2"><channel><title>Old</title><link>https://old.example.com/</link>) +
+          %(<item><title>E</title><guid>e1</guid></item></channel></rss>)
+    feed = described_class.call(xml, now: now)
+    expect([ feed.title, feed.website, feed.episodes.map(&:guid) ]).to eq([ "Old", "https://old.example.com/", [ "e1" ] ])
+  end
+
   it "sees itunes:block as a request not to be listed" do
     expect(parse("catalog_blocked.xml").blocked).to be(true)
   end

@@ -20,7 +20,7 @@ module Catalog
     PERMANENT = [ 301, 308 ].freeze
     USER_AGENT = "Midrolo/1.0 (+https://midrolo.com)".freeze
     ACCEPT = "application/rss+xml, application/xml;q=0.9, text/xml;q=0.9, */*;q=0.5".freeze
-    GZIP = "\x1F\x8B".b.freeze
+    GZIP = [ 0x1F, 0x8B ].pack("C*").freeze # the gzip magic bytes
     STATUS_ERRORS = { 401 => "feed_forbidden", 403 => "feed_forbidden", 404 => "feed_not_found", 410 => "feed_gone",
                       429 => "feed_rate_limited" }.freeze
 
@@ -113,10 +113,12 @@ module Catalog
       raise TooSlow unless left.positive?
 
       buffer = +"".b
+      streamed = nil
       response = connection(target, left).get(target.uri.to_s) do |request|
         request.headers["If-None-Match"] = @etag if @etag
         request.headers["If-Modified-Since"] = @last_modified if @last_modified
-        request.options.on_data = proc do |chunk, received|
+        request.options.on_data = proc do |chunk, received, env|
+          streamed = env
           raise TooSlow if now > deadline
           raise TooLarge, buffer << chunk.byteslice(0, chunk.bytesize - (received - MAX_BYTES)) if received > MAX_BYTES
 
@@ -125,8 +127,9 @@ module Catalog
       end
       Hop.new(status: response.status, headers: response.headers, body: buffer, truncated: false)
     rescue TooLarge => e
-      # Streaming stopped mid-body, so the response's headers are gone with it (no ETag: the digest still skips a parse).
-      Hop.new(status: 200, headers: {}, body: close_after_last_item(e.partial) || raise(NoWholeItem), truncated: true)
+      # Streaming stopped mid-body: the status and headers are the ones the stream carried (Faraday passes its env).
+      Hop.new(status: streamed&.status || 200, headers: streamed&.response_headers || {},
+              body: close_after_last_item(e.partial) || raise(NoWholeItem), truncated: true)
     end
 
     def finished(hop, moved_to)
@@ -147,7 +150,11 @@ module Catalog
       STATUS_ERRORS[status] || (status >= 500 ? "feed_server_error" : "feed_http_#{status}")
     end
 
-    def header(hop, name) = hop.headers[name].to_s.strip.first(255).presence
+    # A response header as text the database takes: valid UTF-8, no control characters, at most 255 characters.
+    def header(hop, name)
+      value = hop.headers[name].to_s.dup.force_encoding(Encoding::UTF_8).scrub("")
+      value.gsub(PlainText::CONTROL, "").strip.first(255).presence
+    end
 
     # [body, truncated] for a body that arrived still gzipped (Net::HTTP inflates only what it asked for and was told
     # about), inflated under the same cap.
