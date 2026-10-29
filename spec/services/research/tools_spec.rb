@@ -422,6 +422,21 @@ RSpec.describe Research::Tools do
   describe "save_summary" do
     before { create(:sponsor_match, report: report) }
 
+    it "names brands instead of the tools' refs, and drops stray leading marks (R146)" do
+      candidates!
+      name = toolkit.scored.fetch(toolkit.resolve_brand("b1")).candidate.entity.name
+      out = run("save_summary", bullets: [ ": Approach b1 first.", "- Then the rest." ])
+      expect(out).to start_with("Summary saved.")
+      expect(report.reload.summary_points).to eq([ "Approach #{name} first.", "Then the rest." ])
+    end
+
+    it "asks again when a ref names no brand the run showed" do
+      candidates!
+      out = run("save_summary", bullets: [ "Approach b999 first." ])
+      expect(out).to include("b999", "brand names")
+      expect(report.reload.summary).to be_nil
+    end
+
     it "waits for the sponsor matches: the summary is about them (R140)" do
       report.sponsor_matches.delete_all
       out = run("save_summary", bullets: [ "Your listeners love finance tools." ])

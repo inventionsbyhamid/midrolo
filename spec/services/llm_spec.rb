@@ -36,11 +36,11 @@ RSpec.describe Llm do
     expect(described_class.pitch_effort).to eq(:low)
   end
 
-  it "defaults to DeepSeek through OpenRouter" do
+  it "defaults to GLM 5.3 through OpenRouter (R146)" do
     with_env("LLM_PROVIDER" => nil, "LLM_AGENT_MODEL" => nil, "LLM_PITCH_MODEL" => nil) do
       expect(described_class.provider).to eq(:openrouter)
-      expect(described_class.agent_model).to eq("deepseek/deepseek-v4.1-flash")
-      expect(described_class.pitch_model).to eq("deepseek/deepseek-v4.1-flash")
+      expect(described_class.agent_model).to eq("z-ai/glm-5.3")
+      expect(described_class.pitch_model).to eq("z-ai/glm-5.3")
     end
   end
 

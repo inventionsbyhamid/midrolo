@@ -157,7 +157,7 @@ The user's call is to build it **production-ready, not as a demo**: Google login
   - `LLM_AGENT_MODEL=claude-opus-5-5` for the agent
   - `LLM_PITCH_MODEL=claude-opus-5-5` for pitches
   - provider: Anthropic
-  - **Changed 2026-10-29 (the user's call):** the defaults are now `deepseek/deepseek-v4.1-flash` through OpenRouter
+  - **Changed 2026-10-29 (the user's call):** the defaults are now `z-ai/glm-5.3` (GLM 5.3, chosen over DeepSeek V4.1 Flash and GLM 5.3 Flash in a head-to-head on the demo shows, R146) through OpenRouter
     (`LLM_PROVIDER=openrouter`, `OPENROUTER_API_KEY`), asking OpenRouter for hosts that don't store or train on
     prompts. Anthropic stays one env change away (`LLM_PROVIDER=anthropic`, the model ids above).
 - Switching to Sonnet or Haiku, or to OpenAI or Gemini, is an env change plus a run of the eval below.

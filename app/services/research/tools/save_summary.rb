@@ -8,7 +8,11 @@ module Research
       MAX_BULLETS = Report::SUMMARY_POINTS
       BULLET_WORDS = Report::SUMMARY_POINT_WORDS
       BULLET_LENGTH = Report::SUMMARY_POINT_LENGTH
-      NO_MATCHES = "Save sponsor matches first: build_audience_profile, find_sponsor_candidates, explain_matches, " \
+      # A brand ref as the tools write it ("b4"), inside a sentence.
+      REF = /\bb\d+\b/
+      # List marks and stray punctuation a model sometimes leads a bullet with (": ", "- ", "• ").
+      LEADING_MARKS = /\A[\s:;,.*•-]+/
+      NO_MATCHES ="Save sponsor matches first: build_audience_profile, find_sponsor_candidates, explain_matches, " \
                    "then save_sponsor_matches. Save the summary after that.".freeze
 
       description "Saves the summary the podcaster reads first, at the top of the report: 1 to #{MAX_BULLETS} bullets, " \
@@ -24,8 +28,13 @@ module Research
       def execute(bullets: [])
         return NO_MATCHES unless report.sponsor_matches.exists?
 
-        given =Array(bullets).map { |bullet| Llm::PlainText.sanitize(bullet.to_s.squish) }.compact_blank
+        given = Array(bullets).map { |bullet| readable(Llm::PlainText.sanitize(bullet.to_s.squish)) }.compact_blank
         return "The summary is empty. Write 1 to #{MAX_BULLETS} bullets and save it again." if given.empty?
+
+        unknown = given.join(" ").scan(REF).uniq
+        if unknown.any?
+          return "The summary names #{unknown.join(', ')}, which no tool showed you. Use brand names and save it again."
+        end
 
         points = given.first(MAX_BULLETS).map { |bullet| Llm::PlainText.clip_words(bullet, BULLET_WORDS, max_chars: BULLET_LENGTH) }
         claims = NumericClaims.new(toolkit)
@@ -42,6 +51,15 @@ module Research
       end
 
       private
+
+      # The reader gets brand names, never the tools' refs ("b4"), and no stray leading list mark (R146).
+      def readable(bullet)
+        named = bullet.gsub(REF) do |ref|
+          id = toolkit.resolve_brand(ref)
+          id ? toolkit.scored.fetch(id).candidate.entity.name : ref
+        end
+        named.sub(LEADING_MARKS, "")
+      end
 
       def notes(given, points)
         shortened = points.each_index.select { |i| points[i] != given[i] }.map { |i| i + 1 }

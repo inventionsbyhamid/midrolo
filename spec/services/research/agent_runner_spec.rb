@@ -71,7 +71,7 @@ RSpec.describe Research::AgentRunner do
     entry = SpendEntry.last
     expect(entry).to have_attributes(user_id: user.id, report_id: report.id, bucket: "judge", model: Llm.agent_model,
                                      input_tokens: 9000, output_tokens: 1800, kind: "llm")
-    expect(entry.cost_usd).to eq(BigDecimal("0.00486"))
+    expect(entry.cost_usd).to eq(BigDecimal("0.01476"))
     expect(report.cost_usd).to eq(entry.cost_usd)
     expect(RubyLLM::Test.requests.size).to eq(9)
   end
@@ -297,11 +297,11 @@ RSpec.describe Research::AgentRunner do
     chat = SponsorResearchAgent.chat(toolkit: toolkit, provider: Llm.provider)
     payload = chat.ask_later("Research sponsors.").render
 
-    expect(payload[:model]).to eq("deepseek/deepseek-v4.1-flash")
+    expect(payload[:model]).to eq("z-ai/glm-5.3")
     expect(payload).not_to have_key(:temperature)
     expect(payload[:reasoning]).to eq(effort: "medium")
     expect(payload[:cache_control]).to eq(type: "ephemeral")
-    expect(payload[:provider]).to eq(data_collection: "deny", max_price: { prompt: 0.3, completion: 1.2 })
+    expect(payload[:provider]).to eq(data_collection: "deny", max_price: { prompt: 1.0, completion: 3.2 })
     expect(payload[:tools].map { |tool| tool.dig(:function, :name) }).to eq(
       %w[read_show_feed find_on_qloo save_taste_seeds build_audience_profile find_sponsor_candidates explain_matches
          save_sponsor_matches save_summary]

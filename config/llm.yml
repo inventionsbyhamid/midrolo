@@ -4,11 +4,11 @@ shared:
   # Never send temperature. Agent thinks at medium effort; pitches at low.
   # Models are OpenRouter ids by default; with LLM_PROVIDER=anthropic use Anthropic's (claude-opus-5-5).
   agent:
-    model: <%= ENV.fetch("LLM_AGENT_MODEL", "deepseek/deepseek-v4.1-flash") %>
+    model: <%= ENV.fetch("LLM_AGENT_MODEL", "z-ai/glm-5.3") %>
     effort: medium
     max_tool_calls: 40
     max_seconds: 360
   pitch:
-    model: <%= ENV.fetch("LLM_PITCH_MODEL", "deepseek/deepseek-v4.1-flash") %>
+    model: <%= ENV.fetch("LLM_PITCH_MODEL", "z-ai/glm-5.3") %>
     effort: low
   # The research run's Qloo call caps live in config/research.yml (R93).
