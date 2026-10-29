@@ -40,6 +40,10 @@ module Podcast::Catalog
     last_published_at && last_published_at >= now - ACTIVE_WINDOW ? "active" : "dormant"
   end
 
+  # Its page says the feed couldn't be read lately: failed, or claimed (which stays listed) after FAILED_AFTER failed
+  # reads in a row.
+  def feed_unreachable? = failed? || (claimed? && fetch_failures.to_i >= FAILED_AFTER)
+
   # Plan section 3, rule 6: only pages with real content get indexed. Active or dormant, 3 or more episodes, stored
   # artwork that isn't taken down, and a description.
   def meets_index_rule?

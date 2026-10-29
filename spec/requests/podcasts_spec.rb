@@ -268,6 +268,13 @@ RSpec.describe "Podcast pages" do
       expect(response.body).to include("We couldn't read this show's feed on our last try")
     end
 
+    it "keeps a claimed show whose feed keeps failing, saying it couldn't be read recently" do
+      podcast.update!(claimed_at: 1.day.ago, fetch_failures: 3, last_error: "feed_http_403")
+      visit "/podcasts/#{podcast.slug}"
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("We couldn't read this show's feed recently")
+    end
+
     describe "caching" do
       it "answers a visitor's repeat request with 304 until the podcast, its listing or a request changes" do
         visit "/podcasts/#{podcast.slug}"

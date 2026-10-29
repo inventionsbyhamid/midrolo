@@ -1,0 +1,10 @@
+We tried to read the RSS feed of <%= @title %> <%= @failures %> times in a row and couldn't: <%= catalog_error_label(@podcast.last_error) %>.
+
+Your page on <%= APP_NAME %> stays listed for brands, with a note that it may be out of date until we can read the feed again. New episodes and sponsor reads won't show until then.
+
+Check that this address opens your feed in a browser: <%= @podcast.feed_url %>
+If your feed moved, add the new address to your host's settings, or write to us at hello@midrolo.com.
+
+We'll keep trying on our own. Your page: <%= podcast_url(@podcast) %>
+
+We send this once when we can't read a show you manage several times in a row.
