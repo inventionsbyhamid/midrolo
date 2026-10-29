@@ -1,1 +1,15 @@
-<%# Podcast page: Claim box on an unclaimed podcast. Lane L4 fills it; lane L3's page renders it with podcast: (from Podcast.for_page). %>
+<%# locals: (podcast:) -%>
+<%# Podcast page: the claim box on an unclaimed podcast (lane L4), in the sidebar of lane L3's page, with the count of
+    brands whose requests wait for the claim (one query). Reads only what Podcast.for_page preloads. Renders nothing
+    for a claimed podcast: "Ask for access" lives on the claim page. %>
+<% unless podcast.claimed? %>
+  <% waiting = podcast.waiting_requests_count %>
+  <%= render "components/card", title: "Host this show?", heading: :h2 do %>
+    <p>Claim it free to set your rates, mark the months you're open and verify your numbers.</p>
+    <% if waiting.positive? %>
+      <p class="mt-3 font-semibold"><%= pluralize(waiting, "brand") %> asked about sponsoring this show.</p>
+    <% end %>
+    <%= ui_button "Claim this show", new_podcast_claim_path(podcast), size: :md, class: "mt-4", rel: "nofollow" %>
+    <p class="mt-3 text-xs text-ink-soft">You prove it with your RSS feed: its owner email, or a short line in your show description.</p>
+  <% end %>
+<% end %>

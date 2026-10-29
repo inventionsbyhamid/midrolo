@@ -1,0 +1,10 @@
+<%# locals: (show:, help:) -%>
+<%# The feed has no owner email: how to show one for a while at this host, then read the feed again
+    (ClaimsController#create with recheck, which also claims at once when it's the user's own address). %>
+<p class="text-ink-soft">Your feed doesn't list an owner email, so we can't send a code yet. You can show one for a while<%= " in #{help.name}" if help.known? %>:</p>
+<ol class="verify-steps">
+  <% help.email_steps.each do |step| %><li><%= step %></li><% end %>
+  <li>Come back and press Check my feed again. If the address is <span class="font-semibold break-all"><%= show.user.email %></span>, the one you signed in with, the show is yours at once. Otherwise we'll email it a code.</li>
+</ol>
+<p class="hint"><%= help.wait %> The address shows in your public feed while it's on, so you can turn it off once you're verified.</p>
+<%= button_to "Check my feed again", podcast_claim_path(show.podcast, recheck: 1), class: "btn btn-secondary btn-md mt-4" %>

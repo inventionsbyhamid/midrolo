@@ -1,7 +1,8 @@
 require "rails_helper"
 
 # The whole media kit flow in a real browser: edit the kit, upload a host photo (the test storage service), verify
-# ownership with the emailed code, publish, and open the public page, then check phone width and print styles.
+# ownership with the emailed code, publish the listing, and open the printable kit, then check phone width and print
+# styles. (The public kit is the podcast page's Rates section now; /k/:slug redirects there.)
 RSpec.describe "Media kit" do
   include ActiveJob::TestHelper
   include Warden::Test::Helpers
@@ -43,14 +44,14 @@ RSpec.describe "Media kit" do
     evaluate_script("getComputedStyle(document.querySelector(#{selector.to_json})).getPropertyValue(#{property.to_json})")
   end
 
-  it "edits the kit, uploads a host photo, verifies, publishes and shows the public page without the watermark" do
+  it "edits the kit, uploads a host photo, verifies, publishes and shows the printable kit" do
     visit edit_show_media_kit_path(podcast)
     fill_in "Headline", with: "Plain-English money lessons for first-time founders"
     fill_in "About the show", with: "Every week a founder walks us through their first big money decision."
     attach_file "Host photo", Rails.root.join("spec/fixtures/files/host.jpg")
     check "Hide Rival Pods"
-    click_button "Save kit"
-    expect(page).to have_text("Kit saved.")
+    click_button "Save listing"
+    expect(page).to have_text("Saved.")
     expect(podcast.media_kit.host_photo).to be_attached
 
     click_link "Preview", match: :first
@@ -69,16 +70,15 @@ RSpec.describe "Media kit" do
     click_button "Verify"
     expect(page).to have_text("You're verified.")
 
-    click_button "Publish kit"
+    click_button "Publish listing"
     expect(page).to have_text("Published.")
+    expect(page).to have_link(href: "/podcasts/#{podcast.reload.slug}#rates")
 
-    visit public_kit_path(podcast.reload.slug)
+    visit show_media_kit_path(podcast)
     expect(page).to have_css("h1", text: "The Founder's Ledger")
     expect(page).to have_text("Stats as reported by the verified owner.")
     expect(page).to have_text("Fieldnote Coffee")
     expect(page).to have_no_text("Rival Pods")
-    expect(page).to have_no_css(".kit-watermark")
-    expect(page).to have_no_text("Preview")
     expect(page).to have_css("img.kit-host-photo")
     expect(eventually_true("document.querySelector('img.kit-host-photo').naturalWidth > 0")).to be(true) # the variant was made
   end
@@ -92,10 +92,6 @@ RSpec.describe "Media kit" do
 
     it "fits a phone screen" do
       page.driver.resize(375, 812)
-      visit public_kit_path(podcast.slug)
-      expect(page).to have_css("h1", text: "The Founder's Ledger")
-      expect(horizontal_overflow).to eq(0)
-
       visit show_media_kit_path(podcast)
       expect(page).to have_css(".kit-watermark")
       expect(horizontal_overflow).to eq(0)
@@ -106,7 +102,7 @@ RSpec.describe "Media kit" do
     end
 
     it "prints without buttons or the map canvas, keeping the top places, every taste and the contact address" do
-      visit public_kit_path(podcast.slug)
+      visit show_media_kit_path(podcast)
       expect(page).to have_css("[data-top-places]", text: "New York")
 
       execute_script("window.print = () => { window.printed = true }")

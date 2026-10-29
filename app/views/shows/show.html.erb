@@ -16,9 +16,9 @@
       </div>
       <span class="text-sm text-ink-soft">
         <% if @show.public_kit? %>
-          <%= link_to "Published", public_kit_path(@show.slug), class: "link" %>
+          <%= link_to "Published", listing_podcast_path(@show.podcast, anchor: "rates"), class: "link" %>
         <% else %>
-          <%= @show.verified? ? "Verified, not published" : "Not published" %>
+          <%= { claimed: "Verified, not published", managed_elsewhere: "Managed by another account", draft: "Draft, not verified" }.fetch(@show.claim_status) %>
         <% end %>
       </span>
     </div>

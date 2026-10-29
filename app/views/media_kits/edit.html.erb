@@ -1,10 +1,10 @@
-<% content_for :title, "#{@show.title} media kit" %>
+<% content_for :title, "#{@show.title} listing" %>
 <div class="mx-auto flex max-w-3xl flex-col gap-6">
   <header class="flex flex-wrap items-center gap-4">
     <%= render "shows/artwork", show: @show %>
     <div class="min-w-0 flex-1 basis-48">
       <p class="truncate text-sm font-semibold"><%= link_to @show.title, show_path(@show), class: "link" %></p>
-      <h1 class="type-h2">Media kit</h1>
+      <h1 class="type-h2">Listing and media kit</h1>
     </div>
     <%= ui_button "Preview", show_media_kit_path(@show), variant: :secondary %>
   </header>

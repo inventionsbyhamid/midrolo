@@ -95,7 +95,8 @@ RSpec.describe "Content Security Policy" do
     create(:media_kit, :published, show: show)
     create(:report, show: show, status: "done", audience: { "brands" => [], "tags" => [] },
                     demographics: { "age" => { "25_to_29" => 0.3, "30_to_34" => -0.2, "35_to_44" => 0.0 } })
-    get public_kit_path(show.slug), headers: { "User-Agent" => browser }
+    sign_in show.user # the kit's preview: the public kit is the podcast page's Rates now
+    get show_media_kit_path(show), headers: { "User-Agent" => browser }
 
     doc = Nokogiri::HTML(response.body)
     expect(doc.css(".age-bar")).not_to be_empty

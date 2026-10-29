@@ -1,0 +1,53 @@
+<%# locals: (f:, kit:) -%>
+<%# The listing (lane L4): what brands see in the directory and the podcast page's Rates section once it's published.
+    It works on a draft workspace too; only the owner show's published listing is public. %>
+<% months = Podcast.listing_months %>
+<%= render "components/card", title: "Sponsorship details" do %>
+  <div class="flex flex-col gap-6">
+    <label class="listing-switch">
+      <%= f.check_box :open_to_sponsors %>
+      <span>
+        <span class="font-semibold">Open to sponsors</span>
+        <span class="block text-sm text-ink-soft">Brands find you with the Open to sponsors filter and can request a spot.</span>
+      </span>
+    </label>
+
+    <fieldset>
+      <legend class="label">Months you're open</legend>
+      <%= hidden_field_tag "media_kit[open_months][]", "", id: nil %>
+      <div class="mt-1 flex flex-wrap gap-2">
+        <% months.each do |month| %>
+          <% box_id = "media_kit_open_months_#{month}" %>
+          <span class="listing-month">
+            <%= check_box_tag "media_kit[open_months][]", month, kit.open_months.include?(month), id: box_id %>
+            <label for="<%= box_id %>"><%= listing_month_label(month) %></label>
+          </span>
+        <% end %>
+      </div>
+      <p class="hint">Pick the months you can take a sponsor. Brands see them next to your rates.</p>
+    </fieldset>
+
+    <div>
+      <%= f.label :looking_for, "Who you're looking for", class: "label" %>
+      <%= f.text_area :looking_for, class: "input min-h-24", rows: 3, maxlength: MediaKit::LOOKING_FOR_LIMIT,
+            placeholder: "Brands our listeners already use: budgeting apps, banks for small businesses, coffee.",
+            aria: { describedby: "looking-for-help", invalid: kit.errors.key?(:looking_for).presence } %>
+      <p id="looking-for-help" class="hint">A sentence or two in your words. Up to <%= MediaKit::LOOKING_FOR_LIMIT %> characters.</p>
+    </div>
+
+    <div>
+      <%= label_tag "media_kit_exclusions_text", "What you won't advertise", class: "label" %>
+      <%= text_field_tag "media_kit[exclusions_text]", kit.exclusions.join(", "), id: "media_kit_exclusions_text", class: "input",
+            placeholder: "Gambling, alcohol, crypto", aria: { describedby: "exclusions-help" } %>
+      <p id="exclusions-help" class="hint">Categories or brands, separated by commas. Up to <%= MediaKit::EXCLUSIONS_LIMIT %>.</p>
+    </div>
+
+    <label class="listing-switch">
+      <%= f.check_box :bands_only %>
+      <span>
+        <span class="font-semibold">Show my numbers as a range</span>
+        <span class="block text-sm text-ink-soft">Brands see a band such as 1,000 to 2,500 per episode instead of the exact figure.</span>
+      </span>
+    </label>
+  </div>
+<% end %>

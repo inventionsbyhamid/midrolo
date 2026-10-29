@@ -1,34 +1,42 @@
 <% content_for :title, "Verify #{@show.title}" %>
+<% help = Claims::HostHelp.for(@show.podcast) %>
 <div class="mx-auto flex max-w-2xl flex-col gap-6">
   <%= render "verifications/header", show: @show %>
 
   <% if @show.verified? %>
     <%= render "components/card", title: "Verified" do %>
-      <p>You've verified that you own this show, so you can publish its media kit.</p>
-      <%= ui_button "Open your media kit", edit_show_media_kit_path(@show), class: "mt-4" %>
+      <p>You've verified that you own this show, so you can publish its listing.</p>
+      <%= ui_button "Open your listing", edit_show_media_kit_path(@show), class: "mt-4" %>
     <% end %>
   <% else %>
-    <p class="type-lead">A public media kit puts your show's name next to rates brands will pay, so we check that the show is yours first. Pick one way:</p>
+    <p class="type-lead">Your listing puts your show's name next to rates brands will pay, so we check that the show is yours first. Pick one way:</p>
 
     <% if @current&.pending? %>
       <p class="flash flash-notice"><%= link_to "Continue where you left off", show_verification_path(@show), class: "link" %></p>
     <% end %>
 
-    <%= render "components/card", title: "Email a code to the feed's owner" do %>
-      <% if @show.owner_email.present? %>
-        <p>We'll send a 6-digit code to <span class="font-semibold"><%= Shows::OwnerEmail.mask(@show.owner_email) %></span>, the owner address in your RSS feed.</p>
-        <%= button_to "Email me a code", show_verification_path(@show), params: { kind: "email" }, class: "btn btn-primary btn-md mt-4" %>
-      <% else %>
-        <p class="text-ink-soft">Your feed doesn't list an owner email, so verify with a feed token instead.</p>
+    <% email_card = capture do %>
+      <%= render "components/card", title: "Email a code to the feed's owner" do %>
+        <% if @show.owner_email.present? %>
+          <p>We'll send a 6-digit code to <span class="font-semibold"><%= Shows::OwnerEmail.mask(@show.owner_email) %></span>, the owner address in your RSS feed.</p>
+          <%= button_to "Email me a code", show_verification_path(@show), params: { kind: "email" }, class: "btn btn-primary btn-md mt-4" %>
+        <% else %>
+          <%= render "verifications/show_email", show: @show, help: help %>
+        <% end %>
       <% end %>
     <% end %>
 
-    <% if @show.feed_url.present? %>
-      <%= render "components/card", title: "Add a token to your feed" do %>
-        <p>Paste a short line into your show description at your podcast host, and we'll look for it in your feed. Handy if you can't reach the owner inbox.</p>
-        <%= button_to "Get my feed token", show_verification_path(@show), params: { kind: "feed_token" },
-              class: "btn #{@show.owner_email.present? ? 'btn-secondary' : 'btn-primary'} btn-md mt-4" %>
+    <% token_card = capture do %>
+      <% if @show.feed_url.present? %>
+        <%= render "components/card", title: "Add a line to your show description" do %>
+          <p>Paste a short line into your show description<%= " in #{help.name}" if help.known? %>, and we'll look for it in your feed. It works without an owner email, and you can remove it once you're verified.</p>
+          <%= button_to "Get my feed token", show_verification_path(@show), params: { kind: "feed_token" },
+                class: "btn #{@show.owner_email.present? ? 'btn-secondary' : 'btn-primary'} btn-md mt-4" %>
+        <% end %>
       <% end %>
     <% end %>
+
+    <%# With no owner email in the feed, the line is the quickest way, so it comes first. %>
+    <%= @show.owner_email.present? ? safe_join([ email_card, token_card ]) : safe_join([ token_card, email_card ]) %>
   <% end %>
 </div>

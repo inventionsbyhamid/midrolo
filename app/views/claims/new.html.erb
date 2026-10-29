@@ -1,0 +1,30 @@
+<% content_for :title, "Claim #{@podcast.title}" %>
+<% response.headers["X-Robots-Tag"] = "noindex, nofollow" %>
+<div class="mx-auto flex max-w-2xl flex-col gap-6">
+  <% if @managed_elsewhere %>
+    <%= render "claims/header", podcast: @podcast, title: "This show is managed by someone else" %>
+    <%= render "components/card", title: "Ask the owner for access" do %>
+      <p>Each show on <%= APP_NAME %> has one owner account, and someone has already proved they run <span class="font-semibold"><%= @podcast.title %></span>.</p>
+      <p class="mt-3">If you work on the show, ask them for access. We'll email the owner your name and email address so they can reply to you. We don't share who they are.</p>
+      <%= button_to "Ask the owner for access", podcast_claim_access_path(@podcast), class: "btn btn-primary btn-md mt-5" %>
+      <p class="hint mt-4">Own the show and can't reach whoever claimed it? Write to <%= mail_to "hello@midrolo.com", nil, class: "link" %> with a link to your show and we'll sort it out.</p>
+    <% end %>
+  <% else %>
+    <%= render "claims/header", podcast: @podcast, title: @show ? "Finish claiming this show" : "Claim this show" %>
+    <p class="type-lead">Claiming is free. It's how you set your rates, mark the months you're open, verify your numbers and answer brands.</p>
+
+    <% if (waiting = @podcast.waiting_requests_count).positive? %>
+      <p class="flash flash-notice"><%= pluralize(waiting, "brand") %> asked about sponsoring this show. You'll see <%= waiting == 1 ? "its request" : "their requests" %> once it's yours.</p>
+    <% end %>
+
+    <%= render "components/card", title: "How it works" do %>
+      <ol class="verify-steps mt-0">
+        <li>We read your RSS feed. If its owner email is <span class="font-semibold break-all"><%= current_user.email %></span>, the address you signed in with, the show is yours at once.</li>
+        <li>If not, prove it with a 6-digit code sent to the feed's owner email, or a short line you add to your show description. No owner email in your feed? The line works on every host, Spotify for Creators included.</li>
+        <li>Set up your listing while you wait. It goes live on your show's page once the show is verified.</li>
+      </ol>
+      <%= button_to (@show ? "Continue" : "Claim this show"), podcast_claim_path(@podcast), class: "btn btn-primary btn-lg mt-6" %>
+      <div class="hint mt-3">Not you? <%= button_to "Sign out", destroy_user_session_path, method: :delete, class: "link-button", form_class: "inline" %> and sign in with the account you use for the show.</div>
+    <% end %>
+  <% end %>
+</div>

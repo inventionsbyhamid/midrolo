@@ -5,6 +5,7 @@
     <h1 class="type-h1">Admin</h1>
     <nav class="flex gap-4" aria-label="Admin">
       <%= link_to "Sign-ups", admin_users_path, class: "link" %>
+      <%= link_to "Move a show", new_admin_claim_transfer_path, class: "link" %>
       <%= link_to "Jobs", mission_control_jobs_path, class: "link", data: { turbo: false } %>
     </nav>
   </header>

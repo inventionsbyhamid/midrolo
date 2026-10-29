@@ -103,7 +103,7 @@ RSpec.describe "Content Security Policy", :network do
     expect(@blocked).to be_empty, @blocked.join("\n")
 
     create(:media_kit, :published, show: report.show)
-    visit public_kit_path(report.show.reload.slug)
+    visit show_media_kit_path(report.show)
     expect(page).to have_css(".age-bar-fill[data-segments]", minimum: 1, visible: :all)
     expect(page.find(".age-bar[data-lean='over'] .age-bar-fill", match: :first).evaluate_script("this.offsetHeight")).to be > 0
     expect_map_drawn("kit_heatmap")

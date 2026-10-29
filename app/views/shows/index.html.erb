@@ -5,7 +5,8 @@
     <%= ui_button "Add another show", new_show_path, variant: :secondary %>
   </header>
 
-  <%# Each card ends on its next step: the latest report, or a first Snapshot. %>
+  <%# Each card says whether the show is claimed (verified, its listing can go public), a draft workspace, or managed
+      by another account, then ends on its next step: the latest report, or a first Snapshot. %>
   <% paused = AppSettings.runs_paused? %>
   <ul class="grid gap-4 sm:grid-cols-2">
     <% @shows.each do |show| %>
@@ -16,6 +17,19 @@
           <div class="min-w-0 flex-1">
             <%= link_to show.title, show_path(show), class: "type-h3 block truncate underline-offset-4 hover:underline" %>
             <p class="truncate text-ink-soft"><%= show.author %></p>
+            <p class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <% case show.claim_status %>
+              <% when :claimed %>
+                <%= ui_badge "Claimed", tone: :success %>
+                <%= link_to "Your listing", edit_show_media_kit_path(show), class: "link" %>
+              <% when :managed_elsewhere %>
+                <%= ui_badge "Managed by someone else", tone: :warning %>
+                <%= link_to "Ask for access", new_podcast_claim_path(show.podcast), class: "link" %>
+              <% else %>
+                <%= ui_badge "Draft" %>
+                <%= link_to "Verify you own it", new_show_verification_path(show), class: "link" %>
+              <% end %>
+            </p>
             <p class="mt-1 text-sm text-ink-soft">
               <% if report %>
                 <%= link_to "Latest report: #{report.status_copy}", show_report_path(show, report), class: "link" %>
