@@ -9,6 +9,7 @@ module Brands
       searches = brand_scoped(current_brand.fit_searches)
       @searches_count = searches.count
       @searches = searches.order(created_at: :desc, id: :desc).limit(SEARCHES_SHOWN).to_a
+      FitSearch.fail_stale(@searches)
       @result_counts = FitResult.where(fit_search_id: @searches.map(&:id)).group(:fit_search_id).count
       saved = brand_scoped(current_brand.saved_podcasts)
       @saved_count = saved.count
