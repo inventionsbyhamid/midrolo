@@ -33,7 +33,8 @@ class BrandsController < ApplicationController
                           .pluck(:podcast_id, Arel.sql("COUNT(*)"), Arel.sql("MIN(sponsor_mentions.published_at)"),
                                  Arel.sql("MAX(sponsor_mentions.published_at)"),
                                  Arel.sql("ARRAY_REMOVE(ARRAY_AGG(DISTINCT sponsor_mentions.promo_code), NULL)"))
-    podcasts = Podcast.for_cards.strict_loading.where(id: stats.map(&:first)).index_by(&:id)
+    # By id, as brands/_sponsored_shows preloads the same artwork, so its queries are this request's cached ones.
+    podcasts = Podcast.for_cards.strict_loading.where(id: stats.map(&:first)).order(:id).index_by(&:id)
     stats.filter_map do |id, count, first, last, codes|
       Row.new(podcast: podcasts[id], episodes_count: count, first_seen: first, last_seen: last, codes: codes.first(3)) if podcasts[id]
     end
