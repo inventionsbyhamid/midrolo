@@ -54,6 +54,42 @@ RSpec.describe "Sitemaps" do
     expect(locs).to eq([ "http://www.example.com/brands/#{brand.slug}" ])
   end
 
+  # Code review M8: the catalog's sitemaps read whole tables, so each is cached until what it lists changes.
+  describe "caching" do
+    before { allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new) }
+
+    it "serves a part from the cache until its rows change, rebuilding at most every few minutes" do
+      first = create(:podcast, :indexable, title: "First Show")
+      get "/sitemaps/podcasts.xml"
+      expect(locs).to eq([ "http://www.example.com/podcasts/#{first.slug}" ])
+
+      allow(Podcast).to receive(:indexable).and_call_original
+      get "/sitemaps/podcasts.xml"
+      expect(locs).to eq([ "http://www.example.com/podcasts/#{first.slug}" ])
+      expect(response.media_type).to eq("application/xml")
+      expect(Podcast).not_to have_received(:indexable)
+
+      second = create(:podcast, :indexable, title: "Second Show")
+      get "/sitemaps/podcasts.xml"
+      expect(locs.size).to eq(1) # built under REBUILD_EVERY ago
+
+      travel SitemapsController::REBUILD_EVERY + 1.minute do
+        get "/sitemaps/podcasts.xml"
+        expect(locs).to contain_exactly("http://www.example.com/podcasts/#{first.slug}", "http://www.example.com/podcasts/#{second.slug}")
+      end
+    end
+
+    it "keeps each part apart, and counts categories in SQL" do
+      3.times { create(:podcast, :indexable, categories: [ "Technology", "News" ]) }
+      create(:podcast, :active, categories: [ "News" ])
+
+      get "/sitemaps/categories.xml"
+      expect(locs).to eq(%w[http://www.example.com/podcasts/category/news http://www.example.com/podcasts/category/technology])
+      get "/sitemaps/brands.xml"
+      expect(locs).to eq([])
+    end
+  end
+
   it "lists the published blog posts", :blog_posts do
     get "/sitemaps/blog.xml"
     expect(locs.first).to eq("http://www.example.com/blog")
