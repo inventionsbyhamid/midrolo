@@ -22,7 +22,8 @@ RSpec.describe "Marketplace stubs" do
     expect([ result.found, result.added, result.podcasts ]).to eq([ [], [], [] ])
     expect(Sponsors::History.for(build(:podcast))).to eq([])
     expect(Sponsors::History.for_brand(build(:brand))).to eq([])
-    expect(Stats::PlatformFetch.call(build(:stat_connection))).to include("error" => "failed")
+    # Filled by lane L5: with no service session there is nothing to ask.
+    expect(Stats::PlatformFetch.call(build(:stat_connection))).to include("ok" => false, "error" => "unavailable")
     expect { Conversations::ClaimHandoff.call(build(:podcast)) }.not_to raise_error
   end
 
@@ -46,7 +47,7 @@ RSpec.describe "Marketplace stubs" do
     %w[numbers sponsors rates claim request save similar audience].each do |name|
       expect(ApplicationController.render(partial: "podcasts/#{name}", locals: { podcast: build(:podcast) }).strip).to eq("")
     end
-    Admin::DashboardController::PANELS.each do |name|
+    (Admin::DashboardController::PANELS - %w[stats]).each do |name| # stats: filled by lane L5
       expect(ApplicationController.render(partial: "admin/dashboard/#{name}", locals: { stats: nil }).strip).to eq("")
     end
   end
