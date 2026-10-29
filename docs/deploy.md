@@ -74,8 +74,8 @@ docker exec -it "$(docker ps -q --filter label=coolify.projectName=midrolo --fil
 ```
 
 - Make yourself the admin, once you've signed in with Google:
-  `bin/rails runner 'User.find_by!(email: "you@example.com").update!(admin: true)'`. /admin and /admin/jobs then ask
-  for `ADMIN_USERNAME` and `ADMIN_PASSWORD` too (unset, they're a 404).
+  `bin/rails runner 'User.find_by!(email: "you@example.com").update!(admin: true)'`. /admin and /admin/jobs then
+  open for you (with `ADMIN_USERNAME` and `ADMIN_PASSWORD` set, they ask for those too).
 - The live Qloo check (8 calls, at most 10): `bin/rails qloo:smoke` ([live-smoke.md](live-smoke.md)).
 - The sample reports (Qloo calls plus a few cents of LLM each): `bin/rails samples:generate`.
 

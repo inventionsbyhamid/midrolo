@@ -31,7 +31,7 @@ Every variable is in [.env.example](../.env.example), with what it does.
   | `pro_yearly` | Pro, $490 a year | `DODO_PRODUCT_PRO_YEARLY` |
   | `sprint` | Sprint, $49 once (Pro for 30 days) | `DODO_PRODUCT_SPRINT` |
 
-- [x] **Your own values:** `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` (optional), `JUDGE_CODE` (never in the repo:
+- [x] **Your own values:** `ADMIN_EMAIL` (optional), `JUDGE_CODE` (never in the repo:
       `docs/devpost.md` keeps `<<JUDGE_CODE>>`), `PROMO_PRO_UNTIL=2026-11-06`.
 - [x] **In Coolify** (deploy.md, Settings): every value above on both apps, runtime only, plus `SECRET_KEY_BASE`,
       `APP_URL=https://midrolo.com`, `DB_HOST` and `MIDROLO_DATABASE_PASSWORD` (the database resource's). Google and

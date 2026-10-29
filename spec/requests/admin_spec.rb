@@ -50,14 +50,25 @@ RSpec.describe "Admin" do
           expect(response).to have_http_status(:not_found)
         end
 
-        it "is not found when ADMIN_USERNAME or ADMIN_PASSWORD is unset, whatever is sent" do
+        it "opens for a signed-in admin on the admin flag alone when ADMIN_USERNAME or ADMIN_PASSWORD is unset (R144)" do
           sign_in admin
           with_admin_env(username: nil) do
-            get path, headers: basic_auth
-            expect(response).to have_http_status(:not_found)
+            get path
+            expect(response).to have_http_status(:ok)
+            expect(response.headers["WWW-Authenticate"]).to be_nil
           end
           with_admin_env(password: "") do
-            get path, headers: { "HTTP_AUTHORIZATION" => basic("ops-user", "") }
+            get path
+            expect(response).to have_http_status(:ok)
+          end
+        end
+
+        it "stays not found for a non-admin or a signed-out visitor when the basic auth variables are unset (R144)" do
+          with_admin_env(username: nil, password: nil) do
+            get path
+            expect(response).to have_http_status(:not_found)
+            sign_in create(:user)
+            get path
             expect(response).to have_http_status(:not_found)
           end
         end
@@ -76,15 +87,15 @@ RSpec.describe "Admin" do
       [ :post, "/admin/jobs/applications/midrolo/queues/default/pause" ],
       [ :delete, "/admin/jobs/applications/midrolo/queues/default/pause" ],
       [ :patch, "/admin/jobs/applications/midrolo/recurring_tasks/nightly" ] ].each do |method, path|
-      it "#{method.upcase} #{path}: 404 for a non-admin or with the env unset, 401 for an admin without basic auth" do
+      it "#{method.upcase} #{path}: 404 for a non-admin, with or without the env, 401 for an admin without basic auth" do
         params = { reason: "x", settings: { promo_budget_usd: "1" } }
 
         sign_in create(:user)
         public_send(method, path, params: params, headers: basic_auth)
         expect(response).to have_http_status(:not_found)
 
-        sign_in admin
-        with_admin_env(password: nil) { public_send(method, path, params: params, headers: basic_auth) }
+        sign_in create(:user)
+        with_admin_env(username: nil, password: nil) { public_send(method, path, params: params) }
         expect(response).to have_http_status(:not_found)
 
         sign_in admin

@@ -108,8 +108,8 @@ Open http://localhost:3100 (bin/dev's default port; `PORT=3200 bin/dev` picks an
   real Podcast Index ids replace them.
 - **Mail** opens in the browser at http://localhost:3100/letter_opener. The design system is at `/styleguide`.
 - **Admin.** Make yourself an admin with
-  `bin/rails runner 'User.find_by!(email: "you@example.com").update!(admin: true)'`, set `ADMIN_USERNAME` and
-  `ADMIN_PASSWORD`, then open `/admin`.
+  `bin/rails runner 'User.find_by!(email: "you@example.com").update!(admin: true)'`, then open `/admin`. Setting
+  `ADMIN_USERNAME` and `ADMIN_PASSWORD` adds a basic auth prompt on top.
 
 The app reads its keys from the environment (there is no dotenv), so export them in the shell that starts the server.
 Each key you add swaps one Fake for the real service.
