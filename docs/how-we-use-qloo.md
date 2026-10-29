@@ -26,7 +26,7 @@ views and crawlers never call it.
 | --- | --- | --- | --- |
 | **The podcaster's sponsor report** (an agent) | `/search`, `/v2/tags`, `/v2/insights` for brands, podcasts, tags, demographics and the heatmap | soft 30, hard 40 uncached calls a report | A taste profile, leans, a map and up to 50 brands ranked by fit, with reasons |
 | **Similar shows**, a step in every report | `/v2/insights`, `filter.type=urn:entity:podcast`, from the show's entity | 1 call a report | "Shows with a similar audience" and "Brands that already sponsor shows like yours" |
-| **The brand side fit search** (an agent) | `/search` for the brand, then `/v2/insights` for podcasts, affinity scores, brands in the category and audience tags | soft 8, hard 10 uncached calls a search | Shows ranked by taste, sponsor proof, price and verified numbers, each with why it fits |
+| **The brand side fit search** (an agent) | `/search` for the brand, then `/v2/insights` for podcasts, taste match scores, brands in the category and audience tags | soft 8, hard 10 uncached calls a search | Shows ranked by taste, sponsor proof, price and verified numbers, each with why it fits |
 | **Competitors** for the brand search | none extra: the brand entity's own properties from `/search` | 0 | "Your competitors sponsor these shows" |
 | **Seeding the catalog** (admin, once) | `/v2/insights`, `filter.type=urn:entity:podcast`, one genre tag at a time | the daily cap | The directory's first shows (the target is 1,000), each matched to its real feed |
 
@@ -40,7 +40,7 @@ Every call is a GET to `https://hackathon.api.qloo.com` with the key in the `X-A
 | `/search` | `query`, `types`, `take` | Find the show, and the shows a host says their listeners love. Confirm a sponsor name found in a feed is a brand (`types=urn:entity:brand`). |
 | `/v2/tags` | `filter.query`, `feature.semantic_search=true`, `filter.tag.types` | Turn topics into taste tags, show categories into media genre tags (`urn:tag:genre:media`), and brand categories into brand tags (`urn:tag:genre:brand`). |
 | `/v2/insights`, `filter.type=urn:entity:brand` | seed signals, `filter.popularity.max=0.97`, `filter.tags`, `take` | Brand recommendations: one broad pass, plus one pass per brand category. |
-| `/v2/insights`, `filter.type=urn:entity:brand` | seed signals, `filter.results.entities` (50 ids at a time) | Score every candidate brand against the same seeds. Qloo has no batch affinity call, so this is how we get one. |
+| `/v2/insights`, `filter.type=urn:entity:brand` | seed signals, `filter.results.entities` (50 ids at a time) | Score every candidate brand against the same seeds. Qloo has no batch call for how strongly many brands line up with one set of seeds, so this is how we get one. |
 | `/v2/insights`, `filter.type=urn:entity:podcast` | seed signals | Similar podcasts: shown in the profile, and read by the proven sponsor scan. |
 | `/v2/insights`, `filter.type=urn:entity:podcast` | the show's own entity (the seed signals when the show isn't on Qloo), `take=10` | Shows with a similar audience: one call per report (Snapshot and full), matched to the Midrolo catalog (podcasts not yet in it are added from the directory). The report lists them with the brands their own feeds show sponsoring them, and a sponsor match that sponsors one says so ("Sponsors 3 shows with your audience"). |
 | `/search`, `types=urn:entity:brand` | the brand's name, `take=5` | The brand search's first step: find the brand, picked by exact name, then its website, then a close name. Its properties carry its tags, categories, competitors and the brands its customers also buy. |
@@ -93,7 +93,7 @@ call to a cheap model writes the three line brief at the end, and a template doe
    categories, as brand genre tags, become the signal.
 2. **Ask Qloo for podcasts.** Insights for podcasts with the brand as the signal, matched to the catalog by Qloo id.
    Up to 10 shows the catalog lacks are added from the directory.
-3. **Score the catalog.** Up to 100 catalog shows in the brand's categories that step 2 didn't return get an affinity
+3. **Score the catalog.** Up to 100 catalog shows in the brand's categories that step 2 didn't return get a taste match
    score against the same signal. Shows open to sponsors that Qloo doesn't know join with no taste score, and say so.
 4. **Proof.** Sponsor history from the shows' own feeds, for the brand, its competitors, the brands its customers also
    buy, and (when Qloo names fewer than 5) brands in its category. This is the "your competitors sponsor these shows"
@@ -150,7 +150,7 @@ Qloo's hackathon key has a limited allowance, so every live call is counted and 
   `/v2/tags` answers keep 30 days, everything else 7. A 400 or 404 is remembered for 1 day, so a bad request costs one
   call a day.
 - **Heatmaps are trimmed.** Qloo ignores `take` on heatmaps (8,421 cells for the United States in one probe), so we
-  keep and cache only the 200 cells with the most affinity, never the whole answer.
+  keep and cache only the 200 cells with the strongest taste match, never the whole answer.
 - **A call guard** (`app/services/taste/call_guard.rb`) runs before every live request, retries included: at most 30
   a minute (`QLOO_MAX_PER_MINUTE`) and a daily cap the admin sets (100 by default). Over a cap, no request is sent. If
   the counter can't count, it refuses.
@@ -268,18 +268,18 @@ GET /search  query=Acme Ledger  types=urn:entity:brand  take=3
 
 Only a brand with the same name is kept: Acme Ledger `<brand 1>`. A name Qloo can't confirm is dropped.
 
-**Scoring** asks for every candidate's affinity to the same seeds in one call:
+**Scoring** asks how strongly every candidate lines up with the same seeds, in one call:
 
 ```text
 GET /v2/insights  filter.type=urn:entity:brand  filter.results.entities=<brand 1>,<brand 2>,<brand 3>  take=3
 ```
 
-Then Ruby scores each brand out of 100: affinity 55 (relative to the run's highest), proven sponsor 20 (a read in
+Then Ruby scores each brand out of 100: taste match 55 (relative to the run's highest), proven sponsor 20 (a read in
 the last 90 days counts in full, an older one half), shared taste tags 15, category match 10. Shows under 5,000
 downloads lose up to 15 points on brands with a popularity over 0.6, so household names don't crowd the list. The tier
 comes from popularity alone.
 
-| Brand | Affinity | Proven | Shared tags | Category | Small show penalty | Fit | Tier |
+| Brand | Taste match | Proven | Shared tags | Category | Small show penalty | Fit | Tier |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Acme Ledger | 0.87, so 55 | yes, 20 | none, 0 | Finance, 10 | 0 (popularity 0.42) | **85** | Easy yes |
 | Borealis Bank | 0.64, so 40.5 | 0 | none, 0 | Finance, 10 | 3.75 (popularity 0.70) | **47** | Realistic |
