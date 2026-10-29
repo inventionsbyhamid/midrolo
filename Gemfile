@@ -49,6 +49,8 @@ gem "dodopayments"
 gem "standardwebhooks"
 gem "resend"
 gem "pagy"
+# The blog's Markdown posts (content/blog), as GitHub-flavored Markdown with raw HTML left out (R148).
+gem "commonmarker"
 gem "mission_control-jobs"
 gem "cloudflare-rails"
 

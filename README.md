@@ -63,6 +63,7 @@ flowchart LR
   dodo -->|Standard Webhooks| web
   web & jobs --> mail["Action Mailer<br/>Resend"]
   web --> storage["Active Storage<br/>Cloudflare R2"]
+  web --> blog["Blog<br/>Markdown posts in content/blog"]
 ```
 
 - **The agent** (`app/agents/sponsor_research_agent.rb`) plans the research. It picks seeds, brand categories and
@@ -72,9 +73,39 @@ flowchart LR
 - **Provenance.** The save tools reject any brand the run never showed the model, and any number not in the data.
 - **The Qloo client** (`app/services/taste/`) caches every answer, shares it across users, and asks the call guard
   before each live request. Details: [docs/how-we-use-qloo.md](docs/how-we-use-qloo.md).
+- **The blog** (`/blog`) is the SEO growth channel: Markdown files in the repo, no database. See [Blog](#blog).
 
 Stack: Ruby 3.4.12, Rails 8.1, PostgreSQL 16, Hotwire, importmap and Tailwind 4 (no Node build), Devise with Google
 sign in, Solid Queue, Solid Cache, Solid Cable, MapLibre with OpenFreeMap tiles.
+
+## Blog
+
+The blog is how Midrolo grows through search. Each post answers a question independent podcasters search for, like
+how to find a first sponsor or what to charge for an ad read, and ends with a free Snapshot and the sample reports.
+
+To add a post, drop a Markdown file in `content/blog/` and deploy. The file name is the URL:
+`content/blog/what-to-charge-for-a-midroll.md` is `/blog/what-to-charge-for-a-midroll`.
+
+```markdown
+---
+title: What to charge for a midroll
+description: The meta description, about 150 to 160 characters, shown in search results and link previews.
+published_on: 2026-11-02
+updated_on: 2026-11-09         # optional: the last real change
+author: Midrolo                # optional: Midrolo by default
+tags: [Pricing, Sponsorship]   # optional: shown on the post and used for related posts
+draft: true                    # optional: hidden outside development
+---
+The post, in Markdown. Use ## for sections: three or more give the post a table of contents.
+```
+
+- **Drafts.** `draft: true`, or a `published_on` after today, hides a post everywhere but development, where it shows
+  with a badge. A post deployed ahead of its date goes live on that date by itself.
+- **Automatic.** Every post gets its share image (`/blog/<slug>/og.png`, 1200x630, drawn like the sample report
+  cards), Open Graph and Twitter tags, JSON-LD (`BlogPosting` and `BreadcrumbList`), a sitemap entry and a place in
+  the Atom feed at `/blog/feed.xml`. The header and footer link the blog once the first post is published.
+- **Checks.** Broken front matter raises an error naming the file. `spec/copy/blog_posts_spec.rb` loads every post
+  and fails on an em or en dash, or a description outside 70 to 160 characters. Raw HTML in a post is left out.
 
 ## Local setup
 

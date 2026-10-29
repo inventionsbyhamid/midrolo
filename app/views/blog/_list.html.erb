@@ -1,0 +1,19 @@
+<%# locals: (posts:, heading: :h2) -%>
+<%# Post cards: the title (the whole card is its link), the description, the date, the reading time and the tags. The
+    index uses h2 titles; a post's related posts sit under an h2, so theirs are h3. %>
+<ul class="post-list">
+  <% posts.each do |post| %>
+    <li class="post-card">
+      <%= render "blog/status", post: post %>
+      <%= content_tag heading, class: "post-card-title" do %>
+        <%= link_to post.title, blog_post_path(post), class: "post-card-link" %>
+      <% end %>
+      <p class="post-card-description"><%= post.description %></p>
+      <p class="post-meta">
+        <span><%= blog_date(post.published_on) %></span>
+        <span><%= post.reading_minutes %> min read</span>
+      </p>
+      <%= render "blog/tags", tags: post.tags %>
+    </li>
+  <% end %>
+</ul>

@@ -48,6 +48,23 @@ RSpec.describe SocialMetaHelper do
       expect(doc.at_css("link[rel='canonical']")["href"]).to eq("http://test.host/k/the-ledger")
     end
 
+    it "adds a blog post's article tags (R148): its times as ISO 8601 and one tag per tag" do
+      doc = head(helper.social_meta(title: "Post", description: "D", type: "article",
+                                    article: { published_time: Time.utc(2026, 11, 2), modified_time: Time.utc(2026, 11, 9),
+                                               tags: [ "Pricing", "Media kits" ] }))
+
+      expect(content(doc, "property", "og:type")).to eq("article")
+      expect(content(doc, "property", "article:published_time")).to eq("2026-11-02T00:00:00Z")
+      expect(content(doc, "property", "article:modified_time")).to eq("2026-11-09T00:00:00Z")
+      expect(doc.css("meta[property='article:tag']").map { |tag| tag["content"] }).to eq([ "Pricing", "Media kits" ])
+    end
+
+    it "writes no article tags for any other page" do
+      doc = head(helper.social_meta(title: "Pricing", description: "D"))
+
+      expect(doc.css("meta[property^='article:']")).to be_empty
+    end
+
     it "uses the page's title (without the site name) by default" do
       helper.content_for(:title, "About")
 

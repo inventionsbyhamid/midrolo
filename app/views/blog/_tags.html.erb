@@ -1,0 +1,8 @@
+<%# locals: (tags:) -%>
+<% if tags.any? %>
+  <ul class="post-tags" aria-label="Tags">
+    <% tags.each do |name| %>
+      <li class="chip"><%= name %></li>
+    <% end %>
+  </ul>
+<% end %>

@@ -1,0 +1,69 @@
+<% content_for :title, @post.title %>
+<% image = blog_post_image_url(@post) %>
+<% content_for :meta, social_meta(description: @post.description, type: "article", image: image, image_alt: @post.title,
+                                   url: blog_post_url(@post),
+                                   article: { published_time: @post.published_at, modified_time: @post.modified_at, tags: @post.tags }) %>
+<% content_for :head do %>
+  <%= blog_feed_link %>
+  <%= blog_post_json_ld(@post, image: image) %>
+<% end %>
+<%# A blog post (R148): the breadcrumb, the post with its table of contents (three h2s or more), related posts and the
+    call to action. %>
+<div class="wrap post-page">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <ol>
+      <li><%= link_to BlogHelper::TITLE, blog_path, class: "link" %></li>
+      <li aria-current="page"><%= @post.title %></li>
+    </ol>
+  </nav>
+
+  <article class="post" aria-labelledby="post-title">
+    <header class="post-header">
+      <%= render "blog/status", post: @post %>
+      <h1 id="post-title" class="type-h1"><%= @post.title %></h1>
+      <p class="type-lead post-dek"><%= @post.description %></p>
+      <p class="post-meta">
+        <span>By <%= @post.author %></span>
+        <span><%= blog_date(@post.published_on) %></span>
+        <% if @post.updated_on && @post.updated_on != @post.published_on %>
+          <span>Updated <%= blog_date(@post.updated_on) %></span>
+        <% end %>
+        <span><%= @post.reading_minutes %> min read</span>
+      </p>
+      <%= render "blog/tags", tags: @post.tags %>
+    </header>
+
+    <% contents = @post.contents %>
+    <div class="<%= class_names("post-layout", "post-layout-toc" => contents.any?) %>">
+      <% if contents.any? %>
+        <nav class="post-toc" aria-labelledby="toc-title">
+          <p id="toc-title" class="post-toc-title">On this page</p>
+          <ol>
+            <% contents.each do |id, text| %>
+              <li><a href="#<%= id %>"><%= text %></a></li>
+            <% end %>
+          </ol>
+        </nav>
+      <% end %>
+      <div class="post-prose">
+        <%= @post.html %>
+      </div>
+    </div>
+  </article>
+
+  <% if @related.any? %>
+    <section class="post-related" aria-labelledby="related-title">
+      <h2 id="related-title" class="type-h2">More from the blog</h2>
+      <%= render "blog/list", posts: @related, heading: :h3 %>
+    </section>
+  <% end %>
+
+  <section class="post-cta" aria-labelledby="cta-title">
+    <h2 id="cta-title" class="closing-title">See which brands already fit your show</h2>
+    <p class="post-cta-lead">A free Snapshot shows your top brand matches in a few minutes.</p>
+    <div class="hero-actions">
+      <%= ui_button "Get my free Snapshot", snapshot_start_path, size: :lg %>
+      <%= ui_button "See the sample reports", samples_path, variant: :secondary, size: :lg %>
+    </div>
+  </section>
+</div>
