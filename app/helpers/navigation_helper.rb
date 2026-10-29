@@ -12,7 +12,7 @@ module NavigationHelper
 
   # Signed in: Podcasts, Your shows, Inbox with its unread count, Brand for a brand's member, and Account. The
   # podcaster's workspace (layouts/app) adds Pipeline after Your shows.
-  def nav_member_links(pipeline: false, user: current_user)
+  def nav_member_links(pipeline: false, user: (current_user if user_signed_in?))
     return nav_visitor_links unless user
 
     [ [ "Podcasts", podcasts_path ], [ "Your shows", shows_path ], ([ "Pipeline", pipeline_path ] if pipeline),
