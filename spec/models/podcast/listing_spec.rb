@@ -57,7 +57,7 @@ RSpec.describe Podcast::Listing do
       podcast = create(:podcast)
       create(:conversation, podcast: podcast, status: "waiting_for_claim")
       create(:conversation, podcast: podcast, status: "waiting_for_claim")
-      create(:conversation, podcast: podcast, status: "declined")
+      create(:conversation, podcast: podcast, status: "declined", decline_reason: "Booked through the spring.")
 
       expect(podcast.waiting_requests_count).to eq(2)
     end

@@ -1,7 +1,7 @@
 require "rails_helper"
 
-# T0 gives each lane its classes with their final signatures and do-nothing bodies (build spec section 10); the
-# lanes fill them. These pin the signatures and the queues.
+# T0 gave each lane its classes with their final signatures (build spec section 10), and the lanes filled them. These
+# pin the signatures and the queues.
 RSpec.describe "Marketplace stubs" do
   it "has the jobs on their queues, with their arguments" do
     expect(Catalog::ArtworkJob.new(1).queue_name).to eq("artwork")
@@ -40,18 +40,16 @@ RSpec.describe "Marketplace stubs" do
     expect(ApplicationController.helpers.trust_badge(build(:stat_reading, trust: "provided"))).to include("Provided")
   end
 
-  it "draws each lane's routes file, and renders each lane's empty partials" do
+  it "draws each lane's routes file, and has each lane's page partials and admin panels" do
     %w[catalog claims stats brands conversations].each do |name|
       expect(Rails.root.join("config/routes/#{name}.rb")).to exist
     end
-    # save is lane L6's, filled (spec/requests/brands_spec.rb covers it); request and the conversations panel are lane
-    # L7's (spec/views/podcasts/request_spec.rb and spec/requests/conversations_spec.rb).
-    %w[numbers sponsors rates claim similar audience].each do |name|
-      expect(ApplicationController.render(partial: "podcasts/#{name}", locals: { podcast: build(:podcast) }).strip).to eq("")
+    # Every lane has filled its partials now; their own specs render them (spec/views/podcasts, spec/requests).
+    %w[numbers sponsors rates claim request save similar audience].each do |name|
+      expect(Rails.root.join("app/views/podcasts/_#{name}.html.erb")).to exist
     end
-    # Filled by their lanes: catalog (L1), stats (L5) and conversations (L7).
-    (Admin::DashboardController::PANELS - %w[catalog stats conversations]).each do |name|
-      expect(ApplicationController.render(partial: "admin/dashboard/#{name}", locals: { stats: nil }).strip).to eq("")
+    Admin::DashboardController::PANELS.each do |name|
+      expect(Rails.root.join("app/views/admin/dashboard/_#{name}.html.erb")).to exist
     end
   end
 end

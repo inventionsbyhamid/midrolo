@@ -241,11 +241,12 @@ RSpec.describe "Blog" do
     end
   end
 
-  describe "GET /sitemap.xml" do
+  # The sitemap index (/sitemap.xml) points at one part per kind of page; the blog's is /sitemaps/blog.xml.
+  describe "the blog's sitemap" do
     def locs = Nokogiri::XML(response.body).remove_namespaces!.xpath("//url").to_h { |url| [ url.at("loc").text, url.at("lastmod")&.text ] }
 
     it "lists the blog and each published post with its last change", :blog_posts do
-      get "/sitemap.xml"
+      get "/sitemaps/blog.xml"
 
       expect(locs).to include("http://www.example.com/blog" => "2026-10-25",
                               "http://www.example.com/blog/finding-your-first-sponsor" => "2026-10-25",
@@ -257,7 +258,9 @@ RSpec.describe "Blog" do
     it "leaves the blog out while it has no posts" do
       get "/sitemap.xml"
 
-      expect(locs.keys.grep(%r{/blog})).to be_empty
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("/sitemaps/pages.xml")
+      expect(response.body).not_to include("/sitemaps/blog.xml")
     end
   end
 
