@@ -68,7 +68,7 @@ module ShareImages
 
     def logo
       height = 30
-      width = (height * Brand::LOGO_RATIO).round(2)
+      width = (height * BrandMark::LOGO_RATIO).round(2)
       nested(:logo, x: WIDTH - MARGIN - width, y: MARGIN + 5, width: width, height: height)
     end
 

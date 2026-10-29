@@ -83,7 +83,7 @@ RSpec.describe "Brand assets" do
     width, height = size(Rails.root.join("app/assets/images/brand/logo-email.png"))
 
     expect(height).to eq(56)
-    expect(width).to be_within(1).of(56 * Brand::LOGO_RATIO)
+    expect(width).to be_within(1).of(56 * BrandMark::LOGO_RATIO)
   end
 
   it "has a landing share image of 1200x630" do

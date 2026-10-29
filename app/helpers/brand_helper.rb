@@ -2,7 +2,7 @@
 # SVG <img> sized by height. email: true gives the lockup's PNG copy (bin/rails brand:build) at an absolute URL instead,
 # because many mail clients block SVG and a message has no page to resolve a path against.
 module BrandHelper
-  VARIANTS = { logo: Brand::LOGO_RATIO, mark: 1 }.freeze
+  VARIANTS = { logo: BrandMark::LOGO_RATIO, mark: 1 }.freeze
   TONES = { light: "", dark: "-dark" }.freeze
   HEIGHTS = { sm: 20, md: 28, lg: 40 }.freeze
   EMAIL_STYLE = "display:block;border:0;outline:none;".freeze
