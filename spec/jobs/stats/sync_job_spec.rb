@@ -205,6 +205,28 @@ RSpec.describe Stats::SyncJob do
       expect(connection.reload).to have_attributes(status: "failed", last_error: /Spotify answered 503\. We'll try again tomorrow/)
     end
 
+    # Final review N9: an admin's Reject (or the owner's Disconnect) while a fetch runs that then fails or is refused.
+    it "stays disconnected when it was rejected while a fetch that failed or was refused ran" do
+      [ fetch_error("failed", "Spotify answered 503"), fetch_error("forbidden") ].each do |outcome|
+        connection.update!(status: "active")
+        allow(Stats::PlatformFetch).to receive(:call) do
+          StatConnection.where(id: connection.id).update_all(status: "disconnected", last_error: StatConnection::REJECTED_MESSAGE)
+          outcome
+        end
+        run
+        expect(connection.reload).to have_attributes(status: "disconnected", last_error: StatConnection::REJECTED_MESSAGE)
+      end
+    end
+
+    it "writes nothing when the owner removed it while a fetch that failed ran" do
+      allow(Stats::PlatformFetch).to receive(:call) do
+        StatConnection.where(id: connection.id).delete_all
+        fetch_error("failed", "Spotify answered 503")
+      end
+      expect { run }.not_to raise_error
+      expect(StatConnection.exists?(connection.id)).to be(false)
+    end
+
     it "comes back to active from failed when a fetch works" do
       connection.update!(status: "failed", last_error: "x")
       stub_fetch(spotify_result)

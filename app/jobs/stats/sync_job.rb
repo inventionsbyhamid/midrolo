@@ -87,7 +87,7 @@ module Stats
 
     def saved(connection, result, now)
       if (problem = ::Stats::Ownership.show_problem(connection, result.fetch("show", {})))
-        return connection.update!(status: "mismatch", last_error: problem, last_checked_at: now)
+        return update_live(connection, status: "mismatch", last_error: problem, last_checked_at: now)
       end
       # Disconnected (an admin's Reject) or removed (the owner's Disconnect) while the platform answered: save nothing.
       return unless StatConnection.where(id: connection.id).where.not(status: "disconnected").exists?
@@ -102,20 +102,31 @@ module Stats
 
     def no_access(connection, now)
       if connection.pending_invite?
-        connection.update!(last_error: NO_ACCESS_YET, last_checked_at: now)
+        update_live(connection, last_error: NO_ACCESS_YET, last_checked_at: now)
       else
-        connection.update!(status: "disconnected", last_error: format(ACCESS_REMOVED, service: service(connection)),
-                           last_checked_at: now)
+        update_live(connection, status: "disconnected", last_error: format(ACCESS_REMOVED, service: service(connection)),
+                                last_checked_at: now)
       end
     end
 
     def failed(connection, message, now)
       text = format(FAILED, message: sentence(message))
       if connection.pending_invite?
-        connection.update!(last_error: text, last_checked_at: now)
+        update_live(connection, last_error: text, last_checked_at: now)
       else
-        connection.update!(status: "failed", last_error: text, last_checked_at: now)
+        update_live(connection, status: "failed", last_error: text, last_checked_at: now)
       end
+    end
+
+    # Like the success path's guard (saved): a connection disconnected (an admin's Reject) or removed (the owner's
+    # Disconnect) while the platform answered keeps that, so a failed or refused fetch never brings it back (final
+    # review N9). Checked under the row's lock.
+    def update_live(connection, **attributes)
+      connection.with_lock do
+        connection.update!(attributes) unless connection.disconnected?
+      end
+    rescue ActiveRecord::RecordNotFound
+      nil
     end
 
     def lapse(connection, now)
