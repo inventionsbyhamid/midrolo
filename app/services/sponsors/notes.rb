@@ -56,6 +56,8 @@ module Sponsors
     NAMED_HEADER = /\A[\W_]*(?:episode |show |podcast )?(?:links|timestamps|outline|chapters|resources|credits|follow(?: us)?|connect|contact|transcript|show notes|notes|guests?|about|music|references|mentioned|books|socials|subscribe|support(?: the show)?|find us|where to find us|more)[\W_]*\z/i
     # "Notion: the workspace", "Notion (notion.com/lex)", "Notion - notion.com/lex", "Notion https://notion.com/lex".
     SECTION_ENTRY = /\A[\W_]*(#{NAME})\s*(?::|\(|\s[-–—|]\s|\shttps?:|\s(?:www\.)?[a-z0-9-]+\.[a-z]{2,})/
+    # A line that is only a name ("BetterHelp", "- HelloFresh").
+    BARE_ENTRY = /\A[\W_]*(#{NAME})[\W_]*\z/
 
     TLDS = %w[com net org co io ai app fm tv me us uk ca au de fr nl se no dk fi es it ie nz in so sh gg ly to xyz club
               shop store health life fit coffee news blog link page site online tech dev studio media show live cash money
@@ -66,6 +68,9 @@ module Sponsors
     CODE = /\b(?:(?:use|enter|with|apply|promo|offer|discount|coupon)\s+(?:the\s+|my\s+|our\s+)?(?:promo\s+|offer\s+|discount\s+|coupon\s+)?code|code)\s*(?:is\s+)?:?\s*["“'‘]?(\p{Alnum}{2,20})(?!\p{Alnum})/i
     CODE_STOPWORDS = %w[at for to the and when below above link in on is it or here this that you your of].to_set.freeze
     OFFER = /(?:\b(?:get|save|enjoy|receive|claim|take)\s+)?(?:(?:up to\s+)?\d{1,3}\s?%\s?off|\$\d[\d,]*(?:\.\d\d)?\s+off|\d{1,3}\s?%\s+discount|free (?:trial|shipping|month|gift|year|bottle|sample|bag|box|week)s?|(?:a |your |one )?(?:first|1st) (?:month|order|box|year|bag)s? (?:free|for free|for \$\d+|half off)|\d+ (?:days|weeks|months) free|buy one,? get one)[^.!?\n,;]{0,60}/i
+    # The host plugging their own thing ("our new course", "my book"): a code or vanity link next to it is no sponsor
+    # read on its own.
+    SELF_PLUG = /\b(?:our|my)\s+(?:\w+\s+){0,2}?(?:course|book|merch|store|shop|newsletter|community|membership|class|workshop|program|app|tour|live show|event|tickets?|swag|shirts?|hoodies?|mugs?|products?|company|startup|agency|coaching)\b/i
     AD_WORDS = /\bsponsor|\bpromo\b|\bdiscount|\bdeal\b|\boffer\b|\bcoupon|\bcode\b|\btrial\b|\bexclusive\b|% off/i
     # Dynamic ad insertion and privacy notices: a monetization hint, never a sponsor ("Learn more about your ad
     # choices. Visit megaphone.fm/adchoices", "Hosted on Acast. See acast.com/privacy").
@@ -87,6 +92,9 @@ module Sponsors
       end
 
       def strong? = @signals.intersect?(STRONG)
+
+      # Only a hint for the model.
+      def weaken! = @signals.subtract(STRONG) << :hint
 
       def key = domain.presence || Research::ProvenSponsorScan.key_for(name)
 
@@ -136,6 +144,7 @@ module Sponsors
       @context = context
       @units = split(text.to_s)
       @headers = Set.new
+      @firm = Set.new
     end
 
     def candidates
@@ -182,47 +191,66 @@ module Sponsors
 
     # ---- "Sponsors" blocks: one brand per line, its link on that line or the next ----
 
+    # Line by line under a "Sponsors" heading. An entry ("Notion: note-taking", "- Vanta: vanta.com/x") or a line that
+    # is only a link ("https://shopify.com/lex", "Go to drinkag1.com/sam") counts; the link on the line after an entry
+    # is that entry's. The block ends at the next heading, or at the first other line once it has had an entry.
+    # An entry stays strong only with a link named like it, a link right under it, or a code; otherwise (a bare name, a
+    # "Guest: Jane (janedoe.com)" line) it's a hint for the model.
     def read_sections
       found = []
+      section = nil
       current = nil
-      section_end = nil
-      header = nil
-      @units.each do |unit|
-        if unit.text.match?(SECTION_HEADER)
-          header = unit.index
-          section_end = unit.line + SECTION_LINES
+      @units.chunk_while { |a, b| a.line == b.line }.each do |units|
+        text = units.map(&:text).join(" ")
+        if text.match?(SECTION_HEADER)
+          section = { header: units.first.index, ends: units.first.line + SECTION_LINES, entries: 0, skipped: 0 }
           current = nil
-        elsif section_end && unit.line <= section_end
-          if header?(unit.text)
-            section_end = nil
+        elsif section && units.first.line <= section[:ends] && header?(text)
+          section = nil
+        elsif section && units.first.line <= section[:ends]
+          kind, current = section_line(text, units.map(&:index), current, found)
+          if kind == :other
+            section[:skipped] += 1
+            section = nil if section[:entries].positive? || section[:skipped] > 2
           else
-            current = section_line(unit, current, found)
-            @headers << header if current
+            section[:entries] += 1
+            @headers << section[:header]
           end
         end
       end
-      found
+      found.each { |c| c.weaken! unless c.domain_named? || c.promo_code || @firm.include?(c) }
     end
 
     def header?(text) = text.match?(CAPS_HEADER) || text.match?(NAMED_HEADER)
 
-    def section_line(unit, current, found)
-      links = external_links(unit.text)
-      name = clean_name(unit.text[SECTION_ENTRY, 1])
-      if name && brand_name?(name)
-        current = Candidate.new(name: name, signals: [ :section ], units: [ unit.index ])
+    # [kind, the entry now open]: kind is :entry, :link, :continuation or :other.
+    def section_line(text, indexes, current, found)
+      links = external_links(text)
+      bare_link = links.any? && text.sub(DOMAIN, "").sub(CALL_TO_ACTION, "").gsub(/\b(?:to|at|out)\b/i, "").match?(/\A[\W_]*\z/)
+      name = clean_name(text[SECTION_ENTRY, 1] || text[BARE_ENTRY, 1])
+      if name && brand_name?(name) && !bare_link
+        current = Candidate.new(name: name, signals: [ :section ], units: indexes)
         found << current
-      elsif links.any? && current && (current.domain.nil? || links.any? { |l| l.domain == current.domain })
-        current.units << unit.index
-      elsif links.any?
-        current = Candidate.new(name: links.first.domain, signals: [ :section ], units: [ unit.index ])
+        link = links.find { |l| self.class.name_matches_domain?(name, l.domain) }
+        @firm << current if link
+        attach_link(current, link || links.first)
+        attach_code_and_offer(current, text)
+        [ :entry, current ]
+      elsif bare_link && current && current.domain.nil?
+        attach_link(current, links.first)
+        attach_code_and_offer(current, text)
+        current.units.concat(indexes)
+        @firm << current
+        [ :continuation, current ]
+      elsif bare_link
+        current = Candidate.new(name: links.first.domain, signals: [ :section ], units: indexes)
+        attach_link(current, links.first)
+        attach_code_and_offer(current, text)
         found << current
+        [ :link, current ]
       else
-        return current
+        [ :other, current ]
       end
-      attach_link(current, links.find { |l| self.class.name_matches_domain?(current.name, l.domain) } || links.first)
-      attach_code_and_offer(current, unit.text)
-      current
     end
 
     # ---- lead-ins: "This episode is brought to you by Notion, Shopify and AG1." ----
@@ -328,6 +356,7 @@ module Sponsors
           candidate.signals << :code if candidate.promo_code
           candidate.signals << :vanity if link.slug && @context.vanity_slug?(link.slug)
           candidate.signals << :hint if candidate.offer || unit.text.match?(AD_WORDS)
+          candidate.weaken! if candidate.strong? && unit.text.match?(SELF_PLUG)
           found << candidate if candidate.signals.any?
         end
       end
@@ -383,8 +412,9 @@ module Sponsors
 
     # The capitalised name in the sentence the domain is named after ("Athletic Greens" for athleticgreens.com).
     def name_for(domain, text)
+      codes = text.scan(CODE).flatten
       text.scan(/(?<![\w.])#{NAME}/).filter_map { |n| clean_name(n) }
-          .find { |n| !n.match?(DOMAIN_NAME) && self.class.name_matches_domain?(n, domain) && brand_name?(n) }
+          .find { |n| !codes.include?(n) && !n.match?(DOMAIN_NAME) && self.class.name_matches_domain?(n, domain) && brand_name?(n) }
     end
 
     # "Notion." => "Notion", "Notion’s" => "Notion", "Notion.so" => "Notion".

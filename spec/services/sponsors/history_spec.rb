@@ -62,7 +62,9 @@ RSpec.describe Sponsors::History do
       expect(rows.map(&:brand)).to all(eq(notion))
     end
 
-    it "leaves out removed podcasts" do
+    it "leaves out removed podcasts, and narrows to the podcasts asked for" do
+      other.update!(status: "dormant")
+      expect(described_class.for_brand(notion, podcasts: Podcast.where(status: "active")).map(&:podcast)).to eq([ podcast ])
       other.update!(status: "removed")
       expect(described_class.for_brand(notion).map(&:podcast)).to eq([ podcast ])
     end

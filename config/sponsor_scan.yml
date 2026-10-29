@@ -257,6 +257,32 @@ shared:
     - from
     - it
     - all
+    - thanks
+    - special
+    - guest
+    - guests
+    - host
+    - hosts
+    - cohost
+    - website
+    - producer
+    - produced
+    - editor
+    - edited
+    - music
+    - newsletter
+    - merch
+    - transcript
+    - timestamps
+    - chapters
+    - credits
+    - resources
+    - twitter
+    - facebook
+    - linkedin
+    - read
+    - watch
+    - listen
   # Words a show's title or host name is made of that say nothing about who it is, so a vanity path "/podcast" or a
   # domain like "dailypodcast.com" doesn't read as the show's own.
   generic_words:

@@ -2,7 +2,8 @@ module Sponsors
   # Sponsor history from sponsor_mentions, one aggregate query each, the most recent first:
   #
   #   Sponsors::History.for(podcast)        the brands that sponsored the podcast (rows with brand set)
-  #   Sponsors::History.for_brand(brand)    the podcasts the brand sponsored (rows with podcast set)
+  #   Sponsors::History.for_brand(brand)    the podcasts the brand sponsored (rows with podcast set); podcasts:
+  #                                         narrows them (Podcast.listed on the brand page)
   #   Sponsors::History.for_brands(brands)  the same for several brands at once, one row per brand and podcast
   #
   # Each Row: brand and podcast (records; the side that was asked about is the record passed in), brand_id, podcast_id,
@@ -41,28 +42,32 @@ module Sponsors
       brands.map { |brand| row(brand, brand: brand, podcast: podcast) }
     end
 
-    def for_brand(brand, limit: nil)
+    # podcasts: narrows the shows (a Podcast scope, like the pages' listed ones); removed podcasts never count.
+    def for_brand(brand, limit: nil, podcasts: Podcast.all)
       return [] unless brand&.id
 
-      podcasts = Podcast.joins(:sponsor_mentions).joins(JOINS).where(sponsor_mentions: { brand_id: brand.id })
-                        .where.not(status: "removed").group("podcasts.id").select("podcasts.*", AGGREGATES)
-                        .order(RECENT_FIRST, "podcasts.id").limit(limit)
-      podcasts.map { |podcast| row(podcast, brand: brand, podcast: podcast) }
+      found = sponsored(podcasts).where(sponsor_mentions: { brand_id: brand.id }).group("podcasts.id")
+                                 .select("podcasts.*", AGGREGATES).order(RECENT_FIRST, "podcasts.id").limit(limit)
+      found.map { |podcast| row(podcast, brand: brand, podcast: podcast) }
     end
 
     # Rows for every (brand, podcast) pair among brands, in one query; brands is records (or ids, and then each row's
     # brand is nil).
-    def for_brands(brands)
+    def for_brands(brands, podcasts: Podcast.all)
       records = Array(brands).select { |b| b.is_a?(Brand) }.index_by(&:id)
       ids = Array(brands).map { |b| b.is_a?(Brand) ? b.id : b }.compact.uniq
       return [] if ids.empty?
 
-      podcasts = Podcast.joins(:sponsor_mentions).joins(JOINS).where(sponsor_mentions: { brand_id: ids })
-                        .where.not(status: "removed").group("podcasts.id", "sponsor_mentions.brand_id")
-                        .select("podcasts.*", "sponsor_mentions.brand_id AS history_brand_id", AGGREGATES)
-                        .order(RECENT_FIRST, "podcasts.id")
-      podcasts.map { |podcast| row(podcast, brand: records[podcast[:history_brand_id]], podcast: podcast) }
+      found = sponsored(podcasts).where(sponsor_mentions: { brand_id: ids }).group("podcasts.id", "sponsor_mentions.brand_id")
+                                 .select("podcasts.*", "sponsor_mentions.brand_id AS history_brand_id", AGGREGATES)
+                                 .order(RECENT_FIRST, "podcasts.id")
+      found.map { |podcast| row(podcast, brand: records[podcast[:history_brand_id]], podcast: podcast) }
     end
+
+    def sponsored(podcasts)
+      podcasts.joins(:sponsor_mentions).joins(JOINS).where.not(status: "removed")
+    end
+    private_class_method :sponsored
 
     def row(record, brand:, podcast:)
       Row.new(brand: brand, podcast: podcast, brand_id: brand&.id || record[:history_brand_id], podcast_id: podcast.id,

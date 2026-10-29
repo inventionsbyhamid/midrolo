@@ -94,6 +94,7 @@ RSpec.describe Sponsors::Notes do
       expect(names("Merch at quiethours.fm/shop, use code QUIET.")).to be_empty
       expect(names("This show is not sponsored by Nike.")).to be_empty
       expect(names("Sponsors: Email ads@quiethours.fm to advertise.")).to be_empty
+      expect(names("Get 20% off my new course at learnwithivy.com with code IVY.")).to be_empty
     end
 
     it "takes a vanity path only when it's made for this show" do
