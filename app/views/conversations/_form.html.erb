@@ -60,8 +60,8 @@
   <% if membership && !membership.verified? %>
     <p class="text-sm text-ink-soft">
       Your brand isn't verified yet, so the show sees an Unverified brand label and you can send
-      <%= Conversations::Start::DAILY_LIMITS[:unverified] %> requests a day. Verify a work email at your company's domain
-      to send up to <%= Conversations::Start::DAILY_LIMITS[:verified] %>.
+      <%= User::Brands::DAILY_REQUESTS[:unverified] %> requests a day. Verify a work email at your company's domain
+      to send up to <%= User::Brands::DAILY_REQUESTS[:verified] %>.
     </p>
   <% end %>
 

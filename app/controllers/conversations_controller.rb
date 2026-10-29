@@ -11,7 +11,7 @@ class ConversationsController < ApplicationController
   ALREADY_ASKED = "You already asked this show. Here's your conversation.".freeze
   NEEDS_BRAND = "Set up your brand first, then send your request.".freeze
 
-  layout "app"
+  layout :inbox_layout
 
   # Public forms are throttled (build spec section 2). The daily allowance per brand member (3 unverified, 25 verified)
   # is Conversations::Start's, counted in the database.
@@ -35,14 +35,14 @@ class ConversationsController < ApplicationController
 
   def new
     @podcast = find_podcast!
-    @facts = Conversations::PageFacts.new(@podcast, user: current_user)
+    @facts = page_facts
     viewer_redirect
     @form = Conversations::RequestForm.new unless performed?
   end
 
   def create
     @podcast = find_podcast!
-    @facts = Conversations::PageFacts.new(@podcast, user: current_user)
+    @facts = page_facts
     membership = chosen_membership
     return needs_brand unless membership
 
@@ -169,11 +169,20 @@ class ConversationsController < ApplicationController
     redirect_to BRAND_HOME, notice: NEEDS_BRAND
   end
 
-  # The brand the user asks as: the one the form names, else their first.
+  # The brand the user asks as: the one the form names, else the one they work as in the brand workspace.
   def chosen_membership
-    memberships = current_user.brand_members.includes(:brand, :user).order(:created_at, :id).to_a
     wanted = params.dig(:spot_request, :brand).to_s
-    memberships.find { |member| member.brand.public_id == wanted } || memberships.first
+    named = current_user.brand_members.joins(:brand).find_by(brands: { public_id: wanted }) if wanted.present?
+    named || current_user.brand_member(session[:brand_member_id])
+  end
+
+  def page_facts = Conversations::PageFacts.new(@podcast, user: current_user, membership_id: session[:brand_member_id])
+
+  # The brand side's pages (its inbox, a thread it reads, asking for a spot) sit in the brand workspace's frame; the
+  # podcaster side's in the app's.
+  def inbox_layout
+    brand_side = { "index" => params[:side] == "brand", "new" => true, "create" => true }.fetch(action_name, @side == :brand)
+    brand_side && current_user&.brand_member? ? "brand" : "app"
   end
 
   def request_params

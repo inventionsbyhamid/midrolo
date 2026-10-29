@@ -12,14 +12,17 @@ module Conversations
 
     # state is one of :signed_out, :owner (the podcast is theirs), :no_brand (no brand account yet), :ongoing (one of
     # their brands has a request running: conversation), :blocked (the show blocked every brand they're in) or :ready
-    # (memberships: the brands they may ask as, the first one the default).
+    # (memberships: the brands they may ask as, the first one the default: the brand they work as in the brand
+    # workspace, User::Brands#brand_member).
     Viewer = Data.define(:state, :memberships, :conversation) do
       def membership = memberships.first
     end
 
-    def initialize(podcast, user: nil)
+    # membership_id is the brand workspace's current BrandMember id (session[:brand_member_id]), if any.
+    def initialize(podcast, user: nil, membership_id: nil)
       @podcast = podcast
       @user = user
+      @membership_id = membership_id
     end
 
     # Brands whose request waits for the claim (one per brand: the partial unique index). Zero once it's claimed.
@@ -57,8 +60,11 @@ module Conversations
       return viewer_in(:signed_out) unless @user
       return viewer_in(:owner) if Show.where(podcast_id: @podcast.id, user_id: @user.id).where.not(verified_at: nil).exists?
 
-      memberships = BrandMember.where(user_id: @user.id).includes(:brand).order(:created_at, :id).to_a
+      memberships = BrandMember.where(user_id: @user.id).includes(:brand).order(created_at: :desc, id: :desc).to_a
       return viewer_in(:no_brand) if memberships.empty?
+
+      current = memberships.find { |member| member.id == @membership_id.to_i } || memberships.first
+      memberships = [ current ] + (memberships - [ current ])
 
       brand_ids = memberships.map(&:brand_id)
       ongoing = Conversation.ongoing.where(podcast_id: @podcast.id, brand_id: brand_ids).order(created_at: :desc).first

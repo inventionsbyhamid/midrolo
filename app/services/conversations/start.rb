@@ -4,11 +4,10 @@ module Conversations
   # feed's owner address is never written to.
   #
   # Spam guards, in order: not your own show, not a brand the show blocked, one ongoing request per show and brand
-  # (asking again opens the one you have), and a daily allowance per brand member: DAILY_LIMITS, counted over the last
-  # WINDOW. The membership row is locked while counting, so parallel requests can't pass the limit together, and the
+  # (asking again opens the one you have), and a daily allowance per brand member (User::Brands::DAILY_REQUESTS, lane
+  # L6's: 3 unverified, 25 with a verified work email), counted over the last WINDOW. The membership row is locked while counting, so parallel requests can't pass the limit together, and the
   # podcast row too, so a claim (Show#verify! locks it) can't slip between "unclaimed" and the waiting row.
   class Start
-    DAILY_LIMITS = { verified: 25, unverified: 3 }.freeze
     WINDOW = 24.hours
     OWN_SHOW = "This is your show. Requests to it arrive in your inbox.".freeze
     BLOCKED = "This show isn't taking requests from your brand.".freeze
@@ -22,7 +21,7 @@ module Conversations
 
     def self.call(...) = new(...).call
 
-    def self.daily_limit(membership) = DAILY_LIMITS.fetch(membership.verified? ? :verified : :unverified)
+    def self.daily_limit(membership) = membership.user.brand_daily_request_limit(membership)
 
     def self.used_today(user) = Conversation.where(started_by_id: user.id, created_at: WINDOW.ago..).count
 
@@ -32,7 +31,7 @@ module Conversations
     def self.limit_message(membership)
       limit = daily_limit(membership)
       base = "You've sent #{limit} requests in the last 24 hours, the most for #{membership.verified? ? 'a verified' : 'an unverified'} brand."
-      membership.verified? ? "#{base} Try again tomorrow." : "#{base} Verify your work email to send up to #{DAILY_LIMITS[:verified]} a day."
+      membership.verified? ? "#{base} Try again tomorrow." : "#{base} Verify your work email to send up to #{User::Brands::DAILY_REQUESTS[:verified]} a day."
     end
 
     # podcast: the show asked; membership: the asker's BrandMember (its user starts the conversation); form: a

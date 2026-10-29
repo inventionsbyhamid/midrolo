@@ -4,7 +4,7 @@
     Signed out (or with no brand yet), the button opens conversations/new, which signs in and sets up the brand and
     then comes back. A brand member gets the form in a dialog. The page's ETag changes with the podcast, and every
     request, answer and block touches it. %>
-<% facts = Conversations::PageFacts.new(podcast, user: current_user) %>
+<% facts = Conversations::PageFacts.new(podcast, user: current_user, membership_id: session[:brand_member_id]) %>
 <% viewer = facts.viewer %>
 <div id="request" class="flex flex-col items-start gap-2">
   <% case viewer.state %>
