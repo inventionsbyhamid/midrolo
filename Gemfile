@@ -83,7 +83,7 @@ end
 
 group :test do
   # Headless Chrome for system specs over CDP (no chromedriver) [https://github.com/rubycdp/cuprite]
-  gem "cuprite", "~> 0.18.0"
+  gem "cuprite", "~> 0.19"
 end
 
 group :development do
