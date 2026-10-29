@@ -1,0 +1,48 @@
+<% content_for :title, "Stats for #{@show.title}" %>
+<% numbers = stats_page_numbers(@podcast) %>
+<div class="mx-auto flex max-w-3xl flex-col gap-6">
+  <header class="flex items-center gap-4">
+    <%= render "shows/artwork", show: @show %>
+    <div class="min-w-0">
+      <p class="truncate text-sm font-semibold"><%= link_to @show.title, show_path(@show), class: "link" %></p>
+      <h1 class="type-h2">Stats</h1>
+    </div>
+  </header>
+
+  <div class="flex flex-col gap-2">
+    <p class="type-lead">Brands trust numbers that come from Spotify and Apple, not screenshots.</p>
+    <ul class="flex list-disc flex-col gap-1 pl-5 text-ink-soft">
+      <li>Invite Midrolo to your Spotify and Apple analytics. It can only read them.</li>
+      <li>We read your numbers every day and show them on your page with the date.</li>
+      <li>Midrolo can't publish, edit or see your earnings. Remove us any time.</li>
+    </ul>
+  </div>
+
+  <% if @claimed_elsewhere %>
+    <p class="flash flash-alert" role="status"><%= StatConnectionsController::CLAIMED_ELSEWHERE %> If the show is yours, write to us and we'll sort it out.</p>
+  <% elsif !@owner %>
+    <div class="flash flash-notice flex-wrap" role="status">
+      <p class="min-w-0 flex-1 basis-64">This show isn't claimed yet. You can send the invites now. Numbers count and reach the show's page once you claim it.</p>
+      <%= ui_button "Claim this show", new_show_verification_path(@show), variant: :secondary, size: :sm %>
+    </div>
+  <% end %>
+
+  <% Stats::PLATFORMS.each_key do |provider| %>
+    <%= render "stats/platform", provider: provider, show: @show, connection: @connections[provider],
+                                 readings: @readings.select { |reading| reading.source == provider }, locked: @claimed_elsewhere %>
+  <% end %>
+
+  <%= render "stats/provided", show: @show, reading: @readings.find { |reading| reading.source == Podcast::Stats::PROVIDED_SOURCE && reading.metric == StatReading::DOWNLOADS_PER_EPISODE },
+                               owner: @owner, locked: @claimed_elsewhere %>
+
+  <% if @owner && numbers.any? %>
+    <section class="flex flex-col gap-4" aria-labelledby="on-your-page">
+      <div>
+        <h2 id="on-your-page" class="type-h3">On your page</h2>
+        <p class="text-sm text-ink-soft">What brands see. Numbers at zero for the last 30 days are left out; the all time totals always show.</p>
+      </div>
+      <%= render "podcasts/numbers", podcast: @podcast %>
+      <%= render "stats/audience", podcast: @podcast %>
+    </section>
+  <% end %>
+</div>

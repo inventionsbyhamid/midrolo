@@ -1,0 +1,79 @@
+<%# locals: (provider:, show:, connection:, readings:, locked: false) -%>
+<%# One platform's card on the Stats screen: how to invite Midrolo, then where the connection stands and what it read. %>
+<% name = Stats.platform_name(provider) %>
+<% service = Stats.service_name(provider) %>
+<% read = Stats::PageNumbers::SHOWN.fetch(provider).filter_map { |metric| readings.find { |reading| reading.metric == metric } } %>
+<% ask_for_link = connection.nil? || connection.failed? || connection.disconnected? || connection.mismatch? %>
+<div id="<%= provider %>" class="scroll-mt-6">
+  <%= render "components/card", title: name, aside: (connection ? stats_connection_badge(connection) : ui_badge("Not connected")) do %>
+    <div class="flex flex-col gap-4">
+      <% if connection %>
+        <% case connection.status %>
+        <% when "pending_invite" %>
+          <p>
+            We're waiting for access to show <code class="text-sm"><%= connection.external_id %></code>. We check every 15 minutes
+            until <%= stats_date(connection.created_at + StatConnection::INVITE_WINDOW) %>, and your numbers appear here as soon as the invite is accepted.
+          </p>
+        <% when "active" %>
+          <p>
+            Connected to show <code class="text-sm"><%= connection.external_id %></code>.
+            Last read <%= stats_date(connection.last_synced_at || connection.updated_at) %>
+            at <%= (connection.last_synced_at || connection.updated_at).utc.strftime("%H:%M") %> UTC. We read it again every day.
+          </p>
+        <% when "disconnected" %>
+          <p>Midrolo's access was removed in <%= service %>. Numbers already on your page stay until they're 45 days old, then show as "Last verified".</p>
+        <% end %>
+
+        <% if connection.last_error.present? %>
+          <p class="<%= connection.pending_invite? ? 'text-ink-soft' : 'field-error mt-0' %>" role="status"><%= connection.last_error %></p>
+        <% end %>
+
+        <% if connection.active? && read.any? %>
+          <dl class="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+            <% read.each do |reading| %>
+              <div>
+                <dt class="text-sm text-ink-soft"><%= stats_metric_label(reading).delete_prefix("#{stats_short_name(provider)} ").upcase_first %></dt>
+                <dd class="font-semibold tabular-nums"><%= number_with_delimiter(reading.value) %></dd>
+              </div>
+            <% end %>
+          </dl>
+        <% end %>
+      <% end %>
+
+      <% if locked %>
+        <p class="text-ink-soft">Only the account that owns this show on Midrolo can connect its <%= name %> stats.</p>
+      <% elsif ask_for_link %>
+        <%= render "stats/invite_steps", provider: provider %>
+        <%= form_with url: show_stat_connections_path(show), class: "flex flex-col gap-3" do |f| %>
+          <%= hidden_field_tag :provider, provider %>
+          <div class="flex flex-col gap-1">
+            <%= label_tag "show_link_#{provider}", "Your #{name} show link", class: "label" %>
+            <%= text_field_tag :show_link, (provider == "apple" && show.podcast.apple_id ? Stats.show_url("apple", show.podcast.apple_id) : nil),
+                  id: "show_link_#{provider}", class: "input", required: true, autocomplete: "off", spellcheck: false, maxlength: 300,
+                  placeholder: provider == "spotify" ? "https://open.spotify.com/show/..." : "https://podcasts.apple.com/us/podcast/your-show/id..." %>
+            <% if provider == "apple" && show.podcast.apple_id %>
+              <p class="hint">We found your show on Apple Podcasts already. Change the link if it's not right.</p>
+            <% end %>
+          </div>
+          <div><%= f.submit "I've invited Midrolo", class: "btn btn-primary btn-md" %></div>
+        <% end %>
+      <% else %>
+        <details class="text-sm">
+          <summary class="link cursor-pointer">How to invite Midrolo</summary>
+          <div class="mt-3"><%= render "stats/invite_steps", provider: provider %></div>
+        </details>
+      <% end %>
+
+      <% if connection && !locked %>
+        <div class="flex flex-wrap gap-3 border-t border-line pt-4">
+          <% unless connection.disconnected? || (connection.failed? && connection.activated_at.nil?) %>
+            <%= button_to "Check now", check_show_stat_connection_path(show, connection), class: "btn btn-secondary btn-sm" %>
+          <% end %>
+          <%= button_to (connection.active? ? "Disconnect" : "Remove"), show_stat_connection_path(show, connection), method: :delete,
+                class: "btn btn-ghost btn-sm",
+                form: { data: { turbo_confirm: connection.active? ? "Disconnect #{name}? Its numbers come off your page now." : "Remove this #{name} connection?" } } %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

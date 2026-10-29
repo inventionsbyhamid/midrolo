@@ -1,0 +1,19 @@
+<%# locals: (provider:) -%>
+<% email = Stats.invite_email(provider) %>
+<ol class="verify-steps mt-0">
+  <% if provider == "spotify" %>
+    <li>Open your <%= link_to "team in Spotify for Creators", "https://manage.spotify.com/teams", class: "link", target: "_blank", rel: "noopener" %>. You need to be an admin of the show.</li>
+    <li>
+      Invite this address and give it <strong>Analytics</strong> access only:
+      <%= render "stats/invite_email", email: email %>
+    </li>
+    <li>Paste your show's Spotify link below and press "I've invited Midrolo".</li>
+  <% else %>
+    <li>Sign in to <%= link_to "Apple Podcasts Connect", "https://podcastsconnect.apple.com", class: "link", target: "_blank", rel: "noopener" %>, then open Account and People.</li>
+    <li>
+      Add this address with the <strong>Analyst</strong> role, which can only see analytics:
+      <%= render "stats/invite_email", email: email %>
+    </li>
+    <li>Check your show's Apple Podcasts link below and press "I've invited Midrolo".</li>
+  <% end %>
+</ol>

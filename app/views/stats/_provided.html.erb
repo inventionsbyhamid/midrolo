@@ -1,0 +1,26 @@
+<%# locals: (show:, reading:, owner:, locked: false) -%>
+<%# The fallback (build spec section 11): the owner's own downloads per episode, labelled "Provided by the show". %>
+<%= render "components/card", title: "Numbers provided by the show", aside: (trust_badge(reading) if reading) do %>
+  <div class="flex flex-col gap-4">
+    <p class="text-ink-soft">
+      Not on Spotify or Apple, or waiting for an invite? Share your own downloads per episode. Your page labels it
+      "Provided by the show", and a verified number takes its place once one arrives.
+    </p>
+    <% if locked %>
+      <p class="text-ink-soft">Only the account that owns this show on Midrolo can put numbers on its page.</p>
+    <% else %>
+      <%= form_with url: provided_show_stats_path(show), method: :patch, class: "flex flex-wrap items-end gap-3" do |f| %>
+        <div class="flex flex-col gap-1">
+          <%= label_tag :downloads_per_episode, "Downloads per episode, last 30 days", class: "label" %>
+          <%= number_field_tag :downloads_per_episode, show.downloads_per_episode, min: 0, step: 1, class: "input w-48", inputmode: "numeric" %>
+        </div>
+        <%= f.submit "Save", class: "btn btn-secondary btn-md" %>
+      <% end %>
+      <% if owner && show.downloads_per_episode && reading.nil? %>
+        <p class="hint mt-0">Not on your page yet. Save to show it.</p>
+      <% elsif !owner %>
+        <p class="hint mt-0">Saved to your workspace for now. It reaches the show's page once you claim the show.</p>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
