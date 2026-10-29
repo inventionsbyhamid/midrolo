@@ -10,9 +10,9 @@
       <p class="text-ink-soft">Only the account that owns this show on Midrolo can put numbers on its page.</p>
     <% else %>
       <%= form_with url: provided_show_stats_path(show), method: :patch, class: "flex flex-wrap items-end gap-3" do |f| %>
-        <div class="flex flex-col gap-1">
+        <div class="flex w-full max-w-64 flex-col gap-1">
           <%= label_tag :downloads_per_episode, "Downloads per episode, last 30 days", class: "label" %>
-          <%= number_field_tag :downloads_per_episode, show.downloads_per_episode, min: 0, step: 1, class: "input w-48", inputmode: "numeric" %>
+          <%= number_field_tag :downloads_per_episode, show.downloads_per_episode, min: 0, step: 1, class: "input w-full", inputmode: "numeric" %>
         </div>
         <%= f.submit "Save", class: "btn btn-secondary btn-md" %>
       <% end %>
