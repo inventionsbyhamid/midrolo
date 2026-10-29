@@ -56,16 +56,14 @@ RSpec.describe "First run" do
     within("#hero") { click_link "Get your show sponsored" }
     within("#for-podcasters") { click_link "Get a free Snapshot" }
 
-    expect(page).to have_current_path("/users/sign_in")
+    expect(page).to have_current_path("/users/sign_in") # through /start, which remembers /shows/new
     expect(page).to have_title("Sign in | Midrolo")
     expect_primary_action("Continue with Google")
     screenshot("sign-in")
     click_button "Continue with Google"
 
-    # A new account picks its side first (review G-1); as a podcaster with no shows yet, the app goes straight to
-    # adding one, and the welcome email is on its way.
-    expect(page).to have_current_path("/welcome")
-    click_button "I run a podcast"
+    # "Get a free Snapshot" leads to adding a show, so after sign in the app returns there (no "podcaster or brand"
+    # choice: the link already said which side), and the welcome email is on its way.
     expect(page).to have_current_path("/shows/new")
     expect(ActionMailer::Base.deliveries.map { |mail| [ mail.to, mail.subject ] }).to eq([ [ [ "new@example.com" ], "Welcome to Midrolo" ] ])
     expect(page).to have_css("h1", text: "Find your show")

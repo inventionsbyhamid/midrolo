@@ -194,7 +194,7 @@ RSpec.describe "Public pages" do
       expect(search.at_css("input[name='q']")).to be_present
       expect(podcasters.css(".side-step h3").map { |h| h.text.squish })
         .to eq([ "Claim your page", "Invite Midrolo to your stats", "Answer brand requests" ])
-      expect(podcasters.at_xpath(".//a[normalize-space()='Get a free Snapshot']")["href"]).to eq("/users/sign_in")
+      expect(podcasters.at_xpath(".//a[normalize-space()='Get a free Snapshot']")["href"]).to eq("/start")
       expect(podcasters.at_css(".side-shot")).to be_nil
       expect(page.at_css("#explore").text).not_to include("demo show")
 
@@ -301,6 +301,20 @@ RSpec.describe "Public pages" do
       closing = page.at_css(".closing")
       expect(closing.css("p")).to be_empty
       expect(closing.css("a").map { |a| a.text.squish }).to eq([ "Find podcasts your customers love", "Get your show sponsored" ])
+    end
+  end
+
+  describe "GET /start (Get my free Snapshot)" do
+    it "sends a visitor to sign in and remembers to come back to adding a show" do
+      get "/start"
+      expect(response).to redirect_to("/users/sign_in")
+      expect(session["user_return_to"]).to eq("/shows/new")
+    end
+
+    it "sends a signed-in user straight to adding a show" do
+      sign_in create(:user)
+      get "/start"
+      expect(response).to redirect_to("/shows/new")
     end
   end
 

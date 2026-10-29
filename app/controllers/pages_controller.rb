@@ -24,6 +24,15 @@ class PagesController < ApplicationController
   end
 
   def pricing; end
+
+  # "Get my free Snapshot" for a visitor: remember that they came to add a show, then sign in. After sign in they
+  # land on /shows/new, skipping the "podcaster or brand" choice the link has already made.
+  def start
+    return redirect_to(new_show_path) if user_signed_in?
+
+    store_location_for(:user, new_show_path)
+    redirect_to new_user_session_path
+  end
   def about; end
   def privacy; end
   def terms; end

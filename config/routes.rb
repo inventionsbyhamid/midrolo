@@ -23,6 +23,7 @@ Rails.application.routes.draw do
   # the public sample reports, the sitemap and robots.txt (R88: a route, so its sitemap URL is the request's host).
   root "pages#home"
   get "pricing", to: "pages#pricing", as: :pricing
+  get "start", to: "pages#start", as: :start
   get "about", to: "pages#about", as: :about
   get "privacy", to: "pages#privacy", as: :privacy
   get "terms", to: "pages#terms", as: :terms
