@@ -110,6 +110,13 @@ then signs in as that account with its saved session.
   key names. Then press **Test fetch** with a connection or a Spotify show link.
 - **When a session expires,** syncs pause, the session shows Expired, and one email goes to the admins. Save a new
   session and syncs resume on their own.
+- **Connections held for review.** A platform show that matches a podcast by name only, while another catalog
+  podcast has the same name, could be a clone pointing at a real show, so nothing counts until an admin looks. It
+  waits under "Doesn't match" in `/admin/stat_connections` with "Midrolo will check it by hand" (the owner's Stats
+  screen says "Being checked"). Open the platform show and the podcast's page and compare them, then press
+  **Approve** (it syncs at once and turns Active) or **Reject** (it is disconnected, any numbers from that platform
+  come off the podcast's page, the owner's Stats screen says it was checked by hand, and the platform show is free
+  for another page to connect).
 
 ## Payments
 
@@ -169,20 +176,27 @@ deploy needs these steps once, in order. Commands run in the **worker's** Termin
 3. **Deploy** (push to `main`) and watch both apps come up. The migrations move each show onto a podcast record.
 4. **Read every existing feed again**, which refills owner emails and feed facts:
    `bin/rails catalog:refresh`.
-5. **Seed the catalog.** Raise `qloo_daily_call_limit` in `/admin` first (the seed reads 21 genre tags, 50 shows a
-   call, and needs roughly 60 to 150 calls for 1,000 shows). Then `bin/rails "catalog:seed[1000]"`. Directory
-   searches run about one a second, so expect 20 to 40 minutes. It's safe to stop and run again. Watch the Catalog
-   panel in `/admin` and the catalog and artwork queues in `/admin/jobs`.
+5. **Seed the catalog.** First set `qloo_daily_call_limit` to 500 in `/admin` (the seed reads 21 genre tags, 50 shows
+   a call, and needs roughly 60 to 150 calls for 1,000 shows, on top of reports and brand searches). Then
+   `bin/rails "catalog:seed_paced[1000,6]"`: one Qloo page at a time, spread over 6 hours (about one page every 9
+   minutes to start), each page's directory searches about one a second. Running it again while it runs starts
+   nothing. `bin/rails catalog:seed_stop` stops it after the page it is on; running it again picks up where it
+   stopped (also after Qloo's daily cap stopped it: raise the cap first). Watch the Paced seed block in `/admin`'s
+   Catalog panel (Running, the next page, pages read, linked so far) and the catalog and artwork queues in
+   `/admin/jobs`. The one shot `catalog:seed[1000]` still exists for development; production uses the paced seed.
 6. **Sponsor detection.** New episodes are scanned as they're read. For the backfill, raise `llm_catalog_daily_usd`
-   in `/admin` (about $5 to $10 covers 1,000 shows), then `bin/rails sponsors:scan`, again if episodes are still
-   waiting. Strong pattern reads are saved even when the budget runs out.
+   in `/admin` (about $5 to $10 covers 1,000 shows), then `bin/rails sponsors:scan` (200 podcasts a run), again if
+   episodes are still waiting. Strong pattern reads are saved even when the budget runs out. After that the daily
+   sponsors sweep (`sweep_sponsors` in `config/recurring.yml`, every day at 4:10am, up to 100 podcasts) picks up
+   episodes that waited for the budget; nothing to set up.
 7. **Similar shows for the samples:** `bin/rails matching:similar_backfill` (one Qloo call per sample report).
 8. **The demo show:** `bin/rails demo:setup`. `DEMO_OWNER_EMAIL` picks the owner account; unset means the first admin.
    It prints the page's address.
 9. **Add a show by hand** when you need one: `bin/rails "catalog:add[<feed URL, Apple link or name>]"`. Spotify links
    are refused; use the show's RSS feed.
 10. **Verified stats:** save the Spotify session (above), then `bin/rails stats:backfill_provided` turns owners' typed
-    downloads into "provided by the show" numbers.
+    downloads into "provided by the show" numbers. Look at `/admin/stat_connections` now and then for connections
+    held for review (Service sessions, above): **Approve** or **Reject** each.
 11. **Check `/admin`:** catalog counts and feed errors, sponsor detection, stats connections, Qloo calls and LLM
     spend.
 
