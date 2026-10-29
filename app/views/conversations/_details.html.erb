@@ -1,4 +1,4 @@
-<%# locals: (conversation:) -%>
+<%# locals: (conversation:, side: :brand) -%>
 <%= render "components/card", title: "The request" do %>
   <dl class="flex flex-col gap-3">
     <div>
@@ -12,6 +12,9 @@
     <div>
       <dt class="text-sm text-ink-soft">Budget</dt>
       <dd class="font-semibold"><%= inbox_budget(conversation.budget_cents) || "Not given" %></dd>
+      <% if side == :podcaster && (check = inbox_rate_check(conversation)) %>
+        <dd class="rate-check"><span class="text-ink-soft"><%= check[:rate] %></span><%= ui_badge check[:note], tone: check[:tone] %></dd>
+      <% end %>
     </div>
     <div>
       <dt class="text-sm text-ink-soft">Sent</dt>
@@ -21,6 +24,9 @@
       <div>
         <dt class="text-sm text-ink-soft">Brand website</dt>
         <dd class="font-semibold"><%= conversation.brand.domain %></dd>
+        <% if side == :podcaster && conversation.brand.slug.present? && conversation.brand.sponsor_mentions_count.to_i.positive? %>
+          <dd class="mt-1 text-sm"><%= link_to "Shows it has sponsored", public_brand_path(conversation.brand), class: "link" %></dd>
+        <% end %>
       </div>
     <% end %>
   </dl>
