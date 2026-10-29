@@ -696,9 +696,9 @@
   }
 
   .fact-source .badge {
-    height: 1.25rem;
+    height: 1.375rem;
     padding-inline: 0.5rem;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
   }
 
   /* The platforms' verified numbers: one disclosure on a phone (PP-12), the cards side by side from 40rem. */

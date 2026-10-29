@@ -1,13 +1,14 @@
 <%# locals: (podcast:, sponsors:) -%>
 <%# The key numbers (plan 4.1, TrustMRR style): verified and provided numbers come first from lane L5's
-    podcasts/_numbers; then the facts Midrolo reads itself, each with the badge saying it came from the feed. A number
-    never shows without its source. %>
+    podcasts/_numbers; then the facts Midrolo reads itself, each with the badge saying it came from the feed and the
+    date it was read (the badge says "feed", so the line doesn't repeat it, PP-15). A number never shows without its
+    source. %>
 <% checked = podcast.feed_checked_at %>
 <% facts = [
-     ([ number_with_delimiter(podcast.episode_count), "episodes in the feed", "the show's RSS feed" ] if podcast.episode_count.to_i.positive?),
+     ([ number_with_delimiter(podcast.episode_count), "episodes in the feed", nil ] if podcast.episode_count.to_i.positive?),
      ([ sponsors, "#{'sponsor'.pluralize(sponsors)} in the last 90 days", "show notes" ] if sponsors.positive?),
      ([ distance_of_time_in_words(podcast.first_published_at, Time.current).delete_prefix("about ").delete_prefix("over ").delete_prefix("almost "),
-        "on air, since #{podcast.first_published_at.strftime('%b %Y')}", "the show's RSS feed" ] if podcast.first_published_at)
+        "on air, since #{podcast.first_published_at.strftime('%b %Y')}", nil ] if podcast.first_published_at)
    ].compact %>
 <section class="wrap mt-10" aria-label="Key numbers">
   <%# The header shows the "Stats verified" pill already. %>
