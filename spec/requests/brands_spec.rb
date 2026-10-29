@@ -280,6 +280,23 @@ RSpec.describe "Brand workspace" do
         expect(response.body).to include("Deep Work Daily")
       end
 
+      # L7: the colleague's row came back and the button said Saved, but the member's list hides it and Remove did nothing.
+      it "tells an unverified member a colleague already saved the show, instead of Saved" do
+        create(:saved_podcast, brand: brand, podcast: podcast, user: create(:brand_member, brand: brand).user)
+
+        post brand_saved_podcasts_path, params: { podcast_id: podcast.public_id }, as: :turbo_stream
+        expect(response.body).to include("save_podcast_#{podcast.public_id}", "On your brand&#39;s list")
+        expect(response.body).not_to include("Remove Deep Work Daily from your shortlist")
+
+        post brand_saved_podcasts_path, params: { podcast_id: podcast.public_id }
+        expect(flash[:notice]).to eq(Brands::SavedPodcastsController::COLLEAGUE_SAVED)
+        expect(brand.saved_podcasts.count).to eq(1)
+
+        member.update!(verified_at: Time.current)
+        post brand_saved_podcasts_path, params: { podcast_id: podcast.public_id }, as: :turbo_stream
+        expect(response.body).to include("Remove Deep Work Daily from your shortlist")
+      end
+
       it "404s for a removed podcast" do
         podcast.update!(status: "removed")
 

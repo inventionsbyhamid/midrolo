@@ -50,11 +50,15 @@ class BrandsController < ApplicationController
            .limit(SIMILAR_LIMIT).to_a
   end
 
-  # The brand's latest finished fit search with its top results, for a signed-in member of the brand only.
+  # The latest finished fit search with its top results, for a signed-in member of the brand only, by the workspace's
+  # rule (Brands::BaseController#visible_searches): a verified member sees the brand's latest, an unverified one only
+  # their own (review M2).
   def latest_fit_search
-    return nil unless current_user && BrandMember.exists?(brand_id: @brand.id, user_id: current_user.id)
+    member = current_user && BrandMember.find_by(brand_id: @brand.id, user_id: current_user.id)
+    return nil unless member
 
-    FitSearch.where(brand_id: @brand.id, status: "done").order(finished_at: :desc, id: :desc)
-             .includes(results: { podcast: { artwork_image: { file_attachment: :blob } } }).first
+    searches = FitSearch.where(brand_id: @brand.id, status: "done")
+    searches = searches.where(user_id: current_user.id) unless member.verified?
+    searches.order(finished_at: :desc, id: :desc).includes(results: { podcast: { artwork_image: { file_attachment: :blob } } }).first
   end
 end

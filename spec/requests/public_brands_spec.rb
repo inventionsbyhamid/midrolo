@@ -72,4 +72,27 @@ RSpec.describe "Public brand pages" do
     get "/brands/#{brand.slug}"
     expect(response.body).to include("Your latest fit search", "Endpoint security buyers", "Risky Business", "91")
   end
+
+  # M2: the workspace hides a colleague's searches from an unverified member; this page showed the brand's latest.
+  it "shows an unverified member only their own search, and a verified member the brand's latest" do
+    mention(on: podcast, at: 1.week.ago)
+    colleague = create(:brand_member, brand: brand, verified_at: Time.current).user
+    search = create(:fit_search, brand: brand, user: colleague, query: "Endpoint security buyers", status: "done", finished_at: 1.hour.ago)
+    create(:fit_result, fit_search: search, podcast: create(:podcast, :active, title: "Risky Business"), score: 91)
+    member = create(:brand_member, brand: brand)
+    sign_in member.user
+
+    get "/brands/#{brand.slug}"
+    expect(response.body).not_to include("Endpoint security buyers", "Risky Business")
+    expect(response.body).to include("Is this your brand?")
+
+    create(:fit_search, brand: brand, user: member.user, query: "My own search", status: "done", finished_at: 1.day.ago)
+    get "/brands/#{brand.slug}"
+    expect(response.body).to include("My own search")
+    expect(response.body).not_to include("Endpoint security buyers")
+
+    member.update!(verified_at: Time.current)
+    get "/brands/#{brand.slug}"
+    expect(response.body).to include("Endpoint security buyers", "Risky Business")
+  end
 end
