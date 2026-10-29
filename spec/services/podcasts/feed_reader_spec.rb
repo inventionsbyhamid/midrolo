@@ -337,5 +337,11 @@ RSpec.describe Podcasts::FeedReader do
     it "returns an unreadable feed for an unknown fake id" do
       expect(reader.read("fake://fake-999").warnings).to eq([ "feed_unreadable" ])
     end
+
+    # Code review L6: a lookup or claim in production can't read a made-up show.
+    it "reads them only while the demo directory is the app's directory" do
+      allow(Podcasts::Directory).to receive(:current).and_return(Podcasts::Directories::PodcastIndex.new(key: "k", secret: "s"))
+      expect(reader.read("fake://fake-1").warnings).to eq([ "feed_blocked" ])
+    end
   end
 end

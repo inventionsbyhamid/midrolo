@@ -8,6 +8,17 @@ module Podcasts
       FEED_ANCHOR = Time.utc(2026, 10, 19, 9, 0, 0) # newest episode of every fake feed
       FEED_PREFIX = "fake://".freeze
 
+      # Whether fake:// feeds are read at all (Catalog::FeedFetcher, Podcasts::FeedReader): only while this demo
+      # directory is the app's directory (development, tests, a demo without Podcast Index keys). With a real directory
+      # a fake:// URL reads as blocked, so nobody can add a made-up show to the live catalog (code review L6).
+      def self.feeds_allowed?
+        Podcasts::Directory.fake?
+      rescue Podcasts::Directory::MissingCredentials
+        false
+      end
+
+      def self.feed_url?(url) = url.to_s.strip.start_with?(FEED_PREFIX)
+
       CATALOG = [
         { directory_id: "fake-1", title: "The Founder's Ledger", author: "Maya Brandt", categories: [ "Business", "Finance" ],
           description: "Plain-English money lessons from first-time founders." },
