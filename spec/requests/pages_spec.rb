@@ -264,7 +264,7 @@ RSpec.describe "Public pages" do
       # UX review L-1: the report and plan questions stay on /pricing.
       expect(faq).not_to include("What's a proxy profile?", "Can I cancel?")
       get "/pricing"
-      expect(page.at_css("#faq").text.squish).to include("What's a proxy profile?", "Can I cancel?", "Is listing my show free?")
+      expect(page.at_css(".faq").text.squish).to include("What's a proxy profile?", "Can I cancel?", "Is listing my show free?")
     end
 
     it "shows what each side pays above the podcaster plans, from the limits the code enforces" do
@@ -369,7 +369,7 @@ RSpec.describe "Public pages" do
     it "names the plans as plans.yml does" do
       sprint = Entitlements.limits(:sprint)[:name]
 
-      [ "/terms", "/" ].each do |path|
+      [ "/terms", "/pricing" ].each do |path| # the landing leaves plan questions to /pricing (UX review L-1)
         get path
         expect(page.at_css("main").text.squish).to include("The #{sprint} plan is a single payment and never renews.")
         expect(response.body).not_to include("Sponsor Sprint")
