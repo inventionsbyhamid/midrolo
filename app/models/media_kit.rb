@@ -166,7 +166,7 @@ class MediaKit < ApplicationRecord
   def header_of(image) = [ image.width, image.height, image.get("vips-loader") ]
 
   def open_months_are_months
-    errors.add(:open_months, "must be months like 2026-11") unless open_months.all? { |month| month.to_s.match?(MONTH) }
+    errors.add(:open_months, "must be calendar months") unless open_months.all? { |month| month.to_s.match?(MONTH) }
   end
 
   def rates_are_whole_dollars
