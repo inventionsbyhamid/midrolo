@@ -17,7 +17,7 @@
       </div>
     <% end %>
     <div>
-      <%= f.label :size, "Plays per episode", class: "label" %>
+      <%= f.label :size, PodcastDirectory::SIZE_LABEL, class: "label" %>
       <%= f.select :size, options_for_select(PodcastDirectory::SIZE_LABELS.invert, directory.size), { include_blank: "Any size" },
             class: "input", data: { action: "change->autosubmit#queue" } %>
     </div>

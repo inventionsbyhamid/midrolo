@@ -4,7 +4,8 @@ module Catalog
   #
   # 1. the podcast already linked to the entity id;
   # 2. a catalog podcast with the same title key (Podcast.title_key_for) and no Qloo link yet: the one whose author is
-  #    close to the entity's (Research::Names.close?), else the only one with that title;
+  #    close to the entity's (Research::Names.close?), else the only catalog podcast with that title at all (a
+  #    same-titled show already linked elsewhere means the author must match: code review M4);
   # 3. with directory: true (the default), a Podcasts::Directory.current search by the entity's name, the same rule
   #    over its hits, and the hit found or created as a podcast (Catalog::NewPodcast, its ingest queued at priority).
   #
@@ -60,8 +61,11 @@ module Catalog
     end
 
     def local_match(key)
-      candidates = Podcast.where(title_key: key, qloo_entity_id: nil).where.not(status: "removed").limit(MAX_CANDIDATES).to_a
-      only(candidates, &:author)
+      titled = Podcast.where(title_key: key).where.not(status: "removed")
+      candidates = titled.where(qloo_entity_id: nil).limit(MAX_CANDIDATES).to_a
+      maker = author
+      close = maker && candidates.find { |candidate| Research::Names.close?(maker, candidate.author.to_s) }
+      close || (candidates.first if candidates.one? && titled.limit(2).count == 1)
     end
 
     def directory_match(key)

@@ -72,6 +72,7 @@ RSpec.describe Stats::Record do
   end
 
   it "derives plays per episode from both platforms over the episodes in the window" do
+    podcast.update!(claimed_at: 1.day.ago) # the listing columns carry numbers for a claimed podcast only
     create(:episode, podcast: podcast, published_at: 2.days.ago)
     create(:episode, podcast: podcast, published_at: 20.days.ago)
     create(:episode, podcast: podcast, published_at: 60.days.ago)

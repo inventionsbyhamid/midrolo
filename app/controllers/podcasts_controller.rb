@@ -22,6 +22,8 @@ class PodcastsController < ApplicationController
     @podcasts = @directory.podcasts
     @adding = @directory.search? && @directory.page == 1 ? lazy_add : []
     @sponsor_counts = sponsor_counts(@podcasts + @adding)
+    # A feed the directory doesn't list is added by its URL only for a signed-in user (Catalog::LazyAdd).
+    @sign_in_to_add = !user_signed_in? && ::Catalog::LazyAdd.url?(@directory.query)
     noindex! unless @directory.plain?
   end
 
@@ -94,7 +96,7 @@ class PodcastsController < ApplicationController
   def lazy_add
     return [] if MediaKit.bot?(request.user_agent)
 
-    result = ::Catalog::LazyAdd.call(@directory.query)
+    result = ::Catalog::LazyAdd.call(@directory.query, signed_in: user_signed_in?)
     listed = @podcasts.map(&:id)
     (result.added + result.found.select(&:pending?)).uniq(&:id)
       .reject { |podcast| listed.include?(podcast.id) || podcast.removed? }.first(ADDING_LIMIT)

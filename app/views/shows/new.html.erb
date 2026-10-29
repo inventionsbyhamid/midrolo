@@ -23,7 +23,7 @@
     <% end %>
 
     <section aria-labelledby="search-heading" class="show-search flex flex-col gap-4">
-      <%= form_with url: search_shows_path, method: :get, role: "search",
+      <%= form_with url: search_shows_path, method: :get, html: { role: "search" },
             data: { controller: "autosubmit", turbo_frame: "search_results", action: "submit->autosubmit#submit" } do |f| %>
         <h2 id="search-heading" class="sr-only">Search for your show</h2>
         <%= f.label :q, "Podcast title", class: "label" %>

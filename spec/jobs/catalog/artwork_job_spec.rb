@@ -4,7 +4,8 @@ RSpec.describe Catalog::ArtworkJob do
   let(:url) { "https://img.example.com/tidepool.png" }
   let(:png) { Vips::Image.black(600, 600).new_from_image([ 0, 128, 128 ]).pngsave_buffer }
   let(:podcast) do
-    create(:podcast, :active, artwork_url: url, description: "About tide pools.", feed_url: "https://feeds.example.com/t.xml")
+    create(:podcast, :active, artwork_url: url, description: "About tide pools.", feed_url: "https://feeds.example.com/t.xml",
+                              podcast_index_id: 31)
   end
 
   before { allow(Resolv).to receive(:getaddresses).and_return([ "93.184.216.34" ]) }

@@ -1,0 +1,6 @@
+<p style="margin:0 0 16px;">The RSS feed of <strong><%= @title %></strong> moved to a new address:</p>
+<p style="margin:0 0 16px;word-break:break-all;"><%= @to %></p>
+<p style="margin:0 0 16px;">You proved you own the old feed, so the show is a draft on <%= APP_NAME %> until you verify the new one. Its listing and numbers are hidden until then.</p>
+<p style="margin:0;">If you didn't move your feed, write to us at hello@midrolo.com.</p>
+<%= mail_button "Verify it again", new_show_verification_url(@show) %>
+<%= mail_footnote "We send this when the feed of a show you manage moves to a new address." %>

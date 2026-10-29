@@ -215,7 +215,7 @@ RSpec.describe "Brand workspace" do
         body = response.body
         expect(body).to include("The Founder&#39;s Ledger", "87", "Qloo ranks it #2 of 50 podcasts",
                                 "Trade Coffee, a competitor, sponsored 4 episodes", "From $400 per episode",
-                                "Within your budget", "2,400 per episode", "Request a spot", "/podcasts/#{podcast.slug}#request",
+                                "Within your budget", "2,400 plays per episode", "Request a spot", "/podcasts/#{podcast.slug}#request",
                                 "Taste data from Qloo", "45 of 50", "How the agent searched")
         expect(body).to include(brand_saved_podcasts_path) # the Save button
         expect(body.scan("<li>").size).to be >= 3 # the three summary bullets

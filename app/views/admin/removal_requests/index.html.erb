@@ -4,7 +4,7 @@
     <h1 class="type-h1">Removal requests</h1>
     <%= link_to "Back to admin", admin_root_path, class: "link" %>
   </header>
-  <p class="text-ink-soft">Requests from anyone but the show's owner. Approving removes the page for good (Podcast#remove!). Answer within 7 days.</p>
+  <p class="text-ink-soft">Requests from anyone but the show's owner. Approving removes the page for good and blocks its feed, its podcast:guid and its artwork wherever they appear, so another show using the same artwork or guid loses them too (Podcast#remove!). Answer within 7 days.</p>
 
   <%= render "components/card", title: "Waiting (#{@pending.size})" do %>
     <% if @pending.empty? %>

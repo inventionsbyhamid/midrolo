@@ -185,6 +185,23 @@ RSpec.describe "Share images" do
         expect(a_request(:any, /.*/)).not_to have_been_made
       end
 
+      # Code review L5: og.png links in pitches already sent keep working after the show is renamed.
+      it "301s an earlier slug to the current one's card, as the kit page does" do
+        old_path = path
+        show.podcast.update!(title: "The Founders Ledger Weekly")
+        expect(show.podcast.slug).not_to eq(old_path.split("/")[2])
+
+        get old_path
+        expect(response).to have_http_status(:moved_permanently)
+        expect(response).to redirect_to("/k/#{show.podcast.reload.slug}/og.png")
+      end
+
+      it "is a 404 once the podcast is removed" do
+        show.podcast.remove!
+        get path
+        expect(response).to have_http_status(:not_found)
+      end
+
       it "is a 404 once the kit is unpublished" do
         show.media_kit.unpublish!
         get path

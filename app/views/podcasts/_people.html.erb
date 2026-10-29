@@ -1,6 +1,6 @@
 <%# locals: (podcast:) -%>
 <%# People (plan 4.1): only those the show's feed names (podcast:person, itunes:author), hosts first; a photo only
-    when the feed publishes one. %>
+    once Midrolo stores it, never hotlinked from the feed (code review L3), else their initials. %>
 <% people = podcast.people.sort_by { |person| [ person.host? ? 0 : 1, -person.episodes_count.to_i, person.name ] }.first(24) %>
 <% if people.any? %>
   <section id="people" class="pod-section" aria-labelledby="people_title">
@@ -9,9 +9,8 @@
     <ul class="people">
       <% people.each do |person| %>
         <li class="person">
-          <% photo = person.image&.visible? && person.image.file.attached? ? rails_storage_proxy_path(person.image.file.variant(:thumb)) : (Show.http_url(person.img_url) unless person.image&.suppressed_at) %>
-          <% if photo %>
-            <img src="<%= photo %>" alt="" class="person-photo" width="44" height="44" loading="lazy" referrerpolicy="no-referrer">
+          <% if person.image&.visible? && person.image.file.attached? %>
+            <img src="<%= rails_storage_proxy_path(person.image.file.variant(:thumb)) %>" alt="" class="person-photo" width="44" height="44" loading="lazy">
           <% else %>
             <span class="person-photo" aria-hidden="true"><%= Podcast.initials_for(person.name) %></span>
           <% end %>

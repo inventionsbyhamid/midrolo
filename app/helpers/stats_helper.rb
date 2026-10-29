@@ -91,7 +91,7 @@ module StatsHelper
   def trust_badge(reading_or_level, source: nil, at: nil)
     reading = reading_or_level if reading_or_level.is_a?(StatReading)
     level = reading ? reading.trust : reading_or_level.to_s
-    source ||= stats_source_name(reading) if reading
+    source = source.presence || (stats_source_name(reading).presence if reading)
     at ||= reading&.captured_at
     label, tone = TRUST_BADGES.fetch(level, [ level.humanize, :neutral ])
     if reading&.trust_verified? && reading.expired?

@@ -64,7 +64,7 @@ RSpec.describe "podcasts/_rates" do
 
       expect(text).to include("Open to sponsors", "Midroll $150", "Rates set by the show.", "Coffee and banks",
                               "We don't advertise Gambling, Crypto",
-                              "Based on 1,800 downloads per episode, provided by the show (Oct 29).")
+                              "Based on 1,800 downloads per episode. Provided by the show Oct 29")
       expect(text).to include(*months.first(2).map { |month| Date.strptime(month, "%Y-%m").strftime("%b %Y") })
       expect(text).not_to include("Jan 2020") # a month gone by
       expect(rendered).to include("badge") # trust_badge
@@ -77,8 +77,27 @@ RSpec.describe "podcasts/_rates" do
 
       text = render_partial("rates").text.squish
 
-      expect(text).to include("Demo show", "Not taking sponsors right now", "1,000 to 2,500 downloads per episode, provided by the show, demo numbers")
+      expect(text).to include("Demo show", "Not taking sponsors right now", "Based on 1,000 to 2,500 downloads per episode.")
       expect(text).not_to include("1,800")
+    end
+
+    def basis_line(doc) = doc.css("p").map { |p| p.text.squish }.find { |text| text.start_with?("Based on") }
+
+    # Code review L1, and the coordinator: the badge names its source in words, never the raw "provided" or
+    # "platforms", and says it once.
+    it "badges the basis in plain words: the show for provided numbers, the platforms for verified plays" do
+      create(:media_kit, :published, show: owner)
+      reading = create(:stat_reading, podcast: podcast, value: 1800, source: "provided", trust: "provided",
+                                      evidence: { "demo" => true }, captured_at: Time.zone.local(2026, 10, 29, 12))
+
+      badge = basis_line(render_partial("rates"))
+      expect(badge).to eq("Based on 1,800 downloads per episode. Provided by the show Demo Oct 29")
+      expect(badge.scan("provided").size + badge.scan("Provided").size).to eq(1)
+
+      reading.update!(source: "platforms", trust: "verified", evidence: { "sources" => %w[spotify apple] })
+      badge = basis_line(render_partial("rates"))
+      expect(badge).to start_with("Based on 1,800 Spotify and Apple plays per episode. Verified with Spotify for Creators and")
+      expect(badge).not_to include("platforms", "downloads")
     end
   end
 end

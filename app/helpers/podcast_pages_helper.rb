@@ -9,6 +9,9 @@ module PodcastPagesHelper
   MEASUREMENT_NAMES = { "op3" => "OP3", "podtrac" => "Podtrac", "chartable" => "Chartable", "podscribe" => "Podscribe",
                         "magellan" => "Magellan AI", "spotify" => "Spotify Ad Analytics" }.freeze
   DESCRIPTION_LIMIT = 158
+  # Where a podcast page's downloads figure came from, for its structured data.
+  VERIFIED_PLAYS = "Spotify and Apple plays per episode over the last 30 days, read from the platforms by #{APP_NAME}".freeze
+  PROVIDED_DOWNLOADS = "Downloads per episode, provided by the show".freeze
   JSON_LD_DESCRIPTION_LIMIT = 500
   # The About section folds a long description behind "Read more" past this.
   ABOUT_FOLD = 600
@@ -132,10 +135,12 @@ module PodcastPagesHelper
     link_to name, podcast_category_path(Podcast.category_slug(name)), **options
   end
 
-  # The search title (plan 4.1): a verified number in it when there is one, else what a buyer searches for.
+  # The search title (plan 4.1): a verified number in it when there is one (the owner's band when they chose ranges),
+  # else what a buyer searches for.
   def pages_title(podcast)
-    if podcast.downloads_trust == "verified" && podcast.downloads_per_episode.to_i.positive?
-      "#{podcast.title}: #{number_to_human(podcast.downloads_per_episode, format: '%n%u', units: { thousand: 'K', million: 'M' })} plays per episode, verified"
+    figure = podcast.public_downloads
+    if figure&.verified? && (figure.band || figure.value.positive?)
+      "#{podcast.title}: #{figure.text(short: true)}, verified"
     else
       "#{podcast.title} podcast sponsorship: rates, sponsors, audience"
     end
@@ -210,6 +215,20 @@ module PodcastPagesHelper
                           pages_breadcrumbs(trail) ])
   end
 
+  # The downloads figure named by its source (plays when read from Spotify and Apple, downloads when the show gave it),
+  # as a range when the owner chose ranges.
+  def pages_downloads_property(figure)
+    return nil unless figure
+
+    property = { "@type" => "PropertyValue", "name" => "#{figure.unit.capitalize} per episode",
+                 "description" => (figure.verified? ? VERIFIED_PLAYS : PROVIDED_DOWNLOADS) }
+    return property.merge("value" => figure.value) unless figure.band
+
+    range = figure.range
+    max = range.end && (range.exclude_end? ? range.end - 1 : range.end)
+    property.merge("minValue" => range.begin, "maxValue" => max).compact
+  end
+
   private
 
   def pages_breadcrumbs(trail)
@@ -224,8 +243,7 @@ module PodcastPagesHelper
          "description" => [ "From the show's RSS feed", checked && "checked #{checked}" ].compact.join(", ") } if podcast.episode_count.to_i.positive?),
       ({ "@type" => "PropertyValue", "name" => "Sponsors in the last 90 days", "value" => sponsors,
          "description" => "Sponsor reads found in the show notes" } if sponsors.positive?),
-      ({ "@type" => "PropertyValue", "name" => "Plays per episode", "value" => podcast.downloads_per_episode,
-         "description" => "#{podcast.downloads_trust.to_s.humanize} by the show's measuring service" } if podcast.downloads_per_episode && podcast.downloads_trust.in?(%w[verified provided])) ].compact
+      pages_downloads_property(podcast.public_downloads) ].compact
   end
 
   # The cheapest spot on a published rate card (refresh_listing! sets min_price_cents only then).

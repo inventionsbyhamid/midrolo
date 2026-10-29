@@ -7,6 +7,12 @@ namespace :sponsors do
     puts "Queued sponsor scans for #{queued} #{'podcast'.pluralize(queued)}"
   end
 
+  desc "Recount each brand's sponsor reads (brands.sponsor_mentions_count) where deletions left it wrong"
+  task recount: :environment do
+    fixed = Sponsors::Recount.call
+    puts "Recounted sponsor reads: #{fixed} #{'brand'.pluralize(fixed)} corrected"
+  end
+
   desc "Scan every episode of one podcast again (its slug), replacing what the model checked before"
   task :rescan, [ :slug ] => :environment do |_, args|
     podcast = Podcast.find_by_slug_or_redirect(args[:slug]) or abort("No podcast with the slug #{args[:slug].inspect}")

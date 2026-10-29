@@ -198,15 +198,35 @@ RSpec.describe Podcast do
 
     it "copies the best reading and the published listing into the directory's columns" do
       create(:stat_reading, podcast: podcast, trust: "verified", source: "spotify", value: 2100)
+      show = create(:show, podcast: podcast)
+      show.verify!(via: "admin")
       podcast.refresh_listing!
       expect(podcast).to have_attributes(downloads_per_episode: 2100, downloads_trust: "verified",
-                                         open_to_sponsors: false, min_price_cents: nil)
+                                         downloads_bands_only: false, open_to_sponsors: false, min_price_cents: nil)
+
+      create(:media_kit, :published, show: show, open_to_sponsors: true, bands_only: true,
+                                     rate_card_overrides: { "midroll" => "300", "preroll" => "120" })
+      podcast.refresh_listing!
+      expect(podcast).to have_attributes(open_to_sponsors: true, min_price_cents: be_between(1, 12_000),
+                                         downloads_bands_only: true)
+    end
+
+    # Code review L8: numbers belong to a claim. Unclaimed (never, or the owner's account went), the columns that drive
+    # the card, the title, structured data and the "Stats verified" filter are empty.
+    it "clears the downloads figure when nobody owns the podcast" do
+      create(:stat_reading, podcast: podcast, trust: "verified", source: "spotify", value: 2100)
+      podcast.refresh_listing!
+      expect(podcast).to have_attributes(downloads_per_episode: nil, downloads_trust: nil, downloads_bands_only: false)
 
       show = create(:show, podcast: podcast)
-      create(:media_kit, :published, show: show, open_to_sponsors: true, rate_card_overrides: { "midroll" => "300",
-                                                                                                 "preroll" => "120" })
+      create(:media_kit, show: show, bands_only: true)
+      show.verify!(via: "admin")
       podcast.refresh_listing!
-      expect(podcast).to have_attributes(open_to_sponsors: true, min_price_cents: be_between(1, 12_000))
+      expect(podcast.reload).to have_attributes(downloads_per_episode: 2100, downloads_bands_only: true)
+
+      show.user.destroy!
+      expect(podcast.reload).to have_attributes(claimed_at: nil, downloads_per_episode: nil, downloads_trust: nil,
+                                                downloads_bands_only: false)
     end
   end
 

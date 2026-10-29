@@ -52,6 +52,35 @@ RSpec.describe Podcast::Listing do
     end
   end
 
+  describe "#public_downloads" do
+    let(:podcast) { create(:podcast, :claimed, downloads_per_episode: 2_140, downloads_trust: "verified") }
+
+    it "names a verified figure as plays and the show's own as downloads (code review L2)" do
+      expect(podcast.public_downloads).to have_attributes(value: 2_140, band: nil, unit: "plays")
+      expect(podcast.public_downloads.text).to eq("2,140 plays per episode")
+      expect(podcast.public_downloads.text(short: true)).to eq("2.14K plays per episode")
+
+      podcast.update!(downloads_trust: "provided")
+      expect(podcast.public_downloads.text).to eq("2,140 downloads per episode")
+    end
+
+    it "is only the band when the owner chose ranges, so nothing can print the figure (code review M3)" do
+      podcast.update!(downloads_bands_only: true)
+      figure = podcast.public_downloads
+      expect([ figure.value, figure.range, figure.text, figure.text(short: true) ])
+        .to eq([ nil, 1_000...2_500, "1,000 to 2,500 plays per episode", "1,000 to 2,500 plays per episode" ])
+
+      podcast.update!(downloads_per_episode: 25_000)
+      expect(podcast.public_downloads.text).to eq("10,000 and up plays per episode")
+    end
+
+    it "is nil for an unclaimed podcast, a figure from the feed or none (code review L8)" do
+      expect(podcast.tap { |p| p.update!(claimed_at: nil) }.public_downloads).to be_nil
+      expect(create(:podcast, :claimed, downloads_per_episode: 90, downloads_trust: "feed").public_downloads).to be_nil
+      expect(create(:podcast, :claimed).public_downloads).to be_nil
+    end
+  end
+
   describe "#waiting_requests_count" do
     it "counts the requests that wait for a claim" do
       podcast = create(:podcast)
