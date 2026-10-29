@@ -1,0 +1,41 @@
+<%# locals: (showcase:, sponsors:) -%>
+<%# The brand side: three steps of the fit search agent, its call to action, and real shows from the directory as they
+    appear there (podcasts/_card). showcase is empty until the directory has indexable shows; the cards are left out. %>
+<section id="for-brands" class="page-section side" aria-labelledby="for-brands-title">
+  <div class="wrap side-grid">
+    <div class="side-copy">
+      <p class="eyebrow">For brands</p>
+      <h2 id="for-brands-title" class="type-h2 mt-2">Find podcasts your customers love</h2>
+      <p class="section-lead">An agent reads your customers' tastes on Qloo and ranks the shows that fit.</p>
+      <ol class="side-steps">
+        <li class="side-step">
+          <h3 class="side-step-title">Name your brand</h3>
+          <p>The agent finds it on Qloo, with its customers' tastes.</p>
+        </li>
+        <li class="side-step">
+          <h3 class="side-step-title">See who fits, and why</h3>
+          <p>Taste match, shows your competitors sponsor, price and verified numbers.</p>
+        </li>
+        <li class="side-step">
+          <h3 class="side-step-title">Request a spot</h3>
+          <p>Message the show directly. No commission.</p>
+        </li>
+      </ol>
+      <div class="hero-actions">
+        <%= ui_button "Find podcasts your customers love", new_brand_search_path %>
+        <%= ui_button "Browse the directory", podcasts_path, variant: :secondary %>
+      </div>
+    </div>
+
+    <% if showcase.any? %>
+      <figure class="side-shot">
+        <figcaption class="side-shot-caption">In the directory now</figcaption>
+        <ul class="dir-grid side-cards" aria-label="Podcasts from the directory">
+          <% showcase.each do |podcast| %>
+            <%= render "podcasts/card", podcast: podcast, sponsors: sponsors.fetch(podcast.id, 0) %>
+          <% end %>
+        </ul>
+      </figure>
+    <% end %>
+  </div>
+</section>

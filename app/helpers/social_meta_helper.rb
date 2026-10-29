@@ -2,7 +2,7 @@
 # content_for :meta: description, canonical URL, Open Graph and Twitter tags, each once, every URL absolute. Any other
 # page gets private_page_meta from layouts/_head: noindex, and no share image.
 module SocialMetaHelper
-  DEFAULT_TITLE = "#{APP_NAME}: find sponsors who already love your listeners".freeze
+  DEFAULT_TITLE = "#{APP_NAME}: where independent podcasts get sponsored".freeze
   DEFAULT_IMAGE_ALT = "#{APP_NAME}: find sponsors who already love your listeners".freeze
   SHARE_IMAGE_SIZE = { width: 1200, height: 630 }.freeze
   LOCALE = "en_US".freeze

@@ -51,9 +51,10 @@ RSpec.describe "First run" do
   it "takes a new user from the landing page to a Snapshot, the upgrade prompt and pricing with no dead ends" do
     visit "/"
     expect(page).to have_css("h1")
-    within("#hero") { expect_primary_action("Get my free Snapshot") }
+    within("#hero") { expect_primary_action("Find podcasts your customers love") }
     screenshot("landing")
-    within("#hero") { click_link "Get my free Snapshot" }
+    within("#hero") { click_link "Get your show sponsored" }
+    within("#for-podcasters") { click_link "Get a free Snapshot" }
 
     expect(page).to have_current_path("/users/sign_in")
     expect(page).to have_title("Sign in | Midrolo")

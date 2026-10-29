@@ -1,0 +1,31 @@
+<%# locals: (heading: :h3) -%>
+<%# What each side pays, above the podcaster plans on /pricing and the landing page (lane L9): listing a show is free for
+    good (plan principle 5), and brands search free during the trial. The brand side has no plan or checkout yet; its
+    limits are the ones the code enforces (LandingHelper#landing_brand_allowances). heading is the cards' level. %>
+<div class="sides">
+  <article class="plan-card sides-card" aria-labelledby="side_listing_name">
+    <%= content_tag heading, "Listing your show", id: "side_listing_name", class: "plan-name" %>
+    <p class="plan-price"><span class="plan-amount">Free</span> <span class="plan-per">forever</span></p>
+    <ul class="plan-features" aria-label="Listing your show includes">
+      <li>Claim your page and set your rates</li>
+      <li>Verified Spotify and Apple numbers</li>
+      <li>Requests from brands, in your inbox</li>
+      <li>No commission on any deal</li>
+    </ul>
+    <div class="plan-action">
+      <%= ui_button "Find your show", podcasts_path, variant: :secondary %>
+    </div>
+  </article>
+  <article class="plan-card sides-card" aria-labelledby="side_brands_name">
+    <%= content_tag heading, "For brands", id: "side_brands_name", class: "plan-name" %>
+    <p class="plan-price"><span class="plan-amount">Free</span> <span class="plan-per">during the trial</span></p>
+    <ul class="plan-features" aria-label="For brands includes">
+      <% landing_brand_allowances.each do |line| %>
+        <li><%= line %></li>
+      <% end %>
+    </ul>
+    <div class="plan-action">
+      <%= ui_button "Find podcasts your customers love", new_brand_search_path, variant: :secondary %>
+    </div>
+  </article>
+</div>

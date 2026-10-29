@@ -1,0 +1,28 @@
+<%# locals: (facts:) -%>
+<%# The proof strip: what a listing carries that a directory doesn't, each shown with the badge the product puts on it
+    (trust_badge is the podcast page's own). facts are the catalog's real counts, or nil while it's small. %>
+<section id="proof" class="proof" aria-labelledby="proof-title">
+  <div class="wrap">
+    <h2 id="proof-title" class="proof-title">Every number says where it came from</h2>
+    <ul class="proof-list">
+      <li class="proof-item">
+        <p class="proof-badge"><%= trust_badge("verified", source: "Spotify for Creators") %></p>
+        <h3 class="proof-name">Verified Spotify and Apple numbers</h3>
+        <p>Shows invite Midrolo to read their stats. No passwords.</p>
+      </li>
+      <li class="proof-item">
+        <p class="proof-badge"><%= trust_badge("feed") %></p>
+        <h3 class="proof-name">Sponsor history with evidence</h3>
+        <p>From each show's episode notes, with the episode and date.</p>
+      </li>
+      <li class="proof-item">
+        <p class="proof-badge"><%= ui_badge "Taste data from Qloo", tone: :accent %></p>
+        <h3 class="proof-name">Matched by audience taste</h3>
+        <p>Qloo ranks shows for brands, and brands for shows.</p>
+      </li>
+    </ul>
+    <% if facts && (counts = landing_catalog_facts(facts)).any? %>
+      <p class="proof-facts">In the directory now: <%= Copy.and_list(counts) %>, read from the shows' own feeds.</p>
+    <% end %>
+  </div>
+</section>
