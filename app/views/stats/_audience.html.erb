@@ -1,0 +1,60 @@
+<%# locals: (podcast:, heading: :h3) -%>
+<%# The verified audience card (lane L5, build spec section 11): who listens on Spotify by age, gender and country,
+    from Spotify for Creators, plus Apple's plays by country when Apple gives them. It sits next to Qloo's taste (the
+    podcasts/_audience partial, modeled), and each says where it comes from. Nothing before a claim or a first sync.
+    The breakdown covers the last 30 days, or the last 12 months when a month had too few listens to show one. %>
+<% numbers = stats_page_numbers(podcast) %>
+<% spotify = numbers.audience("spotify") if podcast.claimed? %>
+<% apple = numbers.audience("apple") if podcast.claimed? %>
+<% apple_countries = apple&.breakdown&.dig("country").presence %>
+<% if spotify || apple_countries %>
+  <section class="card" aria-label="Verified audience">
+    <header class="card-header flex-wrap items-center">
+      <%= content_tag heading, "Who listens", class: "card-title" %>
+      <%= trust_badge(spotify || apple) %>
+    </header>
+    <div class="card-body flex flex-col gap-5">
+      <% if spotify %>
+        <% breakdown = spotify.breakdown || {} %>
+        <% window = spotify.period_days.to_i > Stats::PlatformFetch::WINDOW_DAYS ? "last 12 months" : "last 30 days" %>
+        <% if breakdown.slice("age", "gender", "country").values.any?(&:present?) %>
+          <p class="text-sm text-ink-soft">Spotify listeners, <%= window %>, as Spotify for Creators counts them.</p>
+          <div class="grid gap-6 sm:grid-cols-3">
+            <% [ [ "Age", breakdown["age"], method(:stats_age_label) ],
+                 [ "Gender", breakdown["gender"], method(:stats_gender_label) ],
+                 [ "Top countries", breakdown["country"], method(:stats_country_name) ] ].each do |title, shares, namer| %>
+              <% rows = stats_share_rows(shares, limit: title == "Top countries" ? 5 : 8) { |key| namer.call(key) } %>
+              <% next if rows.empty? %>
+              <div class="flex min-w-0 flex-col gap-2">
+                <p class="text-sm font-semibold"><%= title %></p>
+                <% rows.each do |label, share, scaled| %>
+                  <div class="grid grid-cols-[7rem_1fr] items-center gap-2 text-sm">
+                    <span class="truncate text-ink-soft"><%= label %></span>
+                    <%= ui_meter(scaled, label: "#{title}: #{label}", value_text: stats_percent(share), show_label: false) %>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="text-ink-soft">Not enough Spotify listens yet to show the audience.</p>
+        <% end %>
+      <% end %>
+
+      <% if apple_countries %>
+        <div class="flex flex-col gap-2">
+          <p class="flex flex-wrap items-center gap-2 text-sm font-semibold">
+            Apple Podcasts plays by country, last 30 days
+            <%= trust_badge(apple) if spotify %>
+          </p>
+          <% stats_share_rows(apple_countries, limit: 5) { |code| stats_country_name(code) }.each do |label, share, scaled| %>
+            <div class="grid grid-cols-[7rem_1fr] items-center gap-2 text-sm">
+              <span class="truncate text-ink-soft"><%= label %></span>
+              <%= ui_meter(scaled, label: "Apple plays: #{label}", value_text: stats_percent(share), show_label: false) %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+<% end %>
