@@ -59,6 +59,14 @@ RSpec.describe Catalog::QlooMatch do
     expect(directory).to have_received(:search).with("Night Owls", limit: 10)
   end
 
+  it "takes a lone same-title hit even when the entity's maker reads differently, but not one of several" do
+    directory_with([ hit("11", "Glass Cannon", "Jo Park") ])
+    expect(described_class.call(entity("Q-11", "Glass Cannon", properties: { "channel" => "Big Network" }))&.podcast_index_id).to eq(11)
+
+    directory_with([ hit("12", "The Daily", "Ann"), hit("13", "The Daily", "Ben") ])
+    expect(described_class.call(entity("Q-12", "The Daily", properties: { "channel" => "Carla" }))).to be_nil
+  end
+
   it "takes a lone same-title hit when the entity names no author, and only English ones when asked" do
     directory_with([ hit("5", "Le Podcast", "Anne", language: "fr") ])
     expect(described_class.call(entity("Q-5", "Le Podcast"), english_only: true)).to be_nil

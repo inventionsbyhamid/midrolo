@@ -3,8 +3,8 @@ module Catalog
   # all use it). In order:
   #
   # 1. the podcast already linked to the entity id;
-  # 2. a catalog podcast with the same title key (Podcast.title_key_for) and no Qloo link yet, when exactly one fits:
-  #    its author is close to the entity's (Research::Names.close?), or the entity names no author;
+  # 2. a catalog podcast with the same title key (Podcast.title_key_for) and no Qloo link yet: the one whose author is
+  #    close to the entity's (Research::Names.close?), else the only one with that title;
   # 3. with directory: true (the default), a Podcasts::Directory.current search by the entity's name, the same rule
   #    over its hits, and the hit found or created as a podcast (Catalog::NewPodcast, its ingest queued at priority).
   #
@@ -77,13 +77,14 @@ module Catalog
       nil
     end
 
-    # The one candidate whose author is close to the entity's; without an entity author, the only candidate there is.
-    # Several directory entries for one show (the same title and author) take the first, the directory's best.
+    # The first candidate whose author is close to the entity's (several directory entries for one show take the
+    # directory's best); else the only candidate there is. Qloo's maker field for podcasts isn't documented and may
+    # name the network rather than the host, so a lone candidate with an equal title still counts; a title shared by
+    # several shows ("The Daily") needs the author.
     def only(candidates, &author_of)
       maker = author
-      return candidates.find { |candidate| Research::Names.close?(maker, author_of.call(candidate).to_s) } if maker
-
-      candidates.first if candidates.one?
+      close = maker && candidates.find { |candidate| Research::Names.close?(maker, author_of.call(candidate).to_s) }
+      close || (candidates.first if candidates.one?)
     end
 
     def link(podcast, id)
