@@ -5,10 +5,11 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  # R134: images are uploaded through the media kit form only, so Active Storage's direct-upload endpoint (drawn after
-  # these routes) is closed: it answers 404 like any unknown path. Its read routes (blobs, representations, the disk
-  # service) stay open.
+  # R134: Active Storage's direct-upload endpoint (drawn after these routes) is open to anyone, so it is closed: it
+  # answers 404 like any unknown path. The media kit's photos upload through /uploads instead, which needs a signed-in
+  # user and signs only small web images (R149). The read routes (blobs, representations, the disk service) stay open.
   match "rails/active_storage/direct_uploads", via: :all, to: ->(_env) { raise ActionController::RoutingError, "Not Found" }
+  post "uploads", to: "direct_uploads#create", as: :direct_uploads, format: false
 
   devise_for :users,
              skip: %i[sessions registrations passwords confirmations unlocks],

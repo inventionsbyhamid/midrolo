@@ -25,7 +25,13 @@ module MediaKitsHelper
 
   # The URL of a saved image's variant, or nil. An upload that failed validation is still in memory, unsaved.
   def kit_image_url(attachment, variant)
-    url_for(attachment.variant(variant)) if attachment.attached? && attachment.blob.persisted?
+    url_for(attachment.variant(variant)) if kit_image_saved?(attachment)
+  end
+
+  # A photo saved on the kit, not one picked in a form that then failed to save. A direct upload (R149) is stored
+  # before the form is sent, so a stored blob alone doesn't say the kit has it.
+  def kit_image_saved?(attachment)
+    attachment.attached? && attachment.blob.persisted? && !attachment.record.attachment_changes.key?(attachment.name.to_s)
   end
 
   # "Run a midroll in 4 episodes for $415, 10% off."

@@ -27,6 +27,15 @@ module ContentSecurity
     Array(path[%r{\Ahttps://cdn\.jsdelivr\.net/npm/maplibre-gl@[^/]+/}])
   end
 
+  # Where the browser sends a direct upload (R149): the storage bucket's own origin on S3-style services such as R2
+  # (https://<bucket>.<account>.r2.cloudflarestorage.com); nothing extra for the disk service, which is this app.
+  def upload_hosts
+    bucket = ActiveStorage::Blob.service.try(:bucket)
+    bucket ? [ URI.parse(bucket.url).origin ] : []
+  rescue StandardError
+    []
+  end
+
   # The map style's origin when MAP_STYLE_URL names another https or http host; a style that loads tiles from further
   # hosts needs them added here.
   def map_hosts(style_url = ENV["MAP_STYLE_URL"].to_s.strip)
@@ -47,7 +56,7 @@ Rails.application.configure do
     policy.style_src :self, "https://fonts.googleapis.com", -> { ContentSecurity.maplibre_folder }
     policy.font_src :self, "https://fonts.gstatic.com"
     policy.img_src :self, :https, :data, :blob
-    policy.connect_src :self, -> { ContentSecurity.map_hosts }
+    policy.connect_src :self, -> { ContentSecurity.map_hosts + ContentSecurity.upload_hosts }
     policy.worker_src :self, :blob, -> { ContentSecurity.maplibre_folder }
   end
 

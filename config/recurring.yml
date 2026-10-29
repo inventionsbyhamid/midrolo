@@ -16,3 +16,6 @@ production:
   requeue_stranded_billing_events:
     class: RequeueStrandedBillingEventsJob
     schedule: every 10 minutes
+  purge_unattached_blobs:
+    class: PurgeUnattachedBlobsJob
+    schedule: every day at 4:40am

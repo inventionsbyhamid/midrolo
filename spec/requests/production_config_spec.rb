@@ -79,7 +79,7 @@ RSpec.describe "Production configuration" do
       expect(@facts["mail_url"]).to eq("host" => "midrolo.com", "protocol" => "https")
     end
 
-    it "enforces the Content Security Policy: MapLibre's pinned folder only, and no data: fetches" do
+    it "enforces the Content Security Policy: MapLibre's pinned folder only, uploads to the bucket only (R149), and no data: fetches" do
       folder = Rails.application.importmap.packages.fetch("maplibre-gl").path[%r{\A.+/maplibre-gl@[^/]+/}]
       directives = @facts["csp"].split(";").to_h { |directive| directive.strip.split(/\s+/).then { |name, *sources| [ name, sources ] } }
 
@@ -87,7 +87,7 @@ RSpec.describe "Production configuration" do
       expect(directives["script-src"]).to start_with("'self'", folder)
       expect(directives.values_at("style-src", "worker-src")).to all(include(folder))
       expect(directives.values.flatten).not_to include("https://cdn.jsdelivr.net")
-      expect(directives["connect-src"]).to eq([ "'self'", "https://tiles.openfreemap.org" ])
+      expect(directives["connect-src"]).to eq([ "'self'", "https://tiles.openfreemap.org", "https://kits.acct.r2.cloudflarestorage.com" ])
     end
 
     it "makes no outside request and touches no database while answering (the Cloudflare ranges are seeded)" do

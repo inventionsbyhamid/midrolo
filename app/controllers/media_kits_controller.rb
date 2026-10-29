@@ -1,6 +1,8 @@
 # The owner's side of a media kit: the private preview (always available, watermarked, noindex), the editor, and
 # publishing, which needs a verified show. Scoped to the user's own shows. Viewing never creates a kit row.
 class MediaKitsController < ApplicationController
+  UPLOAD_MISSING = "That photo didn't finish uploading. Please choose it again.".freeze
+
   layout "app"
   before_action :authenticate_user!
   before_action :set_show_and_kit
@@ -26,6 +28,10 @@ class MediaKitsController < ApplicationController
       @content = MediaKit::Content.new(@kit)
       render :edit, status: :unprocessable_content
     end
+  rescue ActiveStorage::FileNotFoundError
+    # A direct upload's signed id whose file never reached storage (R149): Active Storage reads the file's start as
+    # soon as it's assigned. The page's own uploads finish before the form is sent, so only a broken one lands here.
+    redirect_to edit_show_media_kit_path(@show), alert: UPLOAD_MISSING, status: :see_other
   end
 
   def publish

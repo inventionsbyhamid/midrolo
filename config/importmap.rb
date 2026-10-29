@@ -5,6 +5,8 @@ pin "@hotwired/turbo-rails", to: "turbo.min.js"
 pin "@hotwired/stimulus", to: "stimulus.min.js"
 pin "@hotwired/stimulus-loading", to: "stimulus-loading.js"
 pin_all_from "app/javascript/controllers", under: "controllers"
+# Direct uploads for the media kit's photos (R149), from the activestorage gem's own build.
+pin "@rails/activestorage", to: "activestorage.esm.js"
 
 # MapLibre GL for the report heatmap: one exact version from jsdelivr's ESM build (it loads its shared chunk and
 # worker from the same folder). Not preloaded: map_controller imports it only when a map scrolls into view.

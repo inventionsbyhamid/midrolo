@@ -65,6 +65,32 @@ RSpec.describe MediaKit do
       end
     end
 
+    describe "direct uploads (R149)" do
+      # What /uploads and the browser leave behind: a stored blob the form attaches by its signed id, with whatever
+      # type the browser declared.
+      def stored(bytes) = ActiveStorage::Blob.create_and_upload!(io: StringIO.new(bytes), filename: "photo.png",
+                                                                 content_type: "image/png", identify: false)
+
+      it "accepts a stored photo, read back from storage" do
+        kit.update!(cover: stored(fixture("cover.png").binread).signed_id)
+        expect(kit.reload.cover).to be_attached
+      end
+
+      it "rejects a stored file that only claims to be a photo, judged by its bytes" do
+        kit.cover = stored('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>').signed_id
+        expect(kit).not_to be_valid
+        expect(kit.errors.full_messages).to include("Cover couldn't be read as an image. Try a JPEG, PNG or WebP file.")
+      end
+
+      it "rejects an image libvips reads but the kit doesn't take" do
+        gif = "GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00" \
+              "\x01\x00\x01\x00\x00\x02\x02D\x01\x00;".b
+        kit.host_photo = stored(gif).signed_id
+        expect(kit).not_to be_valid
+        expect(kit.errors.full_messages).to include("Host photo couldn't be read as an image. Try a JPEG, PNG or WebP file.")
+      end
+    end
+
     it "removes a photo when asked" do
       kit.host_photo.attach(io: fixture("host.jpg").open, filename: "host.jpg")
       kit.update!(remove_host_photo: "1")

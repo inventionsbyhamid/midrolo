@@ -30,15 +30,22 @@
   <%= render "components/card", title: "Photos" do %>
     <div class="grid gap-6 sm:grid-cols-2">
       <% { cover: [ "Cover", "A wide image across the top of your kit." ], host_photo: [ "Host photo", "A photo of you, shown beside your story." ] }.each do |name, (label, help)| %>
-        <div class="min-w-0">
+        <div class="min-w-0" data-controller="upload" data-upload-max-bytes-value="<%= MediaKit::MAX_IMAGE_BYTES %>"
+             data-upload-types-value="<%= MediaKit::IMAGE_TYPES.to_json %>">
           <%= f.label name, label, class: "label" %>
           <% if (current = kit_image_url(kit.public_send(name), name == :cover ? :hero : :portrait)) %>
             <img src="<%= current %>" alt="Your current <%= label.downcase %>" class="<%= class_names("kit-thumb", "kit-thumb-wide" => name == :cover) %>">
           <% end %>
+          <%# Uploads straight to storage on save, with progress (R149); upload_controller.js shows it. %>
           <%= f.file_field name, accept: MediaKit::IMAGE_TYPES.join(","), class: "input kit-file",
-                aria: { describedby: "#{name}-help", invalid: kit.errors.key?(name).presence } %>
+                aria: { describedby: "#{name}-help #{name}-upload", invalid: kit.errors.key?(name).presence },
+                data: { direct_upload_url: direct_uploads_url, upload_target: "input",
+                        action: "change->upload#check direct-upload:start->upload#start direct-upload:progress->upload#progress " \
+                                "direct-upload:error->upload#fail direct-upload:end->upload#finish" } %>
           <p id="<%= name %>-help" class="hint"><%= help %> JPEG, PNG or WebP, up to 5 MB.</p>
-          <% if kit.public_send(name).attached? && kit.public_send(name).blob.persisted? %>
+          <progress class="upload-bar" max="100" value="0" data-upload-target="bar" aria-label="<%= label %> upload" hidden></progress>
+          <p id="<%= name %>-upload" class="upload-status" data-upload-target="status" aria-live="polite"></p>
+          <% if kit_image_saved?(kit.public_send(name)) %>
             <label class="mt-2 flex items-center gap-2 text-sm">
               <%= f.check_box :"remove_#{name}" %> Remove this <%= label.downcase %>
             </label>
