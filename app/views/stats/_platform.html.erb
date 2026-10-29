@@ -1,15 +1,24 @@
 <%# locals: (provider:, show:, connection:, readings:, locked: false) -%>
-<%# One platform's card on the Stats screen: how to invite Midrolo, then where the connection stands and what it read. %>
+<%# One platform's card on the Stats screen: how to invite Midrolo, then where the connection stands and what it read.
+    A problem reads as one alert with its cause and its one fix (review ST-2); a link that didn't parse comes back in
+    the field with the reason under it (ST-3). %>
 <% name = Stats.platform_name(provider) %>
 <% service = Stats.service_name(provider) %>
 <% read = Stats::PageNumbers::SHOWN.fetch(provider).filter_map { |metric| readings.find { |reading| reading.metric == metric } } %>
-<% ask_for_link = connection.nil? || connection.failed? || connection.disconnected? || connection.mismatch? %>
-<%# The platform's own name for the show once a sync has read it, else its id; links to the show on the platform. %>
+<% bad = flash[:stats_bad_link] if flash[:stats_bad_link].is_a?(Hash) && flash[:stats_bad_link]["provider"] == provider %>
+<% review = connection.present? && ::Stats::Ownership.needs_review?(connection) %>
+<% our_side = connection&.failed? && connection.activated_at.present? %>
+<% ask_for_link = connection.nil? || connection.disconnected? || (connection.mismatch? && !review) || (connection.failed? && !our_side) %>
+<%# The platform's own name for the show once a sync has read it, else "your Spotify show"; the id is in the tooltip (ST-1). %>
 <% if connection %>
   <% show_name = readings.max_by(&:captured_at)&.evidence&.dig("show_name").presence %>
-  <% platform_show = link_to(show_name || "show #{connection.external_id}", Stats.show_url(provider, connection.external_id),
-                             class: "link", target: "_blank", rel: "noopener noreferrer") %>
+  <% platform_show = link_to(show_name || "your #{name} show", Stats.show_url(provider, connection.external_id),
+                             class: "link", target: "_blank", rel: "noopener noreferrer", title: "#{name} show id #{connection.external_id}") %>
 <% end %>
+<% link_value = if bad then bad["link"]
+                elsif connection then Stats.show_url(provider, connection.external_id)
+                elsif provider == "apple" && show.podcast.apple_id then Stats.show_url("apple", show.podcast.apple_id)
+                end %>
 <div id="<%= provider %>" class="scroll-mt-6">
   <%= render "components/card", title: name, aside: (connection ? stats_connection_badge(connection) : ui_badge("Not connected")) do %>
     <div class="flex flex-col gap-4">
@@ -20,18 +29,30 @@
             We're waiting for access to <%= platform_show %> on <%= name %>. We check every 15 minutes
             until <%= stats_date(connection.created_at + StatConnection::INVITE_WINDOW) %>, and your numbers appear here as soon as the invite is accepted.
           </p>
+          <% if connection.last_error.present? %><p class="text-ink-soft" role="status"><%= connection.last_error %></p><% end %>
         <% when "active" %>
           <p>
             Connected to <%= platform_show %> on <%= name %>.
             Last read <%= stats_date(connection.last_synced_at || connection.updated_at) %>
             at <%= (connection.last_synced_at || connection.updated_at).utc.strftime("%H:%M") %> UTC. We read it again every day.
           </p>
-        <% when "disconnected" %>
-          <p>Midrolo's access was removed in <%= service %>. Numbers already on your page stay until they're 45 days old, then show as "Last verified".</p>
-        <% end %>
-
-        <% if connection.last_error.present? %>
-          <p class="<%= connection.pending_invite? ? 'text-ink-soft' : 'field-error mt-0' %>" role="status"><%= connection.last_error %></p>
+        <% else %>
+          <% tone, title, fix = if review
+               [ "warning", "Being checked", "Nothing to do for now. We'll email you when it's approved." ]
+             elsif our_side
+               [ "warning", "We couldn't read #{service} this time", connection.last_error.present? ? "Press Check now to try sooner." : "We'll try again within a day, or press Check now." ]
+             elsif connection.mismatch?
+               [ "danger", "That link isn't #{show.title} on #{name}", "Paste the link to #{show.title} on #{name} below." ]
+             elsif connection.disconnected?
+               [ "danger", "Midrolo's access was removed in #{service}", "Numbers already on your page stay until they're 45 days old. Invite Midrolo again to keep them fresh." ]
+             else
+               [ "danger", "We never got access", "Invite Midrolo again, then paste your show's link below." ]
+             end %>
+          <div class="stats-alert stats-alert-<%= tone %>" role="status">
+            <p class="font-semibold"><%= title %></p>
+            <% if connection.last_error.present? && connection.last_error != title %><p><%= connection.last_error %></p><% end %>
+            <p><%= fix %></p>
+          </div>
         <% end %>
 
         <% if connection.active? && read.any? %>
@@ -49,21 +70,32 @@
       <% if locked %>
         <p class="text-ink-soft">Only the account that owns this show on Midrolo can connect its <%= name %> stats.</p>
       <% elsif ask_for_link %>
-        <%= render "stats/invite_steps", provider: provider %>
+        <% if connection %>
+          <%# They've invited Midrolo before: the steps stay one click away. %>
+          <details class="text-sm">
+            <summary class="link cursor-pointer">How to invite Midrolo</summary>
+            <div class="mt-3"><%= render "stats/invite_steps", provider: provider %></div>
+          </details>
+        <% else %>
+          <%= render "stats/invite_steps", provider: provider %>
+        <% end %>
         <%= form_with url: show_stat_connections_path(show), class: "flex flex-col gap-3" do |f| %>
           <%= hidden_field_tag :provider, provider %>
           <div class="flex flex-col gap-1">
             <%= label_tag "show_link_#{provider}", "Your #{name} show link", class: "label" %>
-            <%= text_field_tag :show_link, (provider == "apple" && show.podcast.apple_id ? Stats.show_url("apple", show.podcast.apple_id) : nil),
+            <%= text_field_tag :show_link, link_value,
                   id: "show_link_#{provider}", class: "input", required: true, autocomplete: "off", spellcheck: false, maxlength: 300,
-                  placeholder: provider == "spotify" ? "https://open.spotify.com/show/..." : "https://podcasts.apple.com/us/podcast/your-show/id..." %>
-            <% if provider == "apple" && show.podcast.apple_id %>
+                  placeholder: provider == "spotify" ? "https://open.spotify.com/show/..." : "https://podcasts.apple.com/us/podcast/your-show/id...",
+                  aria: { invalid: bad.present?.presence, describedby: (bad ? "show_link_#{provider}_error" : nil) } %>
+            <% if bad %>
+              <p id="show_link_<%= provider %>_error" class="field-error"><%= bad["message"] %></p>
+            <% elsif provider == "apple" && connection.nil? && show.podcast.apple_id %>
               <p class="hint">We found your show on Apple Podcasts already. Change the link if it's not right.</p>
             <% end %>
           </div>
           <div><%= f.submit "I've invited Midrolo", class: "btn btn-primary btn-md" %></div>
         <% end %>
-      <% elsif connection.pending_invite? %>
+      <% elsif connection&.pending_invite? %>
         <details class="text-sm">
           <summary class="link cursor-pointer">How to invite Midrolo</summary>
           <div class="mt-3"><%= render "stats/invite_steps", provider: provider %></div>
@@ -72,7 +104,7 @@
 
       <% if connection && !locked %>
         <div class="flex flex-wrap gap-3 border-t border-line pt-4">
-          <% unless connection.disconnected? || (connection.failed? && connection.activated_at.nil?) %>
+          <% if connection.pending_invite? || connection.active? || our_side %>
             <%= button_to "Check now", check_show_stat_connection_path(show, connection), class: "btn btn-secondary btn-sm" %>
           <% end %>
           <%= button_to (connection.active? ? "Disconnect" : "Remove"), show_stat_connection_path(show, connection), method: :delete,

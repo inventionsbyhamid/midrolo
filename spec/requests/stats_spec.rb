@@ -70,7 +70,13 @@ RSpec.describe "Stats screen" do
 
       it "refuses a link without a show id" do
         post show_stat_connections_path(show), params: { provider: "spotify", show_link: "https://open.spotify.com/episode/x" }
-        expect(flash[:alert]).to include("Paste your show's Spotify link")
+        expect(response).to redirect_to(show_stats_path(show, anchor: "spotify"))
+        expect(flash[:stats_bad_link]).to include("provider" => "spotify", "link" => "https://open.spotify.com/episode/x")
+        follow_redirect!
+        field = Nokogiri::HTML(response.body).at_css("#show_link_spotify")
+        expect(field["value"]).to eq("https://open.spotify.com/episode/x")
+        expect(field["aria-invalid"]).to eq("true")
+        expect(Nokogiri::HTML(response.body).at_css("#show_link_spotify_error").text).to include("Paste your show's Spotify link")
         post show_stat_connections_path(show), params: { provider: "youtube", show_link: "x" }
         expect(flash[:alert]).to eq("Choose Spotify or Apple Podcasts.")
         expect(StatConnection.count).to eq(0)

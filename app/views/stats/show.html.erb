@@ -33,7 +33,7 @@
   <% end %>
 
   <%= render "stats/provided", show: @show, reading: @readings.find { |reading| reading.source == Podcast::Stats::PROVIDED_SOURCE && reading.metric == StatReading::DOWNLOADS_PER_EPISODE },
-                               owner: @owner, locked: @claimed_elsewhere %>
+                               owner: @owner, locked: @claimed_elsewhere, verified: @owner && numbers.verified? %>
 
   <% if @owner && numbers.any? %>
     <section class="flex flex-col gap-4" aria-labelledby="on-your-page">
