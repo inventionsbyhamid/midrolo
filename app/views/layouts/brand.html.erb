@@ -10,7 +10,7 @@
     <%= render "shared/masquerade_banner" %>
     <%= render "components/demo_banner" if demo_mode? %>
     <%= render "shared/promo_banner" %>
-    <%= render "components/nav", links: brand_nav_links, sign_out: true %>
+    <%= render "components/nav", links: brand_nav_links, sign_out: true, side: :brand %>
     <%= render "components/flash" %>
     <main id="main" tabindex="-1" class="wrap flex-1 py-8 sm:py-10">
       <%= yield %>

@@ -85,11 +85,13 @@ RSpec.describe "Authentication" do
     end
   end
 
-  it "signs in with Google and lands on /shows" do
+  it "signs in with Google and lands a new account on the podcaster or brand choice, then on /shows as a podcaster" do
     get "/users/auth/google_oauth2/callback"
 
-    expect(response).to redirect_to("/shows")
+    expect(response).to redirect_to("/welcome")
     expect(User.find_by(email: "ada@example.com")).to be_present
+    patch "/side", params: { role: "podcaster" }
+    expect(response).to redirect_to("/shows")
     follow_redirect! # a user with no shows is sent on to the add-a-show page
     expect(response).to redirect_to("/shows/new")
     follow_redirect!

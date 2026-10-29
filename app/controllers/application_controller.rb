@@ -43,13 +43,21 @@ class ApplicationController < ActionController::Base
 
   # Sign in keeps your place (build spec section 10): where you were going (Devise stores it when a page needs sign in;
   # other pages call store_location_for(:user, path) before sending you to sign in), else your side's home: the brand
-  # workspace when you last worked as a brand, your shows otherwise.
+  # workspace when you last worked as a brand, your shows otherwise. A new account that hasn't picked a side yet
+  # chooses first (SidesController#new, review G-1), so a brand never lands on the podcaster's onboarding.
   def after_sign_in_path_for(resource)
-    stored_location_for(resource) || (resource.last_role == "brand" ? BRAND_HOME : shows_path)
+    stored_location_for(resource) || side_home_for(resource)
   end
   def after_sign_out_path_for(_scope) = "/"
 
   private
+
+  def side_home_for(user)
+    return BRAND_HOME if user.last_role == "brand"
+    return welcome_path if user.last_role.nil? && !user.shows.exists? && !user.brand_member?
+
+    shows_path
+  end
 
   # True while an admin views the app as this user (Admin::MasqueradesController, R150).
   def masquerading? = session[:masquerader_id].present? && user_signed_in?

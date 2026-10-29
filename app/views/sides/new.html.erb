@@ -1,0 +1,37 @@
+<% content_for :title, "Welcome" %>
+<%# The first sign in's choice (review G-1). Each card is one button: it remembers the side and opens its home. %>
+<div class="mx-auto flex max-w-4xl flex-col gap-8 py-4">
+  <header class="flex flex-col gap-2">
+    <p class="text-sm font-semibold text-plum">Welcome to <%= APP_NAME %><%= ", #{current_user.name.split.first}" if current_user.name.present? %></p>
+    <h1 class="type-h1">How will you use <%= APP_NAME %>?</h1>
+    <p class="type-lead">Pick a side to start. You can switch any time from the menu.</p>
+  </header>
+
+  <div class="role-choices">
+    <%= button_to side_path, method: :patch, params: { role: "podcaster" }, class: "role-choice", form_class: "contents" do %>
+      <span class="role-choice-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="size-6"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Zm-7 9a7 7 0 0 0 14 0M12 19v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </span>
+      <span class="role-choice-title">I run a podcast</span>
+      <span class="role-choice-list">
+        <span>Find and claim your show's page</span>
+        <span>Set your rates and the months you're open</span>
+        <span>Answer brands that ask for a spot</span>
+      </span>
+      <span class="btn btn-secondary btn-md mt-auto self-start">Find my show</span>
+    <% end %>
+
+    <%= button_to side_path, method: :patch, params: { role: "brand" }, class: "role-choice", form_class: "contents" do %>
+      <span class="role-choice-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="size-6"><path d="M3 12h2m3-5v10m4-13v16m4-11v6m4-3h1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </span>
+      <span class="role-choice-title">I'm a brand</span>
+      <span class="role-choice-list">
+        <span>Find podcasts your customers love, ranked with Qloo</span>
+        <span>See who already sponsors them and what a spot costs</span>
+        <span>Request a spot in a few clicks</span>
+      </span>
+      <span class="btn btn-primary btn-md mt-auto self-start">Find podcasts</span>
+    <% end %>
+  </div>
+</div>

@@ -109,15 +109,15 @@ RSpec.describe "Public pages" do
       expect(header.text).not_to include("Sign in", "Pipeline")
     end
 
-    it "adds Brand for a brand's member and counts the unread conversations on Inbox" do
+    it "gives a brand's member the switch to the brand side and counts the unread conversations on Inbox" do
       user = create(:user)
       member = create(:brand_member, user: user)
       create(:conversation, brand: member.brand, started_by: user)
       sign_in user
       get "/"
 
-      expect(nav_links.keys).to eq([ "Podcasts", "Your shows", "Inbox 1 1 unread", "Brand", "Account" ])
-      expect(nav_links["Brand"]).to eq("/brand")
+      expect(nav_links.keys).to eq([ "Podcasts", "Your shows", "Inbox 1 1 unread", "Account" ])
+      expect(header.at_css("nav[aria-label='Main'] .side-switch form[action='/side'] button").text).to eq("Brand")
       inbox = header.at_css("nav[aria-label='Main'] a[href='/inbox']")
       expect(inbox.at_css(".nav-count").text).to eq("1")
       expect(inbox.at_css(".nav-count")["aria-hidden"]).to eq("true")

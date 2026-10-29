@@ -14,3 +14,7 @@ scope "brand", module: "brands", as: "brand" do
   resources :searches, only: %i[index new create show]
   resources :saved, controller: "saved_podcasts", as: :saved_podcasts, only: %i[index show create destroy]
 end
+
+# The side switch in the nav (podcaster or brand) and the first sign in's choice between them (lane design-brand).
+patch "side", to: "sides#update", as: :side
+get "welcome", to: "sides#new", as: :welcome

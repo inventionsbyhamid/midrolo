@@ -1,0 +1,14 @@
+<%# locals: (side: nil, class: nil) -%>
+<%# Podcaster or Brand (review G-2): which side of Midrolo the signed-in person works on. Pressing the other side
+    remembers it (User#last_role, SidesController) and opens that side's home. %>
+<% side ||= nav_side %>
+<div class="<%= class_names("side-switch", local_assigns[:class]) %>" role="group" aria-label="Work as">
+  <% [ [ :podcaster, "Podcaster" ], [ :brand, "Brand" ] ].each do |key, label| %>
+    <% if side == key %>
+      <span class="side-switch-option" aria-current="true"><%= label %></span>
+    <% else %>
+      <%= button_to label, side_path, method: :patch, params: { role: key }, class: "side-switch-option",
+            aria: { label: "Switch to the #{label.downcase} side" } %>
+    <% end %>
+  <% end %>
+</div>
