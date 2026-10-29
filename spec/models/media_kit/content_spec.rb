@@ -56,35 +56,37 @@ RSpec.describe MediaKit::Content do
 
   describe "#contact" do
     it "mails the contact email the owner chose" do
-      show.update!(contact_email: "sponsors@example.com", owner_email: "owner@example.com")
+      show.update!(contact_email: "sponsors@example.com")
+      show.podcast.update!(owner_email: "owner@example.com")
       expect(content.contact_href).to eq("mailto:sponsors@example.com")
     end
 
     it "never falls back to the feed's owner address" do
-      show.update!(contact_email: nil, owner_email: "owner@example.com", website: "https://show.example.com")
+      show.update!(contact_email: nil)
+      show.podcast.update!(owner_email: "owner@example.com", website: "https://show.example.com")
       expect(content.contact_href).to eq("https://show.example.com")
 
-      show.update!(website: nil)
+      show.podcast.update!(website: nil)
       expect(content.contact_href).to be_nil
     end
 
     it "ignores a website that isn't http(s)" do
-      show.update_columns(website: "javascript:alert(1)")
+      show.podcast.update_columns(website: "javascript:alert(1)")
       expect(content.contact_href).to be_nil
     end
   end
 
   it "describes the publishing cadence in words" do
     expect(content.cadence).to eq("Weekly")
-    show.update!(cadence_days: 1)
+    show.podcast.update!(cadence_days: 1)
     expect(content.cadence).to eq("Daily")
-    show.update!(cadence_days: 14)
+    show.podcast.update!(cadence_days: 14)
     expect(content.cadence).to eq("Every 2 weeks")
-    show.update!(cadence_days: 30)
+    show.podcast.update!(cadence_days: 30)
     expect(content.cadence).to eq("Monthly")
-    show.update!(cadence_days: 4)
+    show.podcast.update!(cadence_days: 4)
     expect(content.cadence).to eq("Every 4 days")
-    show.update!(cadence_days: nil)
+    show.podcast.update!(cadence_days: nil)
     expect(content.cadence).to be_nil
   end
 end

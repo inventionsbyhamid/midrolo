@@ -1,6 +1,6 @@
 # A show's media kit: the owner's story, photos and rates on top of the show's stats and audience profile
-# (assembled by MediaKit::Content). The private preview is always available; the public page at /k/:slug needs a
-# verified show and published_at.
+# (assembled by MediaKit::Content), and the podcast's listing. The private preview is always available; the public page
+# at /k/:slug (the podcast's slug) needs a verified show and published_at.
 class MediaKit < ApplicationRecord
   IMAGE_TYPES = %w[image/jpeg image/png image/webp].freeze
   MAX_IMAGE_BYTES = 5.megabytes
@@ -12,6 +12,11 @@ class MediaKit < ApplicationRecord
   HEADLINE_LIMIT = 120
   ABOUT_LIMIT = 2000
   HIDDEN_BRANDS_LIMIT = 100 # reports list 20 brands; this only bounds a crafted request
+  # The listing (build spec section 3): who the show is looking for, what it won't take, and which months are open
+  # ("2026-11").
+  LOOKING_FOR_LIMIT = 500
+  EXCLUSIONS_LIMIT = 20
+  MONTH = /\A\d{4}-(0[1-9]|1[0-2])\z/
   VERIFY_TO_PUBLISH = "Verify you own this show to publish.".freeze
   # A visitor counts once per kit in this window.
   VIEW_WINDOW = 30.minutes
@@ -39,6 +44,8 @@ class MediaKit < ApplicationRecord
 
   validates :headline, length: { maximum: HEADLINE_LIMIT }
   validates :about, length: { maximum: ABOUT_LIMIT }
+  validates :looking_for, length: { maximum: LOOKING_FOR_LIMIT }
+  validate :open_months_are_months
   validate :images_are_small_web_images
   validate :rates_are_whole_dollars
 
@@ -69,12 +76,20 @@ class MediaKit < ApplicationRecord
     end.to_h)
   end
 
+  def open_months=(value)
+    super(Array(value).map { |month| month.to_s.strip }.compact_blank.uniq.sort)
+  end
+
+  def exclusions=(value)
+    super(Array(value).map { |item| item.to_s.squish.first(HEADLINE_LIMIT) }.compact_blank.uniq.first(EXCLUSIONS_LIMIT))
+  end
+
   def hidden_brand_ids=(value)
     super(Array(value).map { |id| id.to_s.strip }.compact_blank.uniq.first(HIDDEN_BRANDS_LIMIT))
   end
 
   def publish!
-    unless show.verified? && show.slug.present?
+    unless show.verified?
       errors.add(:base, VERIFY_TO_PUBLISH)
       return false
     end
@@ -149,6 +164,10 @@ class MediaKit < ApplicationRecord
   end
 
   def header_of(image) = [ image.width, image.height, image.get("vips-loader") ]
+
+  def open_months_are_months
+    errors.add(:open_months, "must be months like 2026-11") unless open_months.all? { |month| month.to_s.match?(MONTH) }
+  end
 
   def rates_are_whole_dollars
     rate_card_overrides.each do |slot, figure|

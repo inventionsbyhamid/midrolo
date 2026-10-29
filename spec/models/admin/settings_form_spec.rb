@@ -2,7 +2,8 @@ require "rails_helper"
 
 RSpec.describe Admin::SettingsForm do
   let(:valid) do
-    { promo_budget_usd: "10", judge_reserve_usd: "5", llm_daily_budget_usd: "5", promo_pro_until: "2026-11-06",
+    { promo_budget_usd: "10", judge_reserve_usd: "5", llm_daily_budget_usd: "5", llm_catalog_daily_usd: "1",
+      promo_pro_until: "2026-11-06",
       qloo_daily_call_limit: "100", qloo_cost_per_call_usd: "", qloo_free_share: "0.4" }
   end
 

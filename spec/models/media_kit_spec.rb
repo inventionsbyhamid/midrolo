@@ -127,13 +127,13 @@ RSpec.describe MediaKit do
     end
 
     it "publishes once the show is verified" do
-      show.verify!
+      show.verify!(via: "admin")
       expect(kit.publish!).to be(true)
       expect(kit.reload).to be_published
     end
 
     it "unpublishes" do
-      show.verify!
+      show.verify!(via: "admin")
       kit.publish!
       kit.unpublish!
       expect(kit.reload).not_to be_published

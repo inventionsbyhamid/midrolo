@@ -1,6 +1,9 @@
 # One try at proving a user owns a show, which a public media kit requires: a 6-digit code emailed to the feed's
-# owner address (kind "email"), or a token the owner puts in the feed (kind "feed_token"). Success marks only this
-# user's Show row verified; other users' copies of the same feed are untouched.
+# owner address (kind "email"), or a token the owner puts in the feed (kind "feed_token"). Success makes this user's
+# Show the podcast's owner show (Show#verify!); other users' workspaces for the same podcast stay unverified, and a
+# podcast another account already owns can't be verified again (Show::AlreadyClaimed).
+#
+# sent_to is encrypted, deterministically, so the per-address caps can still query it.
 #
 # Codes are never stored: code_digest is an HMAC-SHA256 keyed from secret_key_base, and the code itself is made in
 # VerificationMailer#code while the email renders, so it never sits in the job queue or a log line.
@@ -41,6 +44,7 @@ class ShowVerification < ApplicationRecord
   end
 
   belongs_to :show
+  encrypts :sent_to, deterministic: true
   enum :kind, { email: "email", feed_token: "feed_token" }, validate: true
 
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
@@ -155,7 +159,7 @@ class ShowVerification < ApplicationRecord
 
   def mark_verified!
     update!(verified_at: Time.current)
-    show.verify!
+    show.verify!(via: kind)
     true
   end
 

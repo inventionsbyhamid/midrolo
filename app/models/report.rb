@@ -27,7 +27,7 @@ class Report < ApplicationRecord
   def self.distinct_tastes(items) = items.uniq { |item| item["name"].to_s.downcase.gsub(/[^[:alnum:]]/, "").delete_suffix("s") }
 
   belongs_to :show
-  has_many :agent_steps, -> { order(:position, :id) }, dependent: :destroy
+  has_many :agent_steps, -> { order(:position, :id) }, as: :run, dependent: :destroy, inverse_of: :run
   # In the order the report lists them, which is also the order the plan's visible limit counts in (R43).
   has_many :sponsor_matches, -> { order(*SponsorMatch::IN_REPORT_ORDER) }, dependent: :destroy
 

@@ -17,7 +17,7 @@ RSpec.describe ShowVerification do
     end
 
     it "is unavailable when the feed lists no owner email" do
-      show.update!(owner_email: nil)
+      show.podcast.update!(owner_email: nil)
       expect { described_class.request_code!(show) }.to raise_error(ShowVerification::Unavailable)
     end
 
@@ -117,11 +117,12 @@ RSpec.describe ShowVerification do
       expect(verification.code_digest).to eq(OpenSSL::HMAC.hexdigest("SHA256", key, "#{verification.id}:#{code}"))
     end
 
-    it "verifies the show with the right code and gives it a slug from the title" do
+    it "verifies the show with the right code, making it the podcast's owner" do
       code = verification.issue_code!
 
       expect(verification.check_code(code)).to be(true)
-      expect(show.reload).to have_attributes(verified_at: be_present, slug: "the-founder-s-ledger")
+      expect(show.reload.verified_at).to be_present
+      expect(show.podcast.reload).to have_attributes(claimed_at: show.verified_at, owner_show: show)
       expect(verification.reload.verified_at).to be_present
     end
 
@@ -168,22 +169,27 @@ RSpec.describe ShowVerification do
       expect(described_class.current_for(show)).to eq(newer)
     end
 
-    it "gives a second show with the same title the slug title-2" do
+    it "verifies two different shows with the same title, each its own podcast" do
       other = create(:show, title: "The Founder's Ledger", owner_email: "sam@example.com")
       first = described_class.request_code!(show)
       first.check_code(first.issue_code!)
       second = described_class.request_code!(other)
       second.check_code(second.issue_code!)
 
-      expect([ show.reload.slug, other.reload.slug ]).to eq(%w[the-founder-s-ledger the-founder-s-ledger-2])
+      expect([ show.reload, other.reload ]).to all(be_verified)
+      expect(show.slug).not_to eq(other.slug)
     end
 
-    it "leaves other users' copies of the same feed unverified" do
+    it "leaves other users' workspaces for the same podcast unverified, and won't verify one of them later" do
       copy = create(:show, title: show.title, feed_url: show.feed_url, owner_email: "jane@example.com")
       verification.check_code(verification.issue_code!)
 
       expect(show.reload).to be_verified
-      expect(copy.reload).to have_attributes(verified_at: nil, slug: nil)
+      expect(copy.reload.verified_at).to be_nil
+      travel 2.minutes
+      later = described_class.request_code!(copy)
+      expect { later.check_code(later.issue_code!) }.to raise_error(Show::AlreadyClaimed)
+      expect([ copy.reload.verified_at, later.reload.verified_at ]).to eq([ nil, nil ])
     end
   end
 
@@ -217,7 +223,8 @@ RSpec.describe ShowVerification do
       stub_request(:get, feed_url).to_return(status: 200, body: feed_xml(description: "<p>Great show.</p><p>midrolo-verify=#{verification.token}</p>"))
 
       expect(verification.check_feed_token!).to be(true)
-      expect(show.reload).to have_attributes(verified_at: be_present, slug: "token-talk")
+      expect(show.reload.verified_at).to be_present
+      expect(show.podcast.reload.claimed_at).to be_present
     end
 
     it "verifies when the token is in podcast:txt" do
@@ -257,7 +264,7 @@ RSpec.describe ShowVerification do
     end
 
     it "goes through the SSRF guard: an internal feed URL is never fetched" do
-      show.update_columns(feed_url: "http://169.254.169.254/latest/meta-data")
+      show.podcast.update_columns(feed_url: "http://169.254.169.254/latest/meta-data")
       verification = described_class.start_feed_token!(show)
 
       expect(verification.check_feed_token!).to be(false)

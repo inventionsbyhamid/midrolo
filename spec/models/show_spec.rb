@@ -1,10 +1,16 @@
 require "rails_helper"
 
 RSpec.describe Show do
-  it "requires a title, a user and a way to find the feed" do
-    expect(build(:show, title: "")).not_to be_valid
-    expect(build(:show, feed_url: nil, directory_id: nil)).not_to be_valid
-    expect(build(:show, feed_url: nil, directory_id: "fake-1")).to be_valid
+  it "needs a user and a podcast, and reads what it is from the podcast" do
+    expect(build(:show, user: nil)).not_to be_valid
+    expect(build(:show, podcast: nil)).not_to be_valid
+
+    show = create(:show, title: "The Founder's Ledger", author: "Maya Brandt", directory_id: "fake-1",
+                         owner_email: "maya@example.com", categories: %w[Business Finance])
+    expect(show).to have_attributes(title: "The Founder's Ledger", author: "Maya Brandt", feed_url: "fake://fake-1",
+                                    directory_id: "fake-1", owner_email: "maya@example.com",
+                                    categories: %w[Business Finance], slug: show.podcast.slug, initials: "TF")
+    expect(described_class.column_names).not_to include("title", "feed_url", "owner_email", "slug")
   end
 
   describe "hints" do
@@ -48,12 +54,11 @@ RSpec.describe Show do
       expect(build(:show, contact_email: "nope")).not_to be_valid
     end
 
-    it "does not let one user add the same directory id or feed url twice" do
+    it "gives a user one workspace per podcast, while other users have their own" do
       user = create(:user)
-      create(:show, user: user, directory_id: "fake-1", feed_url: "fake://fake-1")
-      expect(build(:show, user: user, directory_id: "fake-1", feed_url: "https://x.example/a")).not_to be_valid
-      expect(build(:show, user: user, feed_url: "fake://fake-1")).not_to be_valid
-      expect(build(:show, directory_id: "fake-1", feed_url: "fake://fake-1")).to be_valid
+      first = create(:show, user: user, directory_id: "fake-1")
+      expect(build(:show, user: user, podcast: first.podcast)).not_to be_valid
+      expect(build(:show, podcast: first.podcast)).to be_valid
     end
   end
 
@@ -71,45 +76,64 @@ RSpec.describe Show do
   end
 
   describe "#verify!" do
-    it "sets verified_at and a slug from the title, keeping both on a second verification" do
+    it "makes the show the podcast's owner, keeping the first verification's time" do
       show = create(:show, title: "The Founder's Ledger")
-      show.verify!
-      first = [ show.reload.slug, show.verified_at ]
+      show.verify!(via: "email")
+      first = show.reload.verified_at
+      expect(show.podcast.reload).to have_attributes(claimed_at: first, owner_show: show)
+      expect(show.podcast).to be_claimed
 
       travel 1.day
-      show.verify!
-      expect([ show.reload.slug, show.verified_at ]).to eq(first)
-      expect(first.first).to eq("the-founder-s-ledger")
+      show.verify!(via: "feed_token")
+      expect(show.reload.verified_at).to eq(first)
     end
 
-    it "falls back to 'show' for a title with nothing to slug, then counts up" do
-      create(:show, title: "!!!").verify!
-      second = create(:show, title: "???")
-      second.verify!
-      expect(second.slug).to eq("show-2")
+    it "hands the podcast's waiting requests to the new owner, once" do
+      show = create(:show)
+      allow(Conversations::ClaimHandoff).to receive(:call)
+
+      2.times { show.verify!(via: "email") }
+      expect(Conversations::ClaimHandoff).to have_received(:call).with(show.podcast).once
     end
 
-    it "skips slugs taken by titles that end in a number" do
-      create(:show, title: "Ledger 2").verify!
-      create(:show, title: "Ledger").verify!
-      third = create(:show, title: "Ledger")
-      third.verify!
-      expect(third.slug).to eq("ledger-3")
+    it "refuses a second owner for a podcast" do
+      owner = create(:show).tap { |show| show.verify!(via: "email") }
+      other = create(:show, podcast: owner.podcast)
+
+      expect { other.verify!(via: "email") }.to raise_error(Show::AlreadyClaimed, /already claimed/)
+      expect(other.reload).not_to be_verified
+      expect(owner.podcast.reload.owner_show).to eq(owner)
+    end
+
+    it "names how ownership was proven" do
+      expect { create(:show).verify!(via: "guess") }.to raise_error(ArgumentError)
+    end
+  end
+
+  describe "when the owner show goes" do
+    it "unclaims the podcast and takes its listing down" do
+      show = create(:show)
+      create(:media_kit, :published, show: show, open_to_sponsors: true)
+      show.podcast.refresh_listing!
+      expect(show.podcast.reload).to have_attributes(open_to_sponsors: true, min_price_cents: be_positive)
+
+      show.destroy!
+      expect(show.podcast.reload).to have_attributes(claimed_at: nil, open_to_sponsors: false, min_price_cents: nil)
     end
   end
 
   describe ".with_public_kit" do
-    it "matches #public_kit?: verified, slugged and published" do
+    it "matches #public_kit?: verified and published" do
       public_show = create(:show, title: "Public")
       create(:media_kit, :published, show: public_show)
-      unpublished = create(:show, title: "Unpublished").tap(&:verify!)
+      unpublished = create(:show, title: "Unpublished").tap { |show| show.verify!(via: "admin") }
       create(:media_kit, show: unpublished)
-      unverified = create(:show, title: "Unverified", slug: "unverified")
+      unverified = create(:show, title: "Unverified")
       create(:media_kit, show: unverified, published_at: Time.current)
-      no_kit = create(:show, title: "No kit").tap(&:verify!)
+      no_kit = create(:show, title: "No kit").tap { |show| show.verify!(via: "admin") }
 
       expect(described_class.with_public_kit).to contain_exactly(public_show)
-      expect([ public_show, unpublished, unverified, no_kit ].map { |show| show.reload.public_kit? || false })
+      expect([ public_show, unpublished, unverified, no_kit ].map { |show| show.reload.public_kit? })
         .to eq([ true, false, false, false ])
     end
   end
@@ -125,16 +149,17 @@ RSpec.describe Show do
   end
 
   describe "#initials" do
-    it "uses the first letters of the first two words" do
+    it "uses the first letters of the first two words of the podcast's title" do
       expect(build(:show, title: "The Founder's Ledger").initials).to eq("TF")
       expect(build(:show, title: "Serial").initials).to eq("S")
       expect(build(:show, title: "!!!").initials).to eq("?")
     end
   end
 
-  it "is destroyed with its user" do
+  it "is destroyed with its user, and the podcast stays in the catalog" do
     show = create(:show)
     expect { show.user.destroy }.to change(described_class, :count).by(-1)
+    expect(show.podcast.reload).to be_persisted
   end
 
   it "takes its media kit and verifications with it" do
