@@ -19,6 +19,21 @@ module LandingHelper
       "No commission on any deal" ]
   end
 
+  # The home page's structured data (JSON-LD, through BlogHelper#json_ld): Midrolo as an Organization with its name,
+  # address and logo, and the WebSite, whose SearchAction is the directory's search (/podcasts?q=).
+  def landing_json_ld
+    organization = { "@type" => "Organization", "@id" => "#{root_url}#organization", "name" => APP_NAME, "url" => root_url,
+                     "logo" => { "@type" => "ImageObject", "url" => URI.join(root_url, "/icon-512.png").to_s,
+                                 "width" => 512, "height" => 512 } }
+    website = { "@type" => "WebSite", "@id" => "#{root_url}#website", "name" => APP_NAME, "url" => root_url,
+                "description" => "Where independent podcasts get sponsored.", "inLanguage" => "en",
+                "publisher" => { "@id" => organization["@id"] },
+                "potentialAction" => { "@type" => "SearchAction",
+                                       "target" => { "@type" => "EntryPoint", "urlTemplate" => "#{podcasts_url}?q={search_term_string}" },
+                                       "query-input" => "required name=search_term_string" } }
+    json_ld("@context" => "https://schema.org", "@graph" => [ organization, website ])
+  end
+
   # "1,034 podcasts", "2,310 sponsor reads", "412 brands": the catalog's counts, each left out at zero.
   def landing_catalog_facts(facts)
     { podcasts: "podcast", sponsor_reads: "sponsor read", brands: "brand" }.filter_map do |key, noun|
