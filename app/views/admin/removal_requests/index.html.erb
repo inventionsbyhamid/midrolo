@@ -1,0 +1,44 @@
+<% content_for :title, "Removal requests" %>
+<div class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-baseline justify-between gap-3">
+    <h1 class="type-h1">Removal requests</h1>
+    <%= link_to "Back to admin", admin_root_path, class: "link" %>
+  </header>
+  <p class="text-ink-soft">Requests from anyone but the show's owner. Approving removes the page for good (Podcast#remove!). Answer within 7 days.</p>
+
+  <%= render "components/card", title: "Waiting (#{@pending.size})" do %>
+    <% if @pending.empty? %>
+      <p class="text-ink-soft">Nothing waiting.</p>
+    <% else %>
+      <ul class="flex flex-col divide-y divide-line">
+        <% @pending.each do |row| %>
+          <li class="flex flex-wrap items-start justify-between gap-3 py-3">
+            <div class="min-w-0 flex-1 basis-72">
+              <p class="font-semibold"><%= link_to row.podcast.title, podcast_path(row.podcast), class: "link" %></p>
+              <p class="text-sm text-ink-soft"><%= row.email %>, <%= pages_date(row.created_at) %> (<%= pages_ago(row.created_at) %>)</p>
+              <% if row.reason.present? %><p class="mt-1 text-sm"><%= row.reason %></p><% end %>
+            </div>
+            <div class="flex gap-2">
+              <%= button_to "Approve", admin_removal_request_path(row), method: :patch, params: { decision: "approved" }, class: "btn btn-danger btn-sm",
+                    form: { data: { turbo_confirm: "Remove #{row.podcast.title} for good?" } } %>
+              <%= button_to "Reject", admin_removal_request_path(row), method: :patch, params: { decision: "rejected" }, class: "btn btn-secondary btn-sm" %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  <% end %>
+
+  <% if @decided.any? %>
+    <%= render "components/card", title: "Recently decided" do %>
+      <ul class="flex flex-col divide-y divide-line text-sm">
+        <% @decided.each do |row| %>
+          <li class="flex flex-wrap justify-between gap-2 py-2">
+            <span><%= row.podcast.title %>, <%= row.email.presence || "no email" %></span>
+            <span><%= ui_badge row.status.humanize, tone: row.approved? ? :danger : :neutral %> <%= pages_date(row.updated_at) %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  <% end %>
+</div>

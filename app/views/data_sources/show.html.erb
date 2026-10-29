@@ -1,0 +1,54 @@
+<% content_for :title, "Data sources and your rights" %>
+<% content_for :meta, social_meta(description: "Where every fact on a Midrolo podcast page comes from, what we never show, and how to take a page or a photo down.") %>
+<div class="wrap page-head">
+  <article class="prose-page">
+    <h1 class="type-h1">Data sources and your rights</h1>
+    <p class="prose-date">Last updated: October 2026</p>
+    <p class="type-lead">
+      <%= APP_NAME %> has a public page for many podcasts, claimed or not. This page says where each fact on those pages
+      comes from, what we never show, and how a show or a person gets something taken down.
+    </p>
+
+    <h2>Where the facts come from</h2>
+    <ul>
+      <li><strong>The show's own RSS feed.</strong> Title, description, artwork, episodes and their notes, categories, language, how often it publishes, and the people the feed names (hosts and guests). We read the feed itself, not a copy from a directory, and each page says when it was last checked.</li>
+      <li><strong>Sponsors.</strong> Sponsor reads, promo codes and offers found in the show notes of each episode, by pattern matching and an AI model. Each one links to the episode it came from.</li>
+      <li><strong>Hosting and measurement.</strong> Which company hosts the show and which measurement services count its downloads, read from the audio file addresses in the feed.</li>
+      <li><strong>Discovery.</strong> We find shows through Podcast Index, Qloo and what people search for here, then read each show's own feed.</li>
+      <li><strong>Numbers from the show.</strong> Listener and play numbers appear only once the show's owner claims the page and either invites <%= APP_NAME %> to read them from Spotify for Creators or Apple Podcasts Connect (marked verified) or types them in (marked provided by the show). Every number says where it came from and when.</li>
+      <li><strong>Audience taste.</strong> What a show's listeners also like comes from Qloo, only after the owner or a <%= APP_NAME %> member runs a report, and is shown only to signed in members, labelled as Qloo's.</li>
+    </ul>
+
+    <h2>What we never show</h2>
+    <ul>
+      <li>The owner email in a feed. We use it only to send a code to someone who says they own the show, and we store it encrypted.</li>
+      <li>Anyone the feed doesn't name. People appear only as the feed lists them, with a photo only when the feed publishes one.</li>
+      <li>Ratings or reviews copied from Apple, Spotify or anyone else, and download estimates we made up.</li>
+      <li>Contact details. Brands reach a show through <%= APP_NAME %>, and only once its owner has claimed the page.</li>
+    </ul>
+
+    <h2>Your rights</h2>
+    <p>
+      If a page names you, you can ask us what we hold about you, ask us to correct it, or ask us to remove it (GDPR
+      Article 14 and similar laws). We reply within 7 days.
+    </p>
+    <ul>
+      <li><strong>Remove a podcast's page.</strong> Every podcast page has a Remove this page link at the bottom. If you own the show on <%= APP_NAME %>, the page comes down at once. Otherwise we review the request.</li>
+      <li><strong>Remove yourself or your photo.</strong> Email <%= contact_mail_to class: "link" %> with the page's address.</li>
+      <li><strong>Stop a show from being added again.</strong> A removed show's feed is blocked, so a search or an import can't bring it back. Feeds that set the podcast:block or itunes:block tag are never shown.</li>
+    </ul>
+
+    <h2>Images and caches</h2>
+    <p>
+      Artwork is copied once and served from our storage through Cloudflare. When a page is removed we delete its images
+      straight away, but Cloudflare may keep serving a cached copy until it expires. For anything urgent, email
+      <%= contact_mail_to class: "link" %> and we'll clear it by hand.
+    </p>
+
+    <h2>More</h2>
+    <p>
+      How we handle the data of people who sign in is in our <%= link_to "privacy policy", privacy_path, class: "link" %>.
+      Questions go to <%= contact_mail_to class: "link" %>.
+    </p>
+  </article>
+</div>
