@@ -40,6 +40,12 @@ Rails.application.routes.draw do
   get "blog/feed.xml", to: "blog#feed", as: :blog_feed, format: false, defaults: { format: "atom" }
   get "blog/:slug", to: "blog#show", as: :blog_post, format: false
   get "blog/:slug/og.png", to: "share_images#blog_post", as: :blog_post_share_image, format: false
+  # The catalog's share images: the directory, a category, a podcast, an episode and a brand page.
+  get "podcasts/og.png", to: "share_images#directory", as: :podcasts_share_image, format: false
+  get "podcasts/category/:category/og.png", to: "share_images#category", as: :podcast_category_share_image, format: false
+  get "podcasts/:slug/og.png", to: "share_images#podcast", as: :podcast_share_image, format: false
+  get "podcasts/:slug/episodes/:episode_slug/og.png", to: "share_images#episode", as: :podcast_episode_share_image, format: false
+  get "brands/:slug/og.png", to: "share_images#brand", as: :brand_share_image, format: false
 
   # R151: no judge code route; everyone gets the hackathon trial (plans.yml promo).
   resource :account, only: %i[show destroy]

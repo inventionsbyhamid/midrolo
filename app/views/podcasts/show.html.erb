@@ -1,6 +1,8 @@
 <% podcast = @podcast %>
 <% content_for :title, pages_title(podcast) %>
-<% content_for :meta, pages_meta(description: pages_description(podcast, sponsors: @sponsors_90_days.to_i), url: podcast_url(podcast)) %>
+<% card = ShareImages::PodcastCard.new(podcast) %>
+<% content_for :meta, pages_meta(description: pages_description(podcast, sponsors: @sponsors_90_days.to_i), url: podcast_url(podcast),
+                                  image: podcast_share_image_url(podcast, v: card.version), image_alt: card.alt) %>
 <% unless podcast.pending? %>
   <% content_for :head, pages_podcast_json_ld(podcast, sponsors: @sponsors_90_days.to_i) %>
 <% end %>

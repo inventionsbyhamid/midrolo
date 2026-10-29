@@ -4,12 +4,15 @@ RSpec.describe ArtworkHelper do
   def tag_of(html) = Nokogiri::HTML.fragment(html).children.first
 
   it "renders the stored variant through a storage proxy URL, square and lazy" do
-    podcast = create(:podcast, artwork_url: "https://img.example.com/art.jpg", artwork_image: create(:image, :with_file))
+    podcast = create(:podcast, title: "Darknet Diaries", artwork_url: "https://img.example.com/art.jpg",
+                               artwork_image: create(:image, :with_file))
     img = tag_of(helper.podcast_artwork_tag(podcast, size: :card, class: "size-24"))
 
     expect(img.name).to eq("img")
     expect(img["src"]).to include("/rails/active_storage/representations/proxy/")
-    expect(img.attributes.transform_values(&:value)).to include("width" => "320", "height" => "320", "alt" => "", "loading" => "lazy")
+    expect(img.attributes.transform_values(&:value)).to include("width" => "320", "height" => "320", "loading" => "lazy",
+                                                                "alt" => "Darknet Diaries podcast artwork")
+    expect(tag_of(helper.podcast_artwork_tag(podcast, alt: ""))["alt"]).to eq("")
     expect(img["class"]).to eq("size-24 flex-none rounded-lg object-cover")
   end
 

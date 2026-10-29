@@ -16,6 +16,14 @@ class CategoriesController < ApplicationController
     @podcasts = @directory.podcasts
     @sponsor_counts = @podcasts.empty? ? {} : SponsorMention.where(podcast_id: @podcasts.map(&:id)).group(:podcast_id).distinct.count(:brand_id)
     @total = Podcast.category_counts.to_h.fetch(@category, 0)
-    noindex! unless @directory.plain? && @podcasts.count(&:page_indexable?) >= MIN_INDEXABLE
+    noindex! unless @directory.plain? && indexable_shows?
+  end
+
+  private
+
+  # Enough indexable shows in the whole category, as the categories sitemap counts them, so a page the sitemap lists is
+  # never noindex because its first page happens to hold newer, thinner shows.
+  def indexable_shows?
+    Podcast.listed.indexable.in_category(@category).limit(MIN_INDEXABLE).count >= MIN_INDEXABLE
   end
 end
