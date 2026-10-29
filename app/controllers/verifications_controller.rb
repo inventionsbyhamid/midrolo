@@ -1,5 +1,6 @@
-# Proving a user owns a show, which publishing its media kit requires: a code emailed to the feed's owner address,
-# or a token placed in the feed. Scoped to the user's own shows.
+# Proving a user owns a show (claiming it), which publishing its listing requires: a code emailed to the feed's owner
+# address, or a token placed in the feed. Scoped to the user's own shows. Claims usually start from the podcast's page
+# (ClaimsController), which tries the instant claim first and lands here otherwise.
 class VerificationsController < ApplicationController
   layout "app"
   before_action :authenticate_user!
@@ -16,7 +17,7 @@ class VerificationsController < ApplicationController
   throttle to: 10, within: 1.day, only: :create, if: -> { params[:kind] == "email" }, by: -> { current_user.id },
            name: "code_sends_per_user"
 
-  VERIFIED = "You're verified. Publish your media kit when it's ready.".freeze
+  VERIFIED = "You're verified. Set up your listing and publish it when it's ready.".freeze
   ALREADY_VERIFIED = "You've already verified this show, so there's nothing to send.".freeze
   NO_OWNER_EMAIL = "Your feed doesn't list an owner email, so we can't send a code. Verify with a feed token instead.".freeze
   NO_FEED = "We don't have an RSS feed for this show, so we can't look for a token. Verify by email instead.".freeze
@@ -51,12 +52,14 @@ class VerificationsController < ApplicationController
     return redirect_to(new_show_verification_path(@show), status: :see_other) if @show.verified? || verification.nil?
 
     if verification.email? ? verification.check_code(params[:code]) : verification.check_feed_token!
+      @show.reload.sync_listing!
       redirect_to edit_show_media_kit_path(@show), notice: VERIFIED, status: :see_other
     else
       redirect_to show_verification_path(@show), alert: failure_message(verification), status: :see_other
     end
   rescue Show::AlreadyClaimed => e
-    redirect_to show_path(@show), alert: e.message, status: :see_other
+    # The claim page offers to ask the owner for access.
+    redirect_to new_podcast_claim_path(@show.podcast), alert: e.message, status: :see_other
   end
 
   private
