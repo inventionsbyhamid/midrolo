@@ -13,7 +13,7 @@
     <div class="dir-search-field">
       <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.75" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       <%= f.label :q, "Search podcasts", class: "sr-only" %>
-      <%= f.search_field :q, value: @directory.query, class: "input", placeholder: "A show's name, host or topic",
+      <%= f.search_field :q, value: @directory.query, class: "input", placeholder: "Show, host or topic",
             autocomplete: "off", maxlength: PodcastDirectory::QUERY_LIMIT %>
     </div>
     <%= f.submit "Search", class: "btn btn-primary btn-lg", name: nil %>
