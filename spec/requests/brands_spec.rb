@@ -119,6 +119,19 @@ RSpec.describe "Brand workspace" do
       expect(user.reload.last_role).to eq("brand")
     end
 
+    it "counts the brand side's unread conversations on the nav's Inbox, as the main nav does" do
+      create(:conversation, brand: brand, started_by: user)
+      create(:conversation, podcast: claimed_podcast(owner: user)) # the podcaster side: the brand inbox doesn't list it
+
+      get brand_root_path
+
+      header = Nokogiri::HTML(response.body).at_css("header.site-header")
+      inbox = header.at_css("nav[aria-label='Main'] a[href='#{brand_inbox_path}']")
+      expect(inbox.at_css(".nav-count").text).to eq("1")
+      expect(inbox.at_css(".sr-only").text).to eq("1 unread")
+      expect(header.at_css("button[aria-haspopup='dialog']").text.squish).to eq("Menu 1 1 unread")
+    end
+
     describe "work email verification" do
       it "emails a code to the work address and verifies the member with it" do
         get new_brand_verification_path
