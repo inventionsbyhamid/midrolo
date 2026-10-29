@@ -31,12 +31,19 @@
     <% if meta.any? %>
       <p class="ep-meta text-sm"><%= safe_join(meta, tag.span(" · ", aria: { hidden: true })) %></p>
     <% end %>
-    <% listen = [ ([ "Listen on the show's site", Show.http_url(episode.link) ] if Show.http_url(episode.link)),
-                  ([ "Audio file", Show.http_url(episode.enclosure_url) ] if Show.http_url(episode.enclosure_url)) ].compact %>
-    <% if listen.any? %>
+    <%# Listening is secondary here (E-1): an episode page is a search landing, and the show's card offers the request. %>
+    <% audio = Show.http_url(episode.enclosure_url) %>
+    <% site = Show.http_url(episode.link) %>
+    <% if audio || site %>
       <p class="flex flex-wrap gap-2 pt-1">
-        <% listen.each_with_index do |(label, href), index| %>
-          <%= link_to label, href, class: class_names("btn btn-md", index.zero? ? "btn-primary" : "btn-secondary"), rel: "nofollow noopener", target: "_blank" %>
+        <% if audio %>
+          <%= link_to audio, class: "btn btn-secondary btn-md", rel: "nofollow noopener", target: "_blank" do %>
+            <svg viewBox="0 0 20 20" class="size-4" aria-hidden="true"><path d="M6 4.5v11l9-5.5-9-5.5Z" fill="currentColor"/></svg>
+            Play episode
+          <% end %>
+        <% end %>
+        <% if site %>
+          <%= link_to "Listen on the show's site", site, class: "btn btn-secondary btn-md", rel: "nofollow noopener", target: "_blank" %>
         <% end %>
       </p>
     <% end %>
@@ -128,11 +135,24 @@
           <% if podcast.min_price_cents %><li class="chip">From <%= pages_money(podcast.min_price_cents) %></li><% end %>
           <% if pages_cadence(podcast) %><li class="chip"><%= pages_cadence(podcast) %></li><% end %>
         </ul>
-        <%= ui_button "See the show's page", podcast_path(podcast), variant: :secondary, size: :sm, class: "mt-4 w-full" %>
+        <div class="mt-4 flex flex-col gap-2">
+          <% if podcast.open_to_sponsors? || podcast.claimed? %>
+            <%= ui_button "Request a spot", new_conversation_path(podcast: podcast.to_param), class: "w-full", rel: "nofollow" %>
+          <% end %>
+          <%= ui_button "See the show's page", podcast_path(podcast), variant: :secondary, class: "w-full" %>
+        </div>
       <% end %>
       <div class="fine-print">
-        <p><%= APP_NAME %> isn't affiliated with <%= podcast.title %>. This page is built from the show's public RSS feed.</p>
-        <p><%= link_to "Remove this page", new_podcast_removal_path(podcast), class: "link text-ink-soft", rel: "nofollow" %></p>
+        <% if podcast.demo? %>
+          <p>A fictional show <%= APP_NAME %> runs so you can try the marketplace.</p>
+        <% elsif podcast.claimed? %>
+          <p>Run by the show. Facts from its feed and its own accounts.</p>
+        <% else %>
+          <p><%= APP_NAME %> isn't affiliated with <%= podcast.title %>. This page is built from the show's public RSS feed.</p>
+        <% end %>
+        <% unless podcast.demo? %>
+          <p><%= link_to "Remove this page", new_podcast_removal_path(podcast), class: "link text-ink-soft", rel: "nofollow" %></p>
+        <% end %>
       </div>
     </aside>
   </div>

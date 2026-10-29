@@ -274,6 +274,13 @@
     }
   }
 
+  /* Inside a page's main column (beside a sidebar) two across is the most a card can take (CB-1). */
+  .pod-main .dir-grid {
+    @media (width >= 72rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
   /* A podcast card: the whole card is the link (the title's ::after covers it), so the focus ring is drawn on it. */
   .dir-card {
     position: relative;
