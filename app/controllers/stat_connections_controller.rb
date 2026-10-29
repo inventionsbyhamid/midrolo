@@ -89,7 +89,7 @@ class StatConnectionsController < ApplicationController
 
   def invited_notice(provider)
     if owner?
-      "Thanks. We'll check every 15 minutes until the invite is accepted, then your #{Stats.platform_name(provider)} numbers appear here."
+      "Thanks. We'll keep checking until the invite is accepted, often at first and then less often, then your #{Stats.platform_name(provider)} numbers appear here."
     else
       "Saved. Claim the show, and its #{Stats.platform_name(provider)} numbers count once the invite is accepted."
     end

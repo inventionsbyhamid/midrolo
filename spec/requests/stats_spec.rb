@@ -65,7 +65,7 @@ RSpec.describe "Stats screen" do
         expect(response).to redirect_to(show_stats_path(show, anchor: "spotify"))
 
         follow_redirect!
-        expect(response.body).to include("Waiting for access").and include("We check every 15 minutes")
+        expect(response.body).to include("Waiting for access").and include("We keep checking until")
       end
 
       it "refuses a link without a show id" do

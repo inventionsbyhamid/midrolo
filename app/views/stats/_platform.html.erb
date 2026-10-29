@@ -26,8 +26,8 @@
         <% case connection.status %>
         <% when "pending_invite" %>
           <p>
-            We're waiting for access to <%= platform_show %> on <%= name %>. We check every 15 minutes
-            until <%= stats_date(connection.created_at + StatConnection::INVITE_WINDOW) %>, and your numbers appear here as soon as the invite is accepted.
+            We're waiting for access to <%= platform_show %> on <%= name %>. We keep checking until
+            <%= stats_date(connection.created_at + StatConnection::INVITE_WINDOW) %>, often at first and then less often, and your numbers appear here soon after the invite is accepted.
           </p>
           <% if connection.last_error.present? %><p class="text-ink-soft" role="status"><%= connection.last_error %></p><% end %>
         <% when "active" %>

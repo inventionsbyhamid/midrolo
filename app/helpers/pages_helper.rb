@@ -7,8 +7,9 @@ module PagesHelper
   MIDROLL_SLOT = (600..680)
   WAVEFORM_HEIGHT = 80
 
-  # "Get my free Snapshot": sign in first, or straight to adding a show.
-  def snapshot_start_path = user_signed_in? ? new_show_path : new_user_session_path
+  # "Get my free Snapshot": straight to adding a show. A visitor signs in first, and Devise keeps /shows/new as the
+  # place to return to, so a new podcaster skips the "podcaster or brand" choice.
+  def snapshot_start_path = new_show_path
 
   # "See a sample report": the first done sample, or the samples page until there is one.
   def sample_start_path(samples) = samples.first ? sample_path(samples.first.sample_slug) : samples_path

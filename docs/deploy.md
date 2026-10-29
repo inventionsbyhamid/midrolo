@@ -109,11 +109,19 @@ then signs in as that account with its saved session.
 
 - **Accept each invite** from the email Spotify or Apple sends to the stats address. `/admin/stat_connections` lists
   the pending invites oldest first, with how long each has waited. Midrolo checks a pending invite every 15 minutes
-  for 14 days; the first fetch that works makes it Active.
+  for 2 hours, then hourly for a day, then every 6 hours, for 14 days; the first fetch that works makes it Active.
 - **Save the session** at `/admin/service_sessions` (Spotify needs `sp_dc`; `sp_key` is optional; Apple takes
   `myacinfo` and `itctx`). The form is never prefilled and never shows a saved value. Or, in the worker's Terminal,
   `bin/rails "stats:session[spotify]" < file`, which reads JSON or `KEY=value` lines from stdin and prints only the
   key names. Then press **Test fetch** with a connection or a Spotify show link.
+- **Rate limits (Stats::Throttle, per platform).** Midrolo stays a light, polite client of its own accounts: one
+  helper run at a time, at least 30 seconds apart plus up to 15 random seconds, at most 40 runs an hour and 300 a day.
+  A rate-limited answer starts a cooldown (the platform's Retry-After, else an hour, doubling on repeats up to 24
+  hours); 5 failed runs in a row pause the platform for an hour. Syncs that must wait are rescheduled, never dropped.
+  The Spotify token is reused for its hour, so the account signs in at most once an hour. Each show syncs once a day
+  at its own minute; the 12-month audience call runs at most weekly. `/admin/service_sessions` shows runs this hour
+  and today, the next allowed run and any cooldown, and edits the four limits (STATS_MIN_GAP_SECONDS,
+  STATS_GAP_JITTER_SECONDS, STATS_RUNS_PER_HOUR, STATS_RUNS_PER_DAY).
 - **When a session expires,** syncs pause, the session shows Expired, and one email goes to the admins. Save a new
   session and syncs resume on their own.
 - **Connections held for review.** A platform show that matches a podcast by name only, while another catalog

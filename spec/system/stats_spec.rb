@@ -26,7 +26,7 @@ RSpec.describe "Verified stats" do
       fill_in "Your Spotify show link", with: "https://open.spotify.com/show/4rOoJ6Egrf8K2IrywzwOMk?si=abc"
       click_on "I've invited Midrolo"
     end
-    expect(page).to have_text("We'll check every 15 minutes")
+    expect(page).to have_text("We'll keep checking until the invite is accepted")
     within("#spotify") { expect(page).to have_text("Waiting for access") }
     expect(skipped_heading_levels).to be_empty
 

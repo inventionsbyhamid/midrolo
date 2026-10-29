@@ -12,7 +12,7 @@
 
   <p class="max-w-prose text-ink-soft">
     Accept each pending invite in the stats account's inbox (<%= Copy.and_list(Stats::PLATFORMS.keys.map { |p| Stats.invite_email(p) }.uniq) %>).
-    Midrolo checks pending invites every 15 minutes, so a connection turns active by itself once the invite is accepted.
+    Midrolo checks pending invites every 15 minutes for 2 hours, then hourly for a day, then every 6 hours, so a connection turns active by itself once the invite is accepted.
   </p>
 
   <% paused = Stats::PLATFORMS.keys.reject { |p| @sessions[p]&.ok? && @sessions[p].credentials.present? } %>
