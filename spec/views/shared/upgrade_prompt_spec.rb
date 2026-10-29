@@ -81,7 +81,14 @@ RSpec.describe "shared/_upgrade_prompt" do
     expect(node.at_css("a")).to be_nil
   end
 
+  it "offers the waitlist, not a dead end at pricing, while paid plans can't be bought (review PO-12)" do
+    node = render_prompt(reason: :plan, kind: :agent, bucket: nil)
+    expect(node.text.squish).to eq("Full reports open with paid plans soon Join the waitlist and we'll email you when they open. Join the waitlist")
+    expect(link(node)).to eq([ "Join the waitlist", "/pricing" ])
+  end
+
   it "points a plan without full reports or pitch packs to Creator" do
+    allow(Billing).to receive(:mode).and_return(:test)
     node = render_prompt(reason: :plan, kind: :agent, bucket: nil)
     expect(node.text.squish).to eq("Full agent reports are on Creator and up See plans")
     expect(link(node)).to eq([ "See plans", "/pricing" ])
