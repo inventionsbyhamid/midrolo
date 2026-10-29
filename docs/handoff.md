@@ -68,8 +68,6 @@ The Devpost points judges at **AiGM by AiHunt** (feed `https://anchor.fm/s/12d45
 
 ## Later
 
-- [ ] The share image (`app/assets/images/og.svg`, drawn into og.png by `bin/rails brand:build`) still carries the
-      podcaster tagline. Redraw it for "Where independent podcasts get sponsored".
 - [ ] A recurring `sponsors:scan` in `config/recurring.yml`, so episodes that waited for budget are picked up daily.
 - [ ] Before switching `LLM_AGENT_MODEL` or the provider, add 8 to 10 real shows to `config/eval_shows.yml` and run
       `bin/rails eval:run` with live keys.

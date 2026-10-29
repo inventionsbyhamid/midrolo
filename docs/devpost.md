@@ -87,7 +87,7 @@ numbers say how big a show is. Only taste says who should fit, and Qloo is how b
 - **The catalog itself.** Midrolo's directory was seeded from Qloo's podcast lists by genre, each matched to its
   real feed.
 
-The non obvious part is the join. Qloo says who should fit; the feeds prove who already pays shows like this; the
+The part that isn't obvious is the join. Qloo says who should fit; the feeds prove who already pays shows like this; the
 verified numbers say what it's worth. Every Qloo call, and why, is in `docs/how-we-use-qloo.md` in the repo.
 
 ### Built during the submission period
