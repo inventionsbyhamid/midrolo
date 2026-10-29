@@ -35,9 +35,12 @@
   <% list_ids = [ dom_id(report, :top_matches), dom_id(report, :more_matches) ] %>
   <%= render "reports/section", name: "matches", title: "Sponsor matches",
         aside: tag.p("#{pluralize(matches.size, 'brand')}, best fit first", class: "text-sm text-ink-soft") do %>
-    <%# What the two numbers on a row mean, so a high fit marked Realistic doesn't read as a contradiction (review RP-3). %>
-    <p class="report-section-note">Fit is how closely a brand's customers match your listeners. Easy yes, Realistic and Long shot are how likely the brand is to say yes.</p>
-    <div data-controller="filter" class="mt-3">
+    <%# What the two marks on a row mean, so a high fit marked Long shot doesn't read as a contradiction (review RP-3).
+        The owner's report only; a sample explains it in How we built this. %>
+    <% unless read_only %>
+      <p class="report-section-note">Fit is how closely a brand's customers match your listeners. Easy yes, Realistic and Long shot say how big the brand is, so how hard the ask is.</p>
+    <% end %>
+    <div data-controller="filter" class="<%= class_names('mt-3' => !read_only) %>">
       <ol id="<%= list_ids.first %>" class="match-list" data-filter-target="list" aria-label="Top sponsor matches">
         <%= render partial: "sponsor_matches/list_item", collection: top, as: :sponsor_match, locals: { read_only: read_only } %>
       </ol>
