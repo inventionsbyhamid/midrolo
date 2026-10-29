@@ -59,6 +59,34 @@ apps hold the same values; the worker adds `MIDROLO_PROCESS=jobs` and `RAILS_MAX
 Production stops at boot, naming the variable, when a required one is blank (`lib/required_env.rb`). After changing a
 variable, redeploy (or restart) both apps.
 
+## Payments
+
+Billing goes through one adapter per payment provider (`app/services/billing/provider.rb`); nothing else in the app
+names a vendor. Production runs Dodo Payments, in Midrolo's own Dodo business, in **test mode**: `BILLING_MODE` is
+unset, so everyone sees the founding member waitlist, and only judges (with the judge code) and admins see "Try
+checkout in test mode" (test card 4242 4242 4242 4242).
+
+- **Test mode settings:** `DODO_API_KEY` (a `dodo_test_` key), `DODO_ENVIRONMENT=test_mode`, `DODO_WEBHOOK_SECRET`
+  (the test webhook to `https://midrolo.com/webhooks/dodo`, which is enabled) and the five `DODO_PRODUCT_*` test ids.
+- **Going live:** the live catalog and its webhook already exist in Dodo, the webhook switched off. Swap in the live
+  key, `DODO_ENVIRONMENT=live_mode`, the live webhook's secret and the live product ids; switch the live webhook on in
+  Dodo; set `BILLING_MODE=live`; redeploy. Live mode still waits for the go-live check (R94: Qloo's price per call
+  set in `/admin`, and every paid plan keeping a 60% margin), and shows the waitlist until it passes.
+
+### Switching payment provider
+
+1. Add an adapter in `app/services/billing/providers/` with the interface `provider.rb` documents: checkout, the
+   customer portal, webhook verification and parsing into `Billing::Event`, plus `configured?`, `environment`,
+   `setup`, `live_setup` and `fees`. `spec/services/billing/provider_spec.rb` checks every registered adapter has them.
+2. Register it in `Billing::Provider::ADAPTERS` (and `REAL`), and add its product ids under its name in
+   `config/plans.yml` `product_ids`.
+3. Set `BILLING_PROVIDER` and the new provider's keys, create its products and point its webhook at
+   `https://midrolo.com/webhooks/<name>`.
+4. Update who takes the payment in the privacy and terms pages, and the Content Security Policy if its checkout or
+   portal loads on midrolo.com rather than on its own domain.
+
+Existing subscriptions keep their `provider` and stay with the old provider until they end.
+
 ## Deploys
 
 Pushing to `main` deploys both apps: Coolify's GitHub App starts a build of each. **Deploy** in Coolify does the same

@@ -34,7 +34,15 @@ module Billing
                          expires_at cancel_at_next_billing_date].freeze
       STORED_METADATA = %w[user_id price_key].freeze
 
+      # Dodo's worst case taken from one payment (Billing::Margins), as its pricing pages state it.
+      FEES = { rate: BigDecimal("0.06"), fixed_usd: BigDecimal("0.40") }.freeze
+
+      # The registry contract (Billing::Provider).
+      def self.configured? = ENV["DODO_API_KEY"].present?
       def self.environment = ENV["DODO_ENVIRONMENT"] == "live_mode" ? :live_mode : :test_mode
+      def self.setup = "DODO_API_KEY"
+      def self.live_setup = "DODO_API_KEY and DODO_ENVIRONMENT=live_mode"
+      def self.fees = FEES
 
       attr_reader :webhook_secret
 
@@ -50,7 +58,7 @@ module Billing
       def webhook_secret_name = "DODO_WEBHOOK_SECRET"
 
       def checkout_url(user:, price_key:, return_url:)
-        product_id = Billing.product_id(price_key)
+        product_id = Billing.product_id(price_key, provider: NAME)
         raise MissingCredentials, "DODO_PRODUCT_#{price_key.to_s.upcase} is not set" unless product_id
 
         session = call_api("checkout") do
@@ -115,7 +123,7 @@ module Billing
       # could otherwise claim to be the Sprint. A product that isn't ours gives nil, and Sync notes it.
       def price_key_for(data, metadata)
         product_id = text(data["product_id"]) || text(object(Array(data["product_cart"]).first)["product_id"])
-        product_id ? Billing.price_key_for_product(product_id) : text(metadata["price_key"])
+        product_id ? Billing.price_key_for_product(product_id, provider: NAME) : text(metadata["price_key"])
       end
 
       def stored(payload, data, metadata)

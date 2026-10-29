@@ -2,7 +2,7 @@
 # account page's line on when a plan renews or ends.
 module BillingHelper
   INTERVALS = { monthly: "/month", yearly: "/year", once: " once" }.freeze
-  TEST_NOTE = "Test mode: use Dodo's test card. Nothing is charged.".freeze
+  TEST_NOTE = "Test mode: pay with the test card 4242 4242 4242 4242 and any future date. Nothing is charged.".freeze
 
   # "$19/month", "$190/year", "$49 once"
   def price_label(price) = "$#{price.usd}#{INTERVALS.fetch(price.interval)}"

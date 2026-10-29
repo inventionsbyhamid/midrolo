@@ -1,5 +1,5 @@
 # Plan limits and pricing: the single source of plan numbers (spec §11, R59). Entitlements reads the limits; each plan's
-# price_keys name its prices, and product_ids maps every price key to the provider's product id (set via ENV).
+# price_keys name its prices, and product_ids maps every price key to each provider's product id (set via ENV).
 # - snapshots_per_month, agent_reports and pitches count per usage period: the subscription's, else the calendar month.
 #   With agent_reports_total, agent reports count all time instead, in the plan's own spend bucket (judge, promo).
 # - pitches: unlimited is bounded by the LLM budget only.
@@ -74,11 +74,13 @@ shared:
     agent_reports: 1
     agent_reports_total: true
     pitches: 20
-  # price_key => the billing provider's product id, from ENV (blank until set). Billing reads it; it sits under shared
-  # because config_for loads nothing outside shared and the environment sections.
+  # provider name => price_key => that provider's product id, from ENV (blank until set). Billing reads the chosen
+  # provider's (Billing::Provider, R145); a new provider adds its own block. It sits under shared because config_for
+  # loads nothing outside shared and the environment sections.
   product_ids:
-    creator_monthly: <%= ENV["DODO_PRODUCT_CREATOR_MONTHLY"] %>
-    creator_yearly: <%= ENV["DODO_PRODUCT_CREATOR_YEARLY"] %>
-    pro_monthly: <%= ENV["DODO_PRODUCT_PRO_MONTHLY"] %>
-    pro_yearly: <%= ENV["DODO_PRODUCT_PRO_YEARLY"] %>
-    sprint: <%= ENV["DODO_PRODUCT_SPRINT"] %>
+    dodo:
+      creator_monthly: <%= ENV["DODO_PRODUCT_CREATOR_MONTHLY"] %>
+      creator_yearly: <%= ENV["DODO_PRODUCT_CREATOR_YEARLY"] %>
+      pro_monthly: <%= ENV["DODO_PRODUCT_PRO_MONTHLY"] %>
+      pro_yearly: <%= ENV["DODO_PRODUCT_PRO_YEARLY"] %>
+      sprint: <%= ENV["DODO_PRODUCT_SPRINT"] %>

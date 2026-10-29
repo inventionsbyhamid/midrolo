@@ -95,8 +95,9 @@
       </table>
     </div>
     <p class="mt-3 text-sm text-ink-soft">
-      At caps: every full report, Snapshot and pitch the plan allows (a yearly plan, 12 months of them), on worst case Dodo
-      fees of 6% plus $0.40 a payment. LLM: <%= admin_usd(inputs.agent_llm_usd) %> a full report and
+      At caps: every full report, Snapshot and pitch the plan allows (a yearly plan, 12 months of them), on the payment
+      provider's worst case fees of <%= number_to_percentage(Billing::Provider.fees[:rate] * 100, precision: 0) %> plus
+      <%= admin_usd(Billing::Provider.fees[:fixed_usd]) %> a payment. LLM: <%= admin_usd(inputs.agent_llm_usd) %> a full report and
       <%= admin_usd(inputs.pitch_llm_usd) %> a pitch, or the measured average when higher. The pitch figure is an estimate
       from the design notes, since the app kept none. Qloo: <%= inputs.agent_calls %> calls a full report and
       <%= inputs.snapshot_calls %> a Snapshot (the hard cap per report, or the measured average when higher), at

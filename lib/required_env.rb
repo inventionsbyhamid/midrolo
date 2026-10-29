@@ -4,7 +4,7 @@
 #
 # Everything else is optional: ADMIN_USERNAME/ADMIN_PASSWORD (unset, the admin flag alone), ADMIN_EMAIL (unset, every
 # admin account gets the error mail), OPENROUTER_API_KEY (the LLM's: runs fail until it's set), GOOGLE_CLIENT_*
-# (sign in fails until they're set) and DODO_* (billing stays a waitlist). QLOO_API_KEY and PODCAST_INDEX_* are
+# (sign in fails until they're set) and the payment provider's keys, DODO_* (billing stays a waitlist). QLOO_API_KEY and PODCAST_INDEX_* are
 # required even though they're optional elsewhere: outside production a blank key means demo data, but production has
 # no demo data, and every page asks whether it's showing some (DemoMode), so without them no page renders.
 module RequiredEnv

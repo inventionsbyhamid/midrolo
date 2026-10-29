@@ -11,11 +11,11 @@ RSpec.describe "App configs" do
     expect(config(:plans).dig(:creator, :price_monthly_usd)).to eq(19)
   end
 
-  it "maps every price key to a provider product id from ENV" do
+  it "maps every price key to a product id per provider, from ENV (R145)" do
     stub_const("ENV", ENV.to_h.merge("DODO_PRODUCT_SPRINT" => "pdt_sprint"))
 
-    expect(config(:plans)[:product_ids]).to eq(creator_monthly: nil, creator_yearly: nil, pro_monthly: nil, pro_yearly: nil,
-                                               sprint: "pdt_sprint")
+    expect(config(:plans)[:product_ids]).to eq(dodo: { creator_monthly: nil, creator_yearly: nil, pro_monthly: nil,
+                                                       pro_yearly: nil, sprint: "pdt_sprint" })
   end
 
   it "re-enqueues stranded billing events every 10 minutes in production" do

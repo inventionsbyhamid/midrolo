@@ -1,7 +1,7 @@
 # Billing specs: a clean billing ENV per example, synthetic Dodo webhooks from spec/fixtures/dodo, and real Standard
 # Webhooks signatures over them (the same check production runs).
 module BillingHelpers
-  BILLING_ENV = %w[BILLING_MODE DODO_API_KEY DODO_ENVIRONMENT DODO_WEBHOOK_SECRET DODO_PRODUCT_CREATOR_MONTHLY
+  BILLING_ENV = %w[BILLING_MODE BILLING_PROVIDER DODO_API_KEY DODO_ENVIRONMENT DODO_WEBHOOK_SECRET DODO_PRODUCT_CREATOR_MONTHLY
                    DODO_PRODUCT_CREATOR_YEARLY DODO_PRODUCT_PRO_MONTHLY DODO_PRODUCT_PRO_YEARLY DODO_PRODUCT_SPRINT].freeze
   # A made-up signing secret in Dodo's whsec_ format; never a real one.
   DODO_TEST_WEBHOOK_SECRET = "whsec_#{Base64.strict_encode64('midrolo-spec-dodo-webhook-secret')}".freeze

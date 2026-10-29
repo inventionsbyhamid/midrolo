@@ -115,8 +115,13 @@ RSpec.describe Billing do
       expect(described_class.plan_for(nil)).to be_nil
     end
 
-    it "maps price keys to provider product ids from ENV, and back" do
+    it "maps price keys to the chosen provider's product ids from ENV, and back, each provider its own (R145)" do
       with_billing_env("DODO_PRODUCT_PRO_YEARLY" => "pdt_pro_yearly") do
+        expect(described_class.product_id("pro_yearly", provider: "fake")).to be_nil
+        expect(described_class.price_key_for_product("pdt_pro_yearly", provider: "fake")).to be_nil
+        expect(described_class.product_id("pro_yearly", provider: "dodo")).to eq("pdt_pro_yearly")
+      end
+      with_billing_env("DODO_API_KEY" => "key", "DODO_PRODUCT_PRO_YEARLY" => "pdt_pro_yearly") do
         expect(described_class.product_id("pro_yearly")).to eq("pdt_pro_yearly")
         expect(described_class.product_id("pro_monthly")).to be_nil
         expect(described_class.price_key_for_product("pdt_pro_yearly")).to eq("pro_yearly")

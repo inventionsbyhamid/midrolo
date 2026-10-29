@@ -5,7 +5,7 @@
 #   :waitlist (the default): paid buttons join the founding-member waitlist and checkout is shut, except that judges
 #             and admins may try it against a provider in test mode (spec §15).
 #   :test     checkout is open to every signed-in user against a provider in test mode. For staging.
-#   :live     real payments. Needs DODO_API_KEY and DODO_ENVIRONMENT=live_mode, and the go-live check (R94,
+#   :live     real payments. Needs the provider's live keys (Provider.live_setup), and the go-live check (R94,
 #             Billing::Margins): the Qloo cost per call set and every paid plan keeping 60% or more at its caps.
 # A mode its provider can't back, or live before the go-live check passes, falls back to :waitlist, with a warning.
 module Billing
@@ -40,7 +40,7 @@ module Billing
     def go_live_blockers(check = nil)
       return [] unless ENV["BILLING_MODE"].to_s.strip.downcase == "live"
 
-      setup = "payments aren't set up for live mode (DODO_API_KEY and DODO_ENVIRONMENT=live_mode)" unless Provider.live?
+      setup = "payments aren't set up for live mode (#{Provider.live_setup})" unless Provider.live?
       [ setup, *(check || Margins.check).blockers ].compact
     end
 
@@ -97,13 +97,14 @@ module Billing
     # The keys a waitlist entry may name.
     def waitlist_keys = prices.map(&:key) << NOTIFY_KEY
 
-    # The provider's product id for a price key (plans.yml product_ids, from ENV), or nil when unset.
-    def product_id(price_key) = product_ids[price_key.to_s.to_sym].presence
+    # A provider's product id for a price key (plans.yml product_ids, under the provider's name, from ENV), or nil when
+    # unset. provider defaults to the chosen one (R145).
+    def product_id(price_key, provider: Provider.chosen_name) = product_ids(provider)[price_key.to_s.to_sym].presence
 
-    def price_key_for_product(product_id)
+    def price_key_for_product(product_id, provider: Provider.chosen_name)
       return if product_id.blank?
 
-      product_ids.find { |_key, id| id.to_s == product_id.to_s }&.first&.to_s
+      product_ids(provider).find { |_key, id| id.to_s == product_id.to_s }&.first&.to_s
     end
 
     # Forgets the memoized provider, plans.yml, this request's live mode and the warnings given (after ENV changes, in
@@ -120,13 +121,13 @@ module Billing
     # :live, or :waitlist with a warning until payments and the go live check allow it (R94). Billing.mode keeps the
     # answer for the rest of the request or job (Current).
     def live_mode
-      return fall_back("BILLING_MODE=live needs DODO_API_KEY and DODO_ENVIRONMENT=live_mode") unless Provider.live?
+      return fall_back("BILLING_MODE=live needs #{Provider.live_setup}") unless Provider.live?
 
       blockers = Margins.check.blockers
       blockers.empty? ? :live : fall_back("BILLING_MODE=live waits for the go live check: #{blockers.join('; ')}")
     end
 
-    def product_ids = Entitlements.plans[:product_ids] || {}
+    def product_ids(provider) = (Entitlements.plans[:product_ids] || {})[provider.to_s.to_sym] || {}
 
     def fall_back(reason)
       @warned ||= Set.new

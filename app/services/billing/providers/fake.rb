@@ -1,13 +1,20 @@
 module Billing
   module Providers
-    # The provider in development and test when DODO_API_KEY is unset; never in production. It calls nothing: checkout
-    # and portal URLs are pages on this site (FakeBillingController, development and test only), and its webhooks are
-    # Billing::Event's own fields as JSON, signed with WEBHOOK_SECRET and checked by the same Standard Webhooks code as
-    # Dodo's.
+    # The provider in development and test when no real one is configured; never in production. It calls nothing:
+    # checkout and portal URLs are pages on this site (FakeBillingController, development and test only), and its
+    # webhooks are Billing::Event's own fields as JSON, signed with WEBHOOK_SECRET and checked by the same Standard
+    # Webhooks code as a real provider's.
     class Fake
       include WebhookSignature
 
       NAME = "fake".freeze
+
+      # The registry contract (Billing::Provider): always in test mode, and never configured in production.
+      def self.configured? = !Rails.env.production?
+      def self.environment = :test_mode
+      def self.setup = "BILLING_PROVIDER"
+      def self.live_setup = "a real payment provider"
+      def self.fees = Provider::DEFAULT_FEES
       # Not a secret: it signs the Fake's webhooks only, and /webhooks/fake doesn't exist in production.
       WEBHOOK_SECRET = "whsec_#{Base64.strict_encode64('midrolo-fake-billing-webhooks')}".freeze
       PERIODS = { monthly: 1.month, yearly: 1.year }.freeze

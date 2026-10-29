@@ -1,6 +1,6 @@
 module Billing
   # The go-live guard (R94): "profitable from day 1" checked by code. For every paid price in config/plans.yml, what it
-  # nets after worst case Dodo fees (FEE_RATE plus FEE_FIXED_USD a payment) against what its plan costs us when every
+  # nets after the payment provider's worst case fees (Provider.fees) against what its plan costs us when every
   # cap is used: the LLM for its full reports and pitches, and Qloo for its full reports and Snapshots. A yearly price
   # counts 12 months of caps on one payment (usage is counted month by month, R60a); the sprint one period.
   #
@@ -11,8 +11,6 @@ module Billing
   #   Qloo price per call: AppSettings qloo_cost_per_call_usd, set in admin once Qloo quotes; blank until then.
   # Billing.mode refuses :live (the waitlist instead) until the price is set and every paid price keeps MIN_MARGIN.
   module Margins
-    FEE_RATE = BigDecimal("0.06")
-    FEE_FIXED_USD = BigDecimal("0.40")
     MIN_MARGIN = BigDecimal("0.60")
     PITCH_ESTIMATE_USD = BigDecimal("0.04")
     MONTHS = { monthly: 1, yearly: 12, once: 1 }.freeze
@@ -62,7 +60,8 @@ module Billing
         limits = Entitlements.limits(price.plan.to_sym)
         months = MONTHS.fetch(price.interval.to_sym)
         reports, snapshots, pitches = limits.values_at(:agent_reports, :snapshots_per_month, :pitches).map { |cap| cap * months }
-        net = BigDecimal(price.usd.to_s) * (1 - FEE_RATE) - FEE_FIXED_USD
+        fees = Provider.fees
+        net = BigDecimal(price.usd.to_s) * (1 - fees[:rate]) - fees[:fixed_usd]
         llm = reports * inputs.agent_llm_usd + pitches * inputs.pitch_llm_usd
         calls = reports * inputs.agent_calls + snapshots * inputs.snapshot_calls
         qloo = inputs.cost_per_call && calls * inputs.cost_per_call
