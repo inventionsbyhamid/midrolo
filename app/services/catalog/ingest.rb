@@ -8,7 +8,8 @@ module Catalog
   # feed columns (spec ruling 11): the listing and stats columns belong to Podcast#refresh_listing!. Episodes are never
   # deleted (ruling 4); a person the feed stops naming is.
   class Ingest
-    # The episode columns a later read of the same guid updates. The slug is set on insert only (ruling 5).
+    # The episode columns a later read of the same guid updates. The slug is set on insert only (ruling 5), so a
+    # page's URL never moves.
     EPISODE_UPDATES = %i[title description published_at duration_seconds episode_type season number enclosure_url link
                          transcript_url].freeze
     PERSON_UPDATES = %i[name href img_url episodes_count].freeze
@@ -112,15 +113,16 @@ module Catalog
       result.rows.reject { |_id, guid| known.key?(guid) }.map(&:first)
     end
 
-    # guid => slug for new episodes: Episode.slug_for, made longer when another episode of the podcast (stored, or new
-    # in this batch) already has it.
+    # guid => slug for new episodes: Episode.slug_for against every slug the podcast already uses, each one given out
+    # added before the next (the bare title when free, else the guid suffix). Existing episodes keep theirs.
     def new_slugs(episodes)
-      wanted = episodes.to_h { |episode| [ episode.guid, Episode.slug_for(episode.title, episode.guid) ] }
-      taken = @podcast.episodes.where(slug: wanted.values).pluck(:slug).to_set
-      wanted.to_h do |guid, slug|
-        slug = "#{slug}-#{Digest::SHA256.hexdigest(guid.to_s)[6, 6]}" if taken.include?(slug)
+      return {} if episodes.empty?
+
+      taken = @podcast.episodes.pluck(:slug).to_set
+      episodes.to_h do |episode|
+        slug = Episode.slug_for(episode.title, episode.guid, taken: taken)
         taken << slug
-        [ guid, slug ]
+        [ episode.guid, slug ]
       end
     end
 

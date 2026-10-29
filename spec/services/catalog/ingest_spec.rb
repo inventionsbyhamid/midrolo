@@ -26,11 +26,11 @@ RSpec.describe Catalog::Ingest do
       podcast.reload
       expect(podcast.episodes.newest_first.pluck(:guid)).to eq([ "tide-3", "tide-2", "tide-1", "https://traffic.libsyn.com/tidepool/trailer.mp3" ])
       episode = podcast.episodes.find_by(guid: "tide-3")
-      expect(episode.slug).to eq(Episode.slug_for("Episode 3: Anemones up close", "tide-3"))
+      expect(episode.slug).to eq("episode-3-anemones-up-close")
       expect([ episode.duration_seconds, episode.transcript_url ]).to eq([ 3723, "https://tidepool.example.com/3.vtt" ])
 
       expect(podcast.title).to eq("The Tidepool Hour")
-      expect(podcast.slug).to start_with("the-tidepool-hour-")
+      expect(podcast.slug).to eq("the-tidepool-hour")
       expect(podcast.author).to eq("Marina Reyes")
       expect(podcast.owner_email).to eq("marina@tidepool.example.com")
       expect(podcast.podcast_guid).to eq("917393e3-1b1e-5cef-ace4-edaa54e1f810")
@@ -90,10 +90,20 @@ RSpec.describe Catalog::Ingest do
       expect(podcast.episodes.count).to eq(4)
     end
 
-    it "gives a new episode a longer slug when another episode already has its slug" do
-      create(:episode, podcast: podcast, guid: "older", title: "x", slug: Episode.slug_for("Episode 1: Why tide pools matter", "tide-1"))
+    it "gives a new episode its title as its slug, with the guid suffix when another episode already has it" do
+      create(:episode, podcast: podcast, guid: "older", title: "x", slug: "episode-1-why-tide-pools-matter")
       described_class.call(podcast)
-      expect(podcast.episodes.find_by(guid: "tide-1").slug).to match(/\Aepisode-1-why-tide-pools-matter-\h{6}-\h{6}\z/)
+      expect(podcast.episodes.find_by(guid: "tide-1").slug)
+        .to eq("episode-1-why-tide-pools-matter-#{Digest::SHA256.hexdigest('tide-1').first(6)}")
+      expect(podcast.episodes.find_by(guid: "tide-2").slug).to eq("episode-2-starfish-sea-stars")
+    end
+
+    it "gives two new episodes with one title different slugs" do
+      feed_with(xml.sub("Episode 2: Starfish &amp; <i>sea stars</i>", "Episode 1: Why tide pools matter"))
+      described_class.call(podcast)
+      slugs = podcast.episodes.where(guid: %w[tide-1 tide-2]).pluck(:slug)
+      expect(slugs.uniq.size).to eq(2)
+      expect(slugs).to include("episode-1-why-tide-pools-matter")
     end
   end
 
