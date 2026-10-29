@@ -14,7 +14,7 @@
     <% end %>
   </dl>
 
-  <%= form_with url: admin_users_path, method: :get, role: "search", class: "flex flex-wrap items-end gap-3" do |f| %>
+  <%= form_with url: admin_users_path, method: :get, html: { role: "search" }, class: "flex flex-wrap items-end gap-3" do |f| %>
     <div class="flex min-w-0 flex-1 basis-64 flex-col gap-1">
       <%= f.label :q, "Search by name or email", class: "label" %>
       <%= f.search_field :q, value: @query, class: "input", autocomplete: "off" %>

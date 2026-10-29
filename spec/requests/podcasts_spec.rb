@@ -87,6 +87,11 @@ RSpec.describe "Podcast pages" do
       expect(response.body).to include("No podcasts match")
     end
 
+    it "marks the search form as a search landmark" do
+      visit "/podcasts"
+      expect(doc.at_css("form.dir-search")["role"]).to eq("search")
+    end
+
     # Code review M3, L2, L8: a card names the figure by its source, shows the owner's band when they chose ranges,
     # and shows nothing for a show nobody has claimed.
     it "shows a claimed show's plays or downloads per episode on its card, as a band when the owner chose ranges" do

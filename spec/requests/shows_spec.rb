@@ -75,6 +75,7 @@ RSpec.describe "Shows" do
                                          "Paste your RSS or Apple Podcasts link instead")
         # A skeleton stands in for the results while a search loads (Task 20).
         expect(Nokogiri::HTML(response.body).at_css(".show-search .search-busy .skeleton[role='status']").text).to include("Searching")
+        expect(Nokogiri::HTML(response.body).at_css(".show-search form[role='search']")).to be_present
       end
 
       it "shows the upgrade prompt when the plan's show limit is reached" do
