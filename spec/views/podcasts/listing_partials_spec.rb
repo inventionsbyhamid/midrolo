@@ -62,7 +62,8 @@ RSpec.describe "podcasts/_rates" do
 
       text = render_partial("rates").text.squish
 
-      expect(text).to include("Open to sponsors", "Midroll $150", "Rates set by the show.", "Coffee and banks",
+      expect(text).to include("Open to sponsors", "Midroll $150", "Midroll set by the show; preroll and postroll suggested by Midrolo.",
+                              "Suggested", "Coffee and banks",
                               "We don't advertise Gambling, Crypto",
                               "Based on 1,800 downloads per episode. Provided by the show Oct 29")
       expect(text).to include(*months.first(2).map { |month| Date.strptime(month, "%Y-%m").strftime("%b %Y") })

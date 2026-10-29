@@ -31,8 +31,9 @@
       <figure class="side-shot">
         <figcaption class="side-shot-caption">In the directory now</figcaption>
         <ul class="dir-grid side-cards" aria-label="Podcasts from the directory">
+          <% verified_ids = pages_verified_ids(showcase) %>
           <% showcase.each do |podcast| %>
-            <%= render "podcasts/card", podcast: podcast, sponsors: sponsors.fetch(podcast.id, 0) %>
+            <%= render "podcasts/card", podcast: podcast, sponsors: sponsors.fetch(podcast.id, 0), verified: verified_ids.include?(podcast.id) %>
           <% end %>
         </ul>
       </figure>

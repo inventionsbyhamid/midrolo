@@ -6,7 +6,9 @@
   <% if podcasts.any? %>
     <section class="dir-adding" aria-labelledby="adding_title">
       <h2 id="adding_title" class="type-h3">Found in the podcast directory</h2>
-      <p class="pod-note">New to <%= APP_NAME %>. Each page fills in from the show's own feed in a few seconds.</p>
+      <% if podcasts.any?(&:pending?) %>
+        <p class="pod-note">New to <%= APP_NAME %>. Each page fills in from the show's own feed in a few seconds.</p>
+      <% end %>
       <ul class="dir-grid" aria-live="polite">
         <% podcasts.each do |podcast| %>
           <% if podcast.pending? %>
@@ -27,7 +29,7 @@
               </div>
             </li>
           <% else %>
-            <%= render "podcasts/card", podcast: podcast, sponsors: sponsor_counts.fetch(podcast.id, 0) %>
+            <%= render "podcasts/card", podcast: podcast, sponsors: sponsor_counts.fetch(podcast.id, 0), verified: false %>
           <% end %>
         <% end %>
       </ul>

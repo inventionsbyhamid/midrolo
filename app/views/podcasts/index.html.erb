@@ -41,7 +41,7 @@
       <% elsif @directory.filtered? %>
         Matching podcasts
       <% else %>
-        Recently active podcasts
+        All podcasts, newest episode first
       <% end %>
     </h2>
     <% if @directory.page > 1 %><p class="text-sm text-ink-soft">Page <%= @directory.page %></p><% end %>
@@ -49,8 +49,9 @@
 
   <% if @podcasts.any? %>
     <ul class="dir-grid" aria-label="Podcasts">
+      <% verified_ids = pages_verified_ids(@podcasts) %>
       <% @podcasts.each do |podcast| %>
-        <%= render "podcasts/card", podcast: podcast, sponsors: @sponsor_counts.fetch(podcast.id, 0) %>
+        <%= render "podcasts/card", podcast: podcast, sponsors: @sponsor_counts.fetch(podcast.id, 0), verified: verified_ids.include?(podcast.id) %>
       <% end %>
     </ul>
   <% end %>

@@ -101,6 +101,7 @@
     box-shadow: var(--shadow-edge);
   }
 
+  /* On a phone the chips scroll sideways; the right edge fades so the row reads as more to come (D-4). */
   .dir-categories {
     display: flex;
     gap: 0.5rem;
@@ -108,12 +109,14 @@
     padding: 0 1rem 0.25rem;
     overflow-x: auto;
     scrollbar-width: none;
+    mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
 
     @media (width >= 40rem) {
       flex-wrap: wrap;
       margin-inline: 0;
       padding-inline: 0;
       overflow: visible;
+      mask-image: none;
     }
   }
 
@@ -274,6 +277,13 @@
     }
   }
 
+  /* Inside a page's main column (beside a sidebar) two across is the most a card can take (CB-1). */
+  .pod-main .dir-grid {
+    @media (width >= 72rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
   /* A podcast card: the whole card is the link (the title's ::after covers it), so the focus ring is drawn on it. */
   .dir-card {
     position: relative;
@@ -321,7 +331,12 @@
     min-width: 0;
   }
 
+  /* Two lines at most (D-3); the full title is the link's tooltip and on the page. */
   .dir-card-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
     font-size: 1.0625rem;
     font-weight: 700;
     font-stretch: 106%;
@@ -450,6 +465,24 @@
     }
   }
 
+  .pod-art-demo {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: var(--color-plum);
+    color: #fff;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .pod-art-demo-wave {
+    width: 72%;
+  }
+
   .pod-hero-text {
     flex: 1 1 20rem;
     min-width: 0;
@@ -474,6 +507,21 @@
     letter-spacing: -0.035em;
     text-wrap: balance;
     overflow-wrap: anywhere;
+  }
+
+  /* Long titles step down a size and stop at three lines; the full title is in the tooltip and the About section. */
+  .pod-title-mid {
+    font-size: clamp(1.625rem, 1.2rem + 1.8vw, 2.5rem);
+    line-height: 1.05;
+  }
+
+  .pod-title-long {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    font-size: clamp(1.375rem, 1.1rem + 1.2vw, 2rem);
+    line-height: 1.1;
   }
 
   .pod-byline {
@@ -516,6 +564,83 @@
     height: 2.5rem;
     padding-inline: 1.125rem;
     font-size: 0.9375rem;
+  }
+
+  /* Lane L7's Request a spot sits in the row as the first button; its notes (reply time, brands waiting) wrap onto
+     their own line under the buttons. */
+  .pod-actions > #request {
+    display: contents;
+  }
+
+  .pod-actions > #request > p {
+    order: 10;
+    flex-basis: 100%;
+    margin-top: 0.125rem;
+  }
+
+  /* A dormant show or one whose feed fails: Request a spot steps down to a secondary button (PP-5, PP-6). */
+  .pod-actions-quiet > #request .btn-primary {
+    background: var(--color-surface);
+    border-color: var(--color-line-strong);
+    color: var(--color-ink);
+    box-shadow: var(--shadow-edge);
+  }
+
+  /* The deal in one line: from price and open months (PP-3). */
+  .pod-offer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    margin-top: 0.75rem;
+    font-size: 1rem;
+  }
+
+  .pod-offer > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .pod-offer > span + span::before {
+    content: "";
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 2px;
+    background: var(--color-tally);
+  }
+
+  .pod-offer strong {
+    font-size: 1.125rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* An unclaimed show's claim prompt, right under the actions on a phone; the sidebar's card takes over from 64rem. */
+  .pod-claim-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-control);
+    background: var(--color-plum-soft);
+    font-size: 0.9375rem;
+
+    @media (width >= 64rem) {
+      display: none;
+    }
+  }
+
+  .pod-dormant {
+    max-width: 60ch;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-control);
+    background: var(--color-tally-soft);
+    box-shadow: inset 3px 0 0 var(--color-tally);
+    font-size: 0.9375rem;
+    font-weight: 600;
   }
 
   /* ---------- The facts strip: big wide numerals, each on its own rule ---------- */
@@ -571,9 +696,63 @@
   }
 
   .fact-source .badge {
-    height: 1.25rem;
+    height: 1.375rem;
     padding-inline: 0.5rem;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
+  }
+
+  /* The platforms' verified numbers: one disclosure on a phone (PP-12), the cards side by side from 40rem. */
+  .pod-numbers-more {
+    flex: 4 1 100%;
+    min-width: 0;
+
+    @media (width >= 40rem) {
+      flex-basis: 48rem;
+    }
+  }
+
+  .pod-numbers-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.875rem 1.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    font-weight: 650;
+    list-style: none;
+    cursor: pointer;
+
+    @media (width >= 40rem) {
+      display: none;
+    }
+  }
+
+  .pod-numbers-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .pod-numbers-summary > span:first-child::after {
+    content: " +";
+    color: var(--color-plum);
+  }
+
+  .pod-numbers-more[open] > .pod-numbers-summary > span:first-child::after {
+    content: " \2212";
+  }
+
+  .pod-numbers-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .pod-numbers-more[open] > .pod-numbers-summary + .pod-numbers-groups {
+    margin-top: 1rem;
+
+    @media (width >= 40rem) {
+      margin-top: 0;
+    }
   }
 
   /* ---------- Tabs as anchored sections, under the sticky site header ---------- */
@@ -622,8 +801,11 @@
 
   /* ---------- Main column and sidebar ---------- */
 
+  /* Both tracks are minmax(0, ...) and both children min-width 0, so no long title in any card can widen the page
+     (PP-1: a similar show's title once pushed the phone layout to 968 px). */
   .pod-layout {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2rem;
     padding-top: 0.5rem;
 
@@ -844,6 +1026,7 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    min-width: 0;
 
     @media (width >= 64rem) {
       position: sticky;
@@ -942,6 +1125,10 @@
   }
 
   .similar-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
     font-size: 0.9375rem;
     font-weight: 650;
     line-height: 1.3;
@@ -971,6 +1158,15 @@
     padding: 0 0.25rem;
     font-size: 0.8125rem;
     color: var(--color-ink-soft);
+  }
+
+  /* The data sources page: each source's chip sits on the line with its name. */
+  .source-list .badge {
+    vertical-align: 0.0625rem;
+  }
+
+  .source-list > li > span {
+    margin-inline-end: 0.25rem;
   }
 
   /* ---------- Teasers and empty sections ---------- */

@@ -104,6 +104,13 @@
     margin-top: 2rem;
   }
 
+  /* A phone stacks the two calls to action at one width (L-3). */
+  .hero-actions .btn {
+    @media (width < 40rem) {
+      width: 100%;
+    }
+  }
+
   .hero-wave {
     grid-area: wave;
     position: relative;

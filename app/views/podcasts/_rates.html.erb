@@ -14,19 +14,31 @@
       <%= listing_demo_badge(podcast) %>
     </p>
 
+    <%# Each slot says whose price it is (PP-7): the show's own, or Midrolo's suggestion where the show set none. %>
+    <% own = kit.rate_card_overrides.select { |_, figure| figure.is_a?(Integer) }.keys %>
+    <% slots = [ [ "preroll", "Preroll", rates.preroll, "Before the episode starts" ], [ "midroll", "Midroll", rates.midroll, "Read by the host, midway through" ],
+                 [ "postroll", "Postroll", rates.postroll, "After the episode ends" ] ] %>
     <dl class="listing-slots">
-      <% [ [ "Preroll", rates.preroll, "Before the episode starts" ], [ "Midroll", rates.midroll, "Read by the host, midway through" ],
-           [ "Postroll", rates.postroll, "After the episode ends" ] ].each do |name, price, note| %>
-        <div class="<%= class_names("listing-slot", "listing-slot-mid" => name == "Midroll") %>">
+      <% slots.each do |key, name, price, note| %>
+        <div class="<%= class_names("listing-slot", "listing-slot-mid" => key == "midroll") %>">
           <dt class="text-sm font-semibold"><%= name %></dt>
           <dd class="listing-slot-price"><%= kit_money(price) %></dd>
           <dd class="text-sm text-ink-soft"><%= note %></dd>
+          <% if rates.custom? && !own.include?(key) %><dd><%= ui_badge "Suggested" %></dd><% end %>
         </div>
       <% end %>
     </dl>
     <p><%= kit_bundle_line(rates) %></p>
+    <% set, suggested = slots.partition { |key, *| own.include?(key) }.map { |group| group.map { |_, name, *| name } } %>
     <p class="text-sm text-ink-soft">
-      <%= rates.custom? ? "Rates set by the show." : "Suggested rates: #{rates.basis}." %> Per episode, in US dollars.
+      <% if !rates.custom? %>
+        Suggested rates: <%= rates.basis %>.
+      <% elsif suggested.empty? %>
+        Rates set by the show.
+      <% else %>
+        <%= Copy.and_list(set).downcase.upcase_first %> set by the show; <%= Copy.and_list(suggested).downcase %> suggested by <%= APP_NAME %>.
+      <% end %>
+      Per episode, in US dollars.
     </p>
     <% if basis&.reading %>
       <p class="flex flex-wrap items-center gap-2 text-sm text-ink-soft">
