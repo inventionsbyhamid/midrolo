@@ -18,6 +18,18 @@ class AdminMailer < ApplicationMailer
     mail to: recipients, subject: "[#{APP_NAME}] #{error_class}"
   end
 
+  # A platform session of Midrolo's stats account stopped working (Stats::ServiceSessions.expired!), so syncs for that
+  # platform wait until an admin pastes a new one. Names the platform only; never a cookie.
+  def service_session_expired(platform:)
+    recipients = self.class.recipients
+    return if recipients.empty?
+
+    @platform_name = Stats.platform_name(platform)
+    @service_name = Stats.service_name(platform)
+    @url = admin_service_sessions_url
+    mail to: recipients, subject: "[#{APP_NAME}] The #{@service_name} session expired: stats syncs are paused"
+  end
+
   # ADMIN_EMAIL (comma separated) when set, else every admin account's address.
   def self.recipients
     configured = ENV["ADMIN_EMAIL"].to_s.split(",").map(&:strip).compact_blank
