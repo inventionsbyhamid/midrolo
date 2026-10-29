@@ -14,6 +14,8 @@ class ClaimsController < ApplicationController
   throttle to: 5, within: 1.hour, only: :access, by: -> { current_user.id }, scope: "claim_access"
 
   CLAIMED = "%s is yours. Set up your listing below.".freeze
+  # When requests waited for the claim (review PO-11): the best reason to look at the listing editor's inbox card.
+  CLAIMED_WITH_REQUESTS = "%s is yours, and %s already asked about sponsoring it.".freeze
   ACCESS_SENT = "We asked the owner. If they know you, they'll reply to your email.".freeze
   ACCESS_ALREADY_SENT = "You asked the owner recently. Give them a few days to reply.".freeze
   # After "Check my feed again" (recheck=1) on the verification page.
@@ -26,13 +28,14 @@ class ClaimsController < ApplicationController
     return redirect_to(edit_show_media_kit_path(@show)) if @show&.verified?
 
     @managed_elsewhere = @podcast.claimed?
+    @asked_at = Claims::AccessRequest.asked_at(user: current_user, podcast: @podcast) if @managed_elsewhere
   end
 
   def create
     result = Claims::Start.call(user: current_user, podcast: @podcast)
     show = result.show
     case result.outcome
-    when :verified then redirect_to edit_show_media_kit_path(show), notice: format(CLAIMED, show.title), status: :see_other
+    when :verified then redirect_to edit_show_media_kit_path(show), notice: claimed_notice(show), status: :see_other
     when :owner then redirect_to edit_show_media_kit_path(show), status: :see_other
     else redirect_to next_step(show), status: :see_other, **recheck_message
     end
@@ -75,5 +78,10 @@ class ClaimsController < ApplicationController
     return {} if params[:recheck].blank?
 
     @podcast.owner_email.present? ? { notice: EMAIL_FOUND } : { alert: EMAIL_MISSING }
+  end
+
+  def claimed_notice(show)
+    asked = Conversation.where(podcast_id: show.podcast_id).open.count
+    asked.positive? ? format(CLAIMED_WITH_REQUESTS, show.title, helpers.pluralize(asked, "brand")) : format(CLAIMED, show.title)
   end
 end

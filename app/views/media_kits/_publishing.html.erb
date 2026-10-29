@@ -1,7 +1,9 @@
 <%# locals: (show:, kit:) -%>
-<%# Publishing needs a verified show (the claim); the controls live here, outside the kit form. A published listing is
-    the Rates section of the podcast's page (/k/:slug redirects there). %>
-<%= render "components/card", title: "Your listing", aside: (show.public_kit? ? ui_badge("Published", tone: :success) : ui_badge(show.verified? ? "Not published" : "Draft")) do %>
+<%# Where the listing stands (review PO-7): a draft (verify first), managed by someone else, ready to publish (with what
+    brands will see missing, if anything) or live. Publishing itself is the form's "Save and publish", so there is one
+    way to do it. A published listing is the Rates section of the podcast's page (/k/:slug redirects there). %>
+<% status_badge = show.public_kit? ? ui_badge("Published", tone: :success) : ui_badge(show.verified? ? "Not published" : "Draft") %>
+<%= render "components/card", title: "Publishing", aside: status_badge do %>
   <% case show.claim_status %>
   <% when :managed_elsewhere %>
     <p class="font-semibold">Another account manages this show, so this listing stays a draft.</p>
@@ -9,23 +11,35 @@
     <%= ui_button "Ask for access", new_podcast_claim_path(show.podcast), class: "mt-4" %>
   <% when :draft %>
     <p class="font-semibold"><%= MediaKit::VERIFY_TO_PUBLISH %></p>
-    <p class="mt-1 text-ink-soft">Set everything up now. We'll email a code to the owner address in your RSS feed, or check for a short line you add to your show description. Your preview works either way.</p>
+    <p class="mt-1 text-ink-soft">Set everything up now. Verify with a code sent to your feed's owner address, or a short line in your show description.</p>
     <%= ui_button "Verify ownership", new_show_verification_path(show), class: "mt-4" %>
   <% else %>
-    <% if show.public_kit? %>
-      <div class="flex flex-col gap-3" data-controller="clipboard">
-        <p>Your rates are live on your show's page: <%= link_to listing_podcast_url(show.podcast, anchor: "rates"), listing_podcast_path(show.podcast, anchor: "rates"), class: "link break-all", data: { clipboard_target: "source" } %></p>
-        <p class="text-sm text-ink-soft"><%= kit.open_to_sponsors? ? "Brands can find you under Open to sponsors and request a spot." : "You're not marked open to sponsors, so the directory's Open to sponsors filter leaves you out." %></p>
-        <div class="flex flex-wrap gap-3">
-          <button type="button" class="btn btn-secondary btn-md" data-action="clipboard#copy">
-            <span data-clipboard-target="label" aria-live="polite">Copy link</span>
-          </button>
-          <%= button_to "Unpublish", unpublish_show_media_kit_path(show), method: :patch, class: "btn btn-ghost btn-md" %>
-        </div>
+    <% page_url = listing_podcast_url(show.podcast, anchor: "rates") %>
+    <div class="flex flex-col gap-4">
+      <% if show.public_kit? %>
+        <p><%= kit.open_to_sponsors? ? "Brands see your rates and can request a spot from your page." : "Your rates are live, but you're not open to sponsors, so the directory's Open to sponsors filter leaves you out." %></p>
+      <% else %>
+        <p>Publish to put your rates, open months and who you're looking for on your page.</p>
+        <ul class="flex flex-col gap-1.5 text-[0.9375rem]" aria-label="Before you publish">
+          <% listing_readiness(kit).each do |item| %>
+            <li class="flex items-center gap-2">
+              <span class="<%= class_names("size-2 flex-none rounded-full", item[:ok] ? "bg-success" : "bg-tally") %>" aria-hidden="true"></span>
+              <span><%= item[:text] %></span>
+            </li>
+          <% end %>
+        </ul>
+      <% end %>
+      <div class="flex flex-wrap items-center gap-2" data-controller="clipboard">
+        <span class="url-chip" title="<%= page_url %>"><span><%= page_url.sub(%r{\Ahttps?://}, "").delete_suffix("#rates") %></span></span>
+        <input type="hidden" value="<%= page_url %>" data-clipboard-target="source">
+        <button type="button" class="btn btn-secondary btn-sm" data-action="clipboard#copy">
+          <span data-clipboard-target="label" aria-live="polite">Copy link</span>
+        </button>
+        <%= ui_button "Open", listing_podcast_path(show.podcast, anchor: "rates"), variant: :ghost, size: :sm, target: "_blank", rel: "noopener" %>
+        <% if show.public_kit? %>
+          <%= button_to "Unpublish", unpublish_show_media_kit_path(show), method: :patch, class: "btn btn-ghost btn-sm" %>
+        <% end %>
       </div>
-    <% else %>
-      <p>You've verified this show. Publish to put your rates, open months and who you're looking for on <span class="font-semibold break-all"><%= listing_podcast_url(show.podcast) %></span>.</p>
-      <%= button_to "Publish listing", publish_show_media_kit_path(show), method: :patch, class: "btn btn-primary btn-md mt-4" %>
-    <% end %>
+    </div>
   <% end %>
 <% end %>

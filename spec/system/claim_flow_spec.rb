@@ -37,7 +37,7 @@ RSpec.describe "Claiming a show" do
     click_button "Check my feed"
 
     expect(page).to have_text("You're verified.")
-    expect(page).to have_css("h1", text: "Listing and media kit")
+    expect(page).to have_css("h1", text: "Your listing")
     check "Open to sponsors"
     month = Podcast.listing_months.second
     find("#media_kit_open_months_#{month}", visible: :all).click # the chip's checkbox lies over its label
@@ -46,7 +46,7 @@ RSpec.describe "Claiming a show" do
     click_button "Save listing"
     expect(page).to have_text("Saved.")
 
-    click_button "Publish listing"
+    click_button "Save and publish"
     expect(page).to have_text("Published.")
     expect(page).to have_link(href: "/podcasts/#{podcast.slug}#rates")
 

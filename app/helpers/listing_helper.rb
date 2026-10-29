@@ -54,6 +54,17 @@ module ListingHelper
     ui_badge("Demo show", tone: :warning) if podcast.demo?
   end
 
+  # What a listing has before it's published (review PO-7), from what's saved: [{ ok:, text: }] for open to sponsors,
+  # the open months still ahead and the rates.
+  def listing_readiness(kit)
+    months = kit.open_months & Podcast.listing_months
+    [
+      { ok: kit.open_to_sponsors?, text: kit.open_to_sponsors? ? "Open to sponsors" : "Not marked open to sponsors yet" },
+      { ok: months.any?, text: months.any? ? "Open in #{Copy.and_list(months.map { |month| listing_month_label(month).split.first })}" : "No open months picked yet" },
+      { ok: true, text: kit.rate_card_overrides.any? ? "Your own rates" : "Midrolo's suggested rates (you can set your own)" }
+    ]
+  end
+
   # The owner email as the claim page may show it: masked, never in full.
   def listing_masked_email(address) = Shows::OwnerEmail.mask(address)
 end

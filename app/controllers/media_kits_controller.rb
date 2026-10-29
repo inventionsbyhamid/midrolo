@@ -5,6 +5,7 @@
 # Scoped to the user's own shows. Viewing never creates a kit row.
 class MediaKitsController < ApplicationController
   UPLOAD_MISSING = "That photo didn't finish uploading. Please choose it again.".freeze
+  PUBLISHED = "Published. Your listing is live on your show's page.".freeze
 
   layout "app"
   before_action :authenticate_user!
@@ -26,8 +27,9 @@ class MediaKitsController < ApplicationController
     @kit.assign_attributes(kit_params)
     @show.contact_email = @show.owner_email if params[:use_owner_email].present? && @show.verified? && @show.owner_email.present?
     if @kit.save
+      published = params[:publish].present? && @kit.publish!
       @show.sync_listing!
-      redirect_to edit_show_media_kit_path(@show), notice: "Saved.", status: :see_other
+      redirect_to edit_show_media_kit_path(@show), notice: published ? PUBLISHED : "Saved.", status: :see_other
     else
       @content = MediaKit::Content.new(@kit)
       render :edit, status: :unprocessable_content
@@ -41,7 +43,7 @@ class MediaKitsController < ApplicationController
   def publish
     if @kit.publish!
       @show.sync_listing!
-      redirect_to edit_show_media_kit_path(@show), notice: "Published. Your listing is live on your show's page.", status: :see_other
+      redirect_to edit_show_media_kit_path(@show), notice: PUBLISHED, status: :see_other
     else
       redirect_to edit_show_media_kit_path(@show), alert: MediaKit::VERIFY_TO_PUBLISH, status: :see_other
     end

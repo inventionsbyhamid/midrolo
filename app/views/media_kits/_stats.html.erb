@@ -10,6 +10,9 @@
         </div>
       <% end %>
     </dl>
-    <p class="kit-note mt-4">Stats as reported by the verified owner.</p>
+    <%# Say where each number comes from (review PO-10): episodes and cadence are the feed's; downloads are the show's word. %>
+    <p class="kit-note mt-4">
+      <%= content.show.downloads_per_episode ? "Downloads per episode as reported by the show. Episodes and schedule from its RSS feed." : "From the show's RSS feed." %>
+    </p>
   </section>
 <% end %>

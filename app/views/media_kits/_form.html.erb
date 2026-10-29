@@ -13,6 +13,33 @@
 
   <%= render "media_kits/listing", f: f, kit: kit %>
 
+  <%= render "components/card", title: "Rates", aside: tag.span("Per spot, in US dollars", class: "text-sm text-ink-soft") do %>
+    <p class="text-ink-soft">What a brand pays for one read. Leave a slot blank to use Midrolo's suggestion; the bundle follows your midroll.</p>
+    <div class="mt-4 grid gap-4 sm:grid-cols-3">
+      <% MediaKit::RATE_SLOTS.each do |slot, label| %>
+        <% field_id = "media_kit_rate_card_overrides_#{slot}" %>
+        <div class="<%= class_names('rate-field', 'rate-field-mid' => slot == 'midroll') %>">
+          <label for="<%= field_id %>" class="label"><%= label %></label>
+          <div class="rate-input">
+            <span aria-hidden="true">$</span>
+            <%= number_field_tag "media_kit[rate_card_overrides][#{slot}]", kit.rate_card_overrides[slot], id: field_id, class: "input",
+                  placeholder: suggested.public_send(slot), min: 0, step: 1, inputmode: "numeric",
+                  aria: { describedby: "rates-basis", invalid: kit.errors.key?(:"#{slot}_rate").presence } %>
+          </div>
+          <p class="hint"><%= kit.rate_card_overrides[slot].present? ? "Your rate" : "Suggested: $#{suggested.public_send(slot)}" %></p>
+        </div>
+      <% end %>
+    </div>
+    <div id="rates-basis" class="mt-4 rounded-[var(--radius-control)] bg-paper px-4 py-3 text-sm text-ink-soft">
+      <p>Our suggestion: <%= suggested.basis %>.</p>
+      <% if (basis = listing_downloads_basis(content.downloads_basis)) %>
+        <p class="mt-1">It uses <%= basis %>.</p>
+      <% else %>
+        <p class="mt-1">We don't have your audience numbers yet. <%= link_to "Verify or add them on Stats", show_stats_path(show), class: "link" %> for a sharper suggestion.</p>
+      <% end %>
+    </div>
+  <% end %>
+
   <%= render "components/card", title: "Your story" do %>
     <div class="flex flex-col gap-6">
       <div>
@@ -74,27 +101,6 @@
     <% end %>
   <% end %>
 
-  <%= render "components/card", title: "Rates" do %>
-    <p class="text-ink-soft">Leave a rate blank to use our suggestion. The bundle price follows your midroll rate.</p>
-    <div class="mt-4 grid gap-4 sm:grid-cols-3">
-      <% MediaKit::RATE_SLOTS.each do |slot, label| %>
-        <% field_id = "media_kit_rate_card_overrides_#{slot}" %>
-        <div>
-          <label for="<%= field_id %>" class="label"><%= label %> ($)</label>
-          <%= number_field_tag "media_kit[rate_card_overrides][#{slot}]", kit.rate_card_overrides[slot], id: field_id, class: "input",
-                placeholder: suggested.public_send(slot), min: 0, step: 1, inputmode: "numeric",
-                aria: { describedby: "rates-basis", invalid: kit.errors.key?(:"#{slot}_rate").presence } %>
-        </div>
-      <% end %>
-    </div>
-    <p id="rates-basis" class="hint">Our suggestion: <%= suggested.basis %>.</p>
-    <% if (basis = listing_downloads_basis(content.downloads_basis)) %>
-      <p class="hint">It uses <%= basis %>.</p>
-    <% else %>
-      <p class="hint">We don't have your downloads yet. <%= link_to "Add your downloads per episode", edit_show_path(show), class: "link" %> for a sharper suggestion.</p>
-    <% end %>
-  <% end %>
-
   <% if brands.any? %>
     <%= render "components/card", title: "Brands on your kit" do %>
       <fieldset>
@@ -113,8 +119,13 @@
     <% end %>
   <% end %>
 
-  <div class="flex flex-wrap items-center gap-3">
-    <%= f.submit "Save listing", class: "btn btn-primary btn-lg" %>
-    <%= ui_button "Preview", show_media_kit_path(show), variant: :ghost, size: :lg %>
+  <%# One place to save (review PO-7): Save, and Save and publish while a verified listing is unpublished. %>
+  <div class="save-bar">
+    <% if show.verified? && !show.public_kit? %>
+      <%= f.submit "Save and publish", name: "publish", class: "btn btn-primary btn-md" %>
+      <%= f.submit "Save listing", class: "btn btn-secondary btn-md" %>
+    <% else %>
+      <%= f.submit "Save listing", class: "btn btn-primary btn-md" %>
+    <% end %>
   </div>
 <% end %>

@@ -180,11 +180,30 @@ RSpec.describe "Media kits (owner)" do
 
         show.verify!(via: "admin")
         get edit_show_media_kit_path(show)
-        expect(response.body).to include(publish_show_media_kit_path(show))
+        buttons = Nokogiri::HTML(response.body).css(".save-bar input[type=submit]").map { |input| [ input["name"], input["value"] ] }
+        expect(buttons).to eq([ [ "publish", "Save and publish" ], [ "commit", "Save listing" ] ])
 
         patch publish_show_media_kit_path(show)
         get edit_show_media_kit_path(show)
         expect(response.body).to include(unpublish_show_media_kit_path(show), "/podcasts/#{show.slug}#rates")
+        expect(Nokogiri::HTML(response.body).css(".save-bar input[type=submit]").map { |input| input["value"] }).to eq([ "Save listing" ])
+      end
+
+      it "saves and publishes in one step from the form (review PO-7)" do
+        show.verify!(via: "admin")
+        patch show_media_kit_path(show), params: { publish: "Save and publish", media_kit: { open_to_sponsors: "1" } }
+
+        expect(response).to redirect_to(edit_show_media_kit_path(show))
+        expect(flash[:notice]).to eq("Published. Your listing is live on your show's page.")
+        expect(show.media_kit.reload).to have_attributes(open_to_sponsors: true, published?: true)
+        expect(show.podcast.reload.open_to_sponsors).to be(true)
+      end
+
+      it "only saves an unverified show's listing when asked to publish" do
+        patch show_media_kit_path(show), params: { publish: "Save and publish", media_kit: { open_to_sponsors: "1" } }
+
+        expect(flash[:notice]).to eq("Saved.")
+        expect(show.media_kit.reload).not_to be_published
       end
 
       it "sends a show another account manages to ask for access instead" do
@@ -258,7 +277,7 @@ RSpec.describe "Media kits (owner)" do
 
         show.update!(downloads_per_episode: nil)
         get edit_show_media_kit_path(show)
-        expect(response.body).to include("We don't have your downloads yet.")
+        expect(response.body).to include("We don't have your audience numbers yet.", show_stats_path(show))
       end
     end
 

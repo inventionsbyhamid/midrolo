@@ -13,6 +13,9 @@
     </div>
     <% if email %>
       <%= mail_to email, "Email us", subject: "Sponsoring #{content.show.title}", class: "btn btn-lg kit-contact-button" %>
+    <% elsif content.show.public_kit? %>
+      <%# A listed show takes requests on Midrolo, which keeps them in one inbox (review PO-10). %>
+      <%= link_to "Request a spot on #{APP_NAME}", new_conversation_url(podcast: content.show.podcast.slug), class: "btn btn-lg kit-contact-button" %>
     <% else %>
       <%= link_to "Visit our website", website, class: "btn btn-lg kit-contact-button", rel: "noopener" %>
     <% end %>
