@@ -55,6 +55,15 @@ RSpec.describe Llm::StructuredCall do
       expect(RubyLLM::Test.requests).to be_empty
     end
 
+    it "spends from the bucket given, with no user, and links a fit search" do
+      RubyLLM::Test.stub_response({ subject: "Hi" })
+      search = create(:fit_search)
+      described_class.call(model: Llm.cheap_model, schema: schema, instructions: "x", prompt: "y", bucket: :catalog,
+                           fit_search: search)
+      expect(SpendEntry.last).to have_attributes(bucket: "catalog", user_id: nil, fit_search_id: search.id,
+                                                 model: "deepseek/deepseek-v4.1-flash")
+    end
+
     it "raises BudgetExceeded for a free user" do
       expect do
         described_class.call(model: "deepseek/deepseek-v4.1-flash", schema: schema, instructions: "x", prompt: "y", user: create(:user))

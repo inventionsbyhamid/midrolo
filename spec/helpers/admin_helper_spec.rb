@@ -44,7 +44,7 @@ RSpec.describe AdminHelper do
     end
 
     it "has a row for every spend bucket, then the total" do
-      expect(groups["Spend"].map(&:first)).to eq(%w[Dev Promo Judge Paid Sample Total])
+      expect(groups["Spend"].map(&:first)).to eq(%w[Dev Promo Judge Paid Sample Catalog Total])
       expect(groups["Spend"].to_h.slice("Promo", "Paid", "Total"))
         .to eq("Promo" => { today: "$0.40", month: "$0.50" }, "Paid" => { today: "$0.00", month: "$1.25" },
                "Total" => { today: "$0.40", month: "$1.75" })

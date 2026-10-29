@@ -1,7 +1,7 @@
 # Runtime-tunable settings. A stored Setting row wins, then ENV (KEY upcased), then the default.
 class AppSettings
-  KEYS = %i[promo_budget_usd judge_reserve_usd llm_daily_budget_usd runs_paused runs_paused_reason promo_pro_until
-            qloo_daily_call_limit qloo_cost_per_call_usd qloo_free_share].freeze
+  KEYS = %i[promo_budget_usd judge_reserve_usd llm_daily_budget_usd llm_catalog_daily_usd runs_paused runs_paused_reason
+            promo_pro_until qloo_daily_call_limit qloo_cost_per_call_usd qloo_free_share].freeze
   # Qloo 401s in a row (counted in Rails.cache) before new runs pause themselves (Review Focus #4). A 403 never counts
   # (R87).
   TASTE_AUTH_FAILURE_LIMIT = 3

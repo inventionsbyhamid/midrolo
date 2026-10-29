@@ -1,10 +1,14 @@
 module Llm
   # One-shot structured (JSON schema) call. Returns a Hash with string keys and records one SpendEntry.
   # Raises Llm::FakeModeUnsupported in fake mode: callers provide their own fake path.
+  #
+  # The spend goes to the user's plan's bucket, or to bucket: when given (the catalog's work has no user: bucket:
+  # :catalog), and is linked to the report, pitch or fit search it was for.
   class StructuredCall
     def self.call(**) = new(**).call
 
-    def initialize(model:, schema:, instructions:, prompt:, user:, report: nil, pitch: nil)
+    def initialize(model:, schema:, instructions:, prompt:, user: nil, report: nil, pitch: nil, fit_search: nil,
+                   bucket: nil)
       @model = model
       @schema = schema
       @instructions = instructions
@@ -12,18 +16,20 @@ module Llm
       @user = user
       @report = report
       @pitch = pitch
+      @fit_search = fit_search
+      @bucket = bucket
     end
 
     def call
       raise FakeModeUnsupported, "structured calls need a live LLM; provide a fake path in the caller" if Llm.mode == :fake
 
       Pricing.ensure_known!(@model)
-      bucket = Budget.bucket_for(@user)
+      bucket = @bucket || Budget.bucket_for(@user)
       raise BudgetExceeded, "LLM budget exhausted for #{bucket.inspect}" unless Budget.allow?(bucket)
 
       response = chat.ask(@prompt)
       Budget.record!(user: @user, bucket: bucket, model: @model, tokens: token_counts(response.tokens),
-                     report: @report, pitch: @pitch)
+                     report: @report, pitch: @pitch, fit_search: @fit_search)
       parse(response.content)
     end
 

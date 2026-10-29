@@ -61,6 +61,34 @@ RSpec.describe Llm::Budget do
     end
   end
 
+  describe "the catalog bucket" do
+    it "has a daily cap of its own, outside the shared one" do
+      AppSettings.set(:llm_daily_budget_usd, 1)
+      spend(:catalog, 0.9)
+      expect(described_class.allow?(:paid, estimate_usd: 0.5)).to be(true)
+      expect(described_class.allow?(:catalog, estimate_usd: 0.05)).to be(true)
+      expect(described_class.allow?(:catalog, estimate_usd: 0.2)).to be(false)
+
+      AppSettings.set(:llm_catalog_daily_usd, 2)
+      expect(described_class.allow?(:catalog, estimate_usd: 0.2)).to be(true)
+      expect(described_class.usage[:catalog]).to eq(spent: BigDecimal("0.9"), ceiling: BigDecimal("2"))
+      expect(described_class.usage.dig(:daily, :spent)).to eq(0)
+    end
+
+    it "stops while runs are paused" do
+      AppSettings.pause_runs!("Maintenance")
+      expect(described_class.allow?(:catalog, estimate_usd: 0)).to be(false)
+    end
+
+    it "records a fit search's spend against it" do
+      search = create(:fit_search)
+      entry = described_class.record!(user: nil, bucket: :catalog, model: "deepseek/deepseek-v4.1-flash",
+                                      tokens: { input: 1000, output: 100 }, fit_search: search)
+      expect(entry).to have_attributes(bucket: "catalog", fit_search_id: search.id, user_id: nil)
+      expect(search.spend_entries).to eq([ entry ])
+    end
+  end
+
   describe ".usage" do
     it "gives promo and judge spend (all time) and today's spend against their ceilings, as allow? computes them" do
       AppSettings.set(:llm_daily_budget_usd, 6)
@@ -71,14 +99,15 @@ RSpec.describe Llm::Budget do
       expect(described_class.usage).to eq(
         promo: { spent: BigDecimal("2"), ceiling: BigDecimal("5") },
         judge: { spent: BigDecimal("1.5"), ceiling: BigDecimal("8") },
-        daily: { spent: BigDecimal("2"), ceiling: BigDecimal("6") }
+        daily: { spent: BigDecimal("2"), ceiling: BigDecimal("6") },
+        catalog: { spent: BigDecimal("0"), ceiling: BigDecimal("1") }
       )
     end
 
     it "falls back to the defaults when nothing is set" do
       Setting.delete_all
       expect(described_class.usage.transform_values { |row| row[:ceiling] })
-        .to eq(promo: BigDecimal("5"), judge: BigDecimal("10"), daily: BigDecimal("5"))
+        .to eq(promo: BigDecimal("5"), judge: BigDecimal("10"), daily: BigDecimal("5"), catalog: BigDecimal("1"))
     end
   end
 

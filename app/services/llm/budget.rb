@@ -1,10 +1,13 @@
 module Llm
   # Keeps the product profitable and caps promo/judge usage. Totals for promo and judge are all-time (since launch);
-  # the daily cap covers today's spend across every bucket but only blocks :promo and :paid.
+  # the daily cap covers today's spend across every bucket but the catalog's and only blocks :promo and :paid. The
+  # catalog bucket (the marketplace's own work, sponsor detection) has a daily cap of its own and blocks only itself.
   module Budget
     DAILY_CAPPED = %i[promo paid].freeze
+    # Buckets outside the shared daily cap, each under its own (llm_<bucket>_daily_usd).
+    OWN_DAILY_CAP = %i[catalog].freeze
     # The budget settings' values (USD) when neither a Setting row nor ENV gives one.
-    DEFAULTS = { promo_budget_usd: 10, judge_reserve_usd: 5, llm_daily_budget_usd: 5 }.freeze
+    DEFAULTS = { promo_budget_usd: 10, judge_reserve_usd: 5, llm_daily_budget_usd: 5, llm_catalog_daily_usd: 1 }.freeze
 
     class << self
       # The bucket the user's LLM work draws on: their plan's (Entitlements::Plan#spend_bucket, R62).
@@ -18,6 +21,7 @@ module Llm
         return false if AppSettings.runs_paused?
 
         estimate = dec(estimate_usd)
+        return spent_today(bucket) + estimate <= setting(:llm_catalog_daily_usd) if bucket == :catalog
         return false if DAILY_CAPPED.include?(bucket) && daily_cap_reached?(estimate)
 
         case bucket
@@ -27,23 +31,25 @@ module Llm
         end
       end
 
-      def record!(user:, bucket:, model:, tokens:, kind: :llm, report: nil, pitch: nil)
+      def record!(user:, bucket:, model:, tokens:, kind: :llm, report: nil, pitch: nil, fit_search: nil)
         tokens = (tokens || {}).to_h.transform_keys(&:to_sym)
         counts = %i[input output cache_read cache_write].index_with { |k| tokens[k].to_i }
         cost = model.present? ? Pricing.cost_usd(model: model, **counts) : BigDecimal("0")
         SpendEntry.create!(
-          user: user, report_id: report&.id, pitch_id: pitch&.id, kind: kind.to_s, bucket: bucket.to_s, model: model,
+          user: user, report_id: report&.id, pitch_id: pitch&.id, fit_search_id: fit_search&.id, kind: kind.to_s, bucket: bucket.to_s, model: model,
           input_tokens: counts[:input], output_tokens: counts[:output], cache_read_tokens: counts[:cache_read],
           cache_write_tokens: counts[:cache_write], cost_usd: cost
         )
       end
 
       # What the admin page's meters show, from the same sums and ceilings allow? checks: promo and judge spend (all
-      # time) against their ceilings, and today's spend across every bucket against the daily cap.
+      # time) against their ceilings, today's spend across the shared buckets against the daily cap, and today's
+      # catalog spend against its own.
       def usage
         { promo: { spent: spent(:promo), ceiling: promo_ceiling },
           judge: { spent: spent(:judge), ceiling: judge_ceiling },
-          daily: { spent: spent_today, ceiling: daily_cap } }
+          daily: { spent: spent_today, ceiling: daily_cap },
+          catalog: { spent: spent_today(:catalog), ceiling: setting(:llm_catalog_daily_usd) } }
       end
 
       # A budget setting (a DEFAULTS key) as a BigDecimal: the Setting row, then ENV, then the default.
@@ -68,7 +74,12 @@ module Llm
 
       def spent(bucket) = SpendEntry.where(bucket: bucket.to_s).sum(:cost_usd)
 
-      def spent_today = SpendEntry.today.sum(:cost_usd)
+      # Today's spend in one bucket, or (with none) in every bucket under the shared daily cap.
+      def spent_today(bucket = nil)
+        scope = SpendEntry.today
+        scope = bucket ? scope.where(bucket: bucket.to_s) : scope.where.not(bucket: OWN_DAILY_CAP.map(&:to_s))
+        scope.sum(:cost_usd)
+      end
 
       def dec(value) = BigDecimal(value.to_s)
     end

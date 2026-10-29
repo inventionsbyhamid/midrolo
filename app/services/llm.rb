@@ -44,6 +44,9 @@ module Llm
 
     def pitch_effort = (config.dig(:pitch, :effort) || "low").to_sym
 
+    # The cheap model for bulk work (config/llm.yml cheap:): sponsor detection, a fit search's summary.
+    def cheap_model = config.dig(:cheap, :model).to_s
+
     def provider = (config[:provider].presence || "openrouter").to_sym
 
     def config

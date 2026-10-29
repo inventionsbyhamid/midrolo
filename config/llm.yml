@@ -11,4 +11,8 @@ shared:
   pitch:
     model: <%= ENV.fetch("LLM_PITCH_MODEL", "z-ai/glm-5.3") %>
     effort: low
+  # The cheapest priced model (config/llm_pricing.yml), for bulk work: sponsor detection and a fit search's summary.
+  cheap:
+    model: <%= ENV.fetch("LLM_CHEAP_MODEL", "deepseek/deepseek-v4.1-flash") %>
+    effort: low
   # The research run's Qloo call caps live in config/research.yml (R93).
