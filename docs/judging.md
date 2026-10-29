@@ -75,7 +75,7 @@ Work top to bottom. Deploy steps themselves are in [deploy.md](deploy.md).
 
 ## 8. During judging (Nov 2 to 5)
 
-- [ ] Keep the site up. Check `/admin` and `docker compose ps` once a day.
+- [ ] Keep the site up. Check `/admin` and the project in Coolify once a day.
 - [ ] Watch the Qloo calls against the daily cap. If judges run short, raise it only within the key's allowance.
-- [ ] Backups stay healthy (deploy.md, Backups).
+- [ ] Backups keep running (deploy.md, Backups: the database's Backups tab in Coolify).
 - [ ] If we're a finalist: rehearse [pitch.md](pitch.md), and be free for prep and the live show on Nov 5.

@@ -441,7 +441,8 @@ protections, as built (R92, R93, R105, R108 to R110; these replace R31's numbers
 
 ## 12. Hosting and operations (ioflood)
 
-As built (R37, R79, R115, R117). The operator's guide is `docs/deploy.md`; this is the summary.
+As first built (R37, R79, R115, R117), and kept for self-hosting in `docs/self-hosting.md`. Since 2026-10-29
+midrolo.com runs as a Coolify project instead (web app, worker and Postgres, hourly backups to R2; `docs/deploy.md`).
 - **`compose.yml`** in the repo, every service named `midrolo-*`:
   - `midrolo-web`: Rails behind Thruster (port 80 inside the container). The only service that also joins the shared
     `coolify` network.

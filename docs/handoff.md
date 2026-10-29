@@ -1,6 +1,6 @@
 # Handoff: from keys to judging
 
-Work top to bottom. The details live in [deploy.md](deploy.md) (the server), [live-smoke.md](live-smoke.md) (the
+Work top to bottom. The details live in [deploy.md](deploy.md) (the Coolify project), [live-smoke.md](live-smoke.md) (the
 Qloo check) and [judging.md](judging.md) (the submission). The build is done: a fresh clone runs in demo mode with no
 keys (checked on 2026-10-26: sign in, add a show, Snapshot, promo full report, pitch, kit upload and preview, samples,
 mail).
@@ -9,18 +9,16 @@ mail).
 
 Every variable is in [.env.example](../.env.example), with what it does.
 
-- [ ] **Qloo:** the key is in hand. Ask Qloo for its daily call allowance now; step 5 needs it.
-- [ ] **OpenRouter:** `OPENROUTER_API_KEY`, for full reports and pitches (the model is `LLM_AGENT_MODEL` and `LLM_PITCH_MODEL`). Give
-      Midrolo its own key with a credit limit, so its spend shows apart from other apps.
-- [ ] **Podcast Index:** `PODCAST_INDEX_KEY`, `PODCAST_INDEX_SECRET`.
+- [x] **Qloo:** the key is in hand. Ask Qloo for its daily call allowance now; step 5 needs it.
+- [x] **OpenRouter:** `OPENROUTER_API_KEY`, for full reports and pitches (the model is `LLM_AGENT_MODEL` and
+      `LLM_PITCH_MODEL`). Midrolo has its own key with a credit limit; keep the account topped up.
+- [x] **Podcast Index:** `PODCAST_INDEX_KEY`, `PODCAST_INDEX_SECRET`.
 - [ ] **Google OAuth:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. Redirect URI
       `https://midrolo.com/users/auth/google_oauth2/callback`. Publish the consent screen so any account can sign in.
 - [ ] **Resend:** `RESEND_API_KEY`, with midrolo.com verified as a sending domain.
-- [ ] **Cloudflare R2:** `R2_ACCOUNT_ID`, then two buckets with a token each:
-  - uploads: `R2_BUCKET`, the app's token `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`, Object Read and Write on
-    that bucket only;
-  - backups: `R2_BACKUP_BUCKET`, the backup container's own token `BACKUP_R2_ACCESS_KEY_ID` and
-    `BACKUP_R2_SECRET_ACCESS_KEY`, Object Read and Write on the backup bucket only.
+- [x] **Cloudflare R2:** `R2_ACCOUNT_ID`, and the uploads bucket `R2_BUCKET` with the app's token
+      `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`, Object Read and Write on that bucket only. (Database backups go
+      through Coolify, so the backup bucket and token are for [self-hosting.md](self-hosting.md) only.)
 - [ ] **Dodo, in test mode** (for the judges' test checkout): `DODO_API_KEY`, `DODO_ENVIRONMENT=test_mode`,
       `DODO_WEBHOOK_SECRET` (webhook URL `https://midrolo.com/webhooks/dodo`), and five products, one per price key
       in `config/plans.yml`:
@@ -33,17 +31,14 @@ Every variable is in [.env.example](../.env.example), with what it does.
   | `pro_yearly` | Pro, $490 a year | `DODO_PRODUCT_PRO_YEARLY` |
   | `sprint` | Sprint, $49 once (Pro for 30 days) | `DODO_PRODUCT_SPRINT` |
 
-- [ ] **Your own values:** `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL`, `JUDGE_CODE` (never in the repo:
+- [x] **Your own values:** `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL` (optional), `JUDGE_CODE` (never in the repo:
       `docs/devpost.md` keeps `<<JUDGE_CODE>>`), `PROMO_PRO_UNTIL=2026-11-06`.
-- [ ] **Made on the server** (deploy.md step 5): `SECRET_KEY_BASE`, `MIDROLO_DATABASE_PASSWORD`, and
-      `APP_URL=https://midrolo.com`.
-- [ ] **In the server's `.env`** (deploy.md step 5): fill in the uncommented lines, then uncomment and fill in each
-      commented line you use: `OPENROUTER_API_KEY`, the Google, admin and Dodo keys, `JUDGE_CODE` and
-      `PROMO_PRO_UNTIL`. A line left commented stays unset, so what it turns on stays off.
+- [x] **In Coolify** (deploy.md, Settings): every value above on both apps, runtime only, plus `SECRET_KEY_BASE`,
+      `APP_URL=https://midrolo.com`, `DB_HOST` and `MIDROLO_DATABASE_PASSWORD` (the database resource's). Google and
+      Resend go in when they arrive (Resend holds a placeholder so production boots), then redeploy both apps.
 
 Production refuses to boot without `QLOO_API_KEY`, `PODCAST_INDEX_KEY`, `PODCAST_INDEX_SECRET`, an absolute http(s)
-`APP_URL` and the rest of the uncommented lines in `.env.example`. Compose refuses to start `midrolo-backup` without
-`R2_BACKUP_BUCKET` and its own token.
+`APP_URL` and the rest of the uncommented lines in `.env.example`.
 
 ## 2. Before the first deploy, in the repo
 
@@ -54,29 +49,25 @@ Production refuses to boot without `QLOO_API_KEY`, `PODCAST_INDEX_KEY`, `PODCAST
       `samples:generate` with live keys needs real ones.
 - [ ] Commit. Push and create anything on GitHub or GitLab only when you decide to.
 
-## 3. Deploy ([deploy.md](deploy.md), First deploy)
+## 3. Deploy ([deploy.md](deploy.md))
 
-- [ ] DNS at Cloudflare: `A midrolo.com` and `A www.midrolo.com` to `107.167.86.146`, DNS only (grey cloud), no
-      `AAAA`. There is no tunnel: Coolify's Traefik reaches the site through the labels on `midrolo-web`.
-- [ ] The read only checks of the proxy and the `midrolo-*` names (step 2).
-- [ ] Send the code, create `.env` on the server, `docker compose up -d --build` (steps 4 to 6). Every service is
-      named `midrolo-*`: `midrolo-web`, `midrolo-jobs`, `midrolo-db`, `midrolo-backup`. The volumes are `midrolo-db`
-      and `midrolo-backup-state`, which holds the backup failure flag.
-- [ ] Sign in once with Google, then set your admin flag (step 7).
+- [x] DNS at Cloudflare: `A midrolo.com` and `A www.midrolo.com` to the server, DNS only (grey cloud), no `AAAA`.
+- [x] The Coolify project `midrolo`: the `midrolo` web app, `midrolo-worker` and the `midrolo-db` Postgres, with
+      hourly backups to R2. Pushing to `main` deploys both apps.
+- [ ] Sign in once with Google, then set your admin flag (deploy.md, Running commands).
 
 ## 4. After the deploy
 
-- [ ] Live Qloo smoke: `docker compose exec midrolo-web bin/rails qloo:smoke`. 8 calls, at most 10
+- [ ] Live Qloo smoke: `bin/rails qloo:smoke` in the app's terminal. 8 calls, at most 10
       ([live-smoke.md](live-smoke.md)).
-- [ ] Samples: `docker compose exec midrolo-web bin/rails samples:generate` (Qloo calls plus about $0.50 of LLM
-      each). Read each sample at https://midrolo.com/samples.
+- [ ] Samples: `bin/rails samples:generate` (Qloo calls plus a few cents of LLM each). Read each sample at https://midrolo.com/samples.
 - [ ] deploy.md's "After every deploy" checks:
   - health: `/up` answers 200, and http and www redirect to `https://midrolo.com/`;
   - the browser console shows no Content Security Policy errors, and the map draws;
   - `remote_ip` in the log is your own address;
   - a share image renders (`text_width` prints 447, `og.png` answers `200 image/png`);
   - a Snapshot finishes;
-  - a backup uploads: `docker compose exec midrolo-backup backup`, then `backup list`.
+  - the database's Backups tab in Coolify shows a recent successful backup.
 
 ## 5. Before judging (Nov 2 to 5)
 
@@ -94,7 +85,7 @@ Production refuses to boot without `QLOO_API_KEY`, `PODCAST_INDEX_KEY`, `PODCAST
       paid plan keeps a 60% margin with every cap used (`app/services/billing/margins.rb`).
 - [ ] The Devpost testing instructions say billing is in test mode for judges. That line holds only if production
       has the Dodo keys in test mode (step 1). Set them, or cut the line from `docs/devpost.md` before submitting.
-- [ ] Keep the site up through judging: check `/admin` and `docker compose ps` once a day. Last year's winning demo
+- [ ] Keep the site up through judging: check `/admin` and the project in Coolify once a day. Last year's winning demo
       is dead now; ours must stay up.
 
 ## 6. Submission polish

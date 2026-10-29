@@ -1,7 +1,7 @@
 require "rails_helper"
 
-# compose.yml, the production stack on ioflood (R37, R79, R115; docs/deploy.md), read as YAML: Docker isn't on the
-# Mac, and nothing here may build or start the stack. ioflood is a shared production server, so the stack publishes no
+# compose.yml, the self-hosting stack (R37, R79, R115; docs/self-hosting.md; production runs on Coolify instead), read
+# as YAML: Docker isn't on the Mac, and nothing here may build or start the stack. ioflood is a shared production server, so the stack publishes no
 # host port, keeps every name under midrolo-, and only midrolo-web joins Coolify's network, where Traefik routes
 # midrolo.com to it. Compose makes each service's key a DNS alias on every network the service joins, so the keys are
 # midrolo- names too: a bare "web" on the shared coolify network could answer another app's lookups.
@@ -108,8 +108,8 @@ RSpec.describe "The compose stack" do
     expect(Rails.root.join("Dockerfile.backup").read).to include("FROM docker.io/library/postgres:16", "COPY bin/backup")
   end
 
-  it "is what docs/deploy.md tells the operator to run: every docker compose command names a service here" do
-    commands = Rails.root.join("docs/deploy.md").read.scan(/docker compose (exec|run|logs|stop|start|ps|build|restart)([^\n`]*)/)
+  it "is what docs/self-hosting.md tells the operator to run: every docker compose command names a service here" do
+    commands = Rails.root.join("docs/self-hosting.md").read.scan(/docker compose (exec|run|logs|stop|start|ps|build|restart)([^\n`]*)/)
     named = commands.flat_map do |verb, rest|
       words = rest.split.reject { |word| word.start_with?("-") || word.match?(/\A\d+\z/) }
       %w[exec run logs].include?(verb) ? words.first(1) : words.take_while { |word| word.match?(/\A[a-z][\w-]*\z/) }

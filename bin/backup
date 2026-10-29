@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Database backups to Cloudflare R2 (docs/deploy.md). Runs in the compose stack's midrolo-backup container, which has
+# Database backups to Cloudflare R2 (docs/self-hosting.md). Runs in the compose stack's midrolo-backup container, which has
 # pg_dump and psql for PostgreSQL 16 and aws-cli. The database comes from the PG* variables (PGHOST, PGUSER,
 # PGPASSWORD, PGDATABASE); R2 from R2_ACCOUNT_ID, R2_BACKUP_BUCKET and a token of its own, scoped to that bucket:
 # BACKUP_R2_ACCESS_KEY_ID and BACKUP_R2_SECRET_ACCESS_KEY.
