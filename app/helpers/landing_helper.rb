@@ -20,7 +20,7 @@ module LandingHelper
   end
 
   # The home page's structured data (JSON-LD, through BlogHelper#json_ld): Midrolo as an Organization with its name,
-  # address and logo, and the WebSite, whose SearchAction is the directory's search (/podcasts?q=).
+  # URL and logo, and the WebSite, whose SearchAction is the directory's search (/podcasts?q=).
   def landing_json_ld
     organization = { "@type" => "Organization", "@id" => "#{root_url}#organization", "name" => APP_NAME, "url" => root_url,
                      "logo" => { "@type" => "ImageObject", "url" => URI.join(root_url, "/icon-512.png").to_s,
