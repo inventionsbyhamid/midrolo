@@ -11,7 +11,7 @@ module BrandWorkspaceHelper
                       "category" => "a brand in your category" }.freeze
 
   def brand_nav_links
-    links = [ [ "Dashboard", brand_root_path ], [ "Find podcasts", new_brand_search_path ], [ "Saved", brand_saved_podcasts_path ] ]
+    links = [ [ "Brand", brand_root_path ], [ "Find podcasts", new_brand_search_path ], [ "Saved", brand_saved_podcasts_path ] ]
     links << [ "Your shows", shows_path ] if current_user&.shows&.exists?
     links << [ "Account", account_path ]
   end

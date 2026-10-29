@@ -348,14 +348,19 @@ class FitSearch
     def query = search.query.to_s.squish
 
     # The catalog's brand this search is about: the searcher's own brand when the query names it, else one the catalog
-    # already knows by that name or website (an agency searching for a client). Never created here.
+    # already knows by that name or website (an agency searching for a client), never the searcher's own brand under
+    # another name. Never created here.
     def subject_brand
       return @subject_brand if defined?(@subject_brand)
 
       own = search.brand
-      @subject_brand = if own && Research::Names.close?(own.name, query) then own
-      else Brand.find_existing(name: query, domain: search.website)
-      end
+      return @subject_brand = own if own && Research::Names.close?(own.name, query)
+
+      domain = Brand.normalize_domain(search.website)
+      domain = nil if own && domain == own.domain
+      found = Brand.find_existing(name: query, domain: domain)
+      found = nil if found && own && found.id == own.id
+      @subject_brand = found
     end
 
     def entity_id = @profile&.dig("entity_id").presence

@@ -83,15 +83,22 @@ class FitSearch
 
     def next_bullet
       parts = []
-      parts << "#{@facts.within_budget} fit your budget" if @facts.within_budget.positive?
-      parts << "#{@facts.open_count} are open to sponsors" if @facts.open_count.positive?
-      parts << "#{@facts.verified_count} have verified numbers" if @facts.verified_count.positive?
+      parts << count_phrase(@facts.within_budget, "fits your budget", "fit your budget")
+      parts << count_phrase(@facts.open_count, "is open to sponsors", "are open to sponsors")
+      parts << count_phrase(@facts.verified_count, "has verified numbers", "have verified numbers")
+      parts.compact!
       return "Save the shows you like and request a spot. Unclaimed shows hear from you once they join." if parts.empty?
 
       "#{Copy.and_list(parts).upcase_first}. Request a spot on the ones you like."
     end
 
+    def count_phrase(count, one, many)
+      return nil unless count.positive?
+
+      "#{count} #{count == 1 ? one : many}"
+    end
+
     # One line, no dashes (the copy rules), cut to fit.
-    def clean(text) = text.to_s.gsub(/\s*[—–]\s*/, ", ").squish.truncate(BULLET_LIMIT)
+    def clean(text) = text.to_s.gsub(/\s*[\u2014\u2013]\s*/, ", ").squish.truncate(BULLET_LIMIT)
   end
 end
