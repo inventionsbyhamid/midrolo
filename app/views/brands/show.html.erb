@@ -68,8 +68,9 @@
           <h2 id="similar_title" class="pod-h2">Shows like the ones <%= brand.name %> sponsors</h2>
           <p class="pod-note">In the same categories, and not yet sponsored by <%= brand.name %>.</p>
           <ul class="dir-grid">
+            <% verified_ids = pages_verified_ids(@similar) %>
             <% @similar.each do |podcast| %>
-              <%= render "podcasts/card", podcast: podcast %>
+              <%= render "podcasts/card", podcast: podcast, verified: verified_ids.include?(podcast.id) %>
             <% end %>
           </ul>
         </section>

@@ -9,7 +9,7 @@
      ([ distance_of_time_in_words(podcast.first_published_at, Time.current).delete_prefix("about ").delete_prefix("over ").delete_prefix("almost "),
         "on air, since #{podcast.first_published_at.strftime('%b %Y')}", "the show's RSS feed" ] if podcast.first_published_at)
    ].compact %>
-<section class="wrap" aria-label="Key numbers">
+<section class="wrap mt-10" aria-label="Key numbers">
   <%# The header shows the "Stats verified" pill already. %>
   <%= render "podcasts/numbers", podcast: podcast, pill: false %>
   <% if facts.any? %>

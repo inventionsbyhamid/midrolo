@@ -1,33 +1,50 @@
-<%# locals: (podcast:, actions: true, requestable: false) -%>
+<%# locals: (podcast:, actions: true, request_form: nil) -%>
 <%# The page's header (plan 4.1): the show's own waveform on an ink band with its mid-roll lit, the artwork riding over
-    it, the badges that say where the page stands, title, host, categories and language, how often it publishes, and
-    the actions: Request a spot jumps to lane L7's form (#request, in the sidebar), Save is lane L6's, then Copy link. %>
+    it, the badges that say where the page stands, title, host, categories and language, how often it publishes, the
+    deal in one line (from price and open months, once the show lists them), and the actions. Request a spot is the
+    page's one real control (lane L7's podcasts/_request: a dialog for a brand member, a link otherwise), so the button
+    a visitor sees first is the one that works (PP-2). Save is lane L6's, then Copy link. On a phone an unclaimed show
+    gets its claim prompt here, not 4,000 px down in the sidebar (PP-3). %>
 <% status_label, status_tone = pages_status(podcast) %>
+<% offer = pages_deal(podcast) %>
 <div class="pod-banner"><%= kit_waveform(podcast.public_id) %></div>
 <header class="wrap pod-hero">
   <%= podcast_artwork_tag(podcast, size: :page, class: "pod-art") %>
   <div class="pod-hero-text">
-    <% badges = [ ([ status_label, status_tone ] unless podcast.active?),
+    <% badges = [ ([ "Demo show", :warning ] if podcast.demo?),
+                  ([ status_label, status_tone ] unless podcast.active?),
                   ([ "Open to sponsors", :success ] if podcast.open_to_sponsors?),
                   ([ "Stats verified", :accent ] if stats_page_numbers(podcast).verified?),
-                  ([ "Claimed by the show", :accent ] if podcast.claimed?) ].compact %>
+                  ([ "Claimed by the show", :accent ] if podcast.claimed? && !podcast.demo?) ].compact %>
     <% if badges.any? %>
       <p class="pod-badges"><% badges.each do |label, tone| %><%= ui_badge label, tone: tone %><% end %></p>
     <% end %>
-    <h1 id="podcast_title" class="pod-title"><%= podcast.title %></h1>
+    <h1 id="podcast_title" class="<%= class_names("pod-title", pages_title_size(podcast.title)) %>" title="<%= podcast.title %>"><%= podcast.title %></h1>
     <% byline = [ (tag.span("By #{podcast.author}") if podcast.author.present?),
                   (safe_join(podcast.categories.first(3).map { |name| pages_category_link(name) }, ", ") if podcast.categories.any?),
                   (tag.span(pages_language(podcast.language), class: "pod-byline-soft") if podcast.language.present?) ].compact %>
     <% if byline.any? %>
       <p class="pod-byline"><%= safe_join(byline, tag.span(" · ", class: "pod-byline-soft", aria: { hidden: true })) %></p>
     <% end %>
+    <% if podcast.dormant? && podcast.last_published_at %>
+      <p class="pod-dormant" role="note">
+        No new episode in <%= distance_of_time_in_words(podcast.last_published_at, Time.current).delete_prefix("about ").delete_prefix("over ").delete_prefix("almost ") %>.
+        This show may be on a break.
+      </p>
+    <% end %>
     <% if (rhythm = pages_rhythm(podcast)) %>
       <p class="pod-rhythm"><%= rhythm %></p>
     <% end %>
+    <% if offer %>
+      <p class="pod-offer">
+        <% if offer[:from] %><span>From <strong><%= offer[:from] %></strong> per spot</span><% end %>
+        <% if offer[:months].any? %><span>Open <%= offer[:months].to_sentence(two_words_connector: " and ", last_word_connector: " and ") %></span><% end %>
+      </p>
+    <% end %>
     <% if actions %>
-      <div class="pod-actions">
-        <% if requestable %>
-          <%= ui_button "Request a spot", "#request" %>
+      <div class="<%= class_names("pod-actions", "pod-actions-quiet" => podcast.dormant? || podcast.failed?) %>">
+        <% if request_form.present? %>
+          <%= request_form %>
         <% elsif podcast.min_price_cents %>
           <%= ui_button "See the rate card", "#rates" %>
         <% end %>
@@ -40,6 +57,12 @@
           </button>
         </div>
       </div>
+      <% unless podcast.claimed? %>
+        <p class="pod-claim-strip">
+          <span>Host this show? Claim it free to set your rates and verify your numbers.</span>
+          <%= link_to "Claim this show", new_podcast_claim_path(podcast), class: "link font-semibold", rel: "nofollow" %>
+        </p>
+      <% end %>
     <% end %>
   </div>
 </header>

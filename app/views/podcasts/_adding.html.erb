@@ -27,7 +27,7 @@
               </div>
             </li>
           <% else %>
-            <%= render "podcasts/card", podcast: podcast, sponsors: sponsor_counts.fetch(podcast.id, 0) %>
+            <%= render "podcasts/card", podcast: podcast, sponsors: sponsor_counts.fetch(podcast.id, 0), verified: false %>
           <% end %>
         <% end %>
       </ul>
