@@ -17,6 +17,42 @@ RSpec.describe Catalog::LazyAdd do
                            feed_url: feed_url, categories: [ "News" ], episode_count: 10, itunes_id: nil, language: language)
   end
 
+  # Final review N16: a daily cap on the podcasts searches add (AppSettings catalog_search_adds_per_day).
+  describe "the daily cap" do
+    let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+
+    before { allow(Rails).to receive(:cache).and_return(cache) }
+
+    it "is 300 a day unless the setting says otherwise" do
+      expect(described_class.daily_cap).to eq(300)
+      AppSettings.set(:catalog_search_adds_per_day, 3)
+      expect(described_class.daily_cap).to eq(3)
+    end
+
+    it "adds up to the day's cap, then answers from the catalog alone without asking the directory, and says so" do
+      AppSettings.set(:catalog_search_adds_per_day, 3)
+      hits = Array.new(6) { |i| hit((300 + i).to_s, "Capped Show #{i}", "https://feeds.example.com/capped-#{i}.xml") }
+      directory = directory_with(hits)
+
+      expect(described_class.call("capped show")).to have_attributes(capped: false, added: have_attributes(size: 2))
+      expect(described_class.call("capped show")).to have_attributes(capped: true, added: have_attributes(size: 1))
+      expect(described_class.call("capped show")).to have_attributes(capped: true, added: [])
+      expect(directory).to have_received(:search).twice
+      expect(Podcast.where(source: "search").count).to eq(3)
+
+      travel_to 1.day.from_now.end_of_day
+      expect(described_class.call("capped show").added.size).to eq(2)
+    end
+
+    it "caps a feed URL add the same way" do
+      AppSettings.set(:catalog_search_adds_per_day, 0)
+      allow(ShowLookup).to receive(:call)
+
+      expect(described_class.call("https://feeds.example.com/unknown.xml", signed_in: true)).to have_attributes(added: [], capped: true)
+      expect(ShowLookup).not_to have_received(:call)
+    end
+  end
+
   it "answers from the catalog alone when it has 5 or more matches" do
     found = Array.new(5) { |i| create(:podcast, title: "Ocean Stories #{i}") }
     directory = directory_with([])

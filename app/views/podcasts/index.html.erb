@@ -60,6 +60,10 @@
     <%= render "podcasts/adding", podcasts: @adding, poll: 1, sponsor_counts: @sponsor_counts %>
   <% end %>
 
+  <% if @adds_capped %>
+    <p class="pod-note mt-4">We've added all the new shows we can from the podcast directory today, so these are only shows already on <%= APP_NAME %>. Try again tomorrow for more.</p>
+  <% end %>
+
   <% if @podcasts.any? %>
     <%= render "podcasts/pager", directory: @directory, path: ->(params) { podcasts_path(params) } %>
   <% elsif @adding.none? %>
