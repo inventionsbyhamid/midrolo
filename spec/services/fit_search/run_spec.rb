@@ -42,8 +42,16 @@ RSpec.describe FitSearch::Run do
     results = search.results.includes(:podcast).to_a
     expect(results.map(&:podcast)).to include(ledger)
     expect(results.map(&:podcast)).not_to include(removed)
-    expect(results.map(&:score)).to eq(results.map(&:score).sort.reverse)
+    # Bookable first (review BR-6): the claimed, open, in-budget show leads; each tier is ordered by score.
+    expect(results.first.podcast).to eq(ledger)
+    expect(results.first.proof["tier"]).to eq("ready")
+    tier_ranks = results.map { |r| FitSearch::Scoring::TIERS.index(r.proof["tier"]) }
+    expect(tier_ranks).to eq(tier_ranks.sort)
+    results.group_by { |r| r.proof["tier"] }.each_value { |group| expect(group.map(&:score)).to eq(group.map(&:score).sort.reverse) }
     expect(results.map(&:position)).to eq((1..results.size).to_a)
+    expect(steps.find { |s| s.tool == "price_trust" }.output_summary).to include("Ready to book: The Founder's Ledger.")
+    expect(steps.find { |s| s.tool == "rank" }.output_summary).to match(/\ARanked (all )?\d+ shows.*1 ready to book first\.\z/)
+    expect(steps.find { |s| s.tool == "summary" }.output_summary).to eq("Wrote your summary.")
 
     top = results.find { |r| r.podcast == ledger }
     expect(top.price_fit).to eq("within")
@@ -142,6 +150,18 @@ RSpec.describe FitSearch::Run do
     expect(unknown.agent_steps.first.output_summary).to include("Qloo doesn't know Zzyzx Ledgerworks by name")
     expect(taste).to have_received(:recommend).with(hash_including(type: :podcast, tag_ids: [ "urn:tag:genre:brand:finance" ]))
     expect(unknown.results.first.reasons.first).to include("people into Finance")
+  end
+
+  it "stops after looking the brand up when Qloo doesn't know it and no category was picked" do
+    podcast("Index Fund Mornings")
+    unknown = create(:fit_search, user: user, brand: create(:brand, name: "Zzyzx Ledgerworks"), query: "Zzyzx Ledgerworks",
+                                  categories: [])
+
+    described_class.call(unknown)
+
+    expect(unknown.reload).to have_attributes(status: "done", qloo_brand_entity_id: nil, summary: nil)
+    expect(unknown.agent_steps.map(&:tool)).to eq(%w[find_brand])
+    expect(unknown.results).to be_empty
   end
 
   it "adds the top Qloo podcasts the catalog lacks through the one matcher" do

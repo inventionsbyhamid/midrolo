@@ -77,8 +77,12 @@ class FitSearch
 
     attr_reader :search, :taste, :log
 
+    # With no Qloo profile and no categories there is nothing to search with (review BR-9): the search ends after
+    # step 1 with no results, and its page asks for categories.
     def run_steps
       find_brand
+      return search.update!(summary: nil) if signals.empty?
+
       qloo_podcasts
       category_scores
       proof
@@ -184,8 +188,7 @@ class FitSearch
         open = scope.where(qloo_entity_id: nil, open_to_sponsors: true).order(claimed_at: :desc, id: :desc)
                     .limit(OPEN_WITHOUT_TASTE).to_a
         open.each { |podcast| add(podcast, category_match: true) }
-        step.output_summary = "Scored #{pool.size} shows; Qloo had a score for #{scores.values.compact.size}. " \
-                              "#{open.size} more are open to sponsors without Qloo data."
+        step.output_summary = category_summary(pool.size, scores.values.compact.size, open.size)
       end
     end
 
@@ -250,7 +253,10 @@ class FitSearch
         open = list.count { |c| c.podcast.open_to_sponsors? }
         within = list.count { |c| c.price_fit == "within" }
         verified = list.count { |c| c.podcast.downloads_trust == "verified" }
-        step.output_summary = "#{open} open to sponsors, #{within} within your budget, #{verified} with verified numbers."
+        ready = list.select { |c| tier_for(c) == "ready" }.map { |c| c.podcast.title }
+        text = "#{open} open to sponsors, #{within} within your budget, #{verified} with verified numbers."
+        text += " Ready to book: #{Copy.and_list(ready.first(3))}#{" and #{ready.size - 3} more" if ready.size > 3}." if ready.any?
+        step.output_summary = text
       end
     end
 
@@ -264,9 +270,11 @@ class FitSearch
           c.score = Scoring.call(affinity: c.affinity, category_match: c.category_match, proof: c.proof,
                                  price_fit: c.price_fit, trust: c.podcast.downloads_trust, claimed: c.podcast.claimed?)
         end
-        top = @candidates.values.sort_by { |c| [ -c.score.total, -(c.affinity || 0), c.podcast.id ] }.first(RESULTS_LIMIT)
+        top = @candidates.values.sort_by { |c| Scoring.rank_key(tier: tier_for(c), total: c.score.total, affinity: c.affinity, id: c.podcast.id) }
+                         .first(RESULTS_LIMIT)
         save_results(top)
-        step.output_summary = "Ranked #{@candidates.size} shows and kept the best #{top.size}."
+        ready = top.count { |c| tier_for(c) == "ready" }
+        step.output_summary = rank_summary(top.size, ready)
       end
     end
 
@@ -276,7 +284,7 @@ class FitSearch
         { fit_search_id: search.id, podcast_id: c.podcast.id, position: index + 1, score: c.score.total,
           taste_score: c.affinity, reasons: reasons_for(c), price_fit: c.price_fit, created_at: now, updated_at: now,
           proof: { "brands" => Array(c.proof).first(PROOF_SHOWN), "points" => c.score.parts,
-                   "category_match" => c.category_match, "qloo_rank" => c.qloo_rank }.compact }
+                   "category_match" => c.category_match, "qloo_rank" => c.qloo_rank, "tier" => tier_for(c) }.compact }
       end
       FitResult.transaction do
         search.results.delete_all
@@ -316,7 +324,7 @@ class FitSearch
         results = search.results.includes(:podcast).to_a
         bullets, how = Summary.call(search, summary_facts(results))
         search.update!(summary: bullets.join("\n"))
-        step.output_summary = how == :llm ? "Written from the facts above." : "Written from a template."
+        step.output_summary = how == :llm ? "Wrote your summary from the facts above." : "Wrote your summary."
       end
     end
 
@@ -329,6 +337,31 @@ class FitSearch
         verified_count: results.count { |r| r.podcast.downloads_trust == "verified" }
       )
     end
+
+    # Plain words for step 3, leaving out the parts that found nothing.
+    def category_summary(pooled, scored, open)
+      return "No extra shows in your categories." if pooled.zero? && open.zero?
+
+      parts = []
+      parts << "Qloo scored #{scored} of #{pluralize(pooled, 'more show')} in your categories" if pooled.positive?
+      parts << "#{pluralize(open, 'show')} open to sponsors that Qloo doesn't know yet" if open.positive?
+      "#{Copy.and_list(parts).upcase_first}."
+    end
+
+    def rank_summary(kept, ready)
+      return "No shows to rank yet." if kept.zero?
+
+      ranked = kept == @candidates.size ? "Ranked all #{pluralize(kept, 'show')}" : "Ranked #{@candidates.size} shows and kept the best #{kept}"
+      "#{ranked}, #{ready.zero? ? 'none' : ready} ready to book first."
+    end
+
+    def tier_for(candidate)
+      podcast = candidate.podcast
+      Scoring.tier(claimed: podcast.claimed?, open: podcast.open_to_sponsors?, price_fit: candidate.price_fit,
+                   dormant: podcast.status == "dormant")
+    end
+
+    def pluralize(count, word) = ActionController::Base.helpers.pluralize(count, word)
 
     # ---- shared ----
 

@@ -10,6 +10,8 @@ class FitSearch
   #   price  the show's lowest rate per episode against the brand's budget per episode (PRICE_POINTS).
   #   trust  how far its downloads number can be trusted (TRUST_POINTS); a claimed show without numbers gets
   #          CLAIMED_POINTS.
+  #
+  # The rank puts bookable shows first (tier, below), then orders each tier by this score.
   module Scoring
     WEIGHTS = { taste: 50, proof: 25, price: 15, trust: 10 }.freeze
     CATEGORY_ONLY_AFFINITY = 0.2
@@ -51,6 +53,37 @@ class FitSearch
     def trust_points(trust, claimed)
       TRUST_POINTS[trust.to_s] || (claimed ? CLAIMED_POINTS : 0)
     end
+
+    # Whether a brand can book the show today, best first (review BR-6). The fit score says how well the audience
+    # matches; the tier says whether anyone will answer. Results rank by tier, then by score, so a show that is
+    # claimed, open to sponsors, priced within the budget and still publishing comes before a better taste match
+    # nobody can book yet.
+    #
+    #   ready      claimed, open to sponsors, a rate card within the budget (or no budget given), still publishing
+    #   open       claimed and open to sponsors, but over the budget or without a rate card yet
+    #   claimed    claimed by the show, not open to sponsors
+    #   unclaimed  hasn't joined Midrolo; a request waits until it claims its page
+    #   dormant    no new episode in months, whatever else is true
+    TIERS = %w[ready open claimed unclaimed dormant].freeze
+    READY_PRICES = %w[within no_budget].freeze
+
+    def tier(claimed:, open:, price_fit:, dormant:)
+      return "dormant" if dormant
+      return "unclaimed" unless claimed
+      return "claimed" unless open
+
+      READY_PRICES.include?(price_fit.to_s) ? "ready" : "open"
+    end
+
+    # The rank order: tier first, then the score, then Qloo's affinity, then the podcast's id for ties.
+    def rank_key(tier:, total:, affinity:, id:)
+      [ TIERS.index(tier.to_s) || TIERS.size, -total.to_i, -(affinity || 0).to_f, id.to_i ]
+    end
+
+    # A word for the score (review BR-5): taste scores from Qloo rarely pass 60, so the number alone reads as low.
+    FIT_WORDS = [ [ 55, "Strong fit" ], [ 35, "Good fit" ], [ 0, "Some fit" ] ].freeze
+
+    def fit_word(total) = FIT_WORDS.find { |floor, _| total.to_i >= floor }.last
 
     # The show's lowest rate per episode against the brand's budget per episode, both in cents.
     def price_fit(price_cents:, budget_cents:)
