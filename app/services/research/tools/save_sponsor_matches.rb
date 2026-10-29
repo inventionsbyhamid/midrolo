@@ -15,7 +15,10 @@ module Research
 
       description "Saves the sponsor matches: 20 to 40 candidate refs from find_sponsor_candidates, each with a reason: " \
                   "one plain, specific sentence of #{REASON_WORDS} words or fewer citing shared taste tags or " \
-                  "proven-sponsor evidence from the tools, with no numbers the tools didn't give. Leave out the fit " \
+                  "proven-sponsor evidence from the tools, with no numbers the tools didn't give. Make each one about " \
+                  "its brand: name its most specific shared taste (a broad one like Technology only when there's " \
+                  "nothing narrower) and what the brand offers these listeners, and don't open two reasons the same " \
+                  "way. Leave out the fit " \
                   "score and tier (the card shows them), and say a brand sponsors podcasts only when its candidate " \
                   "entry lists sponsor reads. An empty reason gets a " \
                   "short one written from the brand's shared tags. Brands not in the candidate " \
