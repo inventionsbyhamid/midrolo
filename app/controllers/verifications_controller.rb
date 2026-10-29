@@ -60,7 +60,7 @@ class VerificationsController < ApplicationController
   private
 
   def set_show
-    @show = current_user.shows.find(params[:show_id])
+    @show = current_user.shows.find_by!(public_id: params[:show_id])
   end
 
   # The address scope counts codes from every account to that inbox, so its copy doesn't say "you".

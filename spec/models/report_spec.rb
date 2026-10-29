@@ -172,7 +172,7 @@ RSpec.describe Report do
       step = nil
       expect { step = create(:agent_step, report: report) }
         .to have_broadcasted_to(stream_for(report)).with { |html|
-          expect(html).to include('action="append"', %(target="agent_steps_report_#{report.id}"))
+          expect(html).to include('action="append"', %(target="agent_steps_report_#{report.public_id}"))
         }
       expect { step.update!(status: "ok", duration_ms: 1200) }
         .to have_broadcasted_to(stream_for(report)).with { |html|

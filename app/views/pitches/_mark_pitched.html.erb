@@ -8,7 +8,7 @@
 <% if pipeline_enabled_for?(match.report.show.user) %>
   <div id="<%= dom_id(match, :mark_pitched) %>" class="mark-pitched">
     <% if (newer = newer_copy_for(match)) %>
-      <%= link_to show_report_path(newer.show_id, newer.report_id, anchor: dom_id(newer)), class: "link text-sm" do %>Tracked on your latest report<span aria-hidden="true"> →</span><% end %>
+      <%= link_to match_card_path(newer), class: "link text-sm" do %>Tracked on your latest report<span aria-hidden="true"> →</span><% end %>
     <% elsif match.suggested? || match.saved? %>
       <%= button_to "Mark as pitched", sponsor_match_path(match), method: :patch, params: { sponsor_match: { status: "pitched" } },
             class: "btn btn-secondary btn-md", form_class: "contents" %>

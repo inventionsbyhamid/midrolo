@@ -10,7 +10,7 @@ import { Controller } from "@hotwired/stimulus"
 //   category target: a <select> of categories, "" for all of them.
 //   item targets: the rows, with data-category, data-tier, data-tier-rank, data-proven, data-fit, data-position.
 //   sort target: a <select> with "fit" (server order) or "tier" (easiest to land first, then fit).
-// A link to a row inside the closed full list (#sponsor_match_12, from the pipeline) opens it.
+// A link to a row inside the closed full list (#sponsor_match_3f9a1c2b7d4e8a60, from the pipeline) opens it.
 // State lives in the DOM (aria-pressed, the selects, details[open]), so a page-refresh morph that resets it stays
 // consistent.
 export default class extends Controller {

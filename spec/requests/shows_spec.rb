@@ -125,7 +125,7 @@ RSpec.describe "Shows" do
         existing = nil
         # The duplicate pre-check genuinely misses; another request inserts the same show just before our save.
         allow_any_instance_of(Show).to receive(:save) do
-          Show.insert_all!([ { user_id: user_id, title: "The Founder's Ledger", directory_id: "fake-1", feed_url: "fake://fake-1" } ])
+          Show.insert_all!([ { user_id: user_id, public_id: SecureRandom.hex(8), title: "The Founder's Ledger", directory_id: "fake-1", feed_url: "fake://fake-1" } ])
           existing = Show.find_by!(user_id: user_id, directory_id: "fake-1")
           raise ActiveRecord::RecordNotUnique
         end
@@ -221,7 +221,7 @@ RSpec.describe "Shows" do
       it "renders the hub with header, details, report forms and media kit link" do
         show = create(:show, user: user, title: "Hub Show", author: "Hosty", categories: %w[Business Finance],
                              downloads_per_episode: 1200)
-        get "/shows/#{show.id}"
+        get "/shows/#{show.public_id}"
 
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Hub Show", "Hosty", "Business", "1,200", "Edit", edit_show_path(show),
@@ -233,9 +233,23 @@ RSpec.describe "Shows" do
         expect(titles.index("Find sponsors")).to be < titles.index("Details")
       end
 
+      it "is found by its public id, links to itself that way, and is a 404 by its database id (R147)" do
+        show = create(:show, user: user, downloads_per_episode: 1200)
+        get "/shows/#{show.public_id}"
+        expect(response).to have_http_status(:ok)
+        hrefs = Nokogiri::HTML(response.body).css("a[href^='/shows/']").map { |a| a["href"] }
+        expect(hrefs).to include(edit_show_path(show))
+        expect(edit_show_path(show)).to eq("/shows/#{show.public_id}/edit")
+
+        expect(hrefs.grep(%r{\A/shows/#{show.id}(/|\z)})).to be_empty
+
+        get "/shows/#{show.id}"
+        expect(response).to have_http_status(:not_found)
+      end
+
       it "returns 404 for another user's show" do
         other = create(:show)
-        get "/shows/#{other.id}"
+        get "/shows/#{other.public_id}"
         expect(response).to have_http_status(:not_found)
       end
 
@@ -292,7 +306,7 @@ RSpec.describe "Shows" do
       let(:show) { create(:show, user: user) }
 
       it "renders the details form with the onboarding step" do
-        get "/shows/#{show.id}/edit", params: { onboarding: 1 }
+        get "/shows/#{show.public_id}/edit", params: { onboarding: 1 }
         expect(response).to have_http_status(:ok)
         expect(response.body).to include("Your average downloads per episode in the first 30 days", "United Kingdom",
                                          "Skip for now")
@@ -301,7 +315,7 @@ RSpec.describe "Shows" do
       end
 
       it "updates details, normalizes hints and returns to the hub" do
-        patch "/shows/#{show.id}", params: { show: { downloads_per_episode: "2500", country: "GB",
+        patch "/shows/#{show.public_id}", params: { show: { downloads_per_episode: "2500", country: "GB",
                                                        contact_email: "me@example.com",
                                                        hints: { comparable_shows: [ " Acquired ", "", "Planet Money" ],
                                                                 topics: [ "saas", "" ] } } }
@@ -318,7 +332,7 @@ RSpec.describe "Shows" do
 
         it "saves the hints, starts the same kind of report and opens it" do
           create(:subscription, user: user)
-          expect { patch "/shows/#{show.id}", params: { show: { hints: hints }, rerun: "agent" } }
+          expect { patch "/shows/#{show.public_id}", params: { show: { hints: hints }, rerun: "agent" } }
             .to change(show.reports, :count).by(1).and have_enqueued_job(GenerateReportJob)
           report = show.reports.last
           expect(report).to have_attributes(kind: "agent", status: "queued")
@@ -330,7 +344,7 @@ RSpec.describe "Shows" do
           refusal = Entitlements::NotAllowed.new(:limit, kind: :agent, bucket: :paid, used: 4, in_flight: 0, limit: 4,
                                                          period: "billing period")
           allow(Report).to receive(:start!).and_raise(refusal)
-          patch "/shows/#{show.id}", params: { show: { hints: hints }, rerun: "agent" }
+          patch "/shows/#{show.public_id}", params: { show: { hints: hints }, rerun: "agent" }
           expect(response).to redirect_to(show_path(show))
           expect(flash[:notice]).to eq("Details saved.")
           expect(flash[:upgrade]).to include("reason" => "limit", "kind" => "agent", "used" => 4, "limit" => 4)
@@ -341,8 +355,8 @@ RSpec.describe "Shows" do
           report = create(:report, show: show, kind: "agent", status: "needs_input")
           show.update!(hints: { comparable_shows: [ "Acquired" ], topics: [] })
           expect do
-            patch "/shows/#{show.id}", params: { show: { hints: { comparable_shows: [ " ", "" ], topics: [ "saas" ] } },
-                                                 rerun: "agent", report_id: report.id }
+            patch "/shows/#{show.public_id}", params: { show: { hints: { comparable_shows: [ " ", "" ], topics: [ "saas" ] } },
+                                                 rerun: "agent", report_id: report.public_id }
           end.not_to change(Report, :count)
           expect(response).to redirect_to(show_report_path(show, report))
           expect(flash[:alert]).to include("Add at least one show your listeners also like")
@@ -351,38 +365,38 @@ RSpec.describe "Shows" do
 
         it "falls back to the show page when the report to return to isn't this show's" do
           other = create(:report)
-          patch "/shows/#{show.id}", params: { show: { hints: { comparable_shows: [ "" ] } }, rerun: "agent", report_id: other.id }
+          patch "/shows/#{show.public_id}", params: { show: { hints: { comparable_shows: [ "" ] } }, rerun: "agent", report_id: other.id }
           expect(response).to redirect_to(show_path(show))
           expect(flash[:alert]).to include("Add at least one show")
         end
 
         it "ignores an unknown kind and just saves" do
-          expect { patch "/shows/#{show.id}", params: { show: { hints: hints }, rerun: "bogus" } }.not_to change(Report, :count)
+          expect { patch "/shows/#{show.public_id}", params: { show: { hints: hints }, rerun: "bogus" } }.not_to change(Report, :count)
           expect(response).to redirect_to(show_path(show))
         end
       end
 
       it "re-renders with errors on invalid input" do
-        patch "/shows/#{show.id}", params: { show: { downloads_per_episode: "-5", contact_email: "bad" } }
+        patch "/shows/#{show.public_id}", params: { show: { downloads_per_episode: "-5", contact_email: "bad" } }
         expect(response).to have_http_status(:unprocessable_content)
         expect(show.reload.downloads_per_episode).to be_nil
       end
 
       it "does not allow changing identity fields" do
-        patch "/shows/#{show.id}", params: { show: { title: "Hacked", user_id: create(:user).id, slug: "x" } }
+        patch "/shows/#{show.public_id}", params: { show: { title: "Hacked", user_id: create(:user).id, slug: "x" } }
         expect(show.reload.title).not_to eq("Hacked")
         expect(show.user).to eq(user)
       end
 
       it "returns 404 for another user's show" do
         other = create(:show)
-        get "/shows/#{other.id}/edit"
+        get "/shows/#{other.public_id}/edit"
         expect(response).to have_http_status(:not_found)
       end
 
       it "returns 404 when updating another user's show" do
         other = create(:show)
-        patch "/shows/#{other.id}", params: { show: { country: "GB" } }
+        patch "/shows/#{other.public_id}", params: { show: { country: "GB" } }
         expect(response).to have_http_status(:not_found)
         expect(other.reload.country).to eq("US")
       end

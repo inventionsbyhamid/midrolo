@@ -44,7 +44,7 @@ class MediaKitsController < ApplicationController
   private
 
   def set_show_and_kit
-    @show = current_user.shows.find(params[:show_id])
+    @show = current_user.shows.find_by!(public_id: params[:show_id])
     @kit = @show.media_kit || @show.build_media_kit
   end
 

@@ -83,7 +83,7 @@ RSpec.describe "reports/sections/_summary" do
   it "links each best fit to its row" do
     first = add_matches(3).first
     render_section
-    expect(bullets[1].at_css("a")["href"]).to eq("#sponsor_match_#{first.id}")
+    expect(bullets[1].at_css("a")["href"]).to eq("#sponsor_match_#{first.public_id}")
   end
 
   it "points the owner at their first pitch" do
@@ -91,7 +91,7 @@ RSpec.describe "reports/sections/_summary" do
     render_section
     link = bullets[2].at_css("a")
     expect(link.text).to eq("Write your first pitch to Brand 1")
-    expect(link["href"]).to eq("#sponsor_match_#{matches.first.id}")
+    expect(link["href"]).to eq("#sponsor_match_#{matches.first.public_id}")
   end
 
   it "points the owner at the next brand not pitched yet" do

@@ -15,7 +15,7 @@
   <div id="<%= form_id %>" class="status-row" data-superseded>
     <span class="status-label">Pipeline</span>
     <%= status_badge(newer.status) %>
-    <%= link_to show_report_path(newer.show_id, newer.report_id, anchor: dom_id(newer)), class: "link text-sm" do %>Tracked on your latest report<span aria-hidden="true"> →</span><% end %>
+    <%= link_to match_card_path(newer), class: "link text-sm" do %>Tracked on your latest report<span aria-hidden="true"> →</span><% end %>
     <% if conflict %>
       <p class="field-error w-full" role="alert">Not saved: this brand is now tracked on your latest report.</p>
     <% end %>

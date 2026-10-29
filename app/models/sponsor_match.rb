@@ -1,4 +1,5 @@
 class SponsorMatch < ApplicationRecord
+  include HasPublicId
   STATUSES = %w[suggested saved pitched replied won lost].freeze
   # The podcaster's pipeline, in order: every status past "suggested".
   PIPELINE_STATUSES = (STATUSES - %w[suggested]).freeze

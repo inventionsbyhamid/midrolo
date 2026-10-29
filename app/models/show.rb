@@ -1,4 +1,5 @@
 class Show < ApplicationRecord
+  include HasPublicId
   COUNTRIES = { "US" => "United States", "GB" => "United Kingdom", "CA" => "Canada", "AU" => "Australia", "IN" => "India" }.freeze
   HINT_KEYS = %w[comparable_shows topics].freeze
   HINT_LIMIT = 5

@@ -8,7 +8,7 @@ RSpec.describe "Reports" do
   let(:show) { create(:show, user: user) }
 
   it "requires sign in" do
-    post "/shows/#{show.id}/reports", params: { kind: "snapshot" }
+    post "/shows/#{show.public_id}/reports", params: { kind: "snapshot" }
     expect(response).to redirect_to("/users/sign_in")
   end
 
@@ -110,8 +110,8 @@ RSpec.describe "Reports" do
         Report::SECTIONS.each { |name| expect(response.body).to include(%(id="report_#{name}")) }
         expect(response.body.scan(/class="skeleton"/).size).to be >= 5
         expect(response.body).to include("Media kit", show_media_kit_path(show), 'name="turbo-refresh-method" content="morph"')
-        expect(response.body).to match(/<details[^>]*id="agent_rail_report_#{report.id}"[^>]* open[ >]/)
-        expect(response.body).to include(%(id="agent_steps_report_#{report.id}"))
+        expect(response.body).to match(/<details[^>]*id="agent_rail_report_#{report.public_id}"[^>]* open[ >]/)
+        expect(response.body).to include(%(id="agent_steps_report_#{report.public_id}"))
       end
 
       it "folds the steps into How we built this once the report is done: no rail, one column (R99)" do
@@ -265,12 +265,13 @@ RSpec.describe "Reports" do
           ActiveSupport::Notifications.unsubscribe(sub)
           queries
         end
-        create(:sponsor_match, report: report)
-        count_queries.call # the first request also records the sign-in (Devise trackable)
-        with_one = count_queries.call
-        create_list(:sponsor_match, 5, report: report)
+        first = create(:sponsor_match, report: report)
         newer = create(:report, show: show, kind: "agent", status: "done")
-        report.sponsor_matches.first(3).each do |match|
+        create(:sponsor_match, report: newer, brand_entity_id: first.brand_entity_id, status: "pitched")
+        count_queries.call # the first request also records the sign-in (Devise trackable)
+        with_one = count_queries.call # one superseded card; its newer copy's show and report load once
+        create_list(:sponsor_match, 5, report: report)
+        report.sponsor_matches.where.not(id: first.id).first(2).each do |match|
           create(:sponsor_match, report: newer, brand_entity_id: match.brand_entity_id, status: "pitched")
         end
 

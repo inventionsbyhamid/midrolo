@@ -77,7 +77,7 @@ RSpec.describe UserMailer do
       expect(text(mail)).not_to include("Away")
       expect(button(mail).text.squish).to eq("Open your report")
       expect(text(mail)).to start_with("Your full report") # no blank first line
-      expect(button(mail)["href"]).to eq("http://example.com/shows/#{show.id}/reports/#{report.id}")
+      expect(button(mail)["href"]).to eq("http://example.com/shows/#{show.public_id}/reports/#{report.public_id}")
       expect(text(mail) + mail.html_part.body.to_s).not_to match(dash)
     end
   end
@@ -91,7 +91,7 @@ RSpec.describe UserMailer do
       expect(mail.subject).to eq("Your report needs one more thing")
       expect(text(mail)).to include("The Founder's Ledger", "2 or 3 shows your listeners also love")
       expect(button(mail).text.squish).to eq("Add comparable shows")
-      expect(button(mail)["href"]).to eq("http://example.com/shows/#{show.id}/reports/#{report.id}#report_seeds")
+      expect(button(mail)["href"]).to eq("http://example.com/shows/#{show.public_id}/reports/#{report.public_id}#report_seeds")
       expect(text(mail)).not_to start_with("\n")
       expect(text(mail) + mail.html_part.body.to_s).not_to match(dash)
     end

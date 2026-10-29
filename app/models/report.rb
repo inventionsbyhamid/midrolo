@@ -1,4 +1,5 @@
 class Report < ApplicationRecord
+  include HasPublicId
   KINDS = %w[snapshot agent].freeze
   STATUSES = %w[queued running done failed needs_input].freeze
   ACTIVE = %w[queued running].freeze

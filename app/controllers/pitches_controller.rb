@@ -11,7 +11,7 @@ class PitchesController < ApplicationController
 
   def show
     @catch_up = params[:pitch_id].present?
-    @pitch = @catch_up ? @sponsor_match.pitches.find(params[:pitch_id]) : @sponsor_match.latest_pitch
+    @pitch = @catch_up ? @sponsor_match.pitches.find_by!(public_id: params[:pitch_id]) : @sponsor_match.latest_pitch
   end
 
   def create
@@ -28,7 +28,7 @@ class PitchesController < ApplicationController
   private
 
   def set_sponsor_match
-    @sponsor_match = current_user.sponsor_matches.includes(report: :show).find(params[:sponsor_match_id])
+    @sponsor_match = current_user.sponsor_matches.includes(report: :show).find_by!(public_id: params[:sponsor_match_id])
     raise ActiveRecord::RecordNotFound if @sponsor_match.locked?(plan)
   end
 

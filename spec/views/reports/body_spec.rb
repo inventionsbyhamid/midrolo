@@ -41,7 +41,7 @@ RSpec.describe "reports/_body" do
     expect(how["open"]).to be_nil
     expect(how.at_css("summary").text.squish).to eq("Show the taste profile, steps and method")
     expect(how.at_css("#report_seeds").text).to include("Index Fund Mornings")
-    expect(how.at_css("#agent_steps_report_#{report.id}").text).to include("Reading your last 15 episodes…")
+    expect(how.at_css("#agent_steps_report_#{report.public_id}").text).to include("Reading your last 15 episodes…")
     expect(how.css("dt").map(&:text)).to eq([ "Qloo taste data", "Proven sponsors", "Midrolo fit score" ])
   end
 
@@ -51,7 +51,7 @@ RSpec.describe "reports/_body" do
 
     rail = html.at_css("aside details[data-controller~='responsive-details']")
     expect(rail["open"]).not_to be_nil
-    expect(rail.at_css("#agent_steps_report_#{report.id}")).to be_present
+    expect(rail.at_css("#agent_steps_report_#{report.public_id}")).to be_present
     expect(html.at_css("#report_how #report_seeds")).to be_present
     ids = html.css("[id]").map { |node| node["id"] }
     expect(ids).to eq(ids.uniq)

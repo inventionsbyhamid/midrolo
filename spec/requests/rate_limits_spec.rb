@@ -125,7 +125,7 @@ RSpec.describe "Rate limits", :rate_limits do
     it "answers the 11th with the friendly page and Retry-After of the hour" do
       10.times do
         post show_reports_path(show), params: { kind: "snapshot" }
-        expect(response.location).to match(%r{/shows/#{show.id}/reports/\d+\z})
+        expect(response.location).to match(%r{/shows/#{show.public_id}/reports/\h{16}\z})
       end
       post show_reports_path(show), params: { kind: "snapshot" }
       expect_friendly_page(retry_after: 3600)
@@ -134,7 +134,7 @@ RSpec.describe "Rate limits", :rate_limits do
     it "answers a Turbo Stream request with a stream that replaces the flash" do
       10.times do
         post show_reports_path(show), params: { kind: "snapshot" }, headers: turbo_stream
-        expect(response.location).to match(%r{/reports/\d+\z})
+        expect(response.location).to match(%r{/reports/\h{16}\z})
       end
       post show_reports_path(show), params: { kind: "snapshot" }, headers: turbo_stream
       expect_flash_stream(retry_after: 3600)
@@ -147,7 +147,7 @@ RSpec.describe "Rate limits", :rate_limits do
 
       sign_in other
       post show_reports_path(create(:show, user: other)), params: { kind: "snapshot" }
-      expect(response.location).to match(%r{/reports/\d+\z})
+      expect(response.location).to match(%r{/reports/\h{16}\z})
 
       sign_out other
       10.times do
@@ -165,7 +165,7 @@ RSpec.describe "Rate limits", :rate_limits do
       5.times { post show_reports_path(show), params: { kind: "snapshot" } }
       5.times do
         patch show_path(show), params: rerun
-        expect(response.location).to match(%r{/shows/#{show.id}/reports/\d+\z})
+        expect(response.location).to match(%r{/shows/#{show.public_id}/reports/\h{16}\z})
       end
 
       patch show_path(show), params: rerun
@@ -178,8 +178,8 @@ RSpec.describe "Rate limits", :rate_limits do
     end
 
     it "counts the path however it is spelled: a format, doubled slashes or a trailing slash" do
-      requests = [ [ :post, "/shows/#{show.id}/reports.html" ], [ :post, "/shows//#{show.id}//reports" ],
-                   [ :post, "/shows/#{show.id}/reports/" ] ]
+      requests = [ [ :post, "/shows/#{show.public_id}/reports.html" ], [ :post, "/shows//#{show.public_id}//reports" ],
+                   [ :post, "/shows/#{show.public_id}/reports/" ] ]
       expect_all_counted(requests, limit: 10, params: { kind: "snapshot" })
     end
   end
@@ -224,8 +224,8 @@ RSpec.describe "Rate limits", :rate_limits do
     end
 
     it "counts the path however it is spelled" do
-      requests = [ [ :post, "/sponsor_matches/#{match.id}/pitch.html" ], [ :post, "/sponsor_matches//#{match.id}//pitch" ],
-                   [ :post, "/sponsor_matches/#{match.id}/pitch/" ] ]
+      requests = [ [ :post, "/sponsor_matches/#{match.public_id}/pitch.html" ], [ :post, "/sponsor_matches//#{match.public_id}//pitch" ],
+                   [ :post, "/sponsor_matches/#{match.public_id}/pitch/" ] ]
       expect_all_counted(requests, limit: 30, headers: turbo_stream)
     end
   end
@@ -332,10 +332,12 @@ RSpec.describe "Rate limits", :rate_limits do
       expect(response).to have_http_status(:see_other)
     end
 
-    it "counts the path however it is spelled, and however the show's id is spelled" do
-      encoded_id = show.id.to_s.chars.map { |digit| format("%%%02X", digit.ord) }.join
-      requests = [ [ :post, "/shows/#{show.id}/verification.html" ], [ :post, "/shows//#{show.id}/verification" ],
-                   [ :post, "/shows/0#{show.id}/verification/" ], [ :post, "/shows/#{encoded_id}/verification" ] ]
+    it "counts the path however it is spelled, and however a character of the show's public id is spelled" do
+      # Percent-encode one character of the public id: the router decodes it, so it is the same show.
+      public_id = show.public_id
+      encoded_id = format("%%%02X", public_id[0].ord) + public_id[1..]
+      requests = [ [ :post, "/shows/#{show.public_id}/verification.html" ], [ :post, "/shows//#{show.public_id}/verification" ],
+                   [ :post, "/shows/#{public_id}/verification/" ], [ :post, "/shows/#{encoded_id}/verification" ] ]
       expect_all_counted(requests, limit: 5, params: { kind: "email" })
     end
 

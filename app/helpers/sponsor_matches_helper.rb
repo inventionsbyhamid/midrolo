@@ -19,6 +19,9 @@ module SponsorMatchesHelper
     copies[match.brand_entity_id]
   end
 
+  # The match's card on its report.
+  def match_card_path(match) = show_report_path(match.show, match.report, anchor: dom_id(match))
+
   def status_options = SponsorMatch::STATUSES.map { |status| [ status.humanize, status ] }
 
   def status_badge(status) = ui_badge(status.humanize, tone: STATUS_TONES.fetch(status, :neutral))

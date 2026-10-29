@@ -8,7 +8,7 @@ import { Turbo } from "@hotwired/turbo-rails"
 //
 //   <div data-controller="stream-catchup" data-stream-catchup-url-value="/sponsor_matches/1/pitch?pitch_id=2">
 //     <turbo-cable-stream-source ...></turbo-cable-stream-source>
-//     <div id="pitch_2">...</div>
+//     <div id="pitch_3f9a1c2b7d4e8a60">...</div>
 //   </div>
 export default class extends Controller {
   static values = { url: String }

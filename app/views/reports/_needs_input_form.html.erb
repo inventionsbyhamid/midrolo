@@ -1,15 +1,15 @@
 <%# locals: (report:) -%>
 <%# Fewer than 2 seeds (Review Focus #1): ask for comparable shows, save them as hints and re-run the same kind (R41). %>
 <% show = report.show %>
-<div class="needs-input mt-4" role="region" aria-labelledby="needs_input_title_<%= report.id %>">
-  <p id="needs_input_title_<%= report.id %>" class="type-h3 max-w-prose">We need a little more to go on. Tell us 2 or 3 shows your listeners also love.</p>
+<div class="needs-input mt-4" role="region" aria-labelledby="needs_input_title_<%= report.public_id %>">
+  <p id="needs_input_title_<%= report.public_id %>" class="type-h3 max-w-prose">We need a little more to go on. Tell us 2 or 3 shows your listeners also love.</p>
   <% if report.unresolved_seeds.any? %>
     <p class="mt-2 text-[0.9375rem]">We couldn't find these on Qloo: <%= and_list(report.unresolved_seeds) %>. Try another spelling or a different show.</p>
   <% end %>
 
   <%= form_with model: show, url: show_path(show), method: :patch, class: "mt-5 flex flex-col gap-5" do |f| %>
     <%= hidden_field_tag :rerun, report.kind %>
-    <%= hidden_field_tag :report_id, report.id %>
+    <%= hidden_field_tag :report_id, report.public_id %>
     <fieldset>
       <legend class="label">Shows your listeners also love</legend>
       <div class="grid gap-2 sm:grid-cols-2">

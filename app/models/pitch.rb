@@ -1,6 +1,7 @@
 # One pitch pack for a match (spec §5.5), written by GeneratePitchJob: queued, then done or failed. Regenerate makes a
 # new row; the dialog shows the match's newest. Only done pitches count toward the plan's pitch limit (R50).
 class Pitch < ApplicationRecord
+  include HasPublicId
   STATUSES = %w[queued done failed].freeze
   # What Pitches::Writer returns, one column each.
   FIELDS = %w[subject body angles offer follow_up contact_role].freeze

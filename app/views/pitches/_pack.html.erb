@@ -7,7 +7,7 @@
 %>
 <% writing = pitch&.in_flight? %>
 <div id="<%= dom_id(sponsor_match, :pitch_pack) %>" class="pitch-pack"
-     <%= tag.attributes(data: { controller: "stream-catchup", stream_catchup_url_value: sponsor_match_pitch_path(sponsor_match, pitch_id: pitch.id) }) if writing %>>
+     <%= tag.attributes(data: { controller: "stream-catchup", stream_catchup_url_value: sponsor_match_pitch_path(sponsor_match, pitch_id: pitch.public_id) }) if writing %>>
   <% if refusal %>
     <%= render "shared/upgrade_prompt", prompt: refusal %>
   <% end %>

@@ -29,6 +29,6 @@
         <%= follow_up_badge(match) %>
       </p>
     <% end %>
-    <%= link_to show_report_path(match.show_id, match.report_id, anchor: dom_id(match)), class: "link pipeline-open" do %>Open in report<span class="sr-only">: <%= match.name %></span><% end %>
+    <%= link_to match_card_path(match), class: "link pipeline-open" do %>Open in report<span class="sr-only">: <%= match.name %></span><% end %>
   </div>
 </article>

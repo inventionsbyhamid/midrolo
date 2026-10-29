@@ -230,7 +230,7 @@ RSpec.describe "Pitches" do
       it "returns just one pitch's current state for the dialog to catch up on" do
         write_pitch
         pitch = Pitch.last
-        get sponsor_match_pitch_path(brand_match, pitch_id: pitch.id), headers: turbo
+        get sponsor_match_pitch_path(brand_match, pitch_id: pitch.public_id), headers: turbo
         expect(stream("replace", dom_id(pitch)).at_css("[data-pitch-subject]")).to be_present
         expect(stream("update", "pitch_dialog")).to be_nil
       end
@@ -324,7 +324,7 @@ RSpec.describe "Pitches" do
         expect { post sponsor_match_pitch_path(brand_match), headers: turbo }.not_to have_enqueued_job(GeneratePitchJob)
         expect(response).to have_http_status(:ok)
         expect(Pitch.pluck(:id)).to eq([ twin.id ])
-        expect(stream("update", "pitch_dialog").at_css("[data-stream-catchup-url-value*='pitch_id=#{twin.id}']")).to be_present
+        expect(stream("update", "pitch_dialog").at_css("[data-stream-catchup-url-value*='pitch_id=#{twin.public_id}']")).to be_present
       end
 
       it "doesn't reserve a pitch stuck in the queue" do
@@ -413,7 +413,7 @@ RSpec.describe "Pitches" do
           post sponsor_match_pitch_path(locked), headers: turbo
           expect(response).to have_http_status(:not_found)
           sign_in user
-          get sponsor_match_pitch_path(locked, pitch_id: Pitch.last.id), headers: turbo
+          get sponsor_match_pitch_path(locked, pitch_id: Pitch.last.public_id), headers: turbo
           expect(response).to have_http_status(:not_found)
           sign_in user
           get sponsor_match_pitch_path(locked)

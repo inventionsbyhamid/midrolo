@@ -167,7 +167,7 @@ RSpec.describe "reports/sections/_matches" do
     it "has a Write my pitch button that posts to the match's pitch" do
       match = report.sponsor_matches.first
       form = card.at_xpath(".//form[.//button[contains(., 'Write my pitch')]]")
-      expect(form["action"]).to eq("/sponsor_matches/#{match.id}/pitch")
+      expect(form["action"]).to eq("/sponsor_matches/#{match.public_id}/pitch")
       expect(form["method"]).to eq("post")
       expect(form.at_css("button")["disabled"]).to be_nil
       expect(card.text).not_to include("coming soon")
@@ -179,7 +179,7 @@ RSpec.describe "reports/sections/_matches" do
     it "offers a live pipeline form: a labelled status select that saves on change, notes and a follow-up date" do
       match = report.sponsor_matches.first
       form = card.at_css("form##{ActionView::RecordIdentifier.dom_id(match, :status_form)}")
-      expect(form["action"]).to eq("/sponsor_matches/#{match.id}")
+      expect(form["action"]).to eq("/sponsor_matches/#{match.public_id}")
       expect(form.at_css("input[name='_method']")["value"]).to eq("patch")
       expect(form["data-controller"]).to eq("status-form")
 
@@ -272,7 +272,7 @@ RSpec.describe "reports/sections/_matches" do
     Pitch.create!(sponsor_match: match, status: "done")
     render_section
     card = html.at_css("[data-filter-target='item']")
-    link = card.at_css("a[href='/sponsor_matches/#{match.id}/pitch'][data-turbo-stream='true']")
+    link = card.at_css("a[href='/sponsor_matches/#{match.public_id}/pitch'][data-turbo-stream='true']")
     expect(link.text.squish).to eq("Open pitch")
     expect(link["class"].split).to include("btn-secondary") # R111
     expect(link["class"].split).not_to include("btn-primary")

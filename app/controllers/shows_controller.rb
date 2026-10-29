@@ -79,12 +79,12 @@ class ShowsController < ApplicationController
 
   # Back to the needs-input report the form came from, when it is this show's.
   def rerun_return_path
-    report = @show.reports.find_by(id: params[:report_id])
+    report = @show.reports.find_by(public_id: params[:report_id])
     report ? show_report_path(@show, report) : show_path(@show)
   end
 
   def set_show
-    @show = current_user.shows.find(params[:id])
+    @show = current_user.shows.find_by!(public_id: params[:id])
   end
 
   def show_params

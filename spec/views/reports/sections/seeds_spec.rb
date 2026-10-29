@@ -59,7 +59,7 @@ RSpec.describe "reports/sections/_seeds" do
       expect(shows.first["value"]).to eq("Acquired")
       expect(shows.first["required"]).not_to be_nil
       expect(shows.drop(1).map { |input| input["required"] }.compact).to be_empty
-      expect(form.at_css("input[name='report_id']")["value"]).to eq(report.id.to_s)
+      expect(form.at_css("input[name='report_id']")["value"]).to eq(report.public_id)
       expect(form.css("input[name='show[hints][topics][]']").first["value"]).to eq("saas")
       expect(form.css("input[type='submit'], button[type='submit']")).to be_present
     end
