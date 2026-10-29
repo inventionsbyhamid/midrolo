@@ -42,6 +42,11 @@ RSpec.describe "Brand assets" do
       expect(manifest.values_at("name", "short_name", "description").join(" ")).not_to match(/[\u2013\u2014]/)
     end
 
+    it "describes the app with the site's tagline" do
+      expect(manifest["description"]).to eq("Where independent podcasts get sponsored.")
+      expect(SocialMetaHelper::DEFAULT_TITLE.downcase).to include(manifest["description"].delete_suffix(".").downcase)
+    end
+
     it "is the only web manifest" do
       expect(Rails.root.join("app/views/pwa/manifest.json.erb")).not_to exist
     end

@@ -2,7 +2,7 @@ require "rails_helper"
 
 # Release check for search and sharing: every public page type, walked as a visitor, has one title of its own, a
 # description, a canonical URL, every Open Graph and Twitter tag once with absolute URLs, a 1200x630 share image that
-# loads, and JSON-LD where it is planned (catalog pages and the blog). Pages the pages lane keeps out of search say
+# loads, and JSON-LD where it is planned (the home page, catalog pages and the blog). Pages the pages lane keeps out of search say
 # "noindex, follow"; the rest say nothing.
 RSpec.describe "Public pages' meta tags", :blog_posts do
   around { |example| with_billing_env { example.run } }
@@ -27,7 +27,7 @@ RSpec.describe "Public pages' meta tags", :blog_posts do
 
   # path => whether the page must carry JSON-LD.
   def public_pages
-    { "/" => false, "/pricing" => false, "/about" => false, "/privacy" => false, "/terms" => false,
+    { "/" => true, "/pricing" => false, "/about" => false, "/privacy" => false, "/terms" => false,
       "/data-sources" => false, "/users/sign_in" => false, "/samples" => false, "/samples/#{first_sample_slug}" => false,
       "/blog" => true, "/blog/#{Blog::Post.published.first.slug}" => true, "/podcasts" => false,
       "/podcasts/#{podcast.slug}" => true, "/podcasts/#{podcast.slug}/episodes/#{episode.slug}" => true,
@@ -66,6 +66,34 @@ RSpec.describe "Public pages' meta tags", :blog_posts do
 
     expect(seen.map(&:first).tally.select { |_, count| count > 1 }.keys).to be_empty
     expect(seen.map(&:last).tally.select { |_, count| count > 1 }.keys).to be_empty
+  end
+
+  it "describes Midrolo on the home page: an Organization with its logo, and a WebSite that searches the directory" do
+    podcast
+    get "/"
+    scripts = doc.css("script[type='application/ld+json']")
+    expect(scripts.size).to eq(1)
+    expect(scripts.first["nonce"]).to be_present
+    data = JSON.parse(scripts.first.text)
+    expect(data["@context"]).to eq("https://schema.org")
+    organization, website = data["@graph"].values_at(0, 1)
+
+    expect(organization).to include("@type" => "Organization", "name" => "Midrolo", "url" => "http://www.example.com/",
+                                    "@id" => "http://www.example.com/#organization")
+    expect(organization["logo"]).to include("@type" => "ImageObject", "url" => "http://www.example.com/icon-512.png")
+    expect(Rails.public_path.join("icon-512.png")).to exist
+
+    expect(website).to include("@type" => "WebSite", "name" => "Midrolo", "url" => "http://www.example.com/",
+                               "publisher" => { "@id" => organization["@id"] })
+    action = website["potentialAction"]
+    expect(action).to include("@type" => "SearchAction", "query-input" => "required name=search_term_string")
+    template = action.dig("target", "urlTemplate")
+    expect(template).to eq("http://www.example.com/podcasts?q={search_term_string}")
+
+    get template.sub("{search_term_string}", "darknet")
+    expect(response).to have_http_status(:ok)
+    expect(doc.at_css("h1")).to be_present
+    expect(response.body).to include("Darknet Diaries")
   end
 
   it "lists every indexable page type in the sitemaps, each answering 200 without noindex, and nothing thin or private" do

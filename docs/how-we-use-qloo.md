@@ -112,9 +112,10 @@ its top brand (see "Compare: built, then turned off" above), so the reasons use 
 
 ## Seeding the catalog
 
-The directory started from Qloo's own podcast lists (`bin/rails "catalog:seed[1000]"`, `Catalog::SeedFromQloo`):
-insights for podcasts, one media genre tag at a time (21 genres, from business and technology to true crime and
-music), popularity at most 0.9 so the giants stay out, 50 a page. Each entity is matched to a real feed through
+The directory started from Qloo's own podcast lists (`bin/rails "catalog:seed_paced[1000,6]"`, one page at a time
+spread over six hours, through `Catalog::SeedFromQloo`): insights for podcasts, one media genre tag at a time (21
+genres, from business and technology to true crime and music), popularity at most 0.9 so the giants stay out, 50 a
+page. Each entity is matched to a real feed through
 Podcast Index (equal title, then a close author), English shows only, one directory search a second. The page then
 comes from the show's own feed, never from Qloo or the directory. The seed runs inside the call guard, waits out the
 minute cap and stops at the daily cap; running it again picks up where it stopped.
