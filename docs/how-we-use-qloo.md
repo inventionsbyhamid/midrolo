@@ -46,7 +46,7 @@ code stays in place, unused unless the setting is raised.
 
 | | Free Snapshot | Full agent report |
 | --- | --- | --- |
-| Who decides | Ruby, with fixed rules | The research agent (Claude, through RubyLLM) |
+| Who decides | Ruby, with fixed rules | The research agent (an AI model, through RubyLLM and OpenRouter) |
 | Seeds | The show on Qloo, the shows the host listed, their topics, the show's categories | The agent's pick, up to 8 entities and 5 tags, each with its source |
 | Qloo data | Taste tags, the map, brand matches | Everything in the table above |
 | Reasons | None | One plain sentence per brand |

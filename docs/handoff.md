@@ -10,7 +10,8 @@ mail).
 Every variable is in [.env.example](../.env.example), with what it does.
 
 - [ ] **Qloo:** the key is in hand. Ask Qloo for its daily call allowance now; step 5 needs it.
-- [ ] **Anthropic:** `ANTHROPIC_API_KEY`, for full reports and pitches.
+- [ ] **OpenRouter:** `OPENROUTER_API_KEY`, for full reports and pitches (the model is `LLM_AGENT_MODEL` and `LLM_PITCH_MODEL`). Give
+      Midrolo its own key with a credit limit, so its spend shows apart from other apps.
 - [ ] **Podcast Index:** `PODCAST_INDEX_KEY`, `PODCAST_INDEX_SECRET`.
 - [ ] **Google OAuth:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. Redirect URI
       `https://midrolo.com/users/auth/google_oauth2/callback`. Publish the consent screen so any account can sign in.
@@ -37,7 +38,7 @@ Every variable is in [.env.example](../.env.example), with what it does.
 - [ ] **Made on the server** (deploy.md step 5): `SECRET_KEY_BASE`, `MIDROLO_DATABASE_PASSWORD`, and
       `APP_URL=https://midrolo.com`.
 - [ ] **In the server's `.env`** (deploy.md step 5): fill in the uncommented lines, then uncomment and fill in each
-      commented line you use: `ANTHROPIC_API_KEY`, the Google, admin and Dodo keys, `JUDGE_CODE` and
+      commented line you use: `OPENROUTER_API_KEY`, the Google, admin and Dodo keys, `JUDGE_CODE` and
       `PROMO_PRO_UNTIL`. A line left commented stays unset, so what it turns on stays off.
 
 Production refuses to boot without `QLOO_API_KEY`, `PODCAST_INDEX_KEY`, `PODCAST_INDEX_SECRET`, an absolute http(s)

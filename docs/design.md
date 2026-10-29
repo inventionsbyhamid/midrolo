@@ -157,6 +157,9 @@ The user's call is to build it **production-ready, not as a demo**: Google login
   - `LLM_AGENT_MODEL=claude-opus-5-5` for the agent
   - `LLM_PITCH_MODEL=claude-opus-5-5` for pitches
   - provider: Anthropic
+  - **Changed 2026-10-29 (the user's call):** the defaults are now `deepseek/deepseek-v4.1-flash` through OpenRouter
+    (`LLM_PROVIDER=openrouter`, `OPENROUTER_API_KEY`), asking OpenRouter for hosts that don't store or train on
+    prompts. Anthropic stays one env change away (`LLM_PROVIDER=anthropic`, the model ids above).
 - Switching to Sonnet or Haiku, or to OpenAI or Gemini, is an env change plus a run of the eval below.
 - **Model settings:** thinking on (RubyLLM `with_thinking(effort: :medium)` to start, tuned in testing). No temperature, since current Claude models reject it.
 - **Prompt caching** on the system prompt and tool definitions, through RubyLLM's Anthropic cache support.

@@ -7,7 +7,7 @@ commit the real code to this file.
 
 **Tagline:** Find sponsors who already love your listeners.
 
-**Built with:** Qloo, Claude, RubyLLM, Ruby on Rails, PostgreSQL, Hotwire, Tailwind CSS, Solid Queue, MapLibre,
+**Built with:** Qloo, OpenRouter, RubyLLM, Ruby on Rails, PostgreSQL, Hotwire, Tailwind CSS, Solid Queue, MapLibre,
 Podcast Index, Dodo Payments, Resend, Cloudflare R2, Docker
 
 ---
@@ -61,7 +61,7 @@ report.
 
 ## How we built it
 
-- **The agent.** A RubyLLM agent (Claude Opus 5.5 by default, set by config) with eight coarse tools: read the feed,
+- **The agent.** A RubyLLM agent (any tool-calling model through OpenRouter, set by config) with eight coarse tools: read the feed,
   find seeds on Qloo, save seeds, build the audience profile, find sponsor candidates, explain matches, save matches,
   save the summary. The research tools do the Qloo, directory and feed calls in Ruby and return short summaries. The agent is capped at 40
   tool calls and 6 minutes.

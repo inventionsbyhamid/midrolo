@@ -49,7 +49,7 @@ flowchart LR
   jobs --> run["Research::Run"]
   run -->|full report| agent["SponsorResearchAgent<br/>RubyLLM tool loop"]
   run -->|Snapshot or demo mode| scripted["ScriptedRunner<br/>same tools, no LLM"]
-  agent --> llm["Llm<br/>RubyLLM, claude-opus-5-5"]
+  agent --> llm["Llm<br/>RubyLLM, any model<br/>through OpenRouter"]
   jobs -->|pitch| llm
   agent --> tools["Research tools<br/>read_show_feed, find_on_qloo,<br/>save_taste_seeds, build_audience_profile,<br/>find_sponsor_candidates, explain_matches,<br/>save_sponsor_matches, save_summary"]
   scripted --> tools
@@ -122,8 +122,8 @@ Each key you add swaps one Fake for the real service.
 | --- | --- | --- |
 | `QLOO_API_KEY` | Live Qloo taste data | Fake taste data |
 | `PODCAST_INDEX_KEY`, `PODCAST_INDEX_SECRET` | Real podcast search | The demo catalog |
-| `ANTHROPIC_API_KEY` | The research agent and pitch writer | Templated reasons and pitches |
-| `LLM_AGENT_MODEL`, `LLM_PITCH_MODEL` | Model choice | `claude-opus-5-5` |
+| `OPENROUTER_API_KEY` | The research agent and pitch writer | Templated reasons and pitches |
+| `LLM_PROVIDER`, `LLM_AGENT_MODEL`, `LLM_PITCH_MODEL` | Provider and model choice | `openrouter`, `deepseek/deepseek-v4.1-flash` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign in | Dev sign in |
 | `BILLING_MODE` | `waitlist`, `test` or `live` | `waitlist` |
 | `DODO_API_KEY`, `DODO_WEBHOOK_SECRET` | Dodo checkout and webhooks | The Fake checkout |

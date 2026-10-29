@@ -240,7 +240,8 @@ RSpec.describe "Public pages" do
       get "/privacy"
 
       text = page.at_css("main").text.squish
-      expect(text).to include("Google", "Qloo", "Podcast Index", "Anthropic", "Cloudflare R2", "Resend", "Dodo")
+      expect(text).to include("Google", "Qloo", "Podcast Index", "OpenRouter", "Cloudflare R2", "Resend", "Dodo")
+      expect(text).to include("only ones that don't store or train on what we send")
       expect(text).to include("We don't sell your data")
       expect(text).to include("the map library from jsDelivr", "Cloudflare provides our DNS")
     end
