@@ -156,8 +156,8 @@ RSpec.describe "Public pages" do
     it "says it in plain words" do
       get "/"
 
-      expect(page.at_css(".hero-lead").text.squish).to include("Qloo taste data", "brands your listeners love")
-      expect(page.at_css("#different").text.squish).to include("Brands your listeners love more than most people do.")
+      expect(page.at_css(".hero-lead").text.squish).to include("Qloo taste data", "brands your audience will likely love")
+      expect(page.at_css("#different").text.squish).to include("Brands people like your listeners love more than most.")
       expect(page.at_css("main").text).not_to include("over-index")
       expect(page.at_css("#how-it-works").text.squish).to include("In a few minutes")
     end
