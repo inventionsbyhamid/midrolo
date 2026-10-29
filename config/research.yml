@@ -17,6 +17,9 @@ shared:
   proven_scan_resolutions: 8
   # Names looked up on Qloo per lookup: the comparable shows a podcaster lists, and the agent's find_on_qloo names.
   comparable_show_lookups: 5
+  # find_on_qloo calls per agent run (R139): the playbook needs one, and a second covers a retry with other names.
+  # Each call is up to 10 lookups, so this keeps the seeds from eating the run's Qloo calls.
+  find_on_qloo_calls: 2
   # Topic phrases matched to taste tags per lookup.
   topic_lookups: 5
   # Brand categories searched per run, each a tag lookup and a filtered brand recommendation.

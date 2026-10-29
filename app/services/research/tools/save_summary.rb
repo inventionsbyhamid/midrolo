@@ -3,11 +3,13 @@ module Research
     # The summary is the At a glance box at the top of the report (R99): 1 to 3 bullets of 20 words or fewer, one a
     # line. Dashes come out first (R100). Over the limits, the first 3 bullets are kept and a long one is cut to its
     # first sentence or at a word boundary (the last resort), and the result says so the model can reword and save
-    # again.
+    # again. It waits for the sponsor matches it summarizes (R140): a model that skips ahead is sent back.
     class SaveSummary < Base
       MAX_BULLETS = Report::SUMMARY_POINTS
       BULLET_WORDS = Report::SUMMARY_POINT_WORDS
       BULLET_LENGTH = Report::SUMMARY_POINT_LENGTH
+      NO_MATCHES = "Save sponsor matches first: build_audience_profile, find_sponsor_candidates, explain_matches, " \
+                   "then save_sponsor_matches. Save the summary after that.".freeze
 
       description "Saves the summary the podcaster reads first, at the top of the report: 1 to #{MAX_BULLETS} bullets, " \
                   "each one plain, specific sentence of #{BULLET_WORDS} words or fewer. First, who the audience is, " \
@@ -20,7 +22,9 @@ module Research
                 required: %i[bullets])
 
       def execute(bullets: [])
-        given = Array(bullets).map { |bullet| Llm::PlainText.sanitize(bullet.to_s.squish) }.compact_blank
+        return NO_MATCHES unless report.sponsor_matches.exists?
+
+        given =Array(bullets).map { |bullet| Llm::PlainText.sanitize(bullet.to_s.squish) }.compact_blank
         return "The summary is empty. Write 1 to #{MAX_BULLETS} bullets and save it again." if given.empty?
 
         points = given.first(MAX_BULLETS).map { |bullet| Llm::PlainText.clip_words(bullet, BULLET_WORDS, max_chars: BULLET_LENGTH) }

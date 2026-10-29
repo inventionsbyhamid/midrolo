@@ -10,6 +10,12 @@ module Llm
         known?(model) || raise(UnknownModel, "no pricing for model #{model.inspect}")
       end
 
+      # The model's input and output prices as OpenRouter's max_price takes them (USD per 1M tokens).
+      def max_price(model)
+        prices = table[model.to_s] or raise UnknownModel, "no pricing for model #{model.inspect}"
+        { prompt: price(prices, :input).to_f, completion: price(prices, :output).to_f }
+      end
+
       def cost_usd(model:, input:, output:, cache_read: 0, cache_write: 0)
         prices = table[model.to_s] or raise UnknownModel, "no pricing for model #{model.inspect}"
         total = (input.to_i * price(prices, :input)) + (output.to_i * price(prices, :output)) +

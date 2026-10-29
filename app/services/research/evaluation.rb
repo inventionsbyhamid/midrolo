@@ -4,7 +4,8 @@ module Research
   # Reports run in the dev spend bucket under a dedicated eval user. Run it with bin/rails eval:run.
   #
   # mode: nil follows Llm.mode (the agent with an API key, else the scripted runner); :agent forces the agent
-  # path (needs ANTHROPIC_API_KEY, and overrides LLM_PROVIDER=fake for the run); :scripted forces fake mode.
+  # path (needs the provider's key, OPENROUTER_API_KEY by default, and overrides LLM_PROVIDER=fake for the run);
+  # :scripted forces fake mode.
   class Evaluation
     DEFAULT_PATH = Rails.root.join("config/eval_shows.yml")
     MODES = %w[agent scripted].freeze
@@ -45,11 +46,11 @@ module Research
       original = ENV["LLM_PROVIDER"]
       return yield unless @mode
 
-      if @mode == "agent" && ENV["ANTHROPIC_API_KEY"].blank?
-        raise ModeUnavailable, "EVAL_MODE=agent needs ANTHROPIC_API_KEY"
+      ENV["LLM_PROVIDER"] = @mode == "agent" ? (original == "fake" ? nil : original) : "fake"
+      if @mode == "agent" && ENV[Llm.api_key_name].blank?
+        raise ModeUnavailable, "EVAL_MODE=agent needs #{Llm.api_key_name}"
       end
 
-      ENV["LLM_PROVIDER"] = @mode == "agent" ? (original == "fake" ? nil : original) : "fake"
       yield
     ensure
       ENV["LLM_PROVIDER"] = original if @mode

@@ -55,7 +55,7 @@ RSpec.describe RequiredEnv do
 
   it "leaves the optional keys alone: admin, error mail, LLM, sign in and billing" do
     expect(described_class::VARIABLES.flat_map(&:first)).not_to include(
-      "ADMIN_USERNAME", "ADMIN_PASSWORD", "ADMIN_EMAIL", "ANTHROPIC_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
+      "ADMIN_USERNAME", "ADMIN_PASSWORD", "ADMIN_EMAIL", "OPENROUTER_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET",
       "DODO_API_KEY", "DODO_WEBHOOK_SECRET", "R2_BACKUP_BUCKET"
     )
   end

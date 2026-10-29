@@ -29,6 +29,7 @@ class SponsorResearchAgent < RubyLLM::Agent
   TEXT
 
   model { Llm.agent_model }
+  provider_options { Llm.provider_options(Llm.agent_model) }
   inputs :toolkit
   instructions INSTRUCTIONS
   tools { Research::Tools.all(toolkit) }

@@ -98,13 +98,13 @@ RSpec.describe Pitches::Writer do
   context "when live" do
     before do
       allow(Llm).to receive(:mode).and_return(:live)
-      @old_key = RubyLLM.config.anthropic_api_key
-      RubyLLM.config.anthropic_api_key = "test-key"
+      @old_key = RubyLLM.config.openrouter_api_key
+      RubyLLM.config.openrouter_api_key = "test-key"
       AppSettings.set(:judge_reserve_usd, 5)
       AppSettings.set(:promo_budget_usd, 10)
     end
 
-    after { RubyLLM.config.anthropic_api_key = @old_key }
+    after { RubyLLM.config.openrouter_api_key = @old_key }
 
     def prompt_of(request) = request.messages.find { |m| m.role == :user }.content.to_s
     def instructions_of(request) = request.messages.find { |m| m.role == :system }.content.to_s

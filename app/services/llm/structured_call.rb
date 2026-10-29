@@ -34,6 +34,7 @@ module Llm
              .with_instructions(@instructions)
              .with_schema(@schema)
              .with_thinking(effort: Llm.pitch_effort)
+             .with_provider_options(Llm.provider_options(@model))
     end
 
     def token_counts(tokens)

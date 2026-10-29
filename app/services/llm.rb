@@ -7,16 +7,29 @@ module Llm
   # Raised by one-shot structured calls in fake mode; callers provide their own fake path.
   class FakeModeUnsupported < Error; end
 
+  # The env variable that holds each provider's key; any other provider's is <PROVIDER>_API_KEY.
+  API_KEY_NAMES = { openrouter: "OPENROUTER_API_KEY", anthropic: "ANTHROPIC_API_KEY" }.freeze
+
   class << self
-    # :fake when LLM_PROVIDER=fake, or when ANTHROPIC_API_KEY is blank outside production.
+    # :fake when LLM_PROVIDER=fake, or when the provider's key is blank outside production.
     def mode
       return :fake if ENV["LLM_PROVIDER"] == "fake"
-      return :fake if ENV["ANTHROPIC_API_KEY"].blank? && !Rails.env.production?
+      return :fake if ENV[api_key_name].blank? && !Rails.env.production?
 
       :live
     end
 
     def fake? = mode == :fake
+
+    def api_key_name = API_KEY_NAMES.fetch(provider) { "#{provider.to_s.upcase}_API_KEY" }
+
+    # Merged into every request for the model as-is. OpenRouter routes only to hosts that neither store nor train on
+    # prompts and charge no more than the model's prices in config/llm_pricing.yml, so the ledger is an upper bound.
+    def provider_options(model)
+      return {} unless provider == :openrouter
+
+      { provider: { data_collection: "deny", max_price: Pricing.max_price(model) } }
+    end
 
     def agent_model = config.dig(:agent, :model).to_s
 
@@ -31,7 +44,7 @@ module Llm
 
     def pitch_effort = (config.dig(:pitch, :effort) || "low").to_sym
 
-    def provider = (config[:provider].presence || "anthropic").to_sym
+    def provider = (config[:provider].presence || "openrouter").to_sym
 
     def config
       Rails.application.config_for(:llm)

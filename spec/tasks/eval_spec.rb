@@ -46,8 +46,8 @@ RSpec.describe "rake eval:run" do
   end
 
   it "forces the agent path with EVAL_MODE=agent when a key is present, even if LLM_PROVIDER=fake" do
-    old = ENV.to_h.slice("EVAL_MODE", "ANTHROPIC_API_KEY", "LLM_PROVIDER")
-    ENV.update("EVAL_MODE" => "agent", "ANTHROPIC_API_KEY" => "test-key", "LLM_PROVIDER" => "fake")
+    old = ENV.to_h.slice("EVAL_MODE", "OPENROUTER_API_KEY", "LLM_PROVIDER")
+    ENV.update("EVAL_MODE" => "agent", "OPENROUTER_API_KEY" => "test-key", "LLM_PROVIDER" => "fake")
     modes = []
     allow(Research::Run).to receive(:call) { |report| modes << Llm.mode; report.mark_failed!; nil }
 
@@ -55,7 +55,7 @@ RSpec.describe "rake eval:run" do
     expect(modes).to eq(%i[live live])
     expect(ENV["LLM_PROVIDER"]).to eq("fake") # restored afterwards
   ensure
-    %w[EVAL_MODE ANTHROPIC_API_KEY LLM_PROVIDER].each { |k| ENV[k] = old[k] }
+    %w[EVAL_MODE OPENROUTER_API_KEY LLM_PROVIDER].each { |k| ENV[k] = old[k] }
   end
 
   it "reports a failed expectation and exits non-zero" do

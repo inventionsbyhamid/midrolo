@@ -106,6 +106,23 @@ RSpec.describe Research::Tools do
       out = run("find_on_qloo", names: [ "Zzzz Qqqq" ], topics: [])
       expect(out).to include("Nothing matched")
     end
+
+    it "looks up at most twice a run, then sends the model on to save seeds without calling Qloo (R139)" do
+      run("find_on_qloo", names: [ "The Founder's Ledger" ], topics: [])
+      run("find_on_qloo", names: [ "Zzzz Qqqq" ], topics: [])
+      allow(taste).to receive(:search).and_call_original
+
+      out = run("find_on_qloo", names: [ "Index Fund Mornings" ], topics: [ "Business" ])
+      expect(out).to include("save_taste_seeds")
+      expect(taste).not_to have_received(:search)
+      expect(report.agent_steps.pluck(:tool)).to eq(%w[find_on_qloo find_on_qloo])
+    end
+
+    it "doesn't count a call that looked nothing up" do
+      run("find_on_qloo", names: [], topics: [])
+      run("find_on_qloo", names: [ "Zzzz Qqqq" ], topics: [])
+      expect(run("find_on_qloo", names: [ "The Founder's Ledger" ], topics: [])).to include("fake:podcast:the-founder-s-ledger")
+    end
   end
 
   describe "save_taste_seeds" do
@@ -403,6 +420,16 @@ RSpec.describe Research::Tools do
   end
 
   describe "save_summary" do
+    before { create(:sponsor_match, report: report) }
+
+    it "waits for the sponsor matches: the summary is about them (R140)" do
+      report.sponsor_matches.delete_all
+      out = run("save_summary", bullets: [ "Your listeners love finance tools." ])
+      expect(out).to include("save_sponsor_matches")
+      expect(report.reload.summary).to be_nil
+      expect(report.agent_steps).to be_empty
+    end
+
     it "saves 1 to 3 bullets, one a line, for the At a glance box" do
       out = run("save_summary", bullets: [ "Your listeners love finance tools.", "Start with the budgeting apps." ])
       expect(out).to eq("Summary saved.")

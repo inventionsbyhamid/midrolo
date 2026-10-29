@@ -40,8 +40,8 @@ RSpec.describe GeneratePitchJob do
 
   it "parses a live structured reply into the pitch" do
     allow(Llm).to receive(:mode).and_return(:live)
-    old_key = RubyLLM.config.anthropic_api_key
-    RubyLLM.config.anthropic_api_key = "test-key"
+    old_key = RubyLLM.config.openrouter_api_key
+    RubyLLM.config.openrouter_api_key = "test-key"
     AppSettings.set(:judge_reserve_usd, 5)
     AppSettings.set(:promo_budget_usd, 10)
     RubyLLM::Test.stub_response(written.merge("body" => "Hi Fieldnote Coffee team, our listeners love what you make."))
@@ -54,7 +54,7 @@ RSpec.describe GeneratePitchJob do
     expect(pitch.cost_usd).to eq(SpendEntry.where(pitch_id: pitch.id).sum(:cost_usd))
     expect(SpendEntry.where(pitch_id: pitch.id).count).to eq(1)
   ensure
-    RubyLLM.config.anthropic_api_key = old_key
+    RubyLLM.config.openrouter_api_key = old_key
   end
 
   it "fails with the paused message, uncounted, when the budget refuses" do

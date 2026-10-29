@@ -20,6 +20,8 @@ module Research
     attr_reader :lookup_sources, :unresolved
     # The outcome of the latest SaveTasteSeeds call: {saved: Integer, rejected: Integer}, or nil.
     attr_accessor :last_seed_save
+    # FindOnQloo calls that looked something up this run (R139).
+    attr_accessor :agent_lookups
 
     def initialize(report, taste: nil, directory: nil, feed_reader: Podcasts::FeedReader.new,
                    max_taste_calls: StepLogger.configured_max_taste_calls,
@@ -40,6 +42,7 @@ module Research
       @compared = Set.new
       @lookup_sources = {}
       @unresolved = []
+      @agent_lookups = 0
     end
 
     def show = report.show

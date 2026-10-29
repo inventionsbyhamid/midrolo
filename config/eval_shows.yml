@@ -1,11 +1,11 @@
 # Eval set for the research agent (spec §6). Run it before changing LLM_AGENT_MODEL or the LLM provider:
 #   bin/rails eval:run                      # this file
 #   bin/rails "eval:run[path/to/file.yml]"  # another file (or EVAL_FILE=path/to/file.yml)
-#   EVAL_MODE=agent bin/rails eval:run      # force the agent path (needs ANTHROPIC_API_KEY; overrides LLM_PROVIDER=fake)
+#   EVAL_MODE=agent bin/rails eval:run      # force the agent path (needs OPENROUTER_API_KEY; overrides LLM_PROVIDER=fake)
 #   EVAL_MODE=scripted bin/rails eval:run   # force fake LLM mode
 #
 # IMPORTANT (R40): before switching models or providers, add 8-10 REAL shows (template below) and run the
-# eval with live keys (ANTHROPIC_API_KEY, QLOO_API_KEY, PODCAST_INDEX_KEY/SECRET). Without an Anthropic key,
+# eval with live keys (OPENROUTER_API_KEY, QLOO_API_KEY, PODCAST_INDEX_KEY/SECRET). Without the LLM key,
 # or with LLM_PROVIDER=fake, eval:run exercises the scripted runner, not the agent; it prints which path ran.
 # Each entry runs one full agent report (spend bucket dev; with an API key this costs real money, about
 # $0.50 a show) and checks:

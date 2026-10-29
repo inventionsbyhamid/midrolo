@@ -3,10 +3,10 @@
 # first upload, email or page. Loaded by production.rb, before autoloading.
 #
 # Everything else is optional: ADMIN_USERNAME/ADMIN_PASSWORD (unset, /admin is a 404), ADMIN_EMAIL (unset, every
-# admin account gets the error mail), ANTHROPIC_API_KEY (runs fail until it's set), GOOGLE_CLIENT_* (sign in fails
-# until they're set) and DODO_* (billing stays a waitlist). QLOO_API_KEY and PODCAST_INDEX_* are required even
-# though they're optional elsewhere: outside production a blank key means demo data, but production has no demo
-# data, and every page asks whether it's showing some (DemoMode), so without them no page renders.
+# admin account gets the error mail), OPENROUTER_API_KEY (the LLM's: runs fail until it's set), GOOGLE_CLIENT_*
+# (sign in fails until they're set) and DODO_* (billing stays a waitlist). QLOO_API_KEY and PODCAST_INDEX_* are
+# required even though they're optional elsewhere: outside production a blank key means demo data, but production has
+# no demo data, and every page asks whether it's showing some (DemoMode), so without them no page renders.
 module RequiredEnv
   class Missing < StandardError; end
 

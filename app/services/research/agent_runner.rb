@@ -11,6 +11,8 @@ module Research
   # Seeds: a clean save_taste_seeds call (no rejected ids) that leaves fewer than 2 seeds ends the run as
   # needs_input. A call with rejected ids or invalid arguments may be retried MAX_SEED_RETRIES times.
   #
+  # A model that stops before saving matches is sent back once with CARRY_ON (R141), inside the same caps.
+  #
   # Raises Llm::BudgetExceeded (not allowed to spend), NeedsInput, LimitReached (a cap was hit before any
   # matches were saved; kind :tool_calls or :time) or IncompleteRun (the model stopped without saving
   # matches). Returns the toolkit.
@@ -23,6 +25,9 @@ module Research
     MAX_SEED_RETRIES = 2
     SAMPLE_VOICE = "This report is a public sample: write the summary and reasons about the show in the third person " \
                    '("this show", "its listeners"), never "you" or "your".'.freeze
+    CARRY_ON = "You stopped before saving sponsor matches, so the report isn't done. Carry on from where you are: " \
+               "build_audience_profile, find_sponsor_candidates, explain_matches, save_sponsor_matches, then " \
+               "save_summary.".freeze
     TIMEOUTS = [ Faraday::TimeoutError, Timeout::Error ].freeze
 
     def self.call(report) = new(report).call
@@ -58,6 +63,7 @@ module Research
       bind_time_budget(chat)
       enforce_limits(chat)
       chat.ask(kickoff)
+      carry_on(chat) unless matches_saved?
     rescue LimitReached, *TIMEOUTS => e
       # Matches are the report: a late cap only costs the summary.
       raise(e.is_a?(LimitReached) ? e : LimitReached.new(:time, "request timed out")) unless matches_saved?
@@ -71,6 +77,13 @@ module Research
     def kickoff
       text = "Research sponsors for the podcast #{Untrusted.wrap(toolkit.show.title)}. Start with read_show_feed."
       report.spend_bucket == Samples::SPEND_BUCKET ? "#{text} #{SAMPLE_VOICE}" : text
+    end
+
+    # The model's final answer came without matches: one more turn, bound to the time left like any other.
+    def carry_on(chat)
+      check_limits!
+      bind_time_budget(chat)
+      chat.ask(CARRY_ON)
     end
 
     def enforce_limits(chat)

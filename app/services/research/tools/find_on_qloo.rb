@@ -5,6 +5,10 @@ module Research
 
       MAX_NAMES = Seeds::MAX_LOOKUP_NAMES
       MAX_TOPICS = Seeds::MAX_LOOKUP_TOPICS
+      # R139: config/research.yml.
+      MAX_CALLS = Research.caps.fetch(:find_on_qloo_calls)
+      ENOUGH = "That's #{MAX_CALLS} lookups, the most a report gets. Save taste seeds from what you found " \
+               "(save_taste_seeds) and carry on.".freeze
 
       description "Looks names and topics up on Qloo: up to #{MAX_NAMES} names (this show, comparable shows, guests, " \
                   "artists, brands) and up to #{MAX_TOPICS} topic phrases. Returns the matching Qloo entities and taste " \
@@ -16,7 +20,9 @@ module Research
         names = strings(names).first(MAX_NAMES)
         topics = strings(topics).first(MAX_TOPICS)
         return "Give at least one name or topic to look up." if names.empty? && topics.empty?
+        return ENOUGH if toolkit.agent_lookups >= MAX_CALLS
 
+        toolkit.agent_lookups += 1
         result = Seeds.from_lookup(toolkit, names: names, topics: topics)
         toolkit.record_lookup(result)
         digest(result)
