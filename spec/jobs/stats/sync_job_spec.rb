@@ -33,6 +33,27 @@ RSpec.describe Stats::SyncJob do
       expect(Stats::PlatformFetch).to have_received(:call).once # the 30 days had a breakdown
     end
 
+    it "saves nothing when an admin disconnected it while the platform answered" do
+      allow(Stats::PlatformFetch).to receive(:call) do
+        StatConnection.where(id: connection.id).update_all(status: "disconnected", last_error: StatConnection::REJECTED_MESSAGE)
+        spotify_result
+      end
+      run
+      expect(Stats::PlatformFetch).to have_received(:call)
+      expect(connection.reload).to have_attributes(status: "disconnected", last_error: StatConnection::REJECTED_MESSAGE)
+      expect(readings).to be_empty
+    end
+
+    it "saves nothing when the owner removed it while the platform answered" do
+      allow(Stats::PlatformFetch).to receive(:call) do
+        StatConnection.where(id: connection.id).delete_all
+        spotify_result
+      end
+      run
+      expect(Stats::PlatformFetch).to have_received(:call)
+      expect(readings).to be_empty
+    end
+
     it "keeps waiting while the invite isn't accepted (no access yet)" do
       stub_fetch(fetch_error("forbidden"))
       run
