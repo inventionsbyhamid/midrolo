@@ -12,14 +12,15 @@ Work top to bottom. Deploy steps themselves are in [deploy.md](deploy.md); the o
 - [ ] https://midrolo.com is up, and every check in deploy.md's "After every deploy" passes.
 - [ ] The demo mode banner shows on no page (production has real keys).
 - [ ] `/admin`: runs are not paused, and today's Qloo calls and LLM spend have room.
-- [ ] The catalog is seeded: the Catalog panel in `/admin` shows the shows linked to Qloo, and `/podcasts` lists them
-      with artwork.
+- [ ] The catalog is seeded: the Catalog panel in `/admin` shows the shows linked to Qloo (the paced seed,
+      `catalog:seed_paced`, reached its target or is still running), and `/podcasts` lists them with artwork.
 - [ ] Sponsor detection has run: the Sponsor detection panel in `/admin` shows reads found, and a few podcast pages
       show sponsors with their quotes.
 - [ ] The demo show exists (`bin/rails demo:setup`), its page shows "Demo show", and it isn't in the directory.
 - [ ] Our own show, **AiGM by AiHunt**, is claimed, its Spotify connection is Active in `/admin/stat_connections`,
       and its page shows its Spotify numbers with the Verified badge. If it doesn't by submission time, delete the
-      "Verified numbers" line from the Devpost testing instructions.
+      "Verified numbers" line from the Devpost testing instructions. No connection there waits for review (Approve
+      or Reject each).
 
 ## 2. Production settings
 

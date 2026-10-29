@@ -16,6 +16,9 @@ class StatConnection < ApplicationRecord
   RELEASABLE_STATUSES = %w[pending_invite mismatch failed].freeze
   TAKEN_MESSAGE = "This show is already connected to another Midrolo page.".freeze
   RELEASED_MESSAGE = "The show's owner connected it to their own Midrolo page, so this connection stopped.".freeze
+  # An admin's Reject on a connection held for review (Stats::RejectConnection). Names no show, like the one above.
+  REJECTED_MESSAGE = "Midrolo checked this connection by hand and couldn't confirm that show is this podcast, so it " \
+                     "stopped. Paste your own show's link to connect again.".freeze
 
   belongs_to :podcast
   belongs_to :show, optional: true
@@ -45,6 +48,10 @@ class StatConnection < ApplicationRecord
         connection.update!(status: "disconnected", last_error: RELEASED_MESSAGE)
       end
   end
+
+  # Disconnected by Midrolo (another page's owner took the platform show, or an admin rejected it), not by the
+  # platform: the Stats screen says why instead of "access was removed".
+  def stopped_by_midrolo? = disconnected? && last_error.in?([ RELEASED_MESSAGE, REJECTED_MESSAGE ])
 
   # Another podcast's connection (in any state but disconnected) holds this platform show.
   def platform_show_taken?

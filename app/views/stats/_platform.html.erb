@@ -27,7 +27,10 @@
             at <%= (connection.last_synced_at || connection.updated_at).utc.strftime("%H:%M") %> UTC. We read it again every day.
           </p>
         <% when "disconnected" %>
-          <p>Midrolo's access was removed in <%= service %>. Numbers already on your page stay until they're 45 days old, then show as "Last verified".</p>
+          <%# Stopped by Midrolo (last_error says why), not by the platform. %>
+          <% unless connection.stopped_by_midrolo? %>
+            <p>Midrolo's access was removed in <%= service %>. Numbers already on your page stay until they're 45 days old, then show as "Last verified".</p>
+          <% end %>
         <% end %>
 
         <% if connection.last_error.present? %>

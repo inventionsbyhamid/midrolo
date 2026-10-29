@@ -117,6 +117,63 @@ RSpec.describe "Rate limits", :rate_limits do
     end
   end
 
+  describe "search engine crawlers, confirmed by DNS" do
+    let(:googlebot) { { "User-Agent" => "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" } }
+    let(:crawler) { from("66.249.66.1") }
+    let(:dns) { instance_double(Resolv::DNS, "timeouts=": nil) }
+
+    before do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      allow(Resolv::DNS).to receive(:open) { |&block| block.call(dns) }
+      allow(dns).to receive(:getname) do |ip|
+        { "66.249.66.1" => "crawl-66-249-66-1.googlebot.com", "203.0.113.66" => "crawl-203-0-113-66.googlebot.com" }
+          .fetch(ip) { raise Resolv::ResolvError, "no name for #{ip}" }
+      end
+      allow(dns).to receive(:getaddresses) do |name|
+        { "crawl-66-249-66-1.googlebot.com" => [ Resolv::IPv4.create("66.249.66.1") ] }.fetch(name, [])
+      end
+    end
+
+    it "lets a verified crawler read pages past the global limit, looking it up once and only past the limit" do
+      60.times { get "/pricing", headers: googlebot, env: crawler }
+      expect(Resolv::DNS).not_to have_received(:open)
+
+      podcast = create(:podcast, :indexable)
+      [ "/pricing", "/podcasts", "/podcasts/#{podcast.slug}", "/sitemap.xml" ].each do |path|
+        get path, headers: googlebot, env: crawler
+        expect(response).to have_http_status(:ok), path
+      end
+      head "/about", headers: googlebot, env: crawler
+      expect(response).to have_http_status(:ok)
+      expect(dns).to have_received(:getname).once
+    end
+
+    it "still refuses its writes and its directory searches past their limits" do
+      show = create(:show)
+      60.times { get "/pricing", headers: googlebot, env: crawler }
+      post show_reports_path(show), params: { kind: "snapshot" }, headers: googlebot, env: crawler
+      expect_friendly_page(retry_after: 60)
+
+      travel 1.minute
+      20.times do
+        get "/podcasts", params: { q: "money" }, headers: googlebot, env: crawler
+        expect(response).to have_http_status(:ok)
+      end
+      get "/podcasts", params: { q: "money" }, headers: googlebot, env: crawler
+      expect(response).to have_http_status(:too_many_requests)
+    end
+
+    it "never spares a user agent alone: a browser, or a crawler's name from an address DNS doesn't confirm" do
+      { from("198.51.100.66") => googlebot, from("203.0.113.66") => googlebot, crawler => { "User-Agent" => "curl/8.7.1" } }
+        .each do |env, headers|
+          60.times { get "/pricing", headers: headers, env: env }
+          get "/pricing", headers: headers, env: env
+          expect(response).to have_http_status(:too_many_requests), "#{env['REMOTE_ADDR']} #{headers['User-Agent']}"
+        end
+      expect(dns).to have_received(:getname).twice # once per address that claimed to be Googlebot
+    end
+  end
+
   describe "report starts: 10 an hour per user" do
     let(:show) { create(:show, user: user) }
 
