@@ -43,6 +43,9 @@
                [ "warning", "We couldn't read #{service} this time", connection.last_error.present? ? "Press Check now to try sooner." : "We'll try again within a day, or press Check now." ]
              elsif connection.mismatch?
                [ "danger", "That link isn't #{show.title} on #{name}", "Paste the link to #{show.title} on #{name} below." ]
+             elsif connection.stopped_by_midrolo?
+               [ "danger", "Midrolo stopped this connection",
+                 (connection.last_error == StatConnection::REJECTED_MESSAGE ? nil : "If the show is yours, claim it, then connect again.") ]
              elsif connection.disconnected?
                [ "danger", "Midrolo's access was removed in #{service}", "Numbers already on your page stay until they're 45 days old. Invite Midrolo again to keep them fresh." ]
              else
@@ -51,7 +54,7 @@
           <div class="stats-alert stats-alert-<%= tone %>" role="status">
             <p class="font-semibold"><%= title %></p>
             <% if connection.last_error.present? && connection.last_error != title %><p><%= connection.last_error %></p><% end %>
-            <p><%= fix %></p>
+            <% if fix %><p><%= fix %></p><% end %>
           </div>
         <% end %>
 

@@ -173,7 +173,7 @@ module StatsHelper
     when "active" then [ "Connected", :success ]
     when "mismatch" then ::Stats::Ownership.needs_review?(connection) ? [ "Being checked", :warning ] : [ "Doesn't match", :danger ]
     when "failed" then [ "Couldn't connect", :danger ]
-    else [ "Access removed", :danger ]
+    else connection.stopped_by_midrolo? ? [ "Stopped", :danger ] : [ "Access removed", :danger ]
     end
     ui_badge(label, tone: tone)
   end

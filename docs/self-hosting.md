@@ -51,6 +51,9 @@ midrolo-web, midrolo-jobs, midrolo-backup ─ midrolo-net ─▶ midrolo-db:5432
 - The client's IP (`request.remote_ip`, which the rate limits use) comes from X-Forwarded-For, which Traefik and
   Thruster write. With Cloudflare's proxy on, it comes from CF-Connecting-IP, believed only from Cloudflare's own
   addresses (`config/initializers/client_ip.rb`). A Forwarded or Client-IP header a visitor sends never counts.
+- Every request counts against 60 a minute per IP. Search engine crawlers that DNS confirms (reverse, then forward)
+  may read past it on GET and HEAD, never on their user agent alone; deploy.md, "Rate limits", has the rule. The check
+  uses the web container's DNS resolver.
 - The database is on `midrolo-net` only, so no other stack can reach it. `midrolo-web` is also on `coolify`, which
   other stacks' web containers share, so network placement does not keep it off their ports. The code does (R131):
   every user-supplied URL (a feed, show artwork) is resolved once, refused if any address is internal (private,
@@ -186,17 +189,24 @@ docker compose exec midrolo-web bin/rails samples:generate
 The catalog, sponsor detection, verified stats and the demo show need a few one time steps: back up, read the feeds,
 seed the catalog from Qloo, scan for sponsors, backfill similar shows, make the demo show and save the Spotify
 session. They're listed in order in [deploy.md](deploy.md), "The marketplace: first deploy"; run each command in the
-jobs container, for example:
+jobs container. Set `qloo_daily_call_limit` to 500 in /admin before the seed, which reads one Qloo page at a time over
+6 hours (`catalog:seed_stop` stops it after the page it is on; running it again picks up where it stopped). For example:
 
 ```bash
 docker compose exec midrolo-jobs bin/rails catalog:refresh
-docker compose exec midrolo-jobs bin/rails "catalog:seed[1000]"
+docker compose exec midrolo-jobs bin/rails "catalog:seed_paced[1000,6]"   # 1,000 shows over 6 hours
+docker compose exec midrolo-jobs bin/rails catalog:seed_stop               # only to stop it early
 docker compose exec midrolo-jobs bin/rails sponsors:scan
 docker compose exec midrolo-jobs bin/rails demo:setup
 docker compose exec -T midrolo-jobs bin/rails "stats:session[spotify]" < spotify-session.env   # prints key names only
 ```
 
 The session file holds Midrolo's own Spotify cookie (`sp_dc=...`): keep it out of the repo and delete it after.
+
+Two things run on their own from then on (`config/recurring.yml`, in the jobs container): the daily sponsors sweep
+(4:10am, up to 100 podcasts whose episodes waited for the sponsor check's budget) and the stats syncs. A stats
+connection that matches its podcast by name only, while another podcast has the same name, waits in
+`/admin/stat_connections` until an admin presses Approve or Reject (deploy.md, "Connections held for review").
 
 ## After every deploy: checks
 

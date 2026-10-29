@@ -67,6 +67,8 @@ module Stats
       if (problem = ::Stats::Ownership.show_problem(connection, result.fetch("show", {})))
         return connection.update!(status: "mismatch", last_error: problem, last_checked_at: now)
       end
+      # Disconnected (an admin's Reject) or removed (the owner's Disconnect) while the platform answered: save nothing.
+      return unless StatConnection.where(id: connection.id).where.not(status: "disconnected").exists?
 
       ::Stats::Record.call(connection, result, audience: longer_audience(connection, session, result), now: now)
       connection.update!(status: "active", activated_at: connection.activated_at || now, last_synced_at: now,

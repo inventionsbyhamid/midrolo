@@ -97,7 +97,7 @@ flowchart LR
 
 - **The catalog** (`app/services/catalog/`) reads each feed with conditional GET and adaptive polling, leases due
   feeds with `FOR UPDATE SKIP LOCKED`, paces each host, and stores artwork once per image hash. It was seeded from
-  Qloo's podcast lists by genre (`catalog:seed`).
+  Qloo's podcast lists by genre (`catalog:seed_paced`, a page at a time spread over hours).
 - **Sponsor detection** (`app/services/sponsors/`) scans episode notes with patterns, then a cheap model confirms
   candidates. A brand counts only if the notes name it, and the evidence is always the show's own sentence.
 - **The brand side agent** (`app/services/fit_search/`) makes every Qloo call in Ruby, at most 10 a search, and logs
