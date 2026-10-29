@@ -1,7 +1,7 @@
 {
   "name": "Midrolo",
   "short_name": "Midrolo",
-  "description": "Find sponsors who already love your podcast's listeners.",
+  "description": "Where independent podcasts get sponsored.",
   "start_url": "/",
   "scope": "/",
   "display": "browser",
