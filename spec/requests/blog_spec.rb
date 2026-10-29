@@ -102,7 +102,7 @@ RSpec.describe "Blog" do
       expect(related.css("h3 a").map { |link| link["href"] }).to eq(%w[/blog/what-to-charge-for-a-midroll /blog/media-kits-brands-read])
 
       cta = page.at_css("section.post-cta")
-      expect(cta.at_xpath(".//a[normalize-space()='Get my free Snapshot']")["href"]).to eq("/users/sign_in")
+      expect(cta.at_xpath(".//a[normalize-space()='Get my free Snapshot']")["href"]).to eq("/start")
       expect(cta.at_xpath(".//a[normalize-space()='See the sample reports']")["href"]).to eq("/samples")
     end
 
