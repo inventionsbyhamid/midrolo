@@ -7,7 +7,7 @@ module Catalog
     queue_as :catalog
 
     BATCH = 200
-    LEASE = 20.minutes
+    LEASE = 1.hour
     HOST_SPACING = 3.seconds
     MAX_PER_HOST = 50
 
