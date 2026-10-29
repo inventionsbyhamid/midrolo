@@ -166,6 +166,14 @@ RSpec.describe Stats::Throttle do
       expect(described_class.room("spotify", within: 15.minutes)).to eq(3)
     end
 
+    it "counts only the slots after the jobs already waiting" do
+      expect(reserve).to be_allowed # one runs (for up to 75 s, then 30 to 45 s)
+      8.times { reserve } # 8 wait, a minute apart, until about 10 minutes from now
+      expect(described_class.room("spotify", within: 15.minutes)).to eq(6)
+      6.times { reserve }
+      expect(described_class.room("spotify", within: 15.minutes)).to eq(0)
+    end
+
     it "is 0 while the platform stays shut past the next pass, or without a session" do
       session.update_columns(cooldown_until: t0 + 2.hours)
       expect(described_class.room("spotify", within: 15.minutes)).to eq(0)

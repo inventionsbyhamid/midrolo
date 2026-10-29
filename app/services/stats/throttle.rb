@@ -111,17 +111,18 @@ module Stats
       end
 
       # How many runs fit on platform within the next `within` (for Stats::SyncDueJob, so it enqueues no more than can
-      # run before its next pass): 0 while it stays shut, else the free slots, at most what the hour and day caps leave.
+      # run before its next pass): 0 while it stays shut or jobs already wait past then, else the free slots after those
+      # waiting, at most what the hour and day caps leave.
       def room(platform, within:, now: Time.current)
         limits = Limits.current
         session = ServiceSession.find_by(platform: platform.to_s)
         return 0 unless session
 
-        at = opens_at(session, now, limits)
-        return 0 if at > now + within
+        start = [ now, opens_at(session, now, limits), waiting_after(session, now, limits) ].compact.max
+        return 0 if start > now + within
 
         log = times(session, now)
-        free = ((now + within - [ at, now ].max) / spacing(limits).to_f).floor + 1
+        free = ((now + within - start) / spacing(limits).to_f).floor + 1
         [ free, limits.per_hour - log.count { |time| time > now - 1.hour }, limits.per_day - log.size ].min.clamp(0..)
       end
 

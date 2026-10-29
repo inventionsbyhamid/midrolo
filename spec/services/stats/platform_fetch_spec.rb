@@ -207,6 +207,14 @@ RSpec.describe Stats::PlatformFetch do
       end
     end
 
+    it "still returns the numbers when the token can't be kept" do
+      allow(ServiceSession).to receive(:lock).and_raise(ActiveRecord::StatementInvalid, "lock timeout")
+      stub_helper(stdout: helper_json("token" => { "value" => token, "expires_at" => 1.hour.from_now.utc.iso8601 }))
+      expect(described_class.call(connection)).to include("ok" => true)
+      expect(log.string).to include("couldn't keep the new token (ActiveRecord::StatementInvalid)")
+      expect(log.string).not_to include(token)
+    end
+
     it "is dropped when an admin saves a new session" do
       store_token(token, 30.minutes.from_now)
       Stats::ServiceSessions.save!("spotify", { "sp_dc" => cookie })

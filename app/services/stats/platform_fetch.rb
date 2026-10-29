@@ -124,6 +124,8 @@ module Stats
         row.update_columns(credentials: stored.merge(TOKEN_KEYS.zip([ value, expires.utc.iso8601 ]).to_h).to_json)
       end
       log("signed in; the new token is kept until #{expires.utc.strftime('%H:%M')} UTC") if kept
+    rescue ActiveRecord::ActiveRecordError => e
+      log("couldn't keep the new token (#{e.class.name})") # the fetch itself still counts; the next one signs in
     end
 
     def token_parts(token)
