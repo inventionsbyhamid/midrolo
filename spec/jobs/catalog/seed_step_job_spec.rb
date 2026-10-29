@@ -76,6 +76,21 @@ RSpec.describe Catalog::SeedStepJob do
     expect(queued_steps).to be_empty
   end
 
+  it "picks up where the last chain stopped, and starts over once the tags ran out" do
+    Catalog::SeedProgress.start!(target: 1000, hours: 6)
+    described_class.perform_now(step_state(queued_steps.first))
+    Catalog::SeedProgress.stop!
+    clear_enqueued_jobs
+
+    expect(Catalog::SeedProgress.start!(target: 1000, hours: 6).status).to eq(:started)
+    expect(step_state(queued_steps.sole)).to include("tag_index" => 1, "offset" => 0)
+
+    Catalog::SeedProgress.update!(progress.data.merge("status" => "finished", "stopped" => "exhausted"))
+    clear_enqueued_jobs
+    Catalog::SeedProgress.start!(target: 1000, hours: 6)
+    expect(step_state(queued_steps.sole)).to include("tag_index" => 0, "offset" => 0, "exhausted" => [])
+  end
+
   it "ends quietly for a chain that isn't the running one (stopped, or replaced)" do
     Catalog::SeedProgress.start!(target: 1000, hours: 6)
     state = step_state(queued_steps.first)

@@ -4,8 +4,11 @@ module Catalog
   # stands in one settings row, which the admin catalog panel shows and which keeps a second chain from starting:
   #
   #   {"chain", "status" (running, finished or stopped), "target", "hours", "interval" (seconds), "pages", "matched",
-  #    "added", "missed", "linked", "tag", "offset", "started_at", "finish_by", "last_run_at", "next_run_at",
-  #    "stopped" (why it ended), "error"}
+  #    "added", "missed", "linked", "tag", "offset", "cursor" (where the next page is), "started_at", "finish_by",
+  #    "last_run_at", "next_run_at", "stopped" (why it ended), "error"}
+  #
+  # A new chain picks up at the last one's cursor (stopped, stalled, capped by Qloo or ended by errors) rather than
+  # reading the pages before it again; after the tags ran out it starts over.
   #
   # The interval is the time left until finish_by spread over the pages still expected: before 3 pages a guess of
   # EXPECTED_MATCHES_PER_PAGE (target / TAKE * 2, so 40 pages for 1,000 shows), then the matches a page has really
@@ -48,12 +51,13 @@ module Catalog
 
         finish_by = now + hours.to_f.hours
         interval = interval_for(remaining: target - linked, finish_by: finish_by, pages: 0, matched: 0, now: now)
+        cursor = running&.resume_cursor || SeedFromQloo::Cursor.start(SeedFromQloo::TAGS.size)
         state = { "chain" => SecureRandom.hex(8), "target" => target, "finish_by" => finish_by.iso8601, "interval" => interval,
-                  **SeedFromQloo::Cursor.start(SeedFromQloo::TAGS.size).to_h }
+                  **cursor.to_h }
         setting.update!(value: { "chain" => state["chain"], "status" => "running", "target" => target, "hours" => hours.to_f,
                                  "interval" => interval, "pages" => 0, "matched" => 0, "added" => 0, "missed" => 0,
                                  "linked" => linked, "started_at" => now.iso8601, "finish_by" => finish_by.iso8601,
-                                 "next_run_at" => now.iso8601 })
+                                 "next_run_at" => now.iso8601, "cursor" => cursor.to_h })
         Start.new(status: :started, progress: new(setting.value))
       end
       SeedStepJob.perform_later(state) if state
@@ -99,6 +103,12 @@ module Catalog
 
     def stop_reason = STOP_REASONS.fetch(stopped.to_s, stopped.to_s.humanize.downcase)
 
+    # Where a new chain picks up: this one's next page, unless the tags ran out (or it never read one).
+    def resume_cursor
+      cursor = SeedFromQloo::Cursor.from_h(data["cursor"]) if data["cursor"].is_a?(Hash)
+      cursor unless cursor.nil? || cursor.finished? || stopped == "exhausted"
+    end
+
     # After a page: the counts so far, and when the next page runs (nil when the chain ended with step.stopped).
     def record!(step, now:, interval: nil, error: nil)
       ended = step&.stopped
@@ -106,7 +116,7 @@ module Catalog
       if step
         merged.merge!("matched" => matched.to_i + step.matched, "added" => added.to_i + step.added,
                       "missed" => missed.to_i + step.missed, "linked" => step.linked, "tag" => step.tag,
-                      "offset" => step.cursor.offset)
+                      "offset" => step.cursor.offset, "cursor" => step.cursor.to_h)
       end
       merged.merge!("status" => "finished", "stopped" => ended, "next_run_at" => nil) if ended
       merged.merge!("interval" => interval, "next_run_at" => (now + interval).iso8601) unless ended || interval.nil?

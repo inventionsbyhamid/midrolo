@@ -21,7 +21,10 @@ namespace :catalog do
     progress = start.progress
     case start.status
     when :started
-      puts "catalog:seed_paced: started: #{progress.linked} of #{target} linked to Qloo now; the first page is queued, " \
+      cursor = Catalog::SeedFromQloo::Cursor.from_h(progress.data["cursor"])
+      resumed = cursor.offset.positive? || cursor.tag_index.to_i.positive?
+      from = resumed ? " (picking up at #{Catalog::SeedFromQloo::TAGS[cursor.tag_index]}, offset #{cursor.offset})" : ""
+      puts "catalog:seed_paced: started#{from}: #{progress.linked} of #{target} linked to Qloo now; the first page is queued, " \
            "then one about every #{(progress.interval / 60.0).round} minutes, aiming to end by " \
            "#{progress.finish_by.utc.strftime('%b %-d %H:%M')} UTC. Watch /admin (Catalog)."
     when :running
