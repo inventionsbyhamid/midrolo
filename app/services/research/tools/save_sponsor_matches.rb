@@ -15,7 +15,9 @@ module Research
 
       description "Saves the sponsor matches: 20 to 40 candidate refs from find_sponsor_candidates, each with a reason: " \
                   "one plain, specific sentence of #{REASON_WORDS} words or fewer citing shared taste tags or " \
-                  "proven-sponsor evidence from the tools, with no numbers the tools didn't give. An empty reason gets a " \
+                  "proven-sponsor evidence from the tools, with no numbers the tools didn't give. Leave out the fit " \
+                  "score and tier (the card shows them), and say a brand sponsors podcasts only when its candidate " \
+                  "entry lists sponsor reads. An empty reason gets a " \
                   "short one written from the brand's shared tags. Brands not in the candidate " \
                   "list are rejected. Each call replaces the saved list, so resend the full list when fixing rejections."
       arguments({ matches: { type: "array", maxItems: MAX_MATCHES,

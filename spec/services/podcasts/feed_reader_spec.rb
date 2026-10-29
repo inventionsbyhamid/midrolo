@@ -126,11 +126,25 @@ RSpec.describe Podcasts::FeedReader do
       expect(reader.read(url).warnings).to eq([ "feed_unreadable" ])
     end
 
-    it "flags a body over 5 MB while streaming" do
+    it "flags a body over 5 MB with no whole episode in its first 5 MB" do
       stub_request(:get, url).to_return(status: 200, body: "x" * (5 * 1024 * 1024 + 1))
       feed = reader.read(url)
       expect(feed.episodes).to eq([])
       expect(feed.warnings).to eq([ "feed_too_large" ])
+    end
+
+    it "reads the newest episodes of a feed over 5 MB from its first 5 MB, cut after the last whole episode" do
+      item = ->(n) { "<item><title>Episode #{n}</title><guid>ep-#{n}</guid><description>#{'Sponsored by Notion. ' * 50}</description></item>" }
+      items = (1..6000).map { |n| item.(n) }.join
+      body = %(<?xml version="1.0"?><rss version="2.0"><channel><title>Long Show</title>#{items}</channel></rss>)
+      expect(body.bytesize).to be > 5 * 1024 * 1024
+      stub_request(:get, url).to_return(status: 200, body: body)
+
+      feed = reader.read(url, max_episodes: 3)
+
+      expect(feed.warnings).to eq([])
+      expect(feed.title).to eq("Long Show")
+      expect(feed.episodes.map(&:title)).to eq([ "Episode 1", "Episode 2", "Episode 3" ])
     end
 
     it "flags a blank or non-http url" do

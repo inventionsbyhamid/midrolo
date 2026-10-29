@@ -81,10 +81,11 @@ module ReportsHelper
 
   # ---- Audience ----
 
-  # [[key, label, items]] for the lists that came back (a snapshot has only tags).
+  # [[key, label, items]] for the lists that came back (a snapshot has only tags), each name once (Report.distinct_tastes).
   def audience_groups(audience)
     Report::AUDIENCE_LABELS.filter_map do |key, label|
       items = Array(audience.is_a?(Hash) ? audience[key] : nil).select { |item| item.is_a?(Hash) && item["name"].present? }
+      items = Report.distinct_tastes(items)
       [ key, label, items ] if items.any?
     end
   end

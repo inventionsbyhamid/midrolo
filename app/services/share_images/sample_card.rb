@@ -29,7 +29,7 @@ module ShareImages
 
     def taste_tags
       tags = @report.audience.is_a?(Hash) ? Array(@report.audience["tags"]) : []
-      tags.filter_map { |tag| tag["name"].presence if tag.is_a?(Hash) }
+      Report.distinct_tastes(tags.select { |tag| tag.is_a?(Hash) && tag["name"].present? }).map { |tag| tag["name"] }
     end
   end
 end

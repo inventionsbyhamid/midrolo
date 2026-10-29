@@ -22,6 +22,10 @@ class Report < ApplicationRecord
   AUDIENCE_LABELS = { "tags" => "Interests", "brands" => "Brands", "podcasts" => "Podcasts", "tv_shows" => "TV",
                       "artists" => "Music" }.freeze
 
+  # Qloo has near twins under different ids (Cybercrime twice, "cyber crime", Hacker and Hackers), so a taste list
+  # shows each name once: the first, which is the strongest.
+  def self.distinct_tastes(items) = items.uniq { |item| item["name"].to_s.downcase.gsub(/[^[:alnum:]]/, "").delete_suffix("s") }
+
   belongs_to :show
   has_many :agent_steps, -> { order(:position, :id) }, dependent: :destroy
   # In the order the report lists them, which is also the order the plan's visible limit counts in (R43).

@@ -115,7 +115,7 @@ class MediaKit
 
     def items(key)
       audience = report&.audience
-      Array(audience.is_a?(Hash) ? audience[key] : nil).select { |item| item.is_a?(Hash) && item["name"].present? }
+      Report.distinct_tastes(Array(audience.is_a?(Hash) ? audience[key] : nil).select { |item| item.is_a?(Hash) && item["name"].present? })
     end
   end
 end

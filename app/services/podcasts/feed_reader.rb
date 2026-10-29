@@ -11,7 +11,15 @@ module Podcasts
     BLOCK_TAGS = "p, div, li, ul, ol, h1, h2, h3, h4, h5, h6, tr, blockquote".freeze
     USER_AGENT = "Midrolo/1.0".freeze
 
-    class TooLarge < StandardError; end
+    # Raised once a download passes MAX_BYTES, carrying its first MAX_BYTES.
+    class TooLarge < StandardError
+      attr_reader :partial
+
+      def initialize(partial)
+        @partial = partial
+        super("feed over #{MAX_BYTES} bytes")
+      end
+    end
 
     def initialize(cache: Rails.cache)
       @cache = cache
@@ -52,8 +60,10 @@ module Podcasts
       return body if body.is_a?(Feed)
 
       parse(to_utf8(body), max_episodes, description_limit)
-    rescue TooLarge
-      Feed.unreadable("feed_too_large")
+    rescue TooLarge => e
+      # A long back catalog (CyberWire Daily's feed is 22 MB) still has its newest episodes first: read what fits.
+      body = close_after_last_item(e.partial)
+      body ? parse(to_utf8(body), max_episodes, description_limit) : Feed.unreadable("feed_too_large")
     rescue Faraday::Error => e
       Feed.unreadable(timeout?(e) ? "feed_timeout" : "feed_unreadable")
     end
@@ -90,7 +100,7 @@ module Podcasts
         req.headers["Cache-Control"] = "no-cache" if fresh
         req.options.on_data = proc do |chunk, received|
           buffer.clear if received <= chunk.bytesize # a retry restarts the stream
-          raise TooLarge if received > MAX_BYTES
+          raise TooLarge, buffer << chunk.byteslice(0, chunk.bytesize - (received - MAX_BYTES)) if received > MAX_BYTES
           raise Faraday::TimeoutError, "feed download exceeded #{TIMEOUT}s" if Process.clock_gettime(Process::CLOCK_MONOTONIC) - started > TIMEOUT
 
           buffer << chunk
@@ -103,6 +113,12 @@ module Podcasts
     def connection(target)
       Http.build(headers: { "User-Agent" => USER_AGENT, "Accept" => "application/rss+xml, application/xml, text/xml, */*" },
                  pin: target)
+    end
+
+    # The feed's first MAX_BYTES cut after its last whole episode and closed, so it parses; nil without a whole one.
+    def close_after_last_item(partial)
+      cut = partial.rindex("</item>")
+      partial.byteslice(0, cut + "</item>".bytesize) + "</channel></rss>" if cut
     end
 
     def parse(xml, max_episodes, description_limit)
