@@ -3,12 +3,13 @@ module Llm
   # Raises Llm::FakeModeUnsupported in fake mode: callers provide their own fake path.
   #
   # The spend goes to the user's plan's bucket, or to bucket: when given (the catalog's work has no user: bucket:
-  # :catalog), and is linked to the report, pitch or fit search it was for.
+  # :catalog), and is linked to the report, pitch or fit search it was for. estimate_usd is what the budget check
+  # assumes the call costs (a small batch on the cheap model costs far less than a report's).
   class StructuredCall
     def self.call(**) = new(**).call
 
     def initialize(model:, schema:, instructions:, prompt:, user: nil, report: nil, pitch: nil, fit_search: nil,
-                   bucket: nil)
+                   bucket: nil, estimate_usd: 0.5)
       @model = model
       @schema = schema
       @instructions = instructions
@@ -18,6 +19,7 @@ module Llm
       @pitch = pitch
       @fit_search = fit_search
       @bucket = bucket
+      @estimate_usd = estimate_usd
     end
 
     def call
@@ -25,7 +27,7 @@ module Llm
 
       Pricing.ensure_known!(@model)
       bucket = @bucket || Budget.bucket_for(@user)
-      raise BudgetExceeded, "LLM budget exhausted for #{bucket.inspect}" unless Budget.allow?(bucket)
+      raise BudgetExceeded, "LLM budget exhausted for #{bucket.inspect}" unless Budget.allow?(bucket, estimate_usd: @estimate_usd)
 
       response = chat.ask(@prompt)
       Budget.record!(user: @user, bucket: bucket, model: @model, tokens: token_counts(response.tokens),
