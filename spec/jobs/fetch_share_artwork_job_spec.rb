@@ -81,7 +81,7 @@ RSpec.describe FetchShareArtworkJob do
   describe "is queued" do
     it "when a kit is published" do
       kit = create(:media_kit, show: show)
-      show.verify!
+      show.verify!(via: "admin")
 
       expect { kit.publish! }.to have_enqueued_job(described_class).with(show.id)
     end
@@ -89,8 +89,8 @@ RSpec.describe FetchShareArtworkJob do
     it "when a public kit's show changes its artwork, and not for other edits" do
       create(:media_kit, :published, show: show)
 
-      expect { show.update!(artwork_url: "https://cdn.example.com/new.jpg") }.to have_enqueued_job(described_class).with(show.id)
-      expect { show.update!(title: "Renamed") }.not_to have_enqueued_job(described_class)
+      expect { show.podcast.update!(artwork_url: "https://cdn.example.com/new.jpg") }.to have_enqueued_job(described_class).with(show.id)
+      expect { show.podcast.update!(title: "Renamed") }.not_to have_enqueued_job(described_class)
     end
 
     it "once per URL in ten minutes when a share image asks for it (debounced)" do

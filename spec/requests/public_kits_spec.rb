@@ -20,9 +20,27 @@ RSpec.describe "Public media kits" do
     expect(response).to have_http_status(:not_found)
   end
 
+  it "is at the podcast's slug, and an earlier slug 301s there" do
+    create(:media_kit, :published, show: show)
+    old = show.slug
+    show.podcast.update!(title: "The Founder's Ledger, Renamed")
+
+    visit_kit(old)
+    expect(response).to have_http_status(:moved_permanently)
+    expect(response).to redirect_to(public_kit_path(show.reload.slug))
+    visit_kit(show.slug)
+    expect(response).to have_http_status(:ok)
+  end
+
+  it "404s for a podcast whose only published kit belongs to a workspace that isn't the owner's" do
+    create(:media_kit, show: show, published_at: Time.current)
+    visit_kit
+    expect(response).to have_http_status(:not_found)
+  end
+
   it "404s for an unpublished kit while the owner's preview still works" do
     create(:media_kit, show: show)
-    show.verify!
+    show.verify!(via: "admin")
 
     visit_kit
     expect(response).to have_http_status(:not_found)
@@ -48,7 +66,7 @@ RSpec.describe "Public media kits" do
     end
 
     it "names the host of the verified RSS feed, and nothing else from its URL" do
-      show.update!(feed_url: "https://Feeds.Example.com/shows/ledger.xml?key=s3cret")
+      show.podcast.update!(feed_url: "https://Feeds.Example.com/shows/ledger.xml?key=s3cret")
       visit_kit
 
       expect(response.body).to include("Verified owner of the RSS feed at feeds.example.com")
@@ -104,8 +122,8 @@ RSpec.describe "Public media kits" do
       visit_kit
       doc = Nokogiri::HTML(response.body)
 
-      expect_share_tags(doc, url: "http://www.example.com/k/the-founder-s-ledger",
-                             image: %r{\Ahttp://www\.example\.com/k/the-founder-s-ledger/og\.png\?v=\h{12}\z})
+      expect_share_tags(doc, url: "http://www.example.com/k/#{show.slug}",
+                             image: %r{\Ahttp://www\.example\.com/k/#{show.slug}/og\.png\?v=\h{12}\z})
       tags = share_tags(doc)
       expect(tags["og:title"]).to eq([ "The Founder's Ledger media kit" ])
       expect(tags["og:description"]).to eq([ "Plain-English money lessons for first-time founders" ])
@@ -165,7 +183,7 @@ RSpec.describe "Public media kits" do
       end
 
       it "links to the show's website when there is no contact email, never to the feed's owner address" do
-        show.update!(website: "https://foundersledger.example.com")
+        show.podcast.update!(website: "https://foundersledger.example.com")
         visit_kit
 
         expect(response.body).to include('href="https://foundersledger.example.com"')

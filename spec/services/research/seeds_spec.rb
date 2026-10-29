@@ -21,7 +21,7 @@ RSpec.describe Research::Seeds do
       end
 
       it "skips categories that have no media tag and never raises" do
-        show.update!(categories: [ "Finance", "Kids & Family" ])
+        show.podcast.update!(categories: [ "Finance", "Kids & Family" ])
         seeds = described_class.deterministic(toolkit)
         expect(seeds).to include(entities: [], tags: [], unresolved: [])
       end
@@ -117,10 +117,19 @@ RSpec.describe Research::Seeds do
     end
 
     it "labels the show itself and listed hints by source" do
-      show.update!(title: "Dollar Dispatch", hints: { comparable_shows: [ "Shipping Soon" ] })
+      show.podcast.update!(title: "Dollar Dispatch")
+      show.update!(hints: { comparable_shows: [ "Shipping Soon" ] })
       seeds = described_class.from_lookup(toolkit, names: [ "Dollar Dispatch", "Shipping Soon", "Notion" ], topics: [])
 
       expect(seeds[:sources].values).to eq([ "Your show on Qloo", "You listed it", "Matched \"Notion\"" ])
+    end
+
+    it "links the show's podcast to the Qloo entity found for the show itself" do
+      show.podcast.update!(title: "Dollar Dispatch")
+      seeds = described_class.from_lookup(toolkit, names: [ "Dollar Dispatch", "Notion" ], topics: [])
+
+      own = seeds[:entities].find { |entity| entity.name == "Dollar Dispatch" }
+      expect(show.podcast.reload.qloo_entity_id).to eq(own.id)
     end
 
     it "ignores blanks and duplicates" do

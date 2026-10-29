@@ -315,10 +315,10 @@ RSpec.describe "Public pages" do
       unfinished.update!(status: "failed")
       published = create(:show, title: "Published Show")
       create(:media_kit, :published, show: published)
-      published.verify!
+      published.verify!(via: "admin")
       unpublished = create(:show, title: "Unpublished Show")
       create(:media_kit, show: unpublished)
-      unpublished.verify!
+      unpublished.verify!(via: "admin")
       unverified = create(:show, title: "Unverified Show", slug: "unverified-show")
       create(:media_kit, show: unverified, published_at: Time.current)
 
@@ -326,7 +326,7 @@ RSpec.describe "Public pages" do
 
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("application/xml")
-      expect(locs).to eq((%w[/ /pricing /samples /about /privacy /terms] + [ "/samples/#{Samples.slugs[0]}", "/k/published-show" ])
+      expect(locs).to eq((%w[/ /pricing /samples /about /privacy /terms] + [ "/samples/#{Samples.slugs[0]}", "/k/#{published.slug}" ])
                            .map { |path| "http://www.example.com#{path}" })
     end
   end

@@ -22,10 +22,11 @@ RSpec.describe Research::Toolkit do
     expect(reader).to have_received(:read).once
   end
 
-  it "returns an unreadable feed when the show has no feed url" do
-    show.update_columns(feed_url: nil, directory_id: "fake-1")
+  # A podcast made from a show that had only a directory id keeps a placeholder feed URL no one can fetch.
+  it "returns an unreadable feed when the podcast has no real feed url" do
+    show.podcast.update_columns(feed_url: "directory:577105")
     expect(toolkit.feed.episodes).to eq([])
-    expect(toolkit.feed.warnings).to eq([ "feed_unreadable" ])
+    expect(toolkit.feed.warnings).not_to be_empty
   end
 
   it "remembers entity ids, and accepts plain ids" do

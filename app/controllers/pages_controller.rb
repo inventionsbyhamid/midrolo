@@ -19,7 +19,7 @@ class PagesController < ApplicationController
 
   def sitemap
     @samples = Samples.reports
-    @kit_slugs = Show.with_public_kit.order(:slug).pluck(:slug)
+    @kit_slugs = Show.with_public_kit.joins(:podcast).order("podcasts.slug").pluck("podcasts.slug")
     @posts = Blog::Post.published
   end
 

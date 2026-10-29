@@ -1,6 +1,6 @@
 module Research
-  # Records each unit of research work as an AgentStep the report page shows live, and counts the uncached
-  # taste requests made while it runs into report.taste_calls.
+  # Records each unit of research work as an AgentStep the run's page shows live, and counts the uncached taste
+  # requests made while it runs into run.taste_calls. A run is a podcaster's Report or a brand's FitSearch.
   #
   #   log.step("heatmap", "Mapping where your listeners live…") do |step|
   #     step.output_summary = "42 areas"
@@ -76,11 +76,12 @@ module Research
     def self.configured_max_taste_calls = Research.caps.fetch(:max_taste_calls)
     def self.configured_hard_taste_calls = Research.caps.fetch(:hard_taste_calls)
 
-    attr_reader :report, :max_taste_calls, :hard_taste_calls
+    attr_reader :run, :max_taste_calls, :hard_taste_calls
 
-    def initialize(report, max_taste_calls: self.class.configured_max_taste_calls,
+    # run: a Report or a FitSearch (anything with agent_steps and taste_calls).
+    def initialize(run, max_taste_calls: self.class.configured_max_taste_calls,
                    hard_taste_calls: self.class.configured_hard_taste_calls)
-      @report = report
+      @run = run
       @max_taste_calls = max_taste_calls
       @hard_taste_calls = hard_taste_calls
       @uncached_calls = Concurrent::AtomicFixnum.new
@@ -96,7 +97,7 @@ module Research
     def hard_budget_spent? = uncached_calls >= hard_taste_calls
 
     def step(tool, label, input: nil)
-      record = report.agent_steps.create!(position: next_position, tool: tool.to_s, label: label, status: "running",
+      record = run.agent_steps.create!(position: next_position, tool: tool.to_s, label: label, status: "running",
                                           input_summary: input.to_s.truncate(INPUT_LIMIT).presence)
       handle = Step.new(self)
       started = monotonic
@@ -115,7 +116,7 @@ module Research
     private
 
     def next_position
-      report.agent_steps.maximum(:position).to_i + 1
+      run.agent_steps.maximum(:position).to_i + 1
     end
 
     # Only the outermost step on a thread subscribes, so nested steps don't double count. The flag is
@@ -145,9 +146,9 @@ module Research
 
     # Runs inside an ensure: a failure here must never replace the step's own outcome or exception.
     def record_taste_calls(calls)
-      report.increment!(:taste_calls, calls) if calls.positive?
+      run.increment!(:taste_calls, calls) if calls.positive?
     rescue StandardError => e
-      Rails.error.report(e, handled: true, context: { report_id: report.id, taste_calls: calls })
+      Rails.error.report(e, handled: true, context: { run_type: run.class.name, run_id: run.id, taste_calls: calls })
     end
 
     def finish(record, handle, started, status:, message: nil)

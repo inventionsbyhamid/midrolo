@@ -29,7 +29,7 @@ RSpec.describe VerificationMailer do
   end
 
   it "cuts a long feed title to 60 characters in the subject and the body" do
-    show.update!(title: "A" * 50 + " and an attacker's very long sales pitch goes here")
+    show.podcast.update!(title: "A" * 50 + " and an attacker's very long sales pitch goes here")
     mail = described_class.with(verification: verification).code
     short = show.title.truncate(60)
 

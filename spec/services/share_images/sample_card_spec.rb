@@ -56,7 +56,7 @@ RSpec.describe ShareImages::SampleCard do
     keys = [ card.cache_key ]
     travel(1.minute) { report.update!(summary: "New summary") }
     keys << card.cache_key
-    travel(2.minutes) { show.update!(title: "The Founder's Ledger, renamed") }
+    travel(2.minutes) { show.podcast.update!(title: "The Founder's Ledger, renamed") }
     keys << card.cache_key
     create(:sponsor_match, report: report)
     keys << card.cache_key

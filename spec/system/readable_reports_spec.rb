@@ -24,8 +24,8 @@ RSpec.describe "Readable reports" do
 
   # A finished report of kind on the Fake providers, for a show of user's.
   def run_report(user, kind, directory_id: "fake-2")
-    show = user.shows.find_by(directory_id: directory_id) ||
-           user.shows.create!(ShowLookup.call(directory_id: directory_id).attributes.merge(downloads_per_episode: 1500))
+    podcast = Podcast.find_or_create_from_lookup!(ShowLookup.call(directory_id: directory_id).attributes)
+    show = user.shows.find_by(podcast: podcast) || user.shows.create!(podcast: podcast, downloads_per_episode: 1500)
     report = show.reports.create!(kind: kind, status: "queued", spend_bucket: (kind == "agent" ? "paid" : nil))
     (kind == "agent" ? GenerateReportJob : BuildSnapshotJob).perform_now(report.id)
     report.reload.tap { |done| expect(done).to be_done }

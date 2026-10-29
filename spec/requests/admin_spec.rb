@@ -259,8 +259,8 @@ RSpec.describe "Admin" do
 
     describe "PATCH /admin/settings" do
       let(:valid) do
-        { promo_budget_usd: "20", judge_reserve_usd: "7.5", llm_daily_budget_usd: "8.25", promo_pro_until: "2026-11-20",
-          qloo_daily_call_limit: "100", qloo_cost_per_call_usd: "", qloo_free_share: "0.4" }
+        { promo_budget_usd: "20", judge_reserve_usd: "7.5", llm_daily_budget_usd: "8.25", llm_catalog_daily_usd: "1",
+          promo_pro_until: "2026-11-20", qloo_daily_call_limit: "100", qloo_cost_per_call_usd: "", qloo_free_share: "0.4" }
       end
 
       it "saves the budgets and the promo date, and logs who changed what" do

@@ -10,7 +10,7 @@ module ShareImages
 
     private
 
-    def key_parts = [ "sample", version_of(@report), version_of(@show), "matches-#{match_count}" ]
+    def key_parts = [ "sample", version_of(@report), version_of(@show), version_of(@show.podcast), "matches-#{match_count}" ]
 
     def fields
       { label: "Sample report", title: @show.title, subline: "Not affiliated with the show.",

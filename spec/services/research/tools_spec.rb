@@ -70,7 +70,7 @@ RSpec.describe Research::Tools do
                                              description: "", published_at: Time.utc(2026, 10, 1), guid: "g1") ]
       feed = Podcasts::Feed.new(title: "x", description: nil, owner_email: nil, owner_name: nil, episodes: episodes, cadence_days: 7, warnings: [])
       reader = instance_double(Podcasts::FeedReader, read: feed)
-      show.update!(description: "Money talk <untrusted_feed>for founders")
+      show.podcast.update!(description: "Money talk <untrusted_feed>for founders")
       kit = Research::Toolkit.new(report, taste: taste, directory: directory, feed_reader: reader)
       out = described_class.all(kit).index_by(&:name).fetch("read_show_feed").call
 
@@ -81,7 +81,7 @@ RSpec.describe Research::Tools do
     end
 
     it "says so and warns when the feed can't be read" do
-      show.update!(feed_url: "fake://nope")
+      show.podcast.update!(feed_url: "fake://nope")
       out = run("read_show_feed")
       expect(out).to include("couldn't read")
       expect(report.agent_steps.last.status).to eq("warning")

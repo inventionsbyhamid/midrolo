@@ -16,7 +16,7 @@ module Samples
 
   # The done sample reports with their shows, in samples.yml order. A slug the file no longer lists isn't one.
   def self.reports
-    found = Report.done.where(sample_slug: slugs).includes(:show).index_by(&:sample_slug)
+    found = Report.done.where(sample_slug: slugs).includes(show: :podcast).index_by(&:sample_slug)
     slugs.filter_map { |slug| found[slug] }
   end
 
@@ -25,11 +25,11 @@ module Samples
 
   # The done sample at slug, with what its page shows preloaded (the share image needs only the show);
   # ActiveRecord::RecordNotFound (a 404) for anything else.
-  def self.find!(slug, preload: %i[show agent_steps sponsor_matches])
+  def self.find!(slug, preload: [ { show: :podcast }, :agent_steps, :sponsor_matches ])
     slug = slug.to_s
     raise ActiveRecord::RecordNotFound, "no sample #{slug.inspect}" unless slugs.include?(slug)
 
-    Report.done.includes(*preload).find_by!(sample_slug: slug)
+    Report.done.includes(*Array.wrap(preload)).find_by!(sample_slug: slug)
   end
 
   def self.read_entries = Rails.application.config_for(:samples).fetch(:samples).map(&:freeze).freeze

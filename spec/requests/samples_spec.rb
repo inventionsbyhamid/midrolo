@@ -130,7 +130,7 @@ RSpec.describe "Sample reports" do
   # R152: the sample's media kit, for visitors with no verified show of their own.
   describe "GET /samples/:slug/kit" do
     before do
-      show.update!(website: "https://founders-ledger.example.com")
+      show.podcast.update!(website: "https://founders-ledger.example.com")
       report.update!(audience: { "tags" => [ { "id" => "t1", "name" => "Personal Finance", "score" => 0.9 } ],
                                  "brands" => [ { "id" => "b1", "name" => "Fieldnote Coffee", "affinity" => 0.8 } ] })
     end

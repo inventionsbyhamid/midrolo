@@ -15,7 +15,7 @@ module ShareImages
 
     private
 
-    def key_parts = [ "kit", version_of(@kit), version_of(@show), version_of(@content.report), artwork_state ]
+    def key_parts = [ "kit", version_of(@kit), version_of(@show), version_of(@show.podcast), version_of(@content.report), artwork_state ]
 
     # Whether the artwork is stored yet, so the card is drawn again once it is.
     def artwork_state

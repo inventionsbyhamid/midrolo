@@ -92,12 +92,14 @@ RSpec.describe "Shows" do
     describe "POST /shows" do
       it "creates a show from a directory id for the current user and goes to the details step" do
         expect { post "/shows", params: { directory_id: "fake-1" } }.to change(user.shows, :count).by(1)
+                                                                    .and change(Podcast, :count).by(1)
 
         show = user.shows.last
         expect(show).to have_attributes(directory_id: "fake-1", title: "The Founder's Ledger", author: "Maya Brandt",
                                         feed_url: "fake://fake-1", categories: %w[Business Finance])
+        expect(show.podcast).to have_attributes(source: "claim", apple_id: 1_000_000_001, status: "pending")
         expect(response).to redirect_to(edit_show_path(show, onboarding: 1))
-        expect(RefreshShowFeedJob).to have_been_enqueued.with(show.id)
+        expect(Catalog::IngestPodcastJob).to have_been_enqueued.with(show.podcast.id).at_priority(0)
       end
 
       it "shows an inline error for an unknown directory id" do
@@ -124,9 +126,9 @@ RSpec.describe "Shows" do
         user_id = user.id
         existing = nil
         # The duplicate pre-check genuinely misses; another request inserts the same show just before our save.
-        allow_any_instance_of(Show).to receive(:save) do
-          Show.insert_all!([ { user_id: user_id, public_id: SecureRandom.hex(8), title: "The Founder's Ledger", directory_id: "fake-1", feed_url: "fake://fake-1" } ])
-          existing = Show.find_by!(user_id: user_id, directory_id: "fake-1")
+        allow_any_instance_of(Show).to receive(:save!) do |show|
+          Show.insert_all!([ { user_id: user_id, podcast_id: show.podcast_id, public_id: SecureRandom.hex(8) } ])
+          existing = Show.find_by!(user_id: user_id, podcast_id: show.podcast_id)
           raise ActiveRecord::RecordNotUnique
         end
 
@@ -137,9 +139,21 @@ RSpec.describe "Shows" do
         expect(Show.where(user_id: user_id).count).to eq(1)
       end
 
-      it "lets two users add the same show" do
-        create(:show, user: create(:user), directory_id: "fake-1", feed_url: "fake://fake-1")
+      it "lets two users add the same show, as two workspaces for one podcast" do
+        other = create(:show, user: create(:user), directory_id: "fake-1", feed_url: "fake://fake-1")
         expect { post "/shows", params: { directory_id: "fake-1" } }.to change(user.shows, :count).by(1)
+                                                                    .and not_change(Podcast, :count)
+        expect(user.shows.last.podcast).to eq(other.podcast)
+      end
+
+      it "finds the podcast by its feed URL however the URL is spelled" do
+        podcast = create(:podcast, feed_url: "https://example.com/rss.xml")
+        allow_any_instance_of(Podcasts::FeedReader).to receive(:read).and_return(
+          Podcasts::Feed.new(title: "Feed", description: nil, owner_email: nil, owner_name: nil, episodes: [],
+                             cadence_days: nil, warnings: [])
+        )
+        expect { post "/shows", params: { feed_url: "HTTPS://Example.COM/rss.xml/" } }.not_to change(Podcast, :count)
+        expect(user.shows.last.podcast).to eq(podcast)
       end
 
       it "blocks a second show when the plan allows one, with an upgrade prompt" do

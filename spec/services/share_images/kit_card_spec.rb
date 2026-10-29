@@ -41,7 +41,8 @@ RSpec.describe ShareImages::KitCard do
   end
 
   it "leaves out the downloads and their note when the owner hasn't given them, and the host when unknown" do
-    show.update!(downloads_per_episode: nil, author: nil)
+    show.update!(downloads_per_episode: nil)
+    show.podcast.update!(author: nil)
     shown = texts(card.layout(artwork: :image).svg).join(" ")
 
     expect(shown).not_to include("downloads per episode", "as reported", "Hosted by")
@@ -66,7 +67,7 @@ RSpec.describe ShareImages::KitCard do
   end
 
   it "uses the mark, complete, when the show has no artwork" do
-    show.update!(artwork_url: nil)
+    show.podcast.update!(artwork_url: nil)
     image = card.draw
 
     expect(image.complete).to be(true)
@@ -74,7 +75,7 @@ RSpec.describe ShareImages::KitCard do
   end
 
   it "escapes a hostile show title from the feed and still draws" do
-    show.update!(title: %(</text><script>alert(1)</script>), author: %(<b onload="x">Host</b>))
+    show.podcast.update!(title: %(</text><script>alert(1)</script>), author: %(<b onload="x">Host</b>))
     ShareImages::ArtworkStore.write(artwork_url, teal)
     svg = card.layout(artwork: :image).svg
 

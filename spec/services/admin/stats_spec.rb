@@ -106,6 +106,6 @@ RSpec.describe Admin::Stats do
       %i[users reports spend average_agent_cost pitches waitlist].each { |name| stats.public_send(name) }
       stats.failed_reports.to_a
     end
-    expect(queries).to be <= 14
+    expect(queries).to be <= 15 # the failed reports preload their shows, then the shows' podcasts
   end
 end

@@ -14,7 +14,7 @@ RSpec.describe "Media kits (owner)" do
 
     it "404s for another user's show" do
       other = create(:show)
-      other.verify!
+      other.verify!(via: "admin")
       [ -> { get show_media_kit_path(other) }, -> { get edit_show_media_kit_path(other) },
         -> { patch show_media_kit_path(other), params: { media_kit: { headline: "Mine now" } } },
         -> { patch publish_show_media_kit_path(other) }, -> { patch unpublish_show_media_kit_path(other) } ].each do |request|
@@ -40,7 +40,7 @@ RSpec.describe "Media kits (owner)" do
         get show_media_kit_path(show)
         expect(response.body).not_to include("Verified owner")
 
-        show.verify!
+        show.verify!(via: "admin")
         get show_media_kit_path(show)
         expect(response.body).to include("Verified owner of the RSS feed at example.com")
       end
@@ -61,7 +61,7 @@ RSpec.describe "Media kits (owner)" do
       end
 
       it "drops the contact prompt once there is a contact email or a website" do
-        show.update!(website: "https://foundersledger.example.com")
+        show.podcast.update!(website: "https://foundersledger.example.com")
         get show_media_kit_path(show)
         expect(response.body).not_to include("Add a contact email so brands can reach you")
         expect(response.body).to include("Work with us", "Visit our website")
@@ -142,7 +142,7 @@ RSpec.describe "Media kits (owner)" do
       end
 
       it "copies the feed's owner address into the contact email in one click once verified" do
-        show.verify!
+        show.verify!(via: "admin")
         get edit_show_media_kit_path(show)
         expect(response.body).to include("Use my feed's owner address (j***@example.com)")
 
@@ -161,7 +161,7 @@ RSpec.describe "Media kits (owner)" do
       end
 
       it "publishes a verified show's kit and unpublishes it again" do
-        show.verify!
+        show.verify!(via: "admin")
         patch publish_show_media_kit_path(show)
 
         expect(response).to redirect_to(edit_show_media_kit_path(show))
@@ -180,13 +180,13 @@ RSpec.describe "Media kits (owner)" do
         get edit_show_media_kit_path(show)
         expect(response.body).to include("Verify you own this show to publish.", new_show_verification_path(show))
 
-        show.verify!
+        show.verify!(via: "admin")
         get edit_show_media_kit_path(show)
         expect(response.body).to include(publish_show_media_kit_path(show))
 
         patch publish_show_media_kit_path(show)
         get edit_show_media_kit_path(show)
-        expect(response.body).to include(unpublish_show_media_kit_path(show), "/k/the-founder-s-ledger")
+        expect(response.body).to include(unpublish_show_media_kit_path(show), "/k/#{show.slug}")
       end
     end
 

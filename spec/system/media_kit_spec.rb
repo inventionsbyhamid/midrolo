@@ -85,7 +85,7 @@ RSpec.describe "Media kit" do
 
   context "with a published kit" do
     before do
-      podcast.verify!
+      podcast.verify!(via: "admin")
       create(:media_kit, :published, show: podcast, rate_card_overrides: { "midroll" => 150 })
       podcast.update!(contact_email: "sponsors@example.com")
     end

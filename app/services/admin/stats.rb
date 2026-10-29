@@ -51,7 +51,7 @@ module Admin
     def live_blockers = @live_blockers ||= Billing.go_live_blockers(margins)
 
     def failed_reports
-      @failed_reports ||= Report.failed.includes(:show)
+      @failed_reports ||= Report.failed.includes(show: :podcast)
                                 .order(Report.arel_table[:finished_at].desc.nulls_last, id: :desc).limit(FAILED_SHOWN)
     end
 

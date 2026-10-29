@@ -43,13 +43,14 @@ module Samples
       end
     end
 
-    # The owner's copy of the show, refreshed from the directory. A run that died midway can't block the next one.
+    # The samples owner's workspace for the show's podcast (found or made from the directory, source "sample"). A run
+    # that died midway can't block the next one.
     def show_for(directory_id)
       lookup = ShowLookup.call(directory_id: directory_id)
       raise ShowNotFound, lookup.error unless lookup.ok?
 
-      show = owner.shows.find_or_initialize_by(directory_id: lookup.attributes.fetch(:directory_id))
-      show.update!(lookup.attributes)
+      podcast = Podcast.find_or_create_from_lookup!(lookup.attributes.merge(source: "sample"))
+      show = owner.shows.find_or_create_by!(podcast: podcast)
       show.reports.active.find_each(&:mark_failed!)
       show
     end

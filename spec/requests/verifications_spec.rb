@@ -49,13 +49,14 @@ RSpec.describe "Verifications" do
       expect(response.body).not_to include("jane@example.com")
     end
 
-    it "verifies the show with the right code, gives it a slug and opens the kit editor" do
+    it "verifies the show with the right code and opens the kit editor" do
       request_code
       patch show_verification_path(show), params: { code: last_code }
 
       expect(response).to redirect_to(edit_show_media_kit_path(show))
       expect(flash[:notice]).to eq("You're verified. Publish your media kit when it's ready.")
-      expect(show.reload).to have_attributes(verified_at: be_present, slug: "the-founder-s-ledger")
+      expect(show.reload.verified_at).to be_present
+      expect(show.podcast.reload.claimed_at).to be_present
     end
 
     it "counts down the tries, then locks after 5 wrong codes and asks for a new one" do
@@ -130,7 +131,7 @@ RSpec.describe "Verifications" do
     end
 
     context "when the feed lists no owner email" do
-      before { show.update!(owner_email: nil) }
+      before { show.podcast.update!(owner_email: nil) }
 
       it "offers only the feed token" do
         get new_show_verification_path(show)
@@ -188,8 +189,18 @@ RSpec.describe "Verifications" do
       end
     end
 
+    it "says so, and verifies nothing, when another account already owns the podcast" do
+      create(:show, podcast: show.podcast).verify!(via: "email")
+      request_code
+      patch show_verification_path(show), params: { code: last_code }
+
+      expect(response).to redirect_to(show_path(show))
+      expect(flash[:alert]).to eq(Show::AlreadyClaimed::MESSAGE)
+      expect(show.reload).not_to be_verified
+    end
+
     it "sends no code and issues no token for a show that is already verified" do
-      show.verify!
+      show.verify!(via: "admin")
 
       %w[email feed_token].each do |kind|
         expect { post show_verification_path(show), params: { kind: kind } }.not_to have_enqueued_mail
@@ -200,7 +211,7 @@ RSpec.describe "Verifications" do
     end
 
     it "shows a verified show's status instead of the forms" do
-      show.verify!
+      show.verify!(via: "admin")
       get new_show_verification_path(show)
 
       expect(response.body).to include("You've verified that you own this show")

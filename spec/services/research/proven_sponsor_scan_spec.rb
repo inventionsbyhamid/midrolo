@@ -162,7 +162,7 @@ RSpec.describe Research::ProvenSponsorScan do
   end
 
   describe "platform and self-promotion links (R32)" do
-    before { report.show.update!(title: "My Own Show") }
+    before { report.show.podcast.update!(title: "My Own Show") }
 
     it "never treats them as sponsors, but keeps real sponsors" do
       serve([
@@ -272,7 +272,7 @@ RSpec.describe Research::ProvenSponsorScan do
   end
 
   it "honours the limit and skips blanks, duplicates and the user's own show" do
-    report.show.update!(title: "My Own Show")
+    report.show.podcast.update!(title: "My Own Show")
     scan([ "My Own Show", " ", "The Sponsored Show", "the sponsored show", "Another Show" ], limit: 1)
     expect(directory).to have_received(:search).once
   end

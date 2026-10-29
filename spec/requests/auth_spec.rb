@@ -96,6 +96,23 @@ RSpec.describe "Authentication" do
     expect(response).to have_http_status(:ok)
   end
 
+  it "goes back to the page that asked for sign in" do
+    get "/pipeline"
+    expect(response).to redirect_to("/users/sign_in")
+
+    get "/users/auth/google_oauth2/callback"
+    expect(response).to redirect_to("/pipeline")
+  end
+
+  it "lands someone who last worked as a brand on the brand workspace" do
+    get "/users/auth/google_oauth2/callback"
+    User.find_by!(email: "ada@example.com").update!(last_role: "brand")
+    delete "/users/sign_out"
+
+    get "/users/auth/google_oauth2/callback"
+    expect(response).to redirect_to(ApplicationController::BRAND_HOME)
+  end
+
   it "lands on the sign-in page with a notice when Google fails" do
     OmniAuth.config.mock_auth[:google_oauth2] = :access_denied
     OmniAuth.config.logger = Logger.new(nil)

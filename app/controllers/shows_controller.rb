@@ -1,4 +1,6 @@
 class ShowsController < ApplicationController
+  ALREADY_ADDED = "You've already added this show.".freeze
+
   layout "app"
   # A re-run (update with rerun=<kind>) starts a report, so it counts with ReportsController#create.
   rate_limit_report_starts only: :update, if: -> { Report::KINDS.include?(params[:rerun].to_s) }
@@ -6,7 +8,7 @@ class ShowsController < ApplicationController
   before_action :set_show, only: %i[show edit update]
 
   def index
-    @shows = current_user.shows.order(:created_at).includes(:latest_report)
+    @shows = current_user.shows.order(:created_at).includes(:latest_report, podcast: { artwork_image: { file_attachment: :blob } })
     redirect_to new_show_path if @shows.empty?
   end
 
@@ -15,28 +17,30 @@ class ShowsController < ApplicationController
     @onboarding = current_user.shows.none?
   end
 
+  # Adding a show is starting a workspace for its podcast: the podcast is found (or made, from the directory or the
+  # feed) through Podcast.find_or_create_from_lookup!, and its feed is read at once (Catalog::IngestPodcastJob).
   def create
-    duplicate = existing_duplicate
-    return redirect_to(show_path(duplicate), notice: "You've already added this show.") if duplicate
+    duplicate = existing_show(submitted_podcast)
+    return redirect_to(show_path(duplicate), notice: ALREADY_ADDED) if duplicate
     return render_new(status: :unprocessable_content, at_limit: true) if at_limit?
 
     result = ShowLookup.call(directory_id: params[:directory_id], feed_url: params[:feed_url])
     return render_new(status: :unprocessable_content, error: result.error) unless result.ok?
 
-    duplicate = existing_duplicate(result.attributes)
-    return redirect_to(show_path(duplicate), notice: "You've already added this show.") if duplicate
+    podcast = Podcast.find_or_create_from_lookup!(result.attributes.merge(source: "claim"))
+    duplicate = existing_show(podcast)
+    return redirect_to(show_path(duplicate), notice: ALREADY_ADDED) if duplicate
 
-    show = current_user.shows.new(result.attributes)
-    if show.save
-      RefreshShowFeedJob.perform_later(show.id)
-      redirect_to edit_show_path(show, onboarding: 1)
-    else
-      render_new(status: :unprocessable_content, error: Copy.and_list(show.errors.full_messages))
-    end
+    show = current_user.shows.new(podcast: podcast)
+    show.save!
+    podcast.ingest_later(priority: :high)
+    redirect_to edit_show_path(show, onboarding: 1)
+  rescue ActiveRecord::RecordInvalid => e
+    render_new(status: :unprocessable_content, error: Copy.and_list(e.record.errors.full_messages))
   rescue ActiveRecord::RecordNotUnique
     # A concurrent double-submit won the race: send them to the show that now exists.
-    duplicate = existing_duplicate(result&.attributes || {})
-    duplicate ? redirect_to(show_path(duplicate), notice: "You've already added this show.") : raise
+    duplicate = existing_show(podcast)
+    duplicate ? redirect_to(show_path(duplicate), notice: ALREADY_ADDED) : raise
   rescue Podcasts::Directory::Unavailable
     render_new(status: :unprocessable_content, error: ShowSearchesController::UNAVAILABLE)
   end
@@ -85,7 +89,7 @@ class ShowsController < ApplicationController
   end
 
   def set_show
-    @show = current_user.shows.find_by!(public_id: params[:id])
+    @show = current_user.shows.includes(:podcast).find_by!(public_id: params[:id])
   end
 
   def show_params
@@ -98,12 +102,16 @@ class ShowsController < ApplicationController
     current_user.shows.count >= current_plan.max_shows
   end
 
-  # A show this user already added, matched by what they sent (or by the looked-up attributes).
-  def existing_duplicate(attributes = {})
-    shows = current_user.shows
-    directory_id = attributes[:directory_id] || params[:directory_id].presence
-    feed_url = attributes[:feed_url] || params[:feed_url].to_s.strip.presence
-    (directory_id && shows.find_by(directory_id: directory_id)) || (feed_url && shows.find_by(feed_url: feed_url))
+  # The podcast the form names, when the catalog has it already: by directory id or feed URL, before any lookup.
+  def submitted_podcast
+    directory_id = params[:directory_id].to_s.strip.presence
+    feed_url = params[:feed_url].to_s.strip.presence
+    (directory_id && Podcast.for_directory_id(directory_id)) || (feed_url && Podcast.find_by(feed_url: feed_url))
+  end
+
+  # This user's workspace for the podcast, if they have one.
+  def existing_show(podcast)
+    current_user.shows.find_by(podcast_id: podcast.id) if podcast&.persisted?
   end
 
   def render_new(status:, error: nil, at_limit: false)

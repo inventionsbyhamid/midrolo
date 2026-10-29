@@ -56,7 +56,7 @@ RSpec.describe Research::NumericClaims do
   end
 
   it "accepts a percentage in the show's own title in a reason" do
-    show.update!(title: "99% Invisible")
+    show.podcast.update!(title: "99% Invisible")
     expect(unsupported_in("Heard on 99% Invisible.")).to eq([])
   end
 

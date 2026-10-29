@@ -24,7 +24,8 @@ RSpec.describe "Content Security Policy", :network do
   end
 
   def run_report(user)
-    show = user.shows.create!(ShowLookup.call(directory_id: "fake-2").attributes.merge(downloads_per_episode: 1500))
+    podcast = Podcast.find_or_create_from_lookup!(ShowLookup.call(directory_id: "fake-2").attributes)
+    show = user.shows.create!(podcast: podcast, downloads_per_episode: 1500)
     report = show.reports.create!(kind: "agent", status: "queued", spend_bucket: "paid")
     GenerateReportJob.perform_now(report.id)
     report.reload.tap { |done| expect(done).to be_done }

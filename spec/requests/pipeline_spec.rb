@@ -277,7 +277,7 @@ RSpec.describe "Pipeline" do
         end
 
         it "neutralizes values that a spreadsheet would run as formulas" do
-          show.update!(title: "=Show Title")
+          show.podcast.update!(title: "=Show Title")
           create(:sponsor_match, report: report, name: "=HYPERLINK(\"http://evil.example\")", status: "saved",
                                  category: "+cmd", notes: "-2+3", website: "@SUM(A1)", reason: "Fine reason", fit_score: 90)
           create(:sponsor_match, report: report, name: "\tTabbed Brand", status: "saved", reason: "\rCarriage return",

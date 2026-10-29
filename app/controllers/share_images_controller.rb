@@ -17,12 +17,12 @@ class ShareImagesController < ApplicationController
   STATIC_IMAGE = Rails.root.join("app/assets/images/og.png")
 
   def sample
-    serve ShareImages::SampleCard.new(Samples.find!(params[:slug], preload: :show))
+    serve ShareImages::SampleCard.new(Samples.find!(params[:slug], preload: { show: :podcast }))
   end
 
   def kit
-    show = Show.includes(:media_kit).find_by!(slug: params[:slug].to_s)
-    raise ActiveRecord::RecordNotFound unless show.public_kit?
+    show = Podcast.find_by(slug: params[:slug].to_s)&.owner_show
+    raise ActiveRecord::RecordNotFound unless show&.public_kit?
 
     ShareImages::ArtworkStore.request(show)
     serve ShareImages::KitCard.new(show.media_kit)

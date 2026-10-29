@@ -153,7 +153,8 @@ RSpec.describe "Copy has no dashes", type: :request do
     # A full agent report on the Fake providers for a show of the user's own, with a pitch written for its top match.
     def own_report
       lookup = ShowLookup.call(directory_id: "fake-2")
-      show = user.shows.create!(lookup.attributes.merge(downloads_per_episode: 1500))
+      podcast = Podcast.find_or_create_from_lookup!(lookup.attributes)
+      show = user.shows.create!(podcast: podcast, downloads_per_episode: 1500)
       report = show.reports.create!(kind: "agent", status: "queued", spend_bucket: "paid")
       GenerateReportJob.perform_now(report.id)
       report.reload

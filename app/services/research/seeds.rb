@@ -38,6 +38,7 @@ module Research
       log.step("find_on_qloo", "Looking up shows, artists and topics on Qloo…", input: (names + topics).join(", ")) do |step|
         found_names = names.count { |name| add_entity(name, types: LOOKUP_TYPES) { |e| lookup_source(name, e) } }
         found_topics = topics.count { |topic| add_tag(topic, source: "Topic: #{topic}") }
+        link_own_show(@entities.values.find { |e| e.type == :podcast && @sources[e.id] == SHOW_SOURCE })
         step.output_summary = "Found #{found_names} of #{names.size} names and #{found_topics} of #{topics.size} topics on Qloo"
       end
       result
@@ -62,6 +63,7 @@ module Research
         own = hits.find { |e| show.qloo_entity_id.present? && e.id == show.qloo_entity_id } ||
               hits.find { |e| Names.same?(e.name, show.title) }
         add(own, SHOW_SOURCE) if own
+        link_own_show(own)
         step.output_summary = own ? "Found #{own.name} on Qloo" : "Not on Qloo yet, so we'll use comparable shows and topics"
       end
     end
@@ -127,6 +129,12 @@ module Research
       elsif distinct(show.hints[:comparable_shows]).any? { |hint| Names.same?(hint, name) } then HINT_SOURCE
       else "Matched \"#{name}\""
       end
+    end
+
+    # The show itself, found on Qloo, becomes its podcast's Qloo entity (Podcast#link_qloo_entity!: once, and never
+    # an id another podcast holds), so later runs and the catalog know it.
+    def link_own_show(entity)
+      show.podcast.link_qloo_entity!(entity.id) if entity
     end
 
     def room_for_entity? = @entities.size < MAX_ENTITIES

@@ -80,9 +80,9 @@ module Research
       lookup = ShowLookup.call(directory_id: entry.fetch("directory_id"))
       raise ArgumentError, "#{entry['directory_id']}: #{lookup.error}" unless lookup.ok?
 
-      show = user.shows.find_or_initialize_by(directory_id: lookup.attributes[:directory_id])
-      show.assign_attributes(lookup.attributes.merge(hints: entry["hints"] || {}, downloads_per_episode: entry["downloads_per_episode"]))
-      show.save!
+      podcast = Podcast.find_or_create_from_lookup!(lookup.attributes.merge(source: "admin"))
+      show = user.shows.find_or_initialize_by(podcast: podcast)
+      show.update!(hints: entry["hints"] || {}, downloads_per_episode: entry["downloads_per_episode"])
       show.reports.active.find_each(&:mark_failed!) # an earlier eval that died mid-run
       show
     end

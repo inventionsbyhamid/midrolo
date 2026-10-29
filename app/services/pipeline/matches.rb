@@ -17,7 +17,7 @@ module Pipeline
     # Brand id => the copy that counts, for those of report's brands whose copy that counts is on a newer report.
     def self.newer_copies(report, brand_entity_ids: nil)
       copies(report, brand_entity_ids).where("#{REPORT_AGE} > (?, ?)", report.created_at, report.id)
-                                       .includes(:show, :report).index_by(&:brand_entity_id)
+                                       .includes({ show: :podcast }, :report).index_by(&:brand_entity_id)
     end
 
     # Brand id => the copy that counts among the show's reports before this one.
@@ -42,7 +42,7 @@ module Pipeline
       table = SponsorMatch.arel_table
       SponsorMatch.from(latest, :sponsor_matches)
                   .where.not(status: "suggested")
-                  .includes(:show, :report)
+                  .includes({ show: :podcast }, :report)
                   .order(table[:follow_up_on].asc.nulls_last, table[:fit_score].desc.nulls_last, :name, :id)
     end
 

@@ -199,7 +199,7 @@ RSpec.describe "Share images" do
       expect(response).to have_http_status(:not_found)
 
       create(:media_kit, show: show)
-      show.verify!
+      show.verify!(via: "admin")
       get path
       expect(response).to have_http_status(:not_found)
 
