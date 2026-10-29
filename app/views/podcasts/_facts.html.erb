@@ -10,7 +10,8 @@
         "on air, since #{podcast.first_published_at.strftime('%b %Y')}", "the show's RSS feed" ] if podcast.first_published_at)
    ].compact %>
 <section class="wrap" aria-label="Key numbers">
-  <%= render "podcasts/numbers", podcast: podcast %>
+  <%# The header shows the "Stats verified" pill already. %>
+  <%= render "podcasts/numbers", podcast: podcast, pill: false %>
   <% if facts.any? %>
     <dl class="fact-strip">
       <% facts.each do |value, label, source| %>

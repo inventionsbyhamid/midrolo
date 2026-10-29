@@ -9,7 +9,7 @@
   <div class="pod-hero-text">
     <% badges = [ ([ status_label, status_tone ] unless podcast.active?),
                   ([ "Open to sponsors", :success ] if podcast.open_to_sponsors?),
-                  ([ "Stats verified", :accent ] if podcast.downloads_trust == "verified"),
+                  ([ "Stats verified", :accent ] if stats_page_numbers(podcast).verified?),
                   ([ "Claimed by the show", :accent ] if podcast.claimed?) ].compact %>
     <% if badges.any? %>
       <p class="pod-badges"><% badges.each do |label, tone| %><%= ui_badge label, tone: tone %><% end %></p>
