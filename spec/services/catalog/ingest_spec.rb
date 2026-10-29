@@ -293,6 +293,8 @@ RSpec.describe Catalog::Ingest do
       create(:media_kit, :published, show: owner_show, open_to_sponsors: true, rate_card_overrides: { "midroll" => "300" })
       podcast.record_provided_downloads!(4_000)
       create(:stat_reading, podcast: podcast, source: "spotify", trust: "verified", metric: "followers", value: 50)
+      # itunes:new-feed-url is followed at once, so what's stored is the new feed's (final review N1).
+      stub_request(:get, real_feed).to_return(status: 200, body: xml)
     end
 
     def moved_xml(to) = xml.sub("<link>https://tidepool.example.com/</link>",
@@ -344,6 +346,15 @@ RSpec.describe Catalog::Ingest do
       expect { described_class.call(podcast) }.not_to have_enqueued_mail(ClaimMailer, :feed_moved)
       expect(podcast.reload).to have_attributes(feed_url: url, claimed_at: be_present, downloads_per_episode: 4_000)
       expect(owner_show.reload.verified_at).to be_present
+      expect(PodcastFeedMove.count).to eq(0)
+    end
+
+    it "stays put when the new feed can't be read, and reads the old one again next time to retry" do
+      stub_request(:get, real_feed).to_return(status: 404)
+      feed_with(moved_xml(real_feed), etag: %("v1"))
+
+      expect { described_class.call(podcast) }.not_to have_enqueued_mail(ClaimMailer, :feed_moved)
+      expect(podcast.reload).to have_attributes(feed_url: url, claimed_at: be_present, feed_sha256: nil, feed_etag: nil)
       expect(PodcastFeedMove.count).to eq(0)
     end
 

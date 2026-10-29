@@ -81,6 +81,16 @@ RSpec.describe "Podcast pages" do
       expect(response.body).to include("Darknet Diaries")
     end
 
+    # Final review N16: past the day's cap on podcasts searches add, a search shows only what the catalog has.
+    it "says when today's new shows from the directory are used up, with or without results" do
+      allow(Catalog::LazyAdd).to receive(:call).and_return(Catalog::LazyAdd::Result.new(found: [], added: [], capped: true))
+      visit "/podcasts?q=darknet"
+      expect(response.body).to include("Darknet Diaries", "only shows already on #{APP_NAME}")
+
+      visit "/podcasts?q=zzzzqqq"
+      expect(response.body).to include("No podcasts match", "only shows already on #{APP_NAME}")
+    end
+
     it "says when a search finds nothing" do
       lazy_add_returns
       visit "/podcasts?q=zzzzqqq"

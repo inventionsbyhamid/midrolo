@@ -60,12 +60,19 @@ module Catalog
       AUTHOR_KEYS.lazy.map { |key| properties[key] }.find { |value| value.is_a?(String) && value.strip.present? }
     end
 
+    # A catalog podcast of the entity's title: the first whose author is close to the entity's, directory-listed ones
+    # first; else the catalog's only podcast of that title, and only when a directory lists it (podcast_index_id or
+    # apple_id). A feed someone added by its URL alone never takes a Qloo identity by its title alone (final review N5).
     def local_match(key)
       titled = Podcast.where(title_key: key).where.not(status: "removed")
-      candidates = titled.where(qloo_entity_id: nil).limit(MAX_CANDIDATES).to_a
+      candidates = titled.where(qloo_entity_id: nil).order(Arel.sql("(podcast_index_id IS NULL AND apple_id IS NULL)"), :id)
+                         .limit(MAX_CANDIDATES).to_a
       maker = author
       close = maker && candidates.find { |candidate| Research::Names.close?(maker, candidate.author.to_s) }
-      close || (candidates.first if candidates.one? && titled.limit(2).count == 1)
+      return close if close
+
+      lone = candidates.first if candidates.one? && titled.limit(2).count == 1
+      lone if lone && (lone.podcast_index_id || lone.apple_id)
     end
 
     def directory_match(key)

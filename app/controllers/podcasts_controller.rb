@@ -97,6 +97,7 @@ class PodcastsController < ApplicationController
     return [] if MediaKit.bot?(request.user_agent)
 
     result = ::Catalog::LazyAdd.call(@directory.query, signed_in: user_signed_in?)
+    @adds_capped = result.capped
     listed = @podcasts.map(&:id)
     (result.added + result.found.select(&:pending?)).uniq(&:id)
       .reject { |podcast| listed.include?(podcast.id) || podcast.removed? }.first(ADDING_LIMIT)

@@ -2,9 +2,10 @@
 <%#
   Public brand page (lane L3's brands/show, under "Shows it sponsored"): the listed podcasts this brand sponsored, from
   Sponsors::History.for_brand (one query, plus one for the artwork), the most recent first, each with its codes and the
-  read itself. rows: takes Sponsors::History rows the page already has. Renders nothing for a brand with none.
+  read itself. rows: takes Sponsors::History rows the page already has. Renders nothing for a brand with none. At most
+  BrandsController::SHOW_LIMIT rows, the same cap and order as the page's own count (final review N6).
 %>
-<% rows ||= Sponsors::History.for_brand(brand, podcasts: Podcast.listed) %>
+<% rows ||= Sponsors::History.for_brand(brand, limit: BrandsController::SHOW_LIMIT, podcasts: Podcast.listed) %>
 <% if rows.any? %>
   <%# By id: the brand page loaded the same artwork in that order, so these come from the request's query cache. %>
   <% ActiveRecord::Associations::Preloader.new(records: rows.map(&:podcast).sort_by(&:id), associations: { artwork_image: { file_attachment: :blob } }).call %>

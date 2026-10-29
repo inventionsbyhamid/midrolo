@@ -5,8 +5,11 @@ module Sponsors
   module Rules
     module_function
 
-    # A site a show links to that is never the sponsor of a read (YouTube, Patreon, a link shortener, Amazon).
-    def platform_domain?(domain) = domain.present? && platform_domains.include?(domain)
+    # A site a show links to that is never the sponsor of a read (YouTube, Patreon, a link shortener, Amazon). A
+    # platform that is itself a public suffix (blogspot.com, carrd.co) counts with every site on it.
+    def platform_domain?(domain)
+      domain.present? && (platform_domains.include?(domain) || platform_domains.any? { |platform| domain.end_with?(".#{platform}") })
+    end
 
     # A brand name that is a platform, self-promotion, a stray word ("Our", "Email") or too short to mean anything.
     def not_a_brand?(name)
@@ -18,7 +21,7 @@ module Sponsors
     def generic_word?(word) = generic_words.include?(word.to_s.downcase)
 
     def platform_domains
-      @platform_domains ||= Array(config[:platform_domains]).filter_map { |d| Brand.normalize_domain(d) }.to_set
+      @platform_domains ||= Array(config[:platform_domains]).filter_map { |d| Brand.normalize_domain(d) || d.to_s.strip.downcase.presence }.to_set
     end
 
     def not_brands = @not_brands ||= Array(config[:not_brands]).map { |w| Research::Names.normalize(w) }.to_set

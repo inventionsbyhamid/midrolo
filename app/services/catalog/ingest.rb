@@ -2,11 +2,12 @@ module Catalog
   # One feed read for one podcast (Catalog::IngestPodcastJob runs it): fetch (conditional, capped), skip the parse when
   # the bytes haven't changed, parse, upsert the newest episodes and the people the feed names, update the podcast's
   # feed columns, status, indexable flag and next fetch, then queue the artwork and the sponsor scan of new episodes.
+  # A feed that moved for good (permanent redirects, itunes:new-feed-url) is read at its new home (follow_move).
   #
   # A bad feed never raises and never wedges anything: a failure is counted, kept in last_error and backed off (the
   # wait doubles, up to 7 days). podcast:block, itunes:block and suppressions remove the podcast. Ingest writes only
   # feed columns (spec ruling 11): the listing and stats columns belong to Podcast#refresh_listing!. Episodes are never
-  # deleted (ruling 4); a person the feed stops naming is.
+  # deleted (ruling 4) except by a move that released a claim (final review N4); a person the feed stops naming is.
   class Ingest
     # The episode columns a later read of the same guid updates. The slug is set on insert only (ruling 5), so a
     # page's URL never moves.
@@ -15,6 +16,8 @@ module Catalog
     PERSON_UPDATES = %i[name href img_url episodes_count].freeze
 
     Outcome = Data.define(:status, :new_episode_ids, :error)
+    # Where the feed moved for good: the new URL, and "redirect" or "new_feed_url" (PodcastFeedMove::VIA).
+    Move = Data.define(:url, :via)
 
     def self.call(podcast, priority: Podcast::INGEST_PRIORITIES.fetch(:normal)) = new(podcast, priority).call
 
@@ -34,6 +37,7 @@ module Catalog
       return unchanged!(fetched) if fetched.not_modified? || (fetched.sha256 == @podcast.feed_sha256 && !@podcast.pending?)
 
       feed = FeedParser.call(fetched.body, feed_url: @podcast.feed_url, now: @now)
+      fetched, feed = follow_move(fetched, feed)
       return remove!("feed_blocked_by_show") if feed.blocked
       return remove!("suppressed") if suppressed?(feed.podcast_guid)
 
@@ -48,17 +52,21 @@ module Catalog
 
     private
 
+    # A real move (not just http to https, www., case or a trailing slash: final review N2) is recorded and may release
+    # the claim (Catalog::FeedMove); when it does, the old feed's episodes the new one doesn't carry go too (N4).
     def store!(feed, fetched)
       new_ids = []
       artwork_was = @podcast.artwork_url
       feed_was = @podcast.feed_url
+      guid_was = @podcast.podcast_guid
       released = nil
       Podcast.transaction do
         new_ids = upsert_episodes(feed.episodes)
         upsert_people(feed)
         @podcast.assign_attributes(feed_columns(feed, fetched))
-        if @podcast.feed_url != feed_was
-          released = FeedMove.record(@podcast, from: feed_was, to: @podcast.feed_url, via: move_via(fetched))
+        if @move && !Podcast.same_feed_url?(feed_was, @move.url)
+          released = FeedMove.record(@podcast, from: feed_was, to: @move.url, via: @move.via, feed: feed, guid_was: guid_was)
+          FeedMove.drop_old_episodes(@podcast, keep: feed.episodes.map(&:guid)) if released
         end
         @podcast.status = @podcast.feed_status(@now)
         schedule
@@ -87,7 +95,10 @@ module Catalog
         columns[:first_published_at] = [ feed.first_published_at, @podcast.first_published_at ].compact.min
       end
       columns[:podcast_guid] = feed.podcast_guid if guid_free?(feed.podcast_guid)
-      columns[:feed_url] = moved_to(feed, fetched) || @podcast.feed_url
+      columns[:feed_url] = @move&.url || @podcast.feed_url
+      # The new feed named by itunes:new-feed-url couldn't be read: forget this read's validators so the next one parses
+      # the old feed again and retries the move.
+      columns.merge!(feed_etag: nil, feed_last_modified: nil, feed_sha256: nil) if @retry_move
       columns
     end
 
@@ -97,16 +108,43 @@ module Catalog
       guid.present? && guid != @podcast.podcast_guid && !Podcast.where(podcast_guid: guid).where.not(id: @podcast.id).exists?
     end
 
-    # The feed's new home, when it moved for good (permanent redirects, or itunes:new-feed-url) and no other podcast
-    # has that URL. A move releases a claim (Catalog::FeedMove).
-    def moved_to(feed, fetched)
-      url = Podcast.normalize_feed_url(fetched.moved_to || feed.new_feed_url)
+    # The feed's new home, when it moved for good, with the feed read there: a chain of permanent redirects already
+    # ended there; an itunes:new-feed-url is read now, so what is stored (owner address, guid, episodes) is always the
+    # new feed's and never the old one's (final review N1). A new feed that can't be read leaves the podcast where it is
+    # for now (@retry_move). Returns the [fetched, feed] to store.
+    def follow_move(fetched, feed)
+      if fetched.moved_to.present?
+        url = move_target(fetched.moved_to)
+        @move = Move.new(url: url, via: "redirect") if url
+        return [ fetched, feed ]
+      end
+
+      url = move_target(feed.new_feed_url)
+      return [ fetched, feed ] unless url
+
+      there = FeedFetcher.call(url)
+      url = move_target(there.moved_to) if there.ok? && there.moved_to.present?
+      new_feed = FeedParser.call(there.body, feed_url: url, now: @now) if there.ok? && url
+      return retry_move(fetched, feed) unless new_feed
+
+      @move = Move.new(url: url, via: "new_feed_url")
+      [ there, new_feed ]
+    rescue FeedParser::Unreadable
+      retry_move(fetched, feed)
+    end
+
+    def retry_move(fetched, feed)
+      @retry_move = true
+      [ fetched, feed ]
+    end
+
+    # A feed URL the podcast can move to: normalized, not where it is, not blocked or suppressed, and no other podcast's.
+    def move_target(raw)
+      url = Podcast.normalize_feed_url(raw)
       return nil if url.nil? || url == @podcast.feed_url || Podcasts::SafeUrl.blocked?(url)
 
       url unless Podcast.where(feed_url: url).where.not(id: @podcast.id).exists? || Suppression.podcast?(feed_url: url)
     end
-
-    def move_via(fetched) = fetched.moved_to.present? ? "redirect" : "new_feed_url"
 
     # Upserts the parsed episodes by (podcast, guid) and returns the ids of those that are new.
     def upsert_episodes(episodes)
@@ -222,7 +260,7 @@ module Catalog
       ArtworkJob.set(priority: @priority).perform_later(@podcast.id)
     end
 
-    def suppressed?(guid) = Suppression.podcast?(guid: guid, feed_url: @podcast.feed_url)
+    def suppressed?(guid) = Suppression.podcast?(guid: guid, feed_url: @move&.url || @podcast.feed_url)
 
     def outcome(status, new_ids = [], error = nil) = Outcome.new(status: status, new_episode_ids: new_ids, error: error)
   end

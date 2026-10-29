@@ -61,6 +61,26 @@ RSpec.describe Catalog::QlooMatch do
     expect(clone.reload.qloo_entity_id).to eq("Q-new")
   end
 
+  # Final review N5: a feed added by its URL alone (no directory id) never takes a Qloo identity by its title alone.
+  it "links a lone same-titled podcast by its title alone only when a directory lists it, else needs the author" do
+    clone = create(:podcast, title: "Huge Show", author: "Clone Maker", feed_url: "https://feeds.example.com/huge-clone.xml")
+    directory_with([])
+
+    expect(described_class.call(entity("Q-huge", "Huge Show"), directory: false)).to be_nil
+    expect(clone.reload.qloo_entity_id).to be_nil
+
+    clone.update!(apple_id: 4242)
+    expect(described_class.call(entity("Q-huge", "Huge Show"), directory: false)).to eq(clone)
+  end
+
+  it "prefers a directory-listed podcast among same-titled ones whose authors both match" do
+    create(:podcast, title: "Twin Show", author: "Jo Host", feed_url: "https://feeds.example.com/twin-copy.xml")
+    listed = create(:podcast, title: "Twin Show", author: "Jo Host", podcast_index_id: 77, feed_url: "https://feeds.example.com/twin.xml")
+    directory_with([])
+
+    expect(described_class.call(entity("Q-twin", "Twin Show", properties: { "author" => "Jo Host" }), directory: false)).to eq(listed)
+  end
+
   it "adds the directory hit with an equal title and a close author, queued at the caller's priority" do
     directory = directory_with([ hit("1", "Night Owls", "Someone Else"), hit("2", "Night Owls!", "Rita Moreno"),
                                  hit("3", "Night Owls Extra", "Rita Moreno") ])

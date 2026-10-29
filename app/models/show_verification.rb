@@ -50,7 +50,8 @@ class ShowVerification < ApplicationRecord
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
   scope :unexpired, -> { where(verified_at: nil).where("expires_at > ?", Time.current) }
 
-  # Why the last check_code or check_feed_token! failed: :wrong_code, :locked, :expired, :not_found or :unreadable.
+  # Why the last check_code or check_feed_token! failed: :wrong_code, :locked, :expired, :feed_moved, :not_found or
+  # :unreadable.
   attr_reader :failure
 
   def self.current_for(show) = show.verifications.newest_first.first
@@ -58,11 +59,15 @@ class ShowVerification < ApplicationRecord
   # Queues a code to the feed's owner address. Retires any earlier code, so only the newest one works. The address
   # allowance is checked under an advisory lock on the address, so parallel requests from different accounts can't
   # both slip under the cap; the show's row lock does the same for its own allowance.
+  #
+  # The address is read under the podcast's row lock, the lock a feed move holds while it records itself and expires
+  # pending codes (final review N1): a code goes either to the address of the feed it was asked for, and is retired if
+  # that feed moves, or to the new feed's address.
   def self.request_code!(show)
-    address = normalize_address(show.owner_email)
-    raise Unavailable, "the feed lists no owner email" if address.blank?
-
     verification = transaction do
+      address = normalize_address(Podcast.lock.find(show.podcast_id).owner_email)
+      raise Unavailable, "the feed lists no owner email" if address.blank?
+
       lock_address!(address)
       show.lock!
       throttle!(show.verifications.email, scope: :show)
@@ -119,9 +124,9 @@ class ShowVerification < ApplicationRecord
   # so parallel guesses can't exceed it. Spaces and dashes in the typed code are ignored.
   def check_code(code)
     @failure = nil
-    with_lock do
+    with_podcast_lock do
       next fail_with(:locked) if locked?
-      next fail_with(:expired) unless email? && !verified? && !expired?
+      next fail_with(expired_reason) unless email? && !verified? && !expired?
 
       self.attempts += 1
       if code_digest.present? && ActiveSupport::SecurityUtils.secure_compare(code_digest, self.class.digest(id, code.to_s.gsub(/[\s-]/, "")))
@@ -134,17 +139,24 @@ class ShowVerification < ApplicationRecord
   end
 
   # True when the feed, read fresh through FeedReader (and so the SSRF guard), carries midrolo-verify=TOKEN in its
-  # channel description or a podcast:txt tag.
+  # channel description or a podcast:txt tag. The claim is bound to the feed URL read, so a move that lands while the
+  # feed is read can't carry it onto the new feed (final review N1).
   def check_feed_token!
     @failure = nil
-    return fail_with(:expired) unless feed_token? && !verified? && !expired?
+    return fail_with(expired_reason) unless feed_token? && !verified? && !expired?
 
-    feed = Podcasts::FeedReader.new.read(show.feed_url, max_episodes: 0, description_limit: TOKEN_SCAN_LIMIT, fresh: true)
+    feed_url = show.feed_url
+    feed = Podcasts::FeedReader.new.read(feed_url, max_episodes: 0, description_limit: TOKEN_SCAN_LIMIT, fresh: true)
     increment!(:attempts)
     return fail_with(:unreadable) if feed.warnings.any?
     return fail_with(:not_found) unless token_in?(feed)
 
-    with_lock { verified? || mark_verified! } # a parallel check may have got there first
+    with_podcast_lock do
+      next true if verified? # a parallel check got there first
+      next fail_with(expired_reason) if expired?
+
+      mark_verified!(feed_url: feed_url)
+    end
   end
 
   def token_line = "#{TOKEN_PREFIX}#{token}"
@@ -157,10 +169,25 @@ class ShowVerification < ApplicationRecord
 
   private
 
-  def mark_verified!
+  def mark_verified!(feed_url: nil)
     update!(verified_at: Time.current)
-    show.verify!(via: kind)
+    show.verify!(via: kind, since: created_at, feed_url: feed_url)
     true
+  end
+
+  # The podcast's row, then this one: the order a feed move takes them in (Catalog::FeedMove), so a check and a move
+  # never deadlock, and the check sees a move that committed before it.
+  def with_podcast_lock(&)
+    transaction do
+      Podcast.lock.find(show.podcast_id)
+      lock!
+      yield
+    end
+  end
+
+  # An expired code or token says the feed moved when that is why: a move retires every pending one (Catalog::FeedMove).
+  def expired_reason
+    show.feed_moved_since?(created_at) ? :feed_moved : :expired
   end
 
   def token_in?(feed)

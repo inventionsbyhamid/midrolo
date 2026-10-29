@@ -57,8 +57,11 @@ This is build spec section 9, on production. Note anything that breaks, fix it o
 
 **As a brand** (sign in with a new Google account)
 
-- [ ] "Find podcasts your customers love": onboarding asks for the brand's name and website.
-- [ ] Run a fit search for a real brand. The seven steps fill in live, then the results with proof and badges.
+- [ ] "Find podcasts your customers love": onboarding asks for the brand's name and website. Use any name and a
+      website of your own, or a made-up one unique to you (like yourname-test.com), not a real brand's site: everyone
+      who gives one website joins one brand, so two judges never share a brand this way.
+- [ ] Run a fit search for a real brand (the search asks which brand to look for). The seven steps fill in live, then
+      the results with proof and badges.
 - [ ] Save a show, then open Saved.
 - [ ] Request a spot on the demo show (claimed: the owner account gets the email) and on an unclaimed show (it waits
       for the claim, and no email goes out).

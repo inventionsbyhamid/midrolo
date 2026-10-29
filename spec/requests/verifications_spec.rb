@@ -202,6 +202,22 @@ RSpec.describe "Verifications" do
       expect(show.reload).not_to be_verified
     end
 
+    # Final review N1: a feed move retires the code, and the page says why.
+    it "says the feed moved, and verifies nothing, when the feed moved after the code was sent" do
+      request_code
+      code = last_code
+      travel 1.second
+      podcast = show.podcast
+      Podcast.transaction do
+        Catalog::FeedMove.record(podcast, from: podcast.feed_url, to: "https://moved.example.com/feed.xml", via: "redirect")
+      end
+      patch show_verification_path(show), params: { code: code }
+
+      expect(response).to redirect_to(show_verification_path(show))
+      expect(flash[:alert]).to eq("This show's feed moved; verify it again.")
+      expect(show.reload).not_to be_verified
+    end
+
     it "sends no code and issues no token for a show that is already verified" do
       show.verify!(via: "admin")
 

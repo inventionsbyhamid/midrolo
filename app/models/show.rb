@@ -13,6 +13,14 @@ class Show < ApplicationRecord
     def initialize(message = MESSAGE) = super
   end
 
+  # Raised by verify! when the proof was made against a feed the podcast no longer has: its feed moved after the code
+  # was sent or the token was read (final review N1).
+  class FeedMoved < StandardError
+    MESSAGE = "This show's feed moved; verify it again.".freeze
+
+    def initialize(message = MESSAGE) = super
+  end
+
   COUNTRIES = { "US" => "United States", "GB" => "United Kingdom", "CA" => "Canada", "AU" => "Australia", "IN" => "India" }.freeze
   HINT_KEYS = %w[comparable_shows topics].freeze
   HINT_LIMIT = 5
@@ -66,13 +74,19 @@ class Show < ApplicationRecord
   # verification) and the podcast's claimed_at, then hands the requests that waited for a claim to the owner
   # (Conversations::ClaimHandoff). Raises AlreadyClaimed when another show owns the podcast; the podcast's row lock and
   # the one-verified-show index keep two verifications from both winning.
-  def verify!(via:)
+  #
+  # A proof is bound to the feed it was made against (final review N1): since is when it began (a code's or token's
+  # creation, an instant claim's feed read), feed_url the feed it read. Raises FeedMoved when the podcast's feed moved
+  # since then or is another feed now. Catalog::FeedMove takes the same row lock before it looks for an owner, so a
+  # move either lands before this check and is seen, or after the claim and releases it.
+  def verify!(via:, since: nil, feed_url: nil)
     raise ArgumentError, "unknown verification #{via.inspect}" unless VERIFIED_VIA.include?(via.to_s)
 
     claimed = false
     transaction(requires_new: true) do
       podcast.lock!
       raise AlreadyClaimed if podcast.shows.where.not(id: id).where.not(verified_at: nil).exists?
+      raise FeedMoved if feed_moved_since?(since, feed_url)
 
       unless verified?
         update!(verified_at: Time.current)
@@ -94,6 +108,14 @@ class Show < ApplicationRecord
   # A queued or running report (only one may be active per show).
   def active_report
     reports.live.order(created_at: :desc, id: :desc).first
+  end
+
+  # A feed move recorded at or after since, or a podcast whose feed is no longer feed_url (a change of scheme, www.,
+  # case or trailing slash is the same feed). Read under the podcast's row lock.
+  def feed_moved_since?(since = nil, feed_url = nil)
+    return true if feed_url.present? && !Podcast.same_feed_url?(feed_url, podcast.feed_url)
+
+    since.present? && podcast.feed_moves.where(created_at: since..).exists?
   end
 
   private

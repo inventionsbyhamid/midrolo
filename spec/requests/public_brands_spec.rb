@@ -25,6 +25,17 @@ RSpec.describe "Public brand pages" do
     expect(robots).to be_empty
   end
 
+  # Final review N6: the list under "Shows it sponsored" has the same cap as the header's count.
+  it "lists at most the controller's cap of shows, matching the count in the header" do
+    stub_const("BrandsController::SHOW_LIMIT", 2)
+    3.times { |i| mention(on: create(:podcast, :indexable, title: "Show #{i}"), at: Time.zone.local(2026, 9, 1 + i)) }
+
+    get "/brands/#{brand.slug}"
+
+    expect(doc.css("[data-testid='sponsored-shows'] .sponsored-row").size).to eq(2)
+    expect(doc.text.squish).to include("across 2 podcasts")
+  end
+
   it "names one month once when every read falls in it" do
     mention(on: podcast, at: Time.zone.local(2026, 10, 2))
     mention(on: podcast, at: Time.zone.local(2026, 10, 20))
