@@ -5,40 +5,49 @@
     <%= ui_button "Add another show", new_show_path, variant: :secondary %>
   </header>
 
-  <%# Each card says whether the show is claimed (verified, its listing can go public), a draft workspace, or managed
-      by another account, then ends on its next step: the latest report, or a first Snapshot. %>
+  <%# Each card is the show's checklist (claim, list, verify stats: shows/_steps) with its one next step as the
+      primary button, what's waiting in the inbox, then the report: the latest one, or a first Snapshot. %>
   <% paused = AppSettings.runs_paused? %>
-  <ul class="grid gap-4 sm:grid-cols-2">
+  <ul class="grid gap-4 md:grid-cols-2">
     <% @shows.each do |show| %>
       <% report = show.latest_report %>
-      <li class="card">
-        <div class="card-body flex items-center gap-4">
-          <%= render "shows/artwork", show: show %>
-          <div class="min-w-0 flex-1">
-            <%= link_to show.title, show_path(show), class: "type-h3 block truncate underline-offset-4 hover:underline" %>
-            <p class="truncate text-ink-soft"><%= show.author %></p>
-            <p class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-              <% case show.claim_status %>
-              <% when :claimed %>
-                <%= ui_badge "Claimed", tone: :success %>
-                <%= link_to "Your listing", edit_show_media_kit_path(show), class: "link" %>
-              <% when :managed_elsewhere %>
-                <%= ui_badge "Managed by someone else", tone: :warning %>
-                <%= link_to "Ask for access", new_podcast_claim_path(show.podcast), class: "link" %>
-              <% else %>
-                <%= ui_badge "Draft" %>
-                <%= link_to "Verify you own it", new_show_verification_path(show), class: "link" %>
-              <% end %>
-            </p>
-            <p class="mt-1 text-sm text-ink-soft">
-              <% if report %>
-                <%= link_to "Latest report: #{report.status_copy}", show_report_path(show, report), class: "link" %>
-              <% else %>
-                No report yet
-              <% end %>
-            </p>
-            <% if report.nil? && !paused %>
-              <%= button_to "Get my free Snapshot", show_reports_path(show, kind: "snapshot"), class: "btn btn-primary btn-sm mt-3" %>
+      <% steps = workspace_steps(show) %>
+      <% next_step = workspace_next_step(steps) %>
+      <% waiting = workspace_requests_line(show) %>
+      <li class="card flex flex-col">
+        <div class="card-body flex flex-1 flex-col gap-5">
+          <div class="flex items-start gap-4">
+            <%= render "shows/artwork", show: show %>
+            <div class="min-w-0 flex-1">
+              <%= link_to show.title, show_path(show), class: "type-h3 block truncate underline-offset-4 hover:underline" %>
+              <p class="truncate text-ink-soft"><%= show.author %></p>
+              <% label, tone = { claimed: [ "Claimed", :success ], managed_elsewhere: [ "Managed by someone else", :warning ] }.fetch(show.claim_status, [ "Draft", :neutral ]) %>
+              <p class="mt-1.5"><%= ui_badge label, tone: tone %></p>
+            </div>
+          </div>
+
+          <%= render "shows/steps", show: show, steps: steps, compact: true %>
+
+          <% if waiting %>
+            <%= link_to inbox_path_for(:podcaster, show: show), class: "waiting-line self-start underline-offset-4 hover:underline" do %>
+              <%= waiting %><span class="sr-only">: open the inbox</span>
+            <% end %>
+          <% end %>
+
+          <div class="mt-auto flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-line pt-4">
+            <% if next_step %>
+              <%= ui_button next_step.action, next_step.path, size: :sm %>
+            <% elsif (blocked = steps.find(&:blocked?)) %>
+              <%= ui_button blocked.action, blocked.path, variant: :secondary, size: :sm %>
+            <% else %>
+              <%= ui_button "View your page", listing_podcast_path(show.podcast), variant: :secondary, size: :sm %>
+            <% end %>
+            <% if report %>
+              <%= link_to "Latest report: #{report.status_copy}", show_report_path(show, report), class: "link text-sm" %>
+            <% elsif !paused %>
+              <%= button_to "Get my free Snapshot", show_reports_path(show, kind: "snapshot"), class: "btn btn-ghost btn-sm" %>
+            <% else %>
+              <span class="text-sm text-ink-soft">No report yet</span>
             <% end %>
           </div>
         </div>

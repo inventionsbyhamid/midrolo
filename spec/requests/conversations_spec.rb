@@ -167,7 +167,7 @@ RSpec.describe "Conversations" do
       expect(response.body).to include("Verify this show to read its requests", "1 brand asked about sponsoring it")
 
       get show_path(show)
-      expect(response.body).to include("1 brand</strong> asked about sponsoring this show")
+      expect(response.body).to include("1 brand asked about sponsoring this show")
     end
 
     it "keeps a third party out of every page and action" do

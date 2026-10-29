@@ -8,7 +8,8 @@ class ShowsController < ApplicationController
   before_action :set_show, only: %i[show edit update]
 
   def index
-    @shows = current_user.shows.order(:created_at).includes(:latest_report, podcast: { artwork_image: { file_attachment: :blob } })
+    @shows = current_user.shows.order(:created_at)
+                         .includes(:latest_report, :media_kit, podcast: [ :stat_connections, { artwork_image: { file_attachment: :blob } } ])
     redirect_to new_show_path if @shows.empty?
   end
 
