@@ -1,0 +1,8 @@
+Someone reported the conversation between <%= @brand_name %> and <%= @title %>.
+
+Conversation: <%= @conversation.public_id %>
+Brand domain: <%= @conversation.brand.domain.presence || "none" %>
+Asked by a verified member: <%= @conversation.from_verified_brand? ? "yes" : "no" %>
+Status: <%= @conversation.status.humanize %>
+
+The admin dashboard lists reported conversations.

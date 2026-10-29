@@ -22,7 +22,8 @@ RSpec.describe "Marketplace stubs" do
     expect([ result.found, result.added, result.podcasts ]).to eq([ [], [], [] ])
     expect(Sponsors::History.for(build(:podcast))).to eq([])
     expect(Sponsors::History.for_brand(build(:brand))).to eq([])
-    expect(Stats::PlatformFetch.call(build(:stat_connection))).to include("error" => "failed")
+    # Filled by lane L5: with no service session there is nothing to ask.
+    expect(Stats::PlatformFetch.call(build(:stat_connection))).to include("ok" => false, "error" => "unavailable")
     expect { Conversations::ClaimHandoff.call(build(:podcast)) }.not_to raise_error
   end
 
@@ -43,11 +44,13 @@ RSpec.describe "Marketplace stubs" do
     %w[catalog claims stats brands conversations].each do |name|
       expect(Rails.root.join("config/routes/#{name}.rb")).to exist
     end
-    # save is lane L6's, filled (spec/requests/brands_spec.rb covers it).
-    %w[numbers sponsors rates claim request similar audience].each do |name|
+    # save is lane L6's, filled (spec/requests/brands_spec.rb covers it); request and the conversations panel are lane
+    # L7's (spec/views/podcasts/request_spec.rb and spec/requests/conversations_spec.rb).
+    %w[numbers sponsors rates claim similar audience].each do |name|
       expect(ApplicationController.render(partial: "podcasts/#{name}", locals: { podcast: build(:podcast) }).strip).to eq("")
     end
-    Admin::DashboardController::PANELS.each do |name|
+    # Filled by their lanes: catalog (L1), stats (L5) and conversations (L7).
+    (Admin::DashboardController::PANELS - %w[catalog stats conversations]).each do |name|
       expect(ApplicationController.render(partial: "admin/dashboard/#{name}", locals: { stats: nil }).strip).to eq("")
     end
   end

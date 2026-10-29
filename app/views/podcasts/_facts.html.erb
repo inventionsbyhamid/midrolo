@@ -1,0 +1,25 @@
+<%# locals: (podcast:, sponsors:) -%>
+<%# The key numbers (plan 4.1, TrustMRR style): verified and provided numbers come first from lane L5's
+    podcasts/_numbers; then the facts Midrolo reads itself, each with the badge saying it came from the feed. A number
+    never shows without its source. %>
+<% checked = podcast.feed_checked_at %>
+<% facts = [
+     ([ number_with_delimiter(podcast.episode_count), "episodes in the feed", "the show's RSS feed" ] if podcast.episode_count.to_i.positive?),
+     ([ sponsors, "#{'sponsor'.pluralize(sponsors)} in the last 90 days", "show notes" ] if sponsors.positive?),
+     ([ distance_of_time_in_words(podcast.first_published_at, Time.current).delete_prefix("about ").delete_prefix("over ").delete_prefix("almost "),
+        "on air, since #{podcast.first_published_at.strftime('%b %Y')}", "the show's RSS feed" ] if podcast.first_published_at)
+   ].compact %>
+<section class="wrap" aria-label="Key numbers">
+  <%= render "podcasts/numbers", podcast: podcast %>
+  <% if facts.any? %>
+    <dl class="fact-strip">
+      <% facts.each do |value, label, source| %>
+        <div class="fact">
+          <dt class="fact-label"><%= label %></dt>
+          <dd class="fact-value"><%= value %></dd>
+          <dd class="fact-source"><%= trust_badge("feed", source: source, at: checked) %></dd>
+        </div>
+      <% end %>
+    </dl>
+  <% end %>
+</section>

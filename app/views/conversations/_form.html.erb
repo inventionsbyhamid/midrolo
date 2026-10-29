@@ -1,0 +1,69 @@
+<%# locals: (podcast:, form:, facts:, error: nil) -%>
+<%# The Request a spot form, in the podcast page's dialog (podcasts/_request) and on conversations/new. It reads only
+    the podcast's columns (the page's podcast is strict_loading). %>
+<% memberships = facts.viewer.memberships %>
+<% membership = memberships.find { |member| member.brand.public_id == form.brand } || memberships.first %>
+<%= form_with model: form, url: conversations_path, method: :post, class: "flex flex-col gap-5", data: { turbo_frame: "_top" } do |f| %>
+  <%= hidden_field_tag :podcast, podcast.to_param, id: nil %>
+
+  <% if error %>
+    <div class="flash flash-alert" role="alert"><p><%= error %></p></div>
+  <% end %>
+
+  <% unless podcast.claimed? %>
+    <p class="rounded-xl bg-tally-soft p-3 text-sm">
+      <%= podcast.title %> hasn't claimed its <%= APP_NAME %> page yet. We hold your request and deliver it when they do.
+      We never email shows that haven't joined.
+    </p>
+  <% end %>
+
+  <% if memberships.size > 1 %>
+    <div>
+      <%= f.label :brand, "Ask as", class: "label" %>
+      <%= f.select :brand, memberships.map { |member| [ member.brand.name, member.brand.public_id ] }, {}, class: "input" %>
+    </div>
+  <% end %>
+
+  <div>
+    <%= f.label :format, "Spot", class: "label" %>
+    <%= f.select :format, [ [ "Any spot", "" ] ] + MediaKit::RATE_SLOTS.map { |value, label| [ label, value ] }, {}, class: "input" %>
+  </div>
+
+  <fieldset>
+    <legend class="label">Months</legend>
+    <%= hidden_field_tag "spot_request[months][]", "", id: nil %>
+    <div class="flex flex-wrap gap-2">
+      <% inbox_month_options(form.months).each do |label, value| %>
+        <% box_id = "spot_request_month_#{value}" %>
+        <span class="chip gap-2">
+          <%= check_box_tag "spot_request[months][]", value, form.months.include?(value), id: box_id %>
+          <label for="<%= box_id %>"><%= label %></label>
+        </span>
+      <% end %>
+    </div>
+    <p class="hint">When you'd like the ad to run. Leave them all empty if you're flexible.</p>
+  </fieldset>
+
+  <div>
+    <%= f.label :budget, "Budget in US dollars", class: "label" %>
+    <%= f.text_field :budget, class: "input", inputmode: "numeric", autocomplete: "off", placeholder: "500",
+          aria: { describedby: "spot_request_budget_hint" } %>
+    <p id="spot_request_budget_hint" class="hint">Optional. What you'd spend on this show for the spot you picked.</p>
+  </div>
+
+  <div>
+    <%= f.label :body, "Message", class: "label" %>
+    <%= f.text_area :body, rows: 6, class: "input", required: true, maxlength: Message::BODY_LIMIT,
+          placeholder: "Who you are, what you'd like to promote and why this show fits." %>
+  </div>
+
+  <% if membership && !membership.verified? %>
+    <p class="text-sm text-ink-soft">
+      Your brand isn't verified yet, so the show sees an Unverified brand label and you can send
+      <%= User::Brands::DAILY_REQUESTS[:unverified] %> requests a day. Verify a work email at your company's domain
+      to send up to <%= User::Brands::DAILY_REQUESTS[:verified] %>.
+    </p>
+  <% end %>
+
+  <%= f.submit "Send request", class: "btn btn-primary btn-lg self-start" %>
+<% end %>

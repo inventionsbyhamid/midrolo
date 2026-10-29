@@ -1,1 +1,31 @@
-<%# Lane L5 fills this admin dashboard panel (locals: stats, an Admin::Stats). Empty until then. %>
+<%# locals: (stats:) -%>
+<%# Lane L5's admin panel: whether the stats account's sessions work, and the connections waiting on the admin.
+    It reads its own counts (two small queries); stats (Admin::Stats) isn't needed. %>
+<% sessions = ServiceSession.all.index_by(&:platform) %>
+<% counts = StatConnection.group(:status).count %>
+<%= render "components/card", title: "Verified stats",
+      aside: link_to("Connections", admin_stat_connections_path, class: "link") do %>
+  <div class="flex flex-col gap-4">
+    <ul class="flex flex-col gap-2">
+      <% Stats::PLATFORMS.each do |platform, info| %>
+        <% session = sessions[platform] %>
+        <li class="flex flex-wrap items-center gap-2">
+          <span class="font-semibold"><%= info[:service] %></span>
+          <% if session.nil? || session.credentials.blank? %>
+            <%= ui_badge "Not set", tone: :warning %>
+          <% elsif session.ok? %>
+            <%= ui_badge "Working", tone: :success %>
+          <% else %>
+            <%= ui_badge "Expired, syncs paused", tone: :danger %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+    <p>
+      <%= pluralize(counts.fetch("pending_invite", 0), "pending invite") %> to accept,
+      <%= number_with_delimiter(counts.fetch("active", 0)) %> active,
+      <%= number_with_delimiter(counts.values_at("mismatch", "failed", "disconnected").compact.sum) %> needing a look.
+    </p>
+    <p><%= link_to "Service sessions", admin_service_sessions_path, class: "link" %></p>
+  </div>
+<% end %>

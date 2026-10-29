@@ -60,6 +60,8 @@ class ShowsController < ApplicationController
     end
 
     if @show.update(show_params)
+      # The owner's typed downloads are the podcast's "provided by the show" reading (build spec section 10).
+      @show.podcast.record_provided_downloads!(@show.downloads_per_episode) if @show.verified? && @show.saved_change_to_downloads_per_episode?
       return rerun_report(rerun) if Report::KINDS.include?(rerun)
 
       redirect_to show_path(@show), notice: "Details saved."

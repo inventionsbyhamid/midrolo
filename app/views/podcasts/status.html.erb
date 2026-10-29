@@ -1,0 +1,5 @@
+<% content_for :title, @podcast.title %>
+<% content_for :meta, private_page_meta %>
+<div class="wrap py-8">
+  <%= render "podcasts/pending", podcast: @podcast, poll: @poll %>
+</div>

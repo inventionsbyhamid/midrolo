@@ -1,0 +1,22 @@
+<%# locals: (podcast:) -%>
+<%# Sponsors (plan 4.1): lane L2's podcasts/_sponsors, the history with evidence. Until it renders, the brands found in
+    the episodes on this page, each linking to its brand page. %>
+<section id="sponsors" class="pod-section" aria-labelledby="sponsors_title">
+  <h2 id="sponsors_title" class="pod-h2">Sponsors</h2>
+  <%= pages_slot("podcasts/sponsors", podcast: podcast) do %>
+    <% brands = page_episodes.flat_map(&:brands).group_by(&:slug).map { |_, found| [ found.first, found.size ] }.sort_by { |brand, count| [ -count, brand.name ] } %>
+    <% if brands.any? %>
+      <p class="pod-note">Found in the show notes of recent episodes.</p>
+      <ul class="month-chips mt-3">
+        <% brands.first(20).each do |brand, count| %>
+          <li><%= link_to public_brand_path(brand.slug), class: "chip" do %><strong class="text-ink"><%= brand.name %></strong>&nbsp;<%= pluralize(count, "episode") %><% end %></li>
+        <% end %>
+      </ul>
+    <% else %>
+      <div class="pod-empty">
+        <p class="pod-empty-title">No sponsor reads found yet.</p>
+        <p class="text-ink-soft">We read every episode's show notes for sponsor reads, promo codes and offers. None turned up in the episodes we have.</p>
+      </div>
+    <% end %>
+  <% end %>
+</section>

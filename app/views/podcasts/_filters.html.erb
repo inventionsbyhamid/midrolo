@@ -1,0 +1,52 @@
+<%# locals: (directory:, url:, category_names: nil) -%>
+<%# The directory's filters as one GET form: they apply as soon as one changes (autosubmit), or with Apply without JS.
+    category_names is the category select's options (the directory); a category page passes nil, its category being
+    fixed by the path. Open on a wide screen, folded on a phone (responsive-details). %>
+<% active = directory.to_params.except(:q, :sort, :page).size %>
+<details class="dir-filters" open data-controller="responsive-details">
+  <summary class="dir-filters-summary">
+    <span>Filters<% if active.positive? %> <span class="badge badge-accent ml-1"><%= active %> on</span><% end %></span>
+  </summary>
+  <%= form_with url: url, method: :get, class: "dir-filters-form", data: { controller: "autosubmit", autosubmit_delay_value: 50 } do |f| %>
+    <% if directory.query.present? %><%= hidden_field_tag :q, directory.query, id: nil %><% end %>
+    <% if category_names %>
+      <div>
+        <%= f.label :category, "Category", class: "label" %>
+        <%= f.select :category, options_for_select(category_names, directory.category), { include_blank: "Any category" },
+              class: "input", data: { action: "change->autosubmit#queue" } %>
+      </div>
+    <% end %>
+    <div>
+      <%= f.label :size, "Plays per episode", class: "label" %>
+      <%= f.select :size, options_for_select(PodcastDirectory::SIZE_LABELS.invert, directory.size), { include_blank: "Any size" },
+            class: "input", data: { action: "change->autosubmit#queue" } %>
+    </div>
+    <div>
+      <%= f.label :price, "Price per spot", class: "label" %>
+      <%= f.select :price, options_for_select(PodcastDirectory::PRICES.map { |dollars| [ "Up to #{number_to_currency(dollars, precision: 0)}", dollars ] }, directory.price),
+            { include_blank: "Any price" }, class: "input", data: { action: "change->autosubmit#queue" } %>
+    </div>
+    <div>
+      <%= f.label :language, "Language", class: "label" %>
+      <%= f.select :language, options_for_select(Podcast.language_counts.first(12).map { |code, _| [ pages_language(code), code ] }, directory.language),
+            { include_blank: "Any language" }, class: "input", data: { action: "change->autosubmit#queue" } %>
+    </div>
+    <div>
+      <%= f.label :sort, "Sort by", class: "label" %>
+      <%= f.select :sort, options_for_select(directory.sort_options.invert, directory.sort), {}, class: "input", data: { action: "change->autosubmit#queue" } %>
+    </div>
+    <div class="dir-toggles">
+      <% { "open" => [ "Open to sponsors", directory.open? ], "verified" => [ "Stats verified", directory.verified? ],
+           "sponsored" => [ "Has sponsors", directory.sponsored? ] }.each do |name, (label, checked)| %>
+        <label class="toggle-chip">
+          <%= check_box_tag name, "1", checked, id: "filter_#{name}", data: { action: "change->autosubmit#queue" } %>
+          <%= label %>
+        </label>
+      <% end %>
+      <%= f.submit "Apply", class: "btn btn-secondary btn-sm", name: nil %>
+      <% if active.positive? %>
+        <%= link_to "Clear filters", directory.query.present? ? "#{url}?#{{ q: directory.query }.to_query}" : url, class: "btn btn-ghost btn-sm" %>
+      <% end %>
+    </div>
+  <% end %>
+</details>

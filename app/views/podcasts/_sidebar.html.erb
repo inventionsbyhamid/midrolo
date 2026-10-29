@@ -1,0 +1,105 @@
+<%# locals: (podcast:, similar:, request_form: nil) -%>
+<%# The sidebar (plan 4.1): the listing at a glance once the show publishes it, the claim box on an unclaimed show (lane
+    L4's podcasts/_claim), Request a spot (lane L7's podcasts/_request, at #request: brands' fit results link there), the
+    details read from the feed with when it was last checked, where to listen, similar
+    shows (lane L8's Qloo list for signed-in people, then shared sponsors and categories for everyone), and the fine print. %>
+<% listing = podcast.listing if podcast.listing&.published? %>
+<% months = Array(listing&.open_months).filter_map { |month| pages_month(month)&.then { |label| [ month, label ] } }
+     .select { |month, _| month >= Date.current.strftime("%Y-%m") }.first(6) %>
+<aside class="pod-side" aria-label="About this podcast">
+  <% if podcast.open_to_sponsors? || podcast.min_price_cents || months.any? %>
+    <%= render "components/card", title: "Sponsor this show", heading: :h2,
+          aside: (ui_badge("Open to sponsors", tone: :success) if podcast.open_to_sponsors?) do %>
+      <% if podcast.min_price_cents %>
+        <p class="text-sm text-ink-soft">Rate card from</p>
+        <p class="listing-price"><%= pages_money(podcast.min_price_cents) %></p>
+        <p class="text-sm text-ink-soft">per spot, per episode</p>
+      <% end %>
+      <% if months.any? %>
+        <p class="mt-4 text-sm font-semibold">Open months</p>
+        <ul class="month-chips"><% months.each do |_, label| %><li class="chip"><%= label %></li><% end %></ul>
+      <% end %>
+      <%= link_to "See the rate card", "#rates", class: "link mt-4 inline-block text-sm font-semibold" %>
+    <% end %>
+  <% end %>
+
+  <div id="request" class="pod-request"><%= request_form %></div>
+
+  <% unless podcast.claimed? %>
+    <%= pages_slot("podcasts/claim", podcast: podcast) do %>
+      <div class="lamp-note">
+        <h2 class="font-bold">Host this show?</h2>
+        <p class="mt-1">Claim it free to set your rates, publish open months and verify your numbers.</p>
+        <%= ui_button "Claim this show", user_signed_in? ? new_show_path : new_user_session_path, size: :sm, class: "mt-3", rel: "nofollow" %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%= render "components/card", title: "Podcast details", heading: :h2 do %>
+    <% hosting = podcast.hosting_provider.presence&.then { |name| name == name.downcase ? name.titleize : name } %>
+    <% rows = [ [ "Host", podcast.author.presence ],
+                [ "First episode", pages_date(podcast.first_published_at) ],
+                [ "Latest episode", podcast.last_published_at && "#{pages_date(podcast.last_published_at)}" ],
+                [ "Cadence", pages_cadence(podcast) ],
+                [ "Episodes", (number_with_delimiter(podcast.episode_count) if podcast.episode_count.to_i.positive?) ],
+                [ "Order", podcast.itunes_type.presence&.capitalize ],
+                [ "Explicit", podcast.explicit? ? "Yes" : "No" ],
+                [ "Language", pages_language(podcast.language) ],
+                [ "Hosting", hosting ],
+                [ "Measurement", pages_measurement(podcast)&.join(", ") ] ].select(&:last) %>
+    <dl class="details-list">
+      <% rows.each do |label, value| %>
+        <dt><%= label %></dt>
+        <dd><%= value %></dd>
+      <% end %>
+    </dl>
+    <p class="mt-3 text-xs text-ink-soft">
+      From the show's RSS feed.
+      <% if podcast.feed_checked_at %>
+        <span class="whitespace-nowrap">Feed checked <time datetime="<%= podcast.feed_checked_at.iso8601 %>"><%= pages_ago(podcast.feed_checked_at) %></time>.</span>
+      <% end %>
+    </p>
+  <% end %>
+
+  <% links = [ ([ "Apple Podcasts", pages_apple_url(podcast) ] if podcast.apple_id),
+               ([ pages_host(podcast.website) || "Website", Show.http_url(podcast.website) ] if Show.http_url(podcast.website)),
+               ([ "RSS feed", Show.http_url(podcast.feed_url) ] if Show.http_url(podcast.feed_url)) ].compact %>
+  <% if links.any? %>
+    <%= render "components/card", title: "Listen", heading: :h2 do %>
+      <ul class="flex flex-wrap gap-2">
+        <% links.each do |label, href| %>
+          <li><%= link_to label, href, class: "btn btn-secondary btn-sm", rel: "nofollow noopener", target: "_blank" %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  <% end %>
+
+  <%# Lane L8's Qloo similar shows (signed-in people only), then the SQL list everyone gets. %>
+  <% qloo = (pages_slot("podcasts/similar", podcast: podcast) if user_signed_in?) %>
+  <%= qloo %>
+  <% if similar.any? %>
+    <%= render "components/card", title: qloo ? "More like this" : "Similar shows", heading: :h2 do %>
+      <ul class="similar-list">
+        <% similar.each do |other| %>
+          <li class="similar-item">
+            <%= podcast_artwork_tag(other, size: :thumb, class: "similar-art") %>
+            <div class="min-w-0">
+              <p class="similar-title"><%= link_to other.title, podcast_path(other) %></p>
+              <% if other.author.present? %><p class="truncate text-xs text-ink-soft"><%= other.author %></p><% end %>
+            </div>
+          </li>
+        <% end %>
+      </ul>
+      <p class="mt-2 text-xs text-ink-soft">Shows with the same sponsors or categories.</p>
+    <% end %>
+  <% end %>
+
+  <div class="fine-print">
+    <p><%= APP_NAME %> isn't affiliated with <%= podcast.title %>. This page is built from the show's public RSS feed.</p>
+    <p>
+      <%= link_to "Remove this page", new_podcast_removal_path(podcast), class: "link text-ink-soft", rel: "nofollow" %>
+      <span aria-hidden="true">&middot;</span>
+      <%= link_to "Data sources and your rights", data_sources_path, class: "link text-ink-soft" %>
+    </p>
+  </div>
+</aside>

@@ -1,0 +1,48 @@
+# The demo show (bin/rails demo:setup, Claims::DemoSetup): a fictional podcast Midrolo serves itself at /demo/feed.xml,
+# owned and verified by an admin account, with a published listing and "provided by the show" numbers marked demo, so
+# judges and new brands can request a spot without bothering a real show. It's labelled Demo show everywhere, never
+# indexed, and left out of the directory and the sitemaps (Podcast.not_demo). Episode dates count back from today.
+shared:
+  title: Midrolo Demo Show
+  author: Midrolo (demo)
+  description: >-
+    Demo show: a fictional podcast Midrolo runs so you can try the marketplace. Request a spot, read the rate card
+    and see what a claimed listing looks like. There's no real show behind it and no real listeners.
+  categories: [Business, Marketing]
+  language: en
+  downloads_per_episode: 1800
+  listing:
+    headline: A fictional weekly show about growing an independent podcast
+    about: >-
+      Every week the Midrolo Demo Show pretends to sit down with an independent podcaster and talk about growing an
+      audience and paying for the work. None of it is real: it's here so you can see how a listing works.
+    open_months_ahead: 3
+    looking_for: >-
+      Tools independent creators use every day: hosting, editing, analytics, newsletters and coffee for long
+      recording nights.
+    exclusions: [Gambling, Crypto]
+  episodes:
+    - guid: midrolo-demo-6
+      title: "Pricing your first midroll"
+      description: How a small show sets a fair price for its first host-read ad, and what to send the brand.
+      days_ago: 3
+    - guid: midrolo-demo-5
+      title: "What brands look for in a show"
+      description: Fit, trust and proof that the ad ran. Why a small, loyal audience can beat a big one.
+      days_ago: 10
+    - guid: midrolo-demo-4
+      title: "Verified numbers without a password"
+      description: Inviting a read-only account to your stats instead of sharing screenshots.
+      days_ago: 17
+    - guid: midrolo-demo-3
+      title: "Writing a host read that sounds like you"
+      description: Turning a brand's talking points into a story your listeners won't skip.
+      days_ago: 24
+    - guid: midrolo-demo-2
+      title: "Open months and why they matter"
+      description: Planning a sponsorship calendar so brands can book you ahead.
+      days_ago: 31
+    - guid: midrolo-demo-1
+      title: "Welcome to the Midrolo Demo Show"
+      description: What this fictional show is for, and how to try requesting a spot.
+      days_ago: 38

@@ -1,0 +1,23 @@
+# Download measurement prefixes, detected on a feed's enclosure URLs by Catalog::Detection: vendor => { name: what
+# people read, patterns: regular expressions }. A pattern matches at the start of the URL with its scheme (and a
+# leading "www.") taken off, and covers the whole prefix up to the next URL, which may itself be prefixed
+# (https://op3.dev/e/dts.podtrac.com/redirect.mp3/traffic.libsyn.com/show/1.mp3 is OP3, then Podtrac, then Libsyn).
+# The key is what podcasts.measurement stores. Only detection: Midrolo doesn't fetch any vendor's numbers here.
+op3:
+  name: OP3
+  patterns: ['op3\.dev/e(?:,[^/]*)?/']
+podtrac:
+  name: Podtrac
+  patterns: ['(?:dts\.)?podtrac\.com/(?:pts/)?redirect\.[a-z0-9]+/']
+chartable:
+  name: Chartable
+  patterns: ['chrt\.fm/track/[^/]+/', 'chtbl\.com/track/[^/]+/']
+podscribe:
+  name: Podscribe
+  patterns: ['verifi\.podscribe\.com/rss/p/', 'pscrb\.fm/rss/p/']
+magellan:
+  name: Magellan AI
+  patterns: ['mgln\.ai/(?:e|track)/[^/]+/']
+spotify:
+  name: Spotify Ad Analytics
+  patterns: ['pdst\.fm/e/']

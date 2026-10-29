@@ -6,6 +6,9 @@
   carry no brand data at all (R43).
 %>
 <% matches = report.sponsor_matches.to_a %>
+<%# The proof on each row (brands that already sponsor shows like this one) reads the report's similar shows, asked for
+    once here; a public sample shows it only to a signed-in person, like the similar shows themselves. %>
+<% match_similar_shows(report) if matches.any? && match_similar_visible?(read_only) %>
 <% if matches.empty? %>
   <% if section_pending?(report) %>
     <%= render "reports/section", name: "matches", title: "Sponsor matches" do %>

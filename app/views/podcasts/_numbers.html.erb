@@ -1,1 +1,46 @@
-<%# Podcast page: Key numbers strip with trust badges. Lane L5 fills it; lane L3's page renders it with podcast: (from Podcast.for_page). %>
+<%# locals: (podcast:, pill: true) -%>
+<%# The podcast page's key numbers (lane L5, build spec section 11): the per-episode figure, then each platform's
+    verified numbers under the service they came from and the date Midrolo read them (number, source, date). Nothing
+    before a claim: an unclaimed podcast shows only its feed facts. Readings come from what Podcast.for_page preloaded,
+    else one query (Stats::PageNumbers). pill: false leaves out the "Stats verified" pill when the page's header
+    already shows stats_verified_pill. %>
+<% numbers = stats_page_numbers(podcast) %>
+<% if numbers.any? %>
+  <section id="key-numbers" class="flex flex-col gap-4" aria-labelledby="key-numbers-title">
+    <header class="flex flex-wrap items-center justify-between gap-3">
+      <h2 id="key-numbers-title" class="type-h3">Key numbers</h2>
+      <%= stats_verified_pill(podcast) if pill %>
+    </header>
+
+    <div class="flex flex-wrap gap-4">
+      <% if (per_episode = numbers.per_episode) %>
+        <div class="card min-w-0 flex-1 basis-56">
+          <div class="card-body"><%= render "stats/number", reading: per_episode, bands: numbers.bands? %></div>
+        </div>
+      <% end %>
+
+      <% numbers.groups.each do |group| %>
+        <section class="card min-w-0 flex-[2_1_24rem]" aria-label="<%= Stats.platform_name(group.provider) %> numbers">
+          <header class="card-header flex-wrap items-center">
+            <h3 class="card-title"><%= Stats.platform_name(group.provider) %></h3>
+            <%= trust_badge(group.latest) %>
+          </header>
+          <%# Three across only when the card is wide enough for big numbers (a container query, not the screen). %>
+          <div class="card-body @container">
+            <div class="grid grid-cols-2 gap-x-6 gap-y-5 @lg:grid-cols-3">
+              <% group.readings.each do |reading| %>
+                <%= render "stats/number", reading: reading, bands: numbers.bands?, badge: false %>
+              <% end %>
+            </div>
+          </div>
+        </section>
+      <% end %>
+    </div>
+
+    <p class="text-sm text-ink-soft">
+      Verified numbers are read by Midrolo straight from the show's own Spotify for Creators or Apple Podcasts Connect,
+      with the show's permission, and checked every day.
+      <% if numbers.bands? %>The show shares them as ranges.<% end %>
+    </p>
+  </section>
+<% end %>

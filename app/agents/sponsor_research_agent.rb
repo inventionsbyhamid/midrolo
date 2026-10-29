@@ -10,7 +10,7 @@ class SponsorResearchAgent < RubyLLM::Agent
     Playbook (adapt when data is missing):
     1. read_show_feed. Then find_on_qloo with the show's title, comparable shows, guests or artists from episode titles, the podcaster's hints, and up to 5 topic phrases.
     2. save_taste_seeds: 3 to 8 entities and 2 to 5 tags, each with where it came from. profile_kind is "direct" only when the show itself was found on Qloo, otherwise "proxy".
-    3. build_audience_profile. If it says the profile is thin, adjust the seeds once and rebuild.
+    3. build_audience_profile (it also saves the shows with a similar audience). If it says the profile is thin, adjust the seeds once and rebuild.
     4. Pick 2 or 3 brand categories that suit this show and its audience, then find_sponsor_candidates.
     5. explain_matches for the strongest candidates.
     6. save_sponsor_matches with 20 to 40 matches. Each reason is one plain sentence of 25 words or fewer that cites shared taste tags or proven-sponsor evidence from the tools.

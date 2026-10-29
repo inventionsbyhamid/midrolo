@@ -1,0 +1,44 @@
+<%# locals: (podcasts:, poll:, sponsor_counts: {}) -%>
+<%# Search hits the catalog is still adding (Catalog::LazyAdd): a breathing card while each feed is read, the normal
+    card once it's in. While any is pending, a poll reloads this frame (PodcastsController#adding), at most MAX_POLLS
+    times. %>
+<%= turbo_frame_tag "adding_podcasts", class: "block", target: "_top" do %>
+  <% if podcasts.any? %>
+    <section class="dir-adding" aria-labelledby="adding_title">
+      <h2 id="adding_title" class="type-h3">Found in the podcast directory</h2>
+      <p class="pod-note">New to <%= APP_NAME %>. Each page fills in from the show's own feed in a few seconds.</p>
+      <ul class="dir-grid" aria-live="polite">
+        <% podcasts.each do |podcast| %>
+          <% if podcast.pending? %>
+            <li class="dir-card dir-card-adding">
+              <%= podcast_artwork_tag(podcast, size: :card, class: "dir-card-art") %>
+              <div class="dir-card-body">
+                <h3 class="dir-card-title"><%= link_to podcast.title, podcast_path(podcast), class: "dir-card-link" %></h3>
+                <% if podcast.author.present? %><p class="dir-card-by">By <%= podcast.author %></p><% end %>
+                <p class="dir-card-facts"><span class="inline-flex items-center gap-2"><span class="busy-dot" aria-hidden="true"></span>Adding this show</span></p>
+              </div>
+            </li>
+          <% elsif podcast.failed? %>
+            <li class="dir-card">
+              <%= podcast_artwork_tag(podcast, size: :card, class: "dir-card-art") %>
+              <div class="dir-card-body">
+                <h3 class="dir-card-title"><%= podcast.title %></h3>
+                <p class="dir-card-facts">We couldn't read this show's feed. Try again later.</p>
+              </div>
+            </li>
+          <% else %>
+            <%= render "podcasts/card", podcast: podcast, sponsors: sponsor_counts.fetch(podcast.id, 0) %>
+          <% end %>
+        <% end %>
+      </ul>
+      <% if podcasts.any?(&:pending?) %>
+        <% if poll < PodcastsController::MAX_POLLS %>
+          <div data-controller="poll" data-poll-url-value="<%= adding_podcasts_path(ids: podcasts.map(&:public_id).join(","), n: poll + 1) %>"
+               data-poll-delay-value="<%= PodcastsController::POLL_DELAY %>" hidden></div>
+        <% else %>
+          <p class="pod-note">Still reading. Search again in a minute to see them.</p>
+        <% end %>
+      <% end %>
+    </section>
+  <% end %>
+<% end %>

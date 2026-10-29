@@ -5,10 +5,11 @@ class Report < ApplicationRecord
   ACTIVE = %w[queued running].freeze
   # A run that has not finished in this long is presumed dead (killed worker, lost job).
   STALE_AFTER = 15.minutes
-  SECTIONS = %w[summary seeds audience leans map matches].freeze
-  # Report column behind each section (leans come from demographics, map from heatmap).
+  SECTIONS = %w[summary seeds audience leans map matches similar].freeze
+  # Report column behind each section (leans come from demographics, map from heatmap, similar from similar_podcasts:
+  # Research::SimilarPodcasts).
   SECTION_COLUMNS = { "summary" => :summary, "seeds" => :seeds, "audience" => :audience,
-                      "leans" => :demographics, "map" => :heatmap }.freeze
+                      "leans" => :demographics, "map" => :heatmap, "similar" => :similar_podcasts }.freeze
   FAILURE_MESSAGE = "Something went wrong while researching. Nothing was charged. Try again.".freeze
   STATUS_COPY = { "queued" => "Getting started…", "running" => "Researching your audience…", "done" => "Report ready",
                   "failed" => "Something went wrong", "needs_input" => "Needs a little more info" }.freeze

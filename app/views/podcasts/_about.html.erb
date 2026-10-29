@@ -1,0 +1,31 @@
+<%# locals: (podcast:) -%>
+<%# About (plan 4.1): the description from the show's feed, folded when long, and once the show has published its
+    listing, the owner's own "Who we're looking for". %>
+<% description = podcast.description.to_s %>
+<% listing = podcast.listing if podcast.listing&.published? %>
+<section id="about" class="pod-section" aria-labelledby="about_title">
+  <h2 id="about_title" class="pod-h2">About</h2>
+  <% if description.present? %>
+    <div class="pod-about">
+      <% if description.length > PodcastPagesHelper::ABOUT_FOLD %>
+        <div class="pod-prose pod-about-short"><%= pages_prose(description.truncate(PodcastPagesHelper::ABOUT_FOLD, separator: " ")) %></div>
+        <details class="pod-more">
+          <summary>Read more</summary>
+          <div class="pod-prose"><%= pages_prose(description) %></div>
+        </details>
+      <% else %>
+        <div class="pod-prose"><%= pages_prose(description) %></div>
+      <% end %>
+    </div>
+    <p class="pod-note">From the show's RSS feed.</p>
+  <% else %>
+    <p class="pod-note">The show's feed has no description.</p>
+  <% end %>
+  <% if listing&.looking_for.present? %>
+    <div class="pod-owner-note">
+      <h3 class="font-bold">Who we're looking for</h3>
+      <div class="mt-1"><%= pages_prose(listing.looking_for) %></div>
+      <p class="pod-note">From the show's owner.</p>
+    </div>
+  <% end %>
+</section>

@@ -1,0 +1,24 @@
+<%# locals: (podcast:, poll:) -%>
+<%# A podcast just added from a search, its feed still being read (Catalog::IngestPodcastJob at high priority). The
+    poll reloads this frame (PodcastsController#status) and, once the podcast is ready, the whole page. %>
+<%= turbo_frame_tag "podcast_status", class: "block", target: "_top" do %>
+  <% if podcast.pending? %>
+    <div class="lamp-note flex items-start gap-3" role="status">
+      <span class="busy-dot mt-2" aria-hidden="true"></span>
+      <div>
+        <p class="font-bold">Reading this show's feed.</p>
+        <p class="mt-1">Episodes, people and sponsors appear here in a few seconds.</p>
+      </div>
+    </div>
+    <div class="mt-6"><%= render "components/skeleton", lines: 5, label: "Reading the feed" %></div>
+    <% if poll < PodcastsController::MAX_POLLS %>
+      <div data-controller="poll" data-poll-url-value="<%= podcast_status_path(podcast, n: poll + 1) %>"
+           data-poll-delay-value="<%= PodcastsController::POLL_DELAY %>" hidden></div>
+    <% else %>
+      <p class="pod-note">This is taking longer than usual. Reload the page in a minute.</p>
+    <% end %>
+  <% else %>
+    <p class="lamp-note" role="status">Ready. Loading the page.</p>
+    <div data-controller="poll" data-poll-visit-value="true" hidden></div>
+  <% end %>
+<% end %>

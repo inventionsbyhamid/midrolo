@@ -1,0 +1,21 @@
+<%# locals: (conversation:, side:, message:, error: nil) -%>
+<%# The reply box. A request waiting for the claim takes the brand's notes; a declined or closed one takes nothing. %>
+<div id="<%= dom_id(conversation, :reply) %>">
+  <% if conversation.writable? && (side == :brand || !conversation.waiting_for_claim?) %>
+    <%= form_with model: message, url: conversation_messages_path(conversation), class: "flex flex-col gap-3" do |f| %>
+      <div>
+        <%= f.label :body, conversation.waiting_for_claim? ? "Add to your request" : "Reply", class: "label" %>
+        <%= f.text_area :body, rows: 4, class: "input", required: true, maxlength: Message::BODY_LIMIT,
+              aria: { invalid: error.present?.presence, describedby: (dom_id(conversation, :reply_error) if error) } %>
+        <% if error %>
+          <p id="<%= dom_id(conversation, :reply_error) %>" class="field-error" role="alert"><%= error %></p>
+        <% end %>
+      </div>
+      <%= f.submit "Send", class: "btn btn-primary btn-md self-start" %>
+    <% end %>
+  <% else %>
+    <p class="text-sm text-ink-soft">
+      <%= conversation.declined? ? "This request was declined, so the conversation can't take new messages." : Conversations::Reply::CLOSED %>
+    </p>
+  <% end %>
+</div>

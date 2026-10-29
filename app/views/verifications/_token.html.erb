@@ -1,4 +1,7 @@
 <%# locals: (show:, verification:) -%>
+<%# The feed token in both places ShowVerification#check_feed_token! reads: the show description, or a podcast:txt tag
+    (the Podcasting 2.0 way to prove you control a feed), each with a copy button and steps for the show's host. %>
+<% help = Claims::HostHelp.for(show.podcast) %>
 <%= render "components/card", title: "Add this line to your show description" do %>
   <div class="verify-token" data-controller="clipboard">
     <code class="verify-token-line" data-clipboard-target="source"><%= verification.token_line %></code>
@@ -7,14 +10,25 @@
     </button>
   </div>
   <ol class="verify-steps">
-    <li>Open your show's settings at your podcast host, such as Buzzsprout, Transistor or Libsyn.</li>
-    <li>Paste the line anywhere in your show description and save. A <code>podcast:txt</code> tag works too, if your host offers one.</li>
-    <li>Come back here and check. Hosting providers can take a few minutes to update your feed, so give it a moment if it isn't found straight away.</li>
+    <% help.description_steps.each do |step| %><li><%= step %></li><% end %>
+    <li>Come back here and press Check my feed. <%= help.wait %></li>
   </ol>
   <% if verification.expired? %>
-    <p class="field-error mt-4">That token has expired. <%= button_to "Get a new token", show_verification_path(show), params: { kind: "feed_token" }, class: "link-button", form_class: "inline" %></p>
+    <div class="field-error mt-4">That token has expired. <%= button_to "Get a new token", show_verification_path(show), params: { kind: "feed_token" }, class: "link-button", form_class: "inline" %></div>
   <% else %>
     <%= button_to "Check my feed", show_verification_path(show), method: :patch, class: "btn btn-primary btn-lg mt-5" %>
-    <p class="hint">We read your feed at <%= display_host(show.feed_url) %>. You can remove the line once you're verified; the token works for 7 days.</p>
+    <p class="hint">We read your feed at <%= display_host(show.feed_url) %>. The line can sit anywhere in the description, and you can remove it once you're verified. It works for 7 days.</p>
   <% end %>
+
+  <%# Spotify for Creators has no way to add tags, so there it stays folded. %>
+  <details class="mt-6 border-t border-line pt-4" <%= "open" unless help.key == "spotify" %>>
+    <summary class="cursor-pointer font-semibold">Or add a podcast:txt tag to your feed</summary>
+    <p class="mt-3 text-ink-soft">If your host lets you add tags to your feed, or you write the feed yourself, this tag works too. It's the Podcasting 2.0 standard for proving you control a feed.</p>
+    <div class="verify-token mt-3" data-controller="clipboard">
+      <code class="verify-token-line" data-clipboard-target="source">&lt;podcast:txt purpose="verify"&gt;<%= verification.token_line %>&lt;/podcast:txt&gt;</code>
+      <button type="button" class="btn btn-secondary btn-md" data-action="clipboard#copy">
+        <span data-clipboard-target="label" aria-live="polite">Copy</span>
+      </button>
+    </div>
+  </details>
 <% end %>

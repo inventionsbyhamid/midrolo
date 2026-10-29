@@ -1,0 +1,107 @@
+<% brand = @brand %>
+<% podcasts = @rows.map(&:podcast) %>
+<% episodes = @rows.sum(&:episodes_count) %>
+<% content_for :title, "Podcasts #{brand.name} sponsors" %>
+<% content_for :meta, pages_meta(description: "#{brand.name} sponsored #{pluralize(episodes, 'episode')} across #{pluralize(@rows.size, 'podcast')}, found in each episode's show notes. See the shows, the dates and the promo codes, and shows like them.".truncate(PodcastPagesHelper::DESCRIPTION_LIMIT, separator: " "),
+                                  url: public_brand_url(brand.slug)) %>
+<% content_for :head, pages_list_json_ld(name: "Podcasts #{brand.name} sponsors", url: public_brand_url(brand.slug), podcasts: podcasts,
+                                          trail: [ [ "Podcasts", podcasts_url ], [ brand.name, public_brand_url(brand.slug) ] ]) %>
+<%#
+  The public brand page (plan 4.2): the shows a brand sponsors, from sponsor reads in their show notes (lane L2's
+  brands/_sponsored_shows once it exists, else the list here), shows like them, and for a signed-in member of the
+  brand its latest fit search.
+%>
+<div class="wrap dir-head">
+  <nav aria-label="Breadcrumb">
+    <ol class="crumbs">
+      <li><%= link_to "Podcasts", podcasts_path %></li>
+      <li aria-current="page"><%= brand.name %></li>
+    </ol>
+  </nav>
+  <div class="mt-4 flex flex-wrap items-center gap-4">
+    <span class="brand-mark" aria-hidden="true"><%= Podcast.initials_for(brand.name) %></span>
+    <div class="min-w-0 flex-1 basis-64">
+      <h1 class="type-h1">Podcasts <%= brand.name %> sponsors</h1>
+      <% if brand.domain.present? %>
+        <p class="mt-1 text-ink-soft"><%= link_to brand.domain, "https://#{brand.domain}", class: "link", rel: "nofollow noopener", target: "_blank" %></p>
+      <% end %>
+    </div>
+  </div>
+  <p class="type-lead mt-4 max-w-2xl">
+    <%= brand.name %> sponsored <%= pluralize(number_with_delimiter(episodes), "episode") %> across
+    <%= pluralize(@rows.size, "podcast") %>, found in each episode's show notes.
+  </p>
+</div>
+
+<div class="wrap pb-12">
+  <div class="pod-layout">
+    <div class="pod-main">
+      <section class="pod-section pt-0" aria-labelledby="sponsored_title">
+        <h2 id="sponsored_title" class="pod-h2">Shows it sponsored</h2>
+        <%= pages_optional_slot("brands/sponsored_shows", brand: brand) do %>
+          <ul class="sponsored-list">
+            <% @rows.each do |row| %>
+              <li class="sponsored-row">
+                <%= podcast_artwork_tag(row.podcast, size: :thumb, class: "size-14") %>
+                <div class="min-w-0 flex-1">
+                  <h3 class="dir-card-title"><%= link_to row.podcast.title, podcast_path(row.podcast), class: "dir-card-link" %></h3>
+                  <p class="ep-meta">
+                    <span><strong class="text-ink"><%= pluralize(row.episodes_count, "episode") %></strong></span>
+                    <% if row.first_seen && row.last_seen %>
+                      <% first, last = row.first_seen.strftime("%b %Y"), row.last_seen.strftime("%b %Y") %>
+                      <span><%= first == last ? last : "#{first} to #{last}" %></span>
+                    <% end %>
+                    <% row.codes.each do |code| %><span class="chip">Code <%= code %></span><% end %>
+                  </p>
+                </div>
+              </li>
+            <% end %>
+          </ul>
+          <p class="pod-note">From sponsor reads in each episode's show notes. Dates are the episodes' publish dates.</p>
+        <% end %>
+      </section>
+
+      <% if @similar.present? %>
+        <section class="pod-section" aria-labelledby="similar_title">
+          <h2 id="similar_title" class="pod-h2">Shows like the ones <%= brand.name %> sponsors</h2>
+          <p class="pod-note">In the same categories, and not yet sponsored by <%= brand.name %>.</p>
+          <ul class="dir-grid">
+            <% @similar.each do |podcast| %>
+              <%= render "podcasts/card", podcast: podcast %>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+    </div>
+
+    <aside class="pod-side" aria-label="For <%= brand.name %>">
+      <% if @fit_search %>
+        <%= render "components/card", title: "Your latest fit search", heading: :h2 do %>
+          <p class="text-sm text-ink-soft"><%= @fit_search.query %>, <%= pages_date(@fit_search.finished_at || @fit_search.created_at) %></p>
+          <ul class="similar-list mt-2">
+            <% @fit_search.results.first(BrandsController::FIT_LIMIT).each do |result| %>
+              <li class="similar-item">
+                <%= podcast_artwork_tag(result.podcast, size: :thumb, class: "similar-art") %>
+                <div class="min-w-0 flex-1">
+                  <p class="similar-title"><%= link_to result.podcast.title, podcast_path(result.podcast) %></p>
+                </div>
+                <% if result.score %><span class="badge badge-accent"><%= result.score %></span><% end %>
+              </li>
+            <% end %>
+          </ul>
+          <p class="mt-2 text-xs text-ink-soft">Saved results, for <%= brand.name %>'s team only. Taste data from Qloo.</p>
+        <% end %>
+      <% else %>
+        <div class="lamp-note">
+          <h2 class="font-bold">Is this your brand?</h2>
+          <p class="mt-1">Find the podcasts your customers already love, ranked by fit, proof and price.</p>
+          <%= ui_button "Find shows for #{brand.name}", user_signed_in? ? brand_root_path : brand_start_path, size: :sm, class: "mt-3", rel: "nofollow" %>
+        </div>
+      <% end %>
+      <div class="fine-print">
+        <p><%= APP_NAME %> isn't affiliated with <%= brand.name %>. Sponsor reads are found automatically in public show notes.</p>
+        <p><%= link_to "Data sources and your rights", data_sources_path, class: "link text-ink-soft" %></p>
+      </div>
+    </aside>
+  </div>
+</div>

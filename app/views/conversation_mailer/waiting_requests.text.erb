@@ -1,0 +1,7 @@
+You claimed <%= @title %>. Before you did, <%= @count == 1 ? "a brand" : "#{@count} brands" %> asked about sponsoring it.
+
+Their <%= @count == 1 ? "request is" : "requests are" %> waiting in your inbox. Accept, decline or reply to each one.
+
+Open your inbox: <%= show_inbox_url(@show) %>
+
+We held these requests until the show was claimed. Nothing was sent to the address in your feed.

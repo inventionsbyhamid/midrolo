@@ -1,0 +1,8 @@
+<p style="margin:0 0 16px;">Someone reported the conversation between <strong><%= @brand_name %></strong> and <strong><%= @title %></strong>.</p>
+<ul style="margin:0;padding-left:20px;">
+  <li>Conversation: <%= @conversation.public_id %></li>
+  <li>Brand domain: <%= @conversation.brand.domain.presence || "none" %></li>
+  <li>Asked by a verified member: <%= @conversation.from_verified_brand? ? "yes" : "no" %></li>
+  <li>Status: <%= @conversation.status.humanize %></li>
+</ul>
+<%= mail_footnote "The admin dashboard lists reported conversations." %>

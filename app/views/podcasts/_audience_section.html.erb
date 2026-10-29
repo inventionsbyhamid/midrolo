@@ -1,0 +1,22 @@
+<%# locals: (podcast:) -%>
+<%# Audience (plan 4.1, spec section 10): verified listener numbers from lane L5 when it renders them, and Qloo's
+    taste (lane L8's podcasts/_audience) for signed-in people only, never computed on a page view. Visitors get a
+    teaser and a way in. %>
+<section id="audience" class="pod-section" aria-labelledby="audience_title">
+  <h2 id="audience_title" class="pod-h2">Audience</h2>
+  <%= pages_optional_slot("stats/audience", podcast: podcast) %>
+  <% if user_signed_in? %>
+    <%= pages_slot("podcasts/audience", podcast: podcast) do %>
+      <div class="pod-empty">
+        <p class="pod-empty-title">No audience profile yet.</p>
+        <p class="text-ink-soft">Once the show has a <%= APP_NAME %> report, this shows what its listeners also love: brands, shows and interests. Taste data from Qloo.</p>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="pod-empty">
+      <p class="pod-empty-title">See who listens.</p>
+      <p class="text-ink-soft">Signed in, you'll see what this show's listeners also love, when the show has a profile: brands, shows and interests. Taste data from Qloo.</p>
+      <%= ui_button "Sign in to see it", podcast_sign_in_path(podcast), variant: :secondary, class: "mt-3", rel: "nofollow" %>
+    </div>
+  <% end %>
+</section>

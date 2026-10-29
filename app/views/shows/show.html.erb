@@ -10,12 +10,15 @@
       </p>
     </div>
     <div class="flex flex-col items-start gap-1">
-      <%= ui_button "Media kit", edit_show_media_kit_path(@show), variant: :secondary %>
+      <div class="flex flex-wrap gap-2">
+        <%= ui_button "Media kit", edit_show_media_kit_path(@show), variant: :secondary %>
+        <%= ui_button "Stats", show_stats_path(@show), variant: :secondary %>
+      </div>
       <span class="text-sm text-ink-soft">
         <% if @show.public_kit? %>
-          <%= link_to "Published", public_kit_path(@show.slug), class: "link" %>
+          <%= link_to "Published", listing_podcast_path(@show.podcast, anchor: "rates"), class: "link" %>
         <% else %>
-          <%= @show.verified? ? "Verified, not published" : "Not published" %>
+          <%= { claimed: "Verified, not published", managed_elsewhere: "Managed by another account", draft: "Draft, not verified" }.fetch(@show.claim_status) %>
         <% end %>
       </span>
     </div>
@@ -23,6 +26,7 @@
 
   <%# The next action first: on a phone the run card would otherwise sit below the fold. %>
   <%= render "shows/report_actions", show: @show %>
+  <%= render "conversations/workspace", show: @show %>
 
   <%= render "components/card", title: "Details", aside: link_to("Edit", edit_show_path(@show), class: "link") do %>
     <dl class="grid gap-x-6 gap-y-3 sm:grid-cols-2">

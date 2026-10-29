@@ -1,0 +1,10 @@
+<%# locals: (reading:, bands: false, badge: true) -%>
+<%# One number with its label and, unless the group around it already carries it, its trust badge (number, source,
+    date). Used by the podcast page's key numbers and the workspace Stats screen. %>
+<div class="stat">
+  <p class="stat-value<%= ' text-ink-soft' if reading.expired? %>"><%= stats_value(reading, bands: bands) %></p>
+  <p class="stat-label"><%= stats_metric_label(reading) %></p>
+  <% if badge %>
+    <div class="mt-1"><%= trust_badge(reading) %></div>
+  <% end %>
+</div>

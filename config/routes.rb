@@ -26,7 +26,8 @@ Rails.application.routes.draw do
   get "about", to: "pages#about", as: :about
   get "privacy", to: "pages#privacy", as: :privacy
   get "terms", to: "pages#terms", as: :terms
-  get "sitemap.xml", to: "pages#sitemap", as: :sitemap, format: false, defaults: { format: "xml" }
+  # The sitemap index (lane L3, SitemapsController): pages, podcasts, categories, brands and blog, from /sitemaps/*.xml.
+  get "sitemap.xml", to: "sitemaps#index", as: :sitemap, format: false, defaults: { format: "xml" }
   get "robots.txt", to: "pages#robots", as: :robots, format: false, defaults: { format: "text" }
   resources :samples, only: %i[index show], param: :slug, format: false
   # Share images (og:image) for the sample reports and the public media kits: 1200x630 PNGs drawn by ShareImages.

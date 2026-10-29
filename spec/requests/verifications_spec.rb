@@ -54,7 +54,7 @@ RSpec.describe "Verifications" do
       patch show_verification_path(show), params: { code: last_code }
 
       expect(response).to redirect_to(edit_show_media_kit_path(show))
-      expect(flash[:notice]).to eq("You're verified. Publish your media kit when it's ready.")
+      expect(flash[:notice]).to eq("You're verified. Set up your listing and publish it when it's ready.")
       expect(show.reload.verified_at).to be_present
       expect(show.podcast.reload.claimed_at).to be_present
     end
@@ -166,7 +166,8 @@ RSpec.describe "Verifications" do
         token = ShowVerification.last.token
         follow_redirect!
 
-        expect(response.body).to include("midrolo-verify=#{token}", "data-controller=\"clipboard\"", "a few minutes")
+        expect(response.body).to include("midrolo-verify=#{token}", "data-controller=\"clipboard\"", "15 minutes to a few hours",
+                                         %(&lt;podcast:txt purpose="verify"&gt;midrolo-verify=#{token}))
       end
 
       it "verifies the show once the token is in the feed" do
@@ -194,7 +195,7 @@ RSpec.describe "Verifications" do
       request_code
       patch show_verification_path(show), params: { code: last_code }
 
-      expect(response).to redirect_to(show_path(show))
+      expect(response).to redirect_to(new_podcast_claim_path(show.podcast))
       expect(flash[:alert]).to eq(Show::AlreadyClaimed::MESSAGE)
       expect(show.reload).not_to be_verified
     end

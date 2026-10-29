@@ -1,0 +1,85 @@
+<% content_for :title, "Service sessions" %>
+<div class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-baseline justify-between gap-3">
+    <h1 class="type-h1">Service sessions</h1>
+    <nav class="flex gap-4" aria-label="Stats admin">
+      <%= link_to "Connections", admin_stat_connections_path, class: "link" %>
+      <%= link_to "Back to admin", admin_root_path, class: "link" %>
+    </nav>
+  </header>
+
+  <p class="max-w-prose text-ink-soft">
+    Midrolo reads verified stats by signing in as its own stats account, which podcasters invite to their show.
+    Paste that account's session cookies here. They're encrypted, and never shown again after you save them.
+  </p>
+
+  <% if @result %>
+    <%= render "components/card", title: "Test fetch: #{Stats.platform_name(@tested.provider)} show #{@tested.external_id}" do %>
+      <% if @result["ok"] %>
+        <p class="flex flex-wrap items-center gap-2"><%= ui_badge "Worked", tone: :success %>
+          <%= @result.dig("show", "name").presence || "No show name given" %>,
+          <%= @result.dig("period", "start") %> to <%= @result.dig("period", "end") %></p>
+        <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+          <% @result["metrics"].each do |key, value| %>
+            <div><dt class="text-ink-soft"><%= key %></dt><dd class="font-semibold tabular-nums"><%= number_with_delimiter(value) %></dd></div>
+          <% end %>
+        </dl>
+        <p class="mt-3 text-sm text-ink-soft">Breakdowns: <%= @result["breakdowns"].keys.presence&.join(", ") || "none" %>. Nothing was saved.</p>
+      <% else %>
+        <p class="flex flex-wrap items-center gap-2"><%= ui_badge @result["error"].humanize, tone: :danger %> <%= @result["message"] %></p>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% Stats::PLATFORMS.each do |platform, info| %>
+    <% session = @sessions[platform] %>
+    <%= render "components/card", title: info[:service],
+          aside: (session.nil? || session.credentials.blank? ? ui_badge("Not set", tone: :warning) : ui_badge(session.ok? ? "Working" : "Expired", tone: session.ok? ? :success : :danger)) do %>
+      <div class="flex flex-col gap-5" id="<%= platform %>">
+        <% if session %>
+          <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+            <div><dt class="text-ink-soft">Saved</dt><dd><%= session.updated_at.utc.strftime("%b %-d, %H:%M UTC") %></dd></div>
+            <div><dt class="text-ink-soft">Last worked</dt><dd><%= session.last_ok_at ? session.last_ok_at.utc.strftime("%b %-d, %H:%M UTC") : "Not yet" %></dd></div>
+            <div><dt class="text-ink-soft">Expires around</dt><dd><%= session.expires_hint ? session.expires_hint.utc.strftime("%b %-d, %Y") : "Unknown" %></dd></div>
+          </dl>
+          <% if session.last_error.present? %><p class="field-error mt-0"><%= session.last_error %></p><% end %>
+        <% end %>
+
+        <%= form_with url: admin_service_session_path(platform), method: :patch, class: "flex flex-col gap-3", autocomplete: "off" do |f| %>
+          <p class="text-sm font-semibold"><%= session ? "Replace the session" : "Enter the session" %></p>
+          <% info[:session_keys].each do |key| %>
+            <div class="flex flex-col gap-1">
+              <%= label_tag "#{platform}_#{key}", "#{key}#{' (optional)' unless info[:required_keys].include?(key)}", class: "label font-mono" %>
+              <%= password_field_tag "credentials[#{key}]", nil, id: "#{platform}_#{key}", class: "input font-mono", autocomplete: "off",
+                    required: info[:required_keys].include?(key), spellcheck: false %>
+            </div>
+          <% end %>
+          <div class="flex flex-col gap-1">
+            <%= label_tag "#{platform}_expires_hint", "Expires around (optional)", class: "label" %>
+            <%= date_field_tag :expires_hint, nil, id: "#{platform}_expires_hint", class: "input w-48" %>
+          </div>
+          <div><%= f.submit "Save session", class: "btn btn-primary btn-md" %></div>
+        <% end %>
+
+        <% if session&.credentials.present? %>
+          <%# A full page post: the result renders in place (Turbo wants a redirect after a form). %>
+          <%= form_with url: test_admin_service_session_path(platform), data: { turbo: false }, class: "flex flex-wrap items-end gap-3 border-t border-line pt-4" do |f| %>
+            <% options = Array(@connections[platform]).map { |c| [ "#{c.podcast.title.truncate(40)} (#{c.external_id}, #{c.status.humanize.downcase})", c.id ] } %>
+            <% if options.any? %>
+              <div class="flex min-w-0 flex-1 basis-64 flex-col gap-1">
+                <%= label_tag "#{platform}_connection_id", "Test fetch a connection", class: "label" %>
+                <%= select_tag :connection_id, options_for_select(options), include_blank: "Choose one", id: "#{platform}_connection_id", class: "input" %>
+              </div>
+            <% end %>
+            <div class="flex min-w-0 flex-1 basis-48 flex-col gap-1">
+              <%= label_tag "#{platform}_show_id", options.any? ? "or a show id or link" : "Test fetch a show id or link", class: "label" %>
+              <%= text_field_tag :show_id, nil, id: "#{platform}_show_id", class: "input", autocomplete: "off" %>
+            </div>
+            <%= f.submit "Test fetch", class: "btn btn-secondary btn-md" %>
+          <% end %>
+          <p class="hint mt-0">A test fetch can take up to a minute. It saves no numbers.</p>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

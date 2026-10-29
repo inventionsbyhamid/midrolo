@@ -1,0 +1,7 @@
+<%# locals: (email:) -%>
+<span class="verify-token mt-2 py-2" data-controller="clipboard">
+  <code class="verify-token-line" data-clipboard-target="source"><%= email %></code>
+  <button type="button" class="btn btn-secondary btn-sm" data-action="clipboard#copy">
+    <span data-clipboard-target="label" aria-live="polite">Copy email</span>
+  </button>
+</span>
