@@ -1,5 +1,6 @@
 # Turns what a podcaster picked or pasted into Show attributes, using only Podcasts::Directory.current
-# and Podcasts::FeedReader. Raises Podcasts::Directory::Unavailable when the directory is down.
+# and Podcasts::FeedReader. Raises Podcasts::Directory::Unavailable when the directory is down. read_feed: false answers
+# from the directory alone (an Apple link, or a feed URL the directory lists) and never reads a feed it doesn't know.
 class ShowLookup
   # Only the final /id<digits> path segment counts, so a slug like /my-id2-show/ can't match.
   APPLE_URL = %r{\Ahttps?://podcasts\.apple\.com/.*/id(\d+)(?:[/?#]|\z)}i
@@ -12,11 +13,12 @@ class ShowLookup
     def ok? = error.nil?
   end
 
-  def self.call(directory_id: nil, feed_url: nil) = new(directory_id, feed_url).call
+  def self.call(directory_id: nil, feed_url: nil, read_feed: true) = new(directory_id, feed_url, read_feed).call
 
-  def initialize(directory_id, feed_url)
+  def initialize(directory_id, feed_url, read_feed = true)
     @directory_id = directory_id.to_s.strip.presence
     @feed_url = normalize_url(feed_url)
+    @read_feed = read_feed
   end
 
   def call
@@ -26,7 +28,7 @@ class ShowLookup
       return from_directory(directory.find_by_itunes_id(apple[1]), APPLE_NOT_FOUND)
     end
 
-    from_directory(directory.find_by_feed_url(@feed_url), nil) || from_feed
+    from_directory(directory.find_by_feed_url(@feed_url), nil) || (@read_feed ? from_feed : failure(NOT_FOUND))
   end
 
   private

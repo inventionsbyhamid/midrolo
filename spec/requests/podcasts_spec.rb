@@ -57,7 +57,7 @@ RSpec.describe "Podcast pages" do
       visit "/podcasts?q=darknet"
 
       expect(response).to have_http_status(:ok)
-      expect(Catalog::LazyAdd).to have_received(:call).with("darknet")
+      expect(Catalog::LazyAdd).to have_received(:call).with("darknet", signed_in: false)
       expect(response.body).to include("Results for", "Darknet Diaries", "Found in the podcast directory", "Darknet Daily", "Adding this show")
       expect(response.body).not_to include("Old Radio")
       poll = doc.at_css("turbo-frame#adding_podcasts [data-controller='poll']")
@@ -85,6 +85,48 @@ RSpec.describe "Podcast pages" do
       lazy_add_returns
       visit "/podcasts?q=zzzzqqq"
       expect(response.body).to include("No podcasts match")
+    end
+
+    it "tells a visitor who pasted a feed URL the catalog lacks to sign in to add it (code review M4)" do
+      lazy_add_returns
+      visit "/podcasts?q=#{CGI.escape('https://feeds.example.com/unknown.xml')}"
+      expect(Catalog::LazyAdd).to have_received(:call).with("https://feeds.example.com/unknown.xml", signed_in: false)
+      expect(response.body).to include("Sign in to add a show by its RSS feed")
+
+      sign_in create(:user)
+      visit "/podcasts?q=#{CGI.escape('https://feeds.example.com/unknown.xml')}"
+      expect(Catalog::LazyAdd).to have_received(:call).with("https://feeds.example.com/unknown.xml", signed_in: true)
+      expect(response.body).not_to include("Sign in to add a show by its RSS feed")
+    end
+
+    it "marks the search form as a search landmark" do
+      visit "/podcasts"
+      expect(doc.at_css("form.dir-search")["role"]).to eq("search")
+    end
+
+    # Code review M3, L2, L8: a card names the figure by its source, shows the owner's band when they chose ranges,
+    # and shows nothing for a show nobody has claimed.
+    it "shows a claimed show's plays or downloads per episode on its card, as a band when the owner chose ranges" do
+      create(:podcast, :indexable, :claimed, title: "Verified Show", downloads_per_episode: 2_140, downloads_trust: "verified")
+      create(:podcast, :indexable, :claimed, title: "Banded Show", downloads_per_episode: 4_200, downloads_trust: "provided",
+                                             downloads_bands_only: true)
+      create(:podcast, :indexable, title: "Unclaimed Show", downloads_per_episode: 9_999, downloads_trust: "verified")
+
+      visit "/podcasts"
+
+      cards = doc.css(".dir-card").to_h { |card| [ card.at_css(".dir-card-title").text.squish, card.at_css(".dir-card-facts").text.squish ] }
+      expect(cards["Verified Show"]).to include("2,140 plays per episode")
+      expect(cards["Banded Show"]).to include("2,500 to 5,000 downloads per episode")
+      expect(cards["Banded Show"]).not_to include("4,200")
+      expect(cards["Unclaimed Show"]).not_to include("per episode")
+      expect(response.body).not_to include("9,999")
+      expect(doc.css(".dir-card").find { |card| card.text.include?("Unclaimed Show") }.text).not_to include("Stats verified")
+      expect(doc.at_css("label[for='size']").text).to eq("Plays or downloads per episode")
+      expect(doc.css("select#sort option").map(&:text)).to include("Most plays or downloads")
+
+      visit "/podcasts?verified=1"
+      expect(response.body).to include("Verified Show")
+      expect(response.body).not_to include("Unclaimed Show")
     end
 
     it "throttles searches per visitor", :rate_limits do
@@ -153,6 +195,16 @@ RSpec.describe "Podcast pages" do
       expect(doc.at_css("title").text).to eq("Darknet Diaries podcast sponsorship: rates, sponsors, audience | Midrolo")
       expect(doc.at_css("link[rel='canonical']")["href"]).to eq("http://www.example.com/podcasts/#{podcast.slug}")
       expect(robots).to be_empty
+    end
+
+    it "never hotlinks the feed's artwork or people's photos: stored pictures or initials only (code review L3)" do
+      podcast.update!(artwork_image: nil, artwork_url: "https://tracker.example.com/art.jpg")
+      create(:podcast_person, podcast: podcast, name: "Jack Rhysider", img_url: "https://tracker.example.com/jack.jpg")
+
+      visit "/podcasts/#{podcast.slug}"
+
+      expect(response.body).not_to include("tracker.example.com")
+      expect(doc.css(".person .person-photo").map(&:text)).to eq([ "JR" ])
     end
 
     it "carries the PodcastSeries with sourced numbers and a breadcrumb, an Offer only with a published rate card" do

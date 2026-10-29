@@ -31,7 +31,9 @@ module Podcasts
     # limits is the same data, so it replaces the cached copy and later reads get the newer feed.
     def read(feed_url, max_episodes: 20, description_limit: DESCRIPTION_LIMIT, fresh: false)
       url = feed_url.to_s.strip
-      return fake_feed(url, max_episodes) if url.start_with?(Directories::Fake::FEED_PREFIX)
+      if Directories::Fake.feed_url?(url)
+        return Directories::Fake.feeds_allowed? ? fake_feed(url, max_episodes) : Feed.unreadable("feed_blocked")
+      end
       return Feed.unreadable("feed_blocked") if SafeUrl.blocked?(url)
 
       key = "podcasts:feed:v3:#{max_episodes}:#{description_limit}:#{url}"

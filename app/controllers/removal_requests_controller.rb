@@ -22,7 +22,7 @@ class RemovalRequestsController < ApplicationController
     if owner?
       RemovalRequest.transaction do
         @request_form.update!(status: "approved", email: @request_form.email.presence || current_user.email)
-        @podcast.remove!
+        @podcast.remove!(by: :owner)
       end
       redirect_to podcasts_path, notice: REMOVED, status: :see_other
     elsif @request_form.email.blank?

@@ -33,7 +33,10 @@ RSpec.describe "Remove this page" do
     expect(flash[:notice]).to eq(RemovalRequestsController::REMOVED)
     expect(RemovalRequest.last).to have_attributes(status: "approved", email: "jack@example.com")
     expect(podcast.reload).to be_removed
-    expect(Suppression.podcast?(guid: "guid-darknet")).to be(true)
+    # Only the feed the owner proved: never the guid or the artwork, which other podcasts may share (code review H2).
+    expect(Suppression.podcast?(feed_url: podcast.feed_url)).to be(true)
+    expect(Suppression.podcast?(guid: "guid-darknet")).to be(false)
+    expect(Suppression.image.count).to eq(0)
 
     get podcast_path(podcast)
     expect(response).to have_http_status(:gone)
@@ -69,6 +72,15 @@ RSpec.describe "Remove this page" do
       expect(response).to redirect_to(admin_removal_requests_path)
       expect(request_row.reload.status).to eq("approved")
       expect(podcast.reload).to be_removed
+      expect(Suppression.podcast?(guid: "guid-darknet")).to be(true)
+      expect(Suppression.image?(podcast.artwork_image.sha256)).to be(true)
+    end
+
+    it "takes a page its owner already removed down fully when an admin approves a request about it" do
+      podcast.remove!(by: :owner)
+      sign_in admin
+      patch admin_removal_request_path(request_row), params: { decision: "approved" }
+      expect(Suppression.podcast?(guid: "guid-darknet")).to be(true)
     end
 
     it "rejects one, leaving the page up" do

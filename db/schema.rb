@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_30_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_130100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -262,6 +262,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_120000) do
     t.index ["sponsor_match_id"], name: "index_pitches_one_queued_per_match", unique: true, where: "((status)::text = 'queued'::text)"
   end
 
+  create_table "podcast_feed_moves", force: :cascade do |t|
+    t.bigint "podcast_id", null: false
+    t.string "from_url", null: false
+    t.string "to_url", null: false
+    t.string "via", null: false
+    t.bigint "released_show_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["podcast_id"], name: "index_podcast_feed_moves_on_podcast_id"
+    t.index ["released_show_id"], name: "index_podcast_feed_moves_on_released_show_id"
+  end
+
   create_table "podcast_people", force: :cascade do |t|
     t.bigint "podcast_id", null: false
     t.string "name", null: false
@@ -333,6 +345,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_120000) do
     t.virtual "searchable", type: :tsvector, as: "((setweight(to_tsvector('simple'::regconfig, (COALESCE(title, ''::character varying))::text), 'A'::\"char\") || setweight(to_tsvector('simple'::regconfig, (COALESCE(author, ''::character varying))::text), 'B'::\"char\")) || setweight(to_tsvector('english'::regconfig, COALESCE(description, ''::text)), 'C'::\"char\"))", stored: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "downloads_bands_only", default: false, null: false
     t.index ["apple_id"], name: "index_podcasts_on_apple_id", unique: true
     t.index ["artwork_image_id"], name: "index_podcasts_on_artwork_image_id"
     t.index ["categories"], name: "index_podcasts_on_categories", using: :gin
@@ -651,6 +664,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_120000) do
   add_foreign_key "messages", "conversations", on_delete: :cascade
   add_foreign_key "messages", "users", on_delete: :nullify
   add_foreign_key "pitches", "sponsor_matches", on_delete: :cascade
+  add_foreign_key "podcast_feed_moves", "podcasts", on_delete: :cascade
+  add_foreign_key "podcast_feed_moves", "shows", column: "released_show_id", on_delete: :nullify
   add_foreign_key "podcast_people", "images", on_delete: :nullify
   add_foreign_key "podcast_people", "podcasts"
   add_foreign_key "podcast_redirects", "podcasts", on_delete: :cascade

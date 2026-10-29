@@ -1,0 +1,11 @@
+The RSS feed of <%= @title %> moved to a new address:
+
+<%= @to %>
+
+You proved you own the old feed, so the show is a draft on <%= APP_NAME %> until you verify the new one. Its listing and numbers are hidden until then.
+
+If you didn't move your feed, write to us at hello@midrolo.com.
+
+Verify it again: <%= new_show_verification_url(@show) %>
+
+We send this when the feed of a show you manage moves to a new address.

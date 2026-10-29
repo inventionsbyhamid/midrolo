@@ -10,9 +10,10 @@
     <% if podcast.author.present? %>
       <p class="dir-card-by">By <%= podcast.author %></p>
     <% end %>
+    <% figure = podcast.public_downloads %>
     <p class="dir-card-facts">
-      <% if podcast.downloads_per_episode && podcast.downloads_trust.in?(%w[verified provided]) %>
-        <span><strong><%= number_with_delimiter(podcast.downloads_per_episode) %></strong> per episode</span>
+      <% if figure %>
+        <span><strong><%= figure.amount %></strong> <%= figure.unit %> per episode</span>
       <% end %>
       <% if podcast.min_price_cents %>
         <span>From <strong><%= pages_money(podcast.min_price_cents) %></strong></span>
@@ -27,7 +28,7 @@
       <% end %>
     </p>
     <% badges = [ ([ "Open to sponsors", :success ] if podcast.open_to_sponsors?),
-                  ([ "Stats verified", :accent ] if podcast.downloads_trust == "verified"),
+                  ([ "Stats verified", :accent ] if figure&.verified?),
                   ([ "Claimed", :neutral ] if podcast.claimed?) ].compact %>
     <% if badges.any? %>
       <p class="dir-card-badges">

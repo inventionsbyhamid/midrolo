@@ -45,9 +45,17 @@ module Podcast::Catalog
   def feed_unreachable? = failed? || (claimed? && fetch_failures.to_i >= FAILED_AFTER)
 
   # Plan section 3, rule 6: only pages with real content get indexed. Active or dormant, 3 or more episodes, stored
-  # artwork that isn't taken down, and a description.
+  # artwork that isn't taken down, and a description. And a show someone vouches for: one a directory lists (Podcast
+  # Index or Apple), a claimed one, or one an admin added. A feed added by its URL alone stays noindex until it is
+  # claimed, so nobody can fill midrolo.com's search results with feeds of their own (code review M4).
   def meets_index_rule?
-    (active? || dormant?) && episode_count.to_i >= MIN_INDEXABLE_EPISODES && description.present? && artwork_stored?
+    (active? || dormant?) && episode_count.to_i >= MIN_INDEXABLE_EPISODES && description.present? && artwork_stored? &&
+      vouched_for?
+  end
+
+  # Listed by a directory (the demo directory's feeds count in development), claimed, or added by an admin or a sample.
+  def vouched_for?
+    directory_id.present? || apple_id.present? || claimed? || source_admin? || source_sample?
   end
 
   def artwork_stored?

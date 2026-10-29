@@ -110,4 +110,10 @@ RSpec.describe Catalog::FeedFetcher do
     expect(Catalog::FeedParser.call(result.body).title).to eq("The Founder's Ledger")
     expect(described_class.call("fake://fake-999").error).to eq("feed_not_found")
   end
+
+  # Code review L6: with a real directory, a fake:// URL can't put a made-up show in the live catalog.
+  it "blocks fake:// feeds once the directory is a real one" do
+    allow(Podcasts::Directory).to receive(:current).and_return(Podcasts::Directories::PodcastIndex.new(key: "k", secret: "s"))
+    expect(described_class.call("fake://fake-1").error).to eq("feed_blocked")
+  end
 end

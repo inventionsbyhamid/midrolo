@@ -30,8 +30,8 @@
     </p>
     <% if basis&.reading %>
       <p class="flex flex-wrap items-center gap-2 text-sm text-ink-soft">
-        <span>Based on <%= listing_downloads_basis(basis, bands: kit.bands_only?) %>.</span>
-        <%= trust_badge(basis.reading, source: basis.reading.source, at: basis.reading.captured_at) %>
+        <span>Based on <%= listing_basis_figure(basis, bands: kit.bands_only?) %>.</span>
+        <%= trust_badge(basis.reading) %>
       </p>
     <% end %>
 

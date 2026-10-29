@@ -10,7 +10,7 @@ module Catalog
   # back catalog still has its newest 50 at the top); one with no whole episode in the cap is "feed_too_large".
   #
   # The demo directory's fake:// feeds (Podcasts::Directories::Fake) are made up locally, so development and specs
-  # ingest them without the network.
+  # ingest them without the network; with a real directory they are "feed_blocked".
   class FeedFetcher
     MAX_BYTES = 15.megabytes
     TOTAL_TIMEOUT = 30 # seconds, redirects included
@@ -59,7 +59,9 @@ module Catalog
     end
 
     def call
-      return fake if @url.start_with?(Podcasts::Directories::Fake::FEED_PREFIX)
+      if Podcasts::Directories::Fake.feed_url?(@url)
+        return Podcasts::Directories::Fake.feeds_allowed? ? fake : Result.error("feed_blocked")
+      end
 
       deadline = now + TOTAL_TIMEOUT
       Timeout.timeout(TOTAL_TIMEOUT, TooSlow) { follow(deadline) }

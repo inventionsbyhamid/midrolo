@@ -27,7 +27,8 @@ RSpec.describe Catalog::LazyAdd do
     expect(directory).not_to have_received(:search)
   end
 
-  it "adds up to 5 directory hits the catalog lacks as pending podcasts, from the directory's ids, feed, title and author only" do
+  # Code review M5: random searches mustn't flood the shared catalog queue or jump ahead of claims.
+  it "adds at most 2 directory hits the catalog lacks as pending podcasts, from the directory's ids, feed, title and author only" do
     known = create(:podcast, title: "Known Show", feed_url: "https://feeds.example.com/known.xml")
     hits = [ hit("101", "Known Show", "https://feeds.example.com/known.xml/") ] +
            Array.new(6) { |i| hit((200 + i).to_s, "New Show #{i}", "https://feeds.example.com/new-#{i}.xml") }
@@ -36,12 +37,12 @@ RSpec.describe Catalog::LazyAdd do
     result = described_class.call("show")
 
     expect(result.found).to include(known)
-    expect(result.added.size).to eq(5)
+    expect(result.added.size).to eq(2)
     added = result.added.first
     expect([ added.status, added.source, added.podcast_index_id, added.title, added.author ]).to eq([ "pending", "search", 200, "New Show 0", "Someone" ])
     expect([ added.description, added.artwork_url, added.categories ]).to eq([ nil, nil, [] ])
     expect(added.next_fetch_at).to be_within(1.minute).of(Catalog::NewPodcast::SAFETY_NET.from_now)
-    result.added.each { |podcast| expect(Catalog::IngestPodcastJob).to have_been_enqueued.with(podcast.id).at_priority(0) }
+    result.added.each { |podcast| expect(Catalog::IngestPodcastJob).to have_been_enqueued.with(podcast.id).at_priority(10) }
     expect(result.podcasts).to eq(result.found + result.added)
   end
 
@@ -81,6 +82,34 @@ RSpec.describe Catalog::LazyAdd do
     expect(result.added.map(&:title)).to eq([ "Code & Coffee Weekly" ])
     expect(described_class.call("https://podcasts.apple.com/us/podcast/x/id#{Podcasts::Directories::Fake.itunes_id_for('fake-3')}").found)
       .to eq(result.added)
+  end
+
+  # Code review M4: a feed nobody lists becomes a catalog page only through a signed-in user.
+  describe "a feed URL the directory doesn't list" do
+    let(:feed) { "https://feeds.example.com/spam.xml" }
+
+    before do
+      allow(Resolv).to receive(:getaddresses).and_return([ "93.184.216.34" ])
+      stub_request(:get, feed).to_return(status: 200, body: Rails.root.join("spec/fixtures/feeds/catalog_namespace.xml").binread)
+    end
+
+    it "is never read for a visitor" do
+      expect(described_class.call(feed).podcasts).to eq([])
+      expect(a_request(:get, feed)).not_to have_been_made
+      expect(Podcast.count).to eq(0)
+    end
+
+    it "is read and added for a signed-in user, at normal priority" do
+      result = described_class.call(feed, signed_in: true)
+      expect(result.added.map(&:feed_url)).to eq([ feed ])
+      expect(Catalog::IngestPodcastJob).to have_been_enqueued.with(result.added.first.id).at_priority(10)
+    end
+
+    it "finds a podcast the catalog already has under that feed for anyone" do
+      known = create(:podcast, feed_url: feed)
+      expect(described_class.call("#{feed}/").found).to eq([ known ])
+      expect(a_request(:get, feed)).not_to have_been_made
+    end
   end
 
   it "is empty for an empty query" do

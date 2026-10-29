@@ -18,6 +18,15 @@ RSpec.describe Sponsors::SweepJob do
     expect(described_class.perform_now).to eq(2)
   end
 
+  it "recounts brands' sponsor reads that deleting a podcast left wrong (code review L9)" do
+    brand = create(:brand)
+    create(:sponsor_mention, brand: brand).episode.podcast.destroy!
+    expect(brand.reload.sponsor_mentions_count).to eq(1)
+
+    described_class.perform_now
+    expect(brand.reload.sponsor_mentions_count).to eq(0)
+  end
+
   it "runs every day in production, on the sponsors queue" do
     recurring = ActiveSupport::ConfigurationFile.parse(Rails.root.join("config/recurring.yml"))
     expect(recurring.dig("production", "sweep_sponsors")).to eq("class" => "Sponsors::SweepJob", "schedule" => "every day at 4:10am")

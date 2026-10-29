@@ -75,6 +75,7 @@ RSpec.describe "Shows" do
                                          "Paste your RSS or Apple Podcasts link instead")
         # A skeleton stands in for the results while a search loads (Task 20).
         expect(Nokogiri::HTML(response.body).at_css(".show-search .search-busy .skeleton[role='status']").text).to include("Searching")
+        expect(Nokogiri::HTML(response.body).at_css(".show-search form[role='search']")).to be_present
       end
 
       it "shows the upgrade prompt when the plan's show limit is reached" do
@@ -453,12 +454,14 @@ RSpec.describe "Show search" do
     expect(response.body).to include("TF") # no artwork in the fake catalog: initials tile
   end
 
-  it "renders artwork when the directory has it" do
+  # Code review L3: a directory's artwork URL is the feed's own, so it is never hotlinked; the initials tile stands in.
+  it "shows initials for a directory hit with artwork, never hotlinking it" do
     info = Podcasts::ShowInfo.new(directory_id: "x", title: "Art Show", author: "A", description: "", artwork_url: "https://img.example.com/a.jpg",
                                   feed_url: "https://f.example.com", categories: [], episode_count: 1, itunes_id: nil, language: "en")
     allow(Podcasts::Directory.current).to receive(:search).and_return([ info ])
     get "/shows/search", params: { q: "art" }
-    expect(response.body).to include("https://img.example.com/a.jpg", "1 episode")
+    expect(response.body).to include("AS", "1 episode")
+    expect(response.body).not_to include("img.example.com")
   end
 
   it "renders nothing for an empty query" do

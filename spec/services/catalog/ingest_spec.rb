@@ -50,10 +50,16 @@ RSpec.describe Catalog::Ingest do
       expect(podcast.next_fetch_at).to be_between(12.hours.from_now, (12.hours * 1.05).from_now)
     end
 
-    it "is indexable once its artwork is stored" do
-      podcast.update!(artwork_image: create(:image, :with_file))
+    it "is indexable once its artwork is stored, when a directory lists it" do
+      podcast.update!(artwork_image: create(:image, :with_file), podcast_index_id: 77)
       described_class.call(podcast)
       expect(podcast.reload.indexable).to be(true)
+    end
+
+    it "stays noindex while a feed added by its URL alone is unclaimed (code review M4)" do
+      podcast.update!(artwork_image: create(:image, :with_file))
+      described_class.call(podcast)
+      expect(podcast.reload.indexable).to be(false)
     end
 
     it "stores the people the feed names, counting their episodes, and drops anyone it stops naming" do
@@ -273,6 +279,81 @@ RSpec.describe Catalog::Ingest do
       other = create(:podcast, feed_url: url)
       described_class.call(other)
       expect(other.reload.feed_url).to eq(url)
+    end
+  end
+
+  # Code review H1: a claim proves control of the feed at claim time, so a feed move must not carry it onto a feed the
+  # owner never proved (a claimed decoy pointing itunes:new-feed-url at a real show's feed).
+  describe "a claimed podcast whose feed moves" do
+    let(:owner) { create(:user, email: "decoy@example.com") }
+    let!(:owner_show) { create(:show, user: owner, podcast: podcast) }
+    let(:real_feed) { "https://real.example.com/feed.xml" }
+
+    before do
+      create(:media_kit, :published, show: owner_show, open_to_sponsors: true, rate_card_overrides: { "midroll" => "300" })
+      podcast.record_provided_downloads!(4_000)
+      create(:stat_reading, podcast: podcast, source: "spotify", trust: "verified", metric: "followers", value: 50)
+    end
+
+    def moved_xml(to) = xml.sub("<link>https://tidepool.example.com/</link>",
+                                "<link>https://tidepool.example.com/</link><itunes:new-feed-url>#{to}</itunes:new-feed-url>")
+
+    it "releases the claim on itunes:new-feed-url, records the move, and asks the owner to verify the new feed" do
+      expect(podcast.reload).to have_attributes(claimed_at: be_present, open_to_sponsors: true, downloads_per_episode: 4_000)
+      feed_with(moved_xml(real_feed))
+
+      expect { described_class.call(podcast) }.to have_enqueued_mail(ClaimMailer, :feed_moved)
+
+      podcast.reload
+      expect(podcast.feed_url).to eq(real_feed)
+      expect(owner_show.reload.verified_at).to be_nil
+      expect(podcast).to have_attributes(claimed_at: nil, open_to_sponsors: false, min_price_cents: nil,
+                                         downloads_per_episode: nil, downloads_trust: nil)
+      expect(podcast.owner_show).to be_nil
+      expect(podcast.stat_readings).to be_empty
+      expect(podcast.next_fetch_at).to be > 2.hours.from_now # no longer read hourly as a claimed show
+      expect(podcast.feed_moves.sole).to have_attributes(from_url: url, to_url: real_feed, via: "new_feed_url",
+                                                         released_show: owner_show)
+    end
+
+    it "lets the real show's host claim the moved page, after which the decoy can't take it back" do
+      feed_with(moved_xml(real_feed))
+      described_class.call(podcast)
+
+      host = create(:show, user: create(:user), podcast: podcast.reload)
+      expect { host.verify!(via: "email") }.not_to raise_error
+      expect(podcast.reload.owner_show).to eq(host)
+      expect { owner_show.reload.verify!(via: "email") }.to raise_error(Show::AlreadyClaimed)
+    end
+
+    it "releases it on a permanent redirect too" do
+      stub_request(:get, url).to_return(status: 308, headers: { "Location" => real_feed })
+      stub_request(:get, real_feed).to_return(status: 200, body: xml)
+
+      described_class.call(podcast)
+
+      expect(podcast.reload).to have_attributes(feed_url: real_feed, claimed_at: nil)
+      expect(owner_show.reload.verified_at).to be_nil
+      expect(podcast.feed_moves.sole.via).to eq("redirect")
+    end
+
+    it "keeps the claim when the feed stays put, or names a URL another podcast already has" do
+      create(:podcast, feed_url: real_feed)
+      feed_with(moved_xml(real_feed))
+
+      expect { described_class.call(podcast) }.not_to have_enqueued_mail(ClaimMailer, :feed_moved)
+      expect(podcast.reload).to have_attributes(feed_url: url, claimed_at: be_present, downloads_per_episode: 4_000)
+      expect(owner_show.reload.verified_at).to be_present
+      expect(PodcastFeedMove.count).to eq(0)
+    end
+
+    it "records an unclaimed podcast's move without anyone to tell" do
+      owner_show.update!(verified_at: nil)
+      podcast.update!(claimed_at: nil)
+      feed_with(moved_xml(real_feed))
+
+      expect { described_class.call(podcast) }.not_to have_enqueued_mail(ClaimMailer, :feed_moved)
+      expect(podcast.feed_moves.sole).to have_attributes(to_url: real_feed, released_show: nil)
     end
   end
 

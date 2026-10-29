@@ -39,6 +39,7 @@ RSpec.describe "Admin sign-ups" do
       create(:user, name: "Grace Hopper", email: "grace@example.com")
 
       get admin_users_path(q: "LOVE")
+      expect(Nokogiri::HTML(response.body).at_css("form[role='search'] input[name='q']")).to be_present
       expect(response.body).to include("ada@example.com")
       expect(response.body).not_to include("grace@example.com")
 

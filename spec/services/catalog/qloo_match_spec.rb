@@ -47,6 +47,20 @@ RSpec.describe Catalog::QlooMatch do
     expect(described_class.call(entity("Q-3", "Daily Brief"))).to be_nil
   end
 
+  # Code review M4: a same-titled clone mustn't take a Qloo identity by being the only unlinked one of its title.
+  it "links a lone title only when it is the catalog's only podcast of that title, else needs the author" do
+    create(:podcast, title: "Darknet Diaries", author: "Jack Rhysider", qloo_entity_id: "Q-real")
+    clone = create(:podcast, title: "Darknet Diaries", author: "Clone Maker", feed_url: "https://feeds.example.com/clone.xml")
+    directory_with([])
+
+    expect(described_class.call(entity("Q-new", "Darknet Diaries"), directory: false)).to be_nil
+    expect(clone.reload.qloo_entity_id).to be_nil
+
+    expect(described_class.call(entity("Q-new", "Darknet Diaries", properties: { "author" => "Clone Maker" }), directory: false))
+      .to eq(clone)
+    expect(clone.reload.qloo_entity_id).to eq("Q-new")
+  end
+
   it "adds the directory hit with an equal title and a close author, queued at the caller's priority" do
     directory = directory_with([ hit("1", "Night Owls", "Someone Else"), hit("2", "Night Owls!", "Rita Moreno"),
                                  hit("3", "Night Owls Extra", "Rita Moreno") ])
