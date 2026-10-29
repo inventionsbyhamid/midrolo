@@ -68,4 +68,25 @@ RSpec.describe "Request a spot" do
     expect(page).to have_text("Maya, The Founder's Ledger")
     expect(page).to have_text("Happy to. Our listeners love good coffee.")
   end
+
+  # UX review PP-1: a similar show with a long title in the Qloo list (signed in only) once widened the whole page.
+  # The hero's Request a spot is the real control (PP-2): for a brand member it opens the form, and the sidebar's
+  # button opens the same one.
+  it "fits a phone with a long similar title, and the hero's Request a spot opens the form", :aggregate_failures do
+    long = create(:podcast, :active, title: "#{'Late Night Conversations With Teachers and Students ' * 3}".strip.first(120))
+    report = create(:report, show: podcast.owner_show, status: "done", finished_at: 1.hour.ago)
+    report.update_columns(similar_podcasts: [ { "name" => long.title, "podcast_id" => long.id, "score" => 0.9 },
+                                              { "name" => "A Show The Catalog Lacks With A Long Name " * 3, "score" => 0.5 } ])
+    sign_in_as(asker)
+
+    { "phone" => [ 390, 844 ], "desktop" => [ 1440, 900 ] }.each do |name, (w, h)|
+      page.driver.resize(w, h)
+      visit podcast_path(podcast)
+      expect(page).to have_css("[data-match-similar] a", text: long.title.first(20))
+      expect(evaluate_script("document.documentElement.scrollWidth <= window.innerWidth")).to be(true), "#{name} scrolls sideways"
+    end
+
+    within(".pod-hero") { click_button "Request a spot" }
+    expect(page).to have_css("dialog[open]", text: "Request a spot on The Founder's Ledger")
+  end
 end
