@@ -3,7 +3,8 @@ class MediaKit
   #   - stats from the show (self-reported downloads, episode count, cadence from the feed)
   #   - audience taste from the show's latest done report, agent or snapshot: brands (minus the hidden ones),
   #     taste tags, other tastes, leans and the heatmap. Never sponsor matches.
-  #   - the rate card from Pricing::RateCard with the owner's figures on top
+  #   - the rate card from Pricing::RateCard with the owner's figures on top, suggested from the podcast's best downloads
+  #     reading, else the workspace's typed figure (downloads_basis)
   #   - the contact link: the contact email the owner chose, else the show's website, else none. The feed's owner
   #     address is never used here.
   class Content
@@ -17,11 +18,20 @@ class MediaKit
       def custom? = custom
     end
 
+    # The downloads figure the suggested rates use (lane L4): the podcast's best reading (Podcast#best_downloads_reading:
+    # verified, then provided by the show), else the figure typed into this workspace (reading nil).
+    DownloadsBasis = Data.define(:value, :reading) do
+      def demo? = reading&.evidence.is_a?(Hash) && reading.evidence["demo"].present? || false
+    end
+
     attr_reader :kit, :show
 
-    def initialize(kit)
+    # podcast: the show's podcast when the caller has it loaded already (the podcast page, with its readings), so the
+    # rate card's figure comes from what's loaded.
+    def initialize(kit, podcast: nil)
       @kit = kit
       @show = kit.show
+      @podcast = podcast
     end
 
     def report
@@ -77,7 +87,16 @@ class MediaKit
     end
 
     def suggested_rates
-      @suggested_rates ||= Pricing::RateCard.call(downloads: show.downloads_per_episode, categories: show.categories)
+      @suggested_rates ||= Pricing::RateCard.call(downloads: downloads_basis&.value, categories: show.categories)
+    end
+
+    # The DownloadsBasis for the suggestion, or nil when there's no figure at all.
+    def downloads_basis
+      return @downloads_basis if defined?(@downloads_basis)
+
+      reading = (@podcast || show.podcast).listing_downloads_reading
+      typed = show.downloads_per_episode
+      @downloads_basis = reading ? DownloadsBasis.new(value: reading.value, reading:) : (DownloadsBasis.new(value: typed, reading: nil) if typed)
     end
 
     # The bundle follows the effective mid-roll, so an owner's mid-roll prices the bundle too.
