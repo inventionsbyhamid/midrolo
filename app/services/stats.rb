@@ -24,8 +24,8 @@ module Stats
 
   # The address podcasters invite, per platform (env, defaulting to stats@midrolo.com).
   def invite_email(provider)
-    name = provider.to_s == "apple" ? "MIDROLO_APPLE_EMAIL" : "MIDROLO_SPOTIFY_EMAIL"
-    ENV[name].to_s.strip.presence || "stats@midrolo.com"
+    value = provider.to_s == "apple" ? ENV["MIDROLO_APPLE_EMAIL"] : ENV["MIDROLO_SPOTIFY_EMAIL"]
+    value.to_s.strip.presence || "stats@midrolo.com"
   end
 
   # The platform's show id in what a podcaster pasted: a show link (open.spotify.com/show/ID,
