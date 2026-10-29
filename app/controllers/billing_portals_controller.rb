@@ -2,6 +2,7 @@
 # billing mode (R73). The redirect goes only to the URL the provider returns.
 class BillingPortalsController < ApplicationController
   before_action :authenticate_user!
+  before_action :refuse_while_masquerading, only: :create
 
   def create
     subscription = Billing.portal_subscription(current_user)

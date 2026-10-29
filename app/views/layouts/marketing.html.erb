@@ -7,6 +7,7 @@
   <%# Public pages. Main is full-bleed: each section sets its own width with .wrap. %>
   <body class="flex min-h-dvh flex-col">
     <a href="#main" class="skip-link">Skip to content</a>
+    <%= render "shared/masquerade_banner" %>
     <%= render "components/demo_banner" if demo_mode? %>
     <%= render "components/nav",
           links: [ [ "How it works", "/#how-it-works" ], [ "Samples", samples_path ], [ "Pricing", pricing_path ] ],

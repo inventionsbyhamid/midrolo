@@ -3,7 +3,10 @@
 <div class="flex flex-col gap-6">
   <header class="flex flex-wrap items-baseline justify-between gap-3">
     <h1 class="type-h1">Admin</h1>
-    <%= link_to "Jobs", mission_control_jobs_path, class: "link", data: { turbo: false } %>
+    <nav class="flex gap-4" aria-label="Admin">
+      <%= link_to "Sign-ups", admin_users_path, class: "link" %>
+      <%= link_to "Jobs", mission_control_jobs_path, class: "link", data: { turbo: false } %>
+    </nav>
   </header>
 
   <%= render "components/card", title: "New runs" do %>

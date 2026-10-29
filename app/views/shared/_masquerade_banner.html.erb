@@ -1,0 +1,10 @@
+<%# Shown on every page while an admin views the app as someone else (R150), so the borrowed account can't be missed.
+    The button signs the admin back into their own account. %>
+<% if masquerading? %>
+  <div class="masquerade-banner" role="status">
+    <div class="wrap flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2">
+      <p>Viewing as <strong><%= current_user.name.presence || current_user.email %></strong> (<%= current_user.email %>)</p>
+      <%= button_to "Back to my account", admin_masquerade_path, method: :delete, class: "btn btn-secondary btn-sm" %>
+    </div>
+  </div>
+<% end %>

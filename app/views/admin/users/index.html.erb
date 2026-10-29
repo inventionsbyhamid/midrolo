@@ -1,0 +1,83 @@
+<% content_for :title, "Sign-ups" %>
+<div class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-baseline justify-between gap-3">
+    <h1 class="type-h1">Sign-ups</h1>
+    <%= link_to "Back to admin", admin_root_path, class: "link" %>
+  </header>
+
+  <dl class="grid grid-cols-3 gap-4">
+    <% { today: "Today", week: "Last 7 days", total: "All time" }.each do |key, label| %>
+      <div class="card"><div class="card-body">
+        <dt class="text-sm text-ink-soft"><%= label %></dt>
+        <dd class="type-h2 tabular-nums"><%= number_with_delimiter(@counts[key]) %></dd>
+      </div></div>
+    <% end %>
+  </dl>
+
+  <%= form_with url: admin_users_path, method: :get, role: "search", class: "flex flex-wrap items-end gap-3" do |f| %>
+    <div class="flex min-w-0 flex-1 basis-64 flex-col gap-1">
+      <%= f.label :q, "Search by name or email", class: "label" %>
+      <%= f.search_field :q, value: @query, class: "input", autocomplete: "off" %>
+    </div>
+    <%= f.submit "Search", class: "btn btn-secondary btn-md", name: nil %>
+    <%= link_to "Clear", admin_users_path, class: "link" if @query.present? %>
+  <% end %>
+
+  <%= render "components/card", title: @query.present? ? "Matching \"#{@query}\"" : "Newest first" do %>
+    <% if @users.empty? %>
+      <p class="text-ink-soft"><%= @query.present? ? "No one matches that." : "No sign-ups yet." %></p>
+    <% else %>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr>
+              <th scope="col" class="py-2 pr-4 font-semibold">Name</th>
+              <th scope="col" class="py-2 pr-4 font-semibold">Email</th>
+              <th scope="col" class="py-2 pr-4 font-semibold">Signed up</th>
+              <th scope="col" class="py-2 pr-4 font-semibold">Last sign-in</th>
+              <th scope="col" class="py-2 pr-4 text-right font-semibold">Shows</th>
+              <th scope="col" class="py-2 pr-4 text-right font-semibold">Reports</th>
+              <th scope="col" class="py-2 font-semibold"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @users.each do |user| %>
+              <tr class="border-t border-line align-top">
+                <td class="py-3 pr-4">
+                  <%= user.name.presence || "No name" %>
+                  <% if user.admin? %> <%= ui_badge "Admin", tone: :accent %><% end %>
+                  <% if user.judge? %> <%= ui_badge "Judge", tone: :neutral %><% end %>
+                </td>
+                <td class="py-3 pr-4 break-all"><%= user.email %></td>
+                <td class="py-3 pr-4 whitespace-nowrap">
+                  <%= tag.time(user.created_at.strftime("%b %-d, %Y %-l:%M %p"), datetime: user.created_at.iso8601) %>
+                  <span class="block text-ink-soft"><%= time_ago_in_words(user.created_at) %> ago</span>
+                </td>
+                <td class="py-3 pr-4 whitespace-nowrap">
+                  <% if (seen = user.current_sign_in_at || user.last_sign_in_at) %>
+                    <%= tag.time("#{time_ago_in_words(seen)} ago", datetime: seen.iso8601) %>
+                  <% else %>
+                    <span class="text-ink-soft">Never</span>
+                  <% end %>
+                </td>
+                <td class="py-3 pr-4 text-right tabular-nums"><%= @shows.fetch(user.id, 0) %></td>
+                <td class="py-3 pr-4 text-right tabular-nums"><%= @reports.fetch(user.id, 0) %></td>
+                <td class="py-3 text-right">
+                  <% unless user.admin? || user == current_user || user.email.blank? %>
+                    <%= button_to "View as", admin_masquerade_path, params: { email: user.email },
+                          class: "btn btn-secondary btn-sm whitespace-nowrap",
+                          form: { "aria-label": "View the app as #{user.name.presence || user.email}" } %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <nav class="mt-4 flex justify-between gap-3" aria-label="Pages">
+        <span><%= link_to "Newer", admin_users_path(q: @query.presence, page: @page - 1), class: "link" if @page > 1 %></span>
+        <span><%= link_to "Older", admin_users_path(q: @query.presence, page: @page + 1), class: "link" if @more %></span>
+      </nav>
+    <% end %>
+  <% end %>
+</div>

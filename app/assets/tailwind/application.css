@@ -539,6 +539,13 @@
     font-weight: 600;
   }
 
+  /* Masquerade banner (R150): an admin is viewing the app as someone else. Plum, so it never reads as the demo. */
+  .masquerade-banner {
+    background: var(--color-plum);
+    color: #fff;
+    font-size: 0.875rem;
+  }
+
   /* Header and nav. */
   .site-header {
     position: sticky;

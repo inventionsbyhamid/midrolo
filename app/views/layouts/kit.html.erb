@@ -7,6 +7,7 @@
   <%# Public media kits. The page belongs to the podcaster, so there is no Midrolo nav; the kit view adds the plan badge itself. %>
   <body class="flex min-h-dvh flex-col">
     <a href="#main" class="skip-link">Skip to content</a>
+    <%= render "shared/masquerade_banner" %>
     <%= render "components/demo_banner" if demo_mode? %>
     <%= render "components/flash" %>
     <main id="main" tabindex="-1" class="flex-1">

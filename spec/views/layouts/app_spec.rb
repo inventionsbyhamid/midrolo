@@ -9,6 +9,7 @@ RSpec.describe "layouts/app" do
     AppSettings.set(:promo_pro_until, 1.week.from_now.to_date.to_s)
     without_partial_double_verification do
       allow(view).to receive(:current_plan) { plan_resolved << true && Entitlements::Plan.new(:promo) }
+      allow(view).to receive(:masquerading?).and_return(false)
     end
   end
 

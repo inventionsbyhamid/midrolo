@@ -11,6 +11,7 @@ class CheckoutsController < ApplicationController
 
   before_action :not_found_unless_checkout_open, only: :create
   before_action :authenticate_user!
+  before_action :refuse_while_masquerading, only: :create
 
   def create
     price = Billing.price(params[:price_key])

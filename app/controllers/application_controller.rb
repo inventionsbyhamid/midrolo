@@ -34,12 +34,22 @@ class ApplicationController < ActionController::Base
 
   layout :layout_for_devise
 
-  helper_method :current_plan
+  helper_method :current_plan, :masquerading?
+
+  MASQUERADE_REFUSED = "Only the account's owner can do that. Go back to your own account first.".freeze
 
   def after_sign_in_path_for(_resource) = shows_path
   def after_sign_out_path_for(_scope) = "/"
 
   private
+
+  # True while an admin views the app as this user (Admin::MasqueradesController, R150).
+  def masquerading? = session[:masquerader_id].present? && user_signed_in?
+
+  # For what only the account's owner may do (delete it, pay, manage billing): an admin viewing as them is refused.
+  def refuse_while_masquerading
+    redirect_back_or_to shows_path, alert: MASQUERADE_REFUSED, status: :see_other if masquerading?
+  end
 
   # The signed-in user's plan (Entitlements), resolved once per request; the free plan when signed out.
   def current_plan = @current_plan ||= Entitlements.for(current_user)

@@ -6,6 +6,7 @@ class AccountsController < ApplicationController
 
   layout "app"
   before_action :authenticate_user!
+  before_action :refuse_while_masquerading, only: :destroy
   # Guesses at JUDGE_CODE, per user and per IP (R83).
   throttle to: JUDGE_CODE_TRIES, within: JUDGE_CODE_WINDOW, only: :judge_code, by: -> { current_user.id }, name: "per_user"
   throttle to: JUDGE_CODE_TRIES, within: JUDGE_CODE_WINDOW, only: :judge_code, by: -> { request.remote_ip }, name: "per_ip"

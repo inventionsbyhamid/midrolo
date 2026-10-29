@@ -71,6 +71,10 @@ Rails.application.routes.draw do
   # plus HTTP basic auth; a 404 for anyone else, and for everyone when ADMIN_USERNAME or ADMIN_PASSWORD is unset).
   namespace :admin do
     root to: "dashboard#index"
+    resources :users, only: :index
+    # Masquerade (R150): an admin signs in as a user to see what they see. create is admin-only; destroy (the banner's
+    # button) is guarded by the session marker instead, since current_user is the other user while it runs.
+    resource :masquerade, only: %i[create destroy]
     resource :settings, only: :update
     resource :pause, only: %i[create destroy]
   end
