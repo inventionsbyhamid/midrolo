@@ -51,6 +51,7 @@ class MoveShowPodcastFieldsToPodcasts < ActiveRecord::Migration[8.1]
     group_shows
     insert_podcasts
     link_shows
+    clean_slugs
     merge_duplicate_shows
     change_column_null :shows, :podcast_id, false
 
@@ -100,6 +101,23 @@ class MoveShowPodcastFieldsToPodcasts < ActiveRecord::Migration[8.1]
 
   # One podcast per group, keyed by its feed URL. A directory, Apple or Qloo id two groups share goes to the first, so
   # the unique indexes hold.
+  # Readable slugs (FriendlySlug): a podcast inserted with "title-<6 hex>" takes the bare title when no other podcast
+  # or old kit slug has it. One podcast per title gets it (the oldest); the rest keep their suffix.
+  def clean_slugs
+    execute <<~SQL
+      UPDATE podcasts p SET slug = c.base
+      FROM (
+        SELECT id, base, row_number() OVER (PARTITION BY base ORDER BY created_at, id) AS rn
+        FROM (SELECT id, created_at, #{SLUG_BASE.gsub("x.title", "title")} AS base FROM podcasts
+              WHERE slug = #{SLUG_BASE.gsub("x.title", "title")} || '-' || left(public_id, 6)) t
+      ) c
+      WHERE p.id = c.id AND c.rn = 1
+        AND c.base NOT IN ('new', 'edit', 'search', 'category', 'categories', 'page', 'admin', 'api', 'feed')
+        AND NOT EXISTS (SELECT 1 FROM podcasts q WHERE q.slug = c.base)
+        AND NOT EXISTS (SELECT 1 FROM podcast_redirects r WHERE r.from_slug = c.base)
+    SQL
+  end
+
   def insert_podcasts
     execute <<~SQL
       INSERT INTO podcasts (public_id, slug, title, title_key, author, description, language, categories, feed_url,

@@ -2,10 +2,10 @@
 # Brand.resolve and Brand.find_existing are the only ways code finds one by name or domain.
 class Brand < ApplicationRecord
   include HasPublicId
+  include FriendlySlug
   include Workspace
 
   NAME_LIMIT = 120
-  SLUG_LENGTH = 60
   # Public suffixes of two labels, so "shop.example.co.uk" keeps "example.co.uk" (no public suffix list in the app).
   TWO_LABEL_SUFFIXES = %w[co.uk org.uk ac.uk gov.uk com.au net.au org.au co.nz co.jp co.in co.za com.br com.mx
                           com.sg com.hk com.cn co.kr com.tr com.ar co.il].to_set.freeze
@@ -91,7 +91,7 @@ class Brand < ApplicationRecord
   end
 
   def assign_slug
-    self.slug ||= "#{name.to_s.parameterize.first(SLUG_LENGTH).delete_suffix('-').presence || 'brand'}-#{public_id.to_s.first(6)}"
+    self.slug ||= self.class.free_slug(name, fallback: "brand", qualifiers: [ domain ])
   end
 
   def domain_is_not_webmail

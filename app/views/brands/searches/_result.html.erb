@@ -1,0 +1,85 @@
+<%# locals: (result:, saved:) -%>
+<%#
+  One ranked show: artwork, fit score, why it fits (Qloo taste data), proof from sponsor history, price, numbers with
+  their trust badge and open months, then Request a spot and Save.
+%>
+<% podcast = result.podcast %>
+<% proof = Array(result.proof["brands"]) %>
+<article id="<%= dom_id(podcast, :result) %>" class="card" aria-labelledby="<%= dom_id(podcast, :result_title) %>">
+  <div class="card-body flex flex-col gap-4 sm:flex-row">
+    <%= podcast_artwork_tag(podcast, size: :card, class: "size-20 sm:size-28") %>
+    <div class="flex min-w-0 flex-1 flex-col gap-3">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-ink-soft">#<%= result.position %></p>
+          <h3 id="<%= dom_id(podcast, :result_title) %>" class="type-h3">
+            <%= link_to podcast.title, brand_podcast_href(podcast), class: "underline-offset-4 hover:underline" %>
+          </h3>
+          <% if podcast.author.present? %><p class="truncate text-sm text-ink-soft"><%= podcast.author %></p><% end %>
+          <% if podcast.pending? %><p class="mt-1"><%= ui_badge "Being added to the catalog", tone: :accent %></p><% end %>
+        </div>
+        <p class="flex-none text-right" data-fit-score="<%= result.score %>">
+          <span class="block text-3xl font-extrabold leading-none text-plum tabular-nums"><%= result.score %></span>
+          <span class="text-xs font-semibold uppercase tracking-wide text-ink-soft">fit</span>
+        </p>
+      </div>
+
+      <% if result.reasons.any? %>
+        <div>
+          <h4 class="text-sm font-semibold">Why it fits</h4>
+          <ul class="mt-1 list-disc space-y-0.5 pl-5 text-sm" data-reasons>
+            <% result.reasons.each do |reason| %><li><%= reason %></li><% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <% if proof.any? %>
+        <div>
+          <h4 class="text-sm font-semibold">Proof</h4>
+          <ul class="mt-1 space-y-0.5 text-sm" data-proof>
+            <% proof.each do |row| %>
+              <li class="flex gap-2">
+                <svg viewBox="0 0 16 16" class="mt-0.5 size-4 flex-none text-success" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span><%= brand_proof_line(row) %></span>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <dl class="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+        <div>
+          <dt class="sr-only">Price</dt>
+          <dd class="flex flex-wrap items-center gap-2">
+            <% if (price = brand_price_text(podcast)) %><span><%= price %></span><% end %>
+            <%= brand_price_fit_badge(result.price_fit) %>
+          </dd>
+        </div>
+        <% if (downloads = brand_downloads_text(podcast)) %>
+          <div>
+            <dt class="sr-only">Downloads</dt>
+            <dd class="flex flex-wrap items-center gap-2"><span><%= downloads %></span><%= trust_badge(podcast.downloads_trust) if podcast.downloads_trust.present? %></dd>
+          </div>
+        <% end %>
+        <% if (months = brand_open_months_text(podcast)) %>
+          <div><dt class="sr-only">Open months</dt><dd><%= months %></dd></div>
+        <% elsif !podcast.claimed? %>
+          <div><dt class="sr-only">Status</dt><dd class="text-ink-soft">Not claimed yet</dd></div>
+        <% end %>
+      </dl>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <%= ui_button "Request a spot", brand_podcast_href(podcast, anchor: "request"), size: :sm %>
+        <%= render "podcasts/save", podcast: podcast, saved: saved %>
+        <details class="text-sm">
+          <summary class="cursor-pointer text-ink-soft">Score breakdown</summary>
+          <ul class="mt-1 flex flex-wrap gap-x-4">
+            <% brand_score_parts(result).each do |label, points, weight| %>
+              <li><%= label %> <span class="tabular-nums"><%= points %> of <%= weight %></span></li>
+            <% end %>
+          </ul>
+        </details>
+      </div>
+    </div>
+  </div>
+</article>
