@@ -73,7 +73,7 @@ flowchart LR
 - **The Qloo client** (`app/services/taste/`) caches every answer, shares it across users, and asks the call guard
   before each live request. Details: [docs/how-we-use-qloo.md](docs/how-we-use-qloo.md).
 
-Stack: Ruby 3.4.1, Rails 8.1, PostgreSQL 16, Hotwire, importmap and Tailwind 4 (no Node build), Devise with Google
+Stack: Ruby 3.4.12, Rails 8.1, PostgreSQL 16, Hotwire, importmap and Tailwind 4 (no Node build), Devise with Google
 sign in, Solid Queue, Solid Cache, Solid Cable, MapLibre with OpenFreeMap tiles.
 
 ## Local setup
@@ -82,7 +82,7 @@ It runs with no API keys at all, in **demo mode**: the Fake adapters serve a mad
 data, and templated reasons and pitches. It makes no Qloo, Podcast Index or LLM calls and costs nothing. Every page
 says "Demo mode: showing sample data (no API keys configured)."
 
-You need Ruby 3.4.1, PostgreSQL 16 running locally (your user must be able to create databases) and libvips (for share
+You need Ruby 3.4.12, PostgreSQL 16 running locally (your user must be able to create databases) and libvips (for share
 images and kit photos).
 
 ```sh

@@ -4,8 +4,8 @@
 # bin/remote-rspec rebuilds the image when this file's hash changes (or with --rebuild).
 
 # Keep in step with .ruby-version. The slim image is Debian bookworm.
-ARG RUBY_VERSION=3.4.1
-FROM docker.io/library/ruby:${RUBY_VERSION}-slim
+ARG RUBY_VERSION=3.4.12
+FROM docker.io/library/ruby:${RUBY_VERSION}-slim-bookworm
 
 # build-essential, pkg-config, libpq-dev, libyaml-dev: native gems (pg, psych, bootsnap, msgpack, ...).
 # libvips42: ruby-vips (image_processing) loads it at run time through ffi.
@@ -14,7 +14,7 @@ FROM docker.io/library/ruby:${RUBY_VERSION}-slim
 # tzdata: tzinfo reads /usr/share/zoneinfo on Linux.
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
-      build-essential pkg-config git curl ca-certificates tzdata \
+      build-essential libssl-dev zlib1g-dev libffi-dev libgmp-dev pkg-config git curl ca-certificates tzdata \
       libpq-dev libyaml-dev libvips42 postgresql-client \
       chromium fonts-liberation fonts-noto-color-emoji && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives

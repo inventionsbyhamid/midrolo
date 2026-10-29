@@ -41,7 +41,7 @@ What a run does:
    other. `--lane NAME` picks another. Git data, `tmp/`, `log/`, `storage/`, built assets, `.env*` files, key files
    and `spec/fixtures/private/` are never sent. The one `.env` file that is sent is `.env.example`, which holds no
    values and which a spec reads.
-3. Builds `midrolo-ci:test` from `ci/Dockerfile.test` if that file changed (Ruby 3.4.1, Chromium, fonts, libvips,
+3. Builds `midrolo-ci:test` from `ci/Dockerfile.test` if that file changed (Ruby 3.4.12, Chromium, fonts, libvips,
    libpq). The source isn't in the image, and gems live in the `midrolo-ci-bundle` volume, so a Gemfile change only
    costs a `bundle install`.
 4. Starts `midrolo-ci-db-<run>` (Postgres 16 on tmpfs, password made fresh for the run) and runs

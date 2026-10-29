@@ -239,7 +239,7 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 
 | Area | Choice |
 |---|---|
-| Language / framework | Ruby 3.4.1, **Rails 8.1.3** |
+| Language / framework | Ruby 3.4.12, **Rails 8.1.3** |
 | Database | **PostgreSQL 16** (user's call) |
 | Frontend | Hotwire (Turbo + Stimulus), **importmap**, **Tailwind CSS 4** (`tailwindcss-rails`), Propshaft. Chart.js for the bars, if they're not done in plain CSS. |
 | Map | MapLibre GL JS (pinned version, via importmap/CDN) + OpenFreeMap tiles |
