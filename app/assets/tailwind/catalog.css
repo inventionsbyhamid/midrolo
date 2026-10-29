@@ -1102,14 +1102,21 @@
     flex: none;
     align-items: center;
     justify-content: center;
-    width: 4rem;
-    height: 4rem;
-    border-radius: 1rem;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.875rem;
     background: var(--color-ink);
     color: var(--color-tally);
-    font-size: 1.375rem;
+    font-size: 1.125rem;
     font-weight: 820;
     font-stretch: 125%;
+
+    @media (width >= 48rem) {
+      width: 4rem;
+      height: 4rem;
+      border-radius: 1rem;
+      font-size: 1.375rem;
+    }
   }
 
   .sponsored-list {

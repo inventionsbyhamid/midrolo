@@ -2,7 +2,7 @@
 <%# The sidebar (plan 4.1): the listing at a glance once the show publishes it, the claim box on an unclaimed show (lane
     L4's podcasts/_claim), Request a spot (lane L7's podcasts/_request, at #request: brands' fit results link there), the
     details read from the feed with when it was last checked, where to listen, similar
-    shows (lane L8's Qloo list for signed-in people, else shared sponsors and categories), and the fine print. %>
+    shows (lane L8's Qloo list for signed-in people, then shared sponsors and categories for everyone), and the fine print. %>
 <% listing = podcast.listing if podcast.listing&.published? %>
 <% months = Array(listing&.open_months).filter_map { |month| pages_month(month)&.then { |label| [ month, label ] } }
      .select { |month, _| month >= Date.current.strftime("%Y-%m") }.first(6) %>
@@ -74,11 +74,11 @@
     <% end %>
   <% end %>
 
-  <% qloo = (render("podcasts/similar", podcast: podcast) if user_signed_in?).to_s %>
-  <% if qloo.strip.present? %>
-    <%= qloo %>
-  <% elsif similar.any? %>
-    <%= render "components/card", title: "Similar shows", heading: :h2 do %>
+  <%# Lane L8's Qloo similar shows (signed-in people only), then the SQL list everyone gets. %>
+  <% qloo = (pages_slot("podcasts/similar", podcast: podcast) if user_signed_in?) %>
+  <%= qloo %>
+  <% if similar.any? %>
+    <%= render "components/card", title: qloo ? "More like this" : "Similar shows", heading: :h2 do %>
       <ul class="similar-list">
         <% similar.each do |other| %>
           <li class="similar-item">

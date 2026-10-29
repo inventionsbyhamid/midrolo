@@ -48,7 +48,8 @@
                   <p class="ep-meta">
                     <span><strong class="text-ink"><%= pluralize(row.episodes_count, "episode") %></strong></span>
                     <% if row.first_seen && row.last_seen %>
-                      <span><%= row.first_seen.to_date == row.last_seen.to_date ? pages_date(row.last_seen) : "#{row.first_seen.strftime('%b %Y')} to #{row.last_seen.strftime('%b %Y')}" %></span>
+                      <% first, last = row.first_seen.strftime("%b %Y"), row.last_seen.strftime("%b %Y") %>
+                      <span><%= first == last ? last : "#{first} to #{last}" %></span>
                     <% end %>
                     <% row.codes.each do |code| %><span class="chip">Code <%= code %></span><% end %>
                   </p>

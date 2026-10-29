@@ -25,6 +25,14 @@ RSpec.describe "Public brand pages" do
     expect(robots).to be_empty
   end
 
+  it "names one month once when every read falls in it" do
+    mention(on: podcast, at: Time.zone.local(2026, 10, 2))
+    mention(on: podcast, at: Time.zone.local(2026, 10, 20))
+    get "/brands/#{brand.slug}"
+    expect(doc.text.squish).to include("2 episodes Oct 2026")
+    expect(doc.text).not_to include("Oct 2026 to Oct 2026")
+  end
+
   it "404s a brand with no sponsor reads, or with reads only on removed shows" do
     get "/brands/#{brand.slug}"
     expect(response).to have_http_status(:not_found)
