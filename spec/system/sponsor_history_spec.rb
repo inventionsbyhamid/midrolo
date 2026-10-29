@@ -1,7 +1,7 @@
 require "rails_helper"
 
 # Lane L2's main flow in a real browser: new episodes come in, the sponsor scan runs (fake LLM mode, so patterns only),
-# and what it found shows on the admin dashboard and, once lane L3 draws its routes, on the podcast and brand pages.
+# and what it found shows on the admin dashboard, on the podcast page with its evidence, and on the brand page.
 RSpec.describe "Sponsor history" do
   include Warden::Test::Helpers
 
@@ -37,17 +37,27 @@ RSpec.describe "Sponsor history" do
   end
 
   it "shows the sponsor history on the podcast page" do
-    skip "the podcast page arrives with lane L3" unless Rails.application.routes.url_helpers.respond_to?(:podcast_path)
-
     podcast, episode = scanned
     visit Rails.application.routes.url_helpers.podcast_path(podcast)
 
     within("[data-testid='sponsor-history']") do
       expect(page).to have_link("Helix Sleep")
-      expect(page).to have_css(".badge", text: "Code TIM")
+      expect(page).to have_css(".chip", text: "Code TIM")
       expect(page).to have_text("This episode is brought to you by AG1.")
       click_link episode.title, match: :first
     end
     expect(page).to have_current_path(%r{/episodes/#{episode.slug}\z})
+  end
+
+  it "shows the brand page's shows from the sponsor history" do
+    podcast, = scanned
+    brand = Brand.find_by!(domain: "helixsleep.com")
+    visit Rails.application.routes.url_helpers.public_brand_path(brand.slug)
+
+    within("[data-testid='sponsored-shows']") do
+      expect(page).to have_link(podcast.title)
+      expect(page).to have_css(".chip", text: "Code TIM")
+      expect(page).to have_text("use code TIM for 20% off all mattress orders")
+    end
   end
 end

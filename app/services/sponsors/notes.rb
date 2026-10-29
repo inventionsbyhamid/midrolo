@@ -133,11 +133,12 @@ module Sponsors
       [ label, bare ].uniq.any? { |l| l == key || (key.length >= 3 && l.include?(key)) || (l.length >= 4 && key.include?(l)) }
     end
 
-    # Text cut to the evidence limit at word boundaries, starting a little before the first of terms when it's far in.
+    # Text cut to the evidence limit at word boundaries, starting a little before the first of terms when it's far in,
+    # without a list's leading bullet ("* This episode", "- Vanta").
     def self.snippet(text, terms)
       focus = terms.compact.filter_map { |term| text.downcase.index(term.downcase) }.min.to_i
       start = focus > EVIDENCE_LIMIT / 2 ? text.rindex(/\s/, focus - (EVIDENCE_LIMIT / 4)).to_i : 0
-      text[start..].strip.truncate(EVIDENCE_LIMIT, separator: " ")
+      text[start..].strip.sub(/\A[*•·#>+-]+\s*/, "").truncate(EVIDENCE_LIMIT, separator: " ")
     end
 
     def initialize(text, context)

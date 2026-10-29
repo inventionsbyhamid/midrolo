@@ -1,33 +1,28 @@
 <%# locals: (brand:, rows: nil) -%>
 <%#
-  Public brand page (lane L3's /brands/:slug): the podcasts this brand sponsored, from Sponsors::History.for_brand (one
-  query, plus one for the artwork), the most recent first. Pass rows: when the page already has them. Renders nothing
-  for a brand with no sponsor reads.
+  Public brand page (lane L3's brands/show, under "Shows it sponsored"): the listed podcasts this brand sponsored, from
+  Sponsors::History.for_brand (one query, plus one for the artwork), the most recent first, each with its codes and the
+  read itself. rows: takes Sponsors::History rows the page already has. Renders nothing for a brand with none.
 %>
-<% rows ||= Sponsors::History.for_brand(brand) %>
+<% rows ||= Sponsors::History.for_brand(brand, podcasts: Podcast.listed) %>
 <% if rows.any? %>
   <% ActiveRecord::Associations::Preloader.new(records: rows.map(&:podcast), associations: { artwork_image: { file_attachment: :blob } }).call %>
-  <div class="flex flex-col gap-3" data-testid="sponsored-shows">
-    <p class="text-sm text-ink-soft">
-      <%= pluralize(rows.size, "show") %> where we found <%= brand.name %> in the episode notes, newest first.
-    </p>
-    <ul class="flex flex-col divide-y divide-line" role="list">
+  <div data-testid="sponsored-shows">
+    <ul class="sponsored-list" role="list">
       <% rows.each do |row| %>
         <% podcast = row.podcast %>
-        <li class="flex gap-4 py-4">
+        <li class="sponsored-row items-start">
           <%= link_to sponsors_podcast_path(podcast), class: "shrink-0", tabindex: -1, aria: { hidden: true } do %>
-            <%= podcast_artwork_tag(podcast, size: :thumb, class: "size-16 rounded-lg") %>
+            <%= podcast_artwork_tag(podcast, size: :thumb, class: "size-14") %>
           <% end %>
-          <div class="flex min-w-0 flex-1 flex-col gap-2">
-            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <h3 class="type-h3"><%= link_to podcast.title, sponsors_podcast_path(podcast), class: "link" %></h3>
-              <p class="text-sm text-ink-soft tabular-nums"><%= sponsors_seen(row) %></p>
-            </div>
-            <%= render "sponsors/offer", row: row %>
+          <div class="flex min-w-0 flex-1 flex-col gap-1">
+            <h3 class="dir-card-title"><%= link_to podcast.title, sponsors_podcast_path(podcast), class: "link" %></h3>
+            <%= render "sponsors/meta", row: row %>
             <%= render "sponsors/evidence", row: row, podcast: podcast %>
           </div>
         </li>
       <% end %>
     </ul>
+    <p class="pod-note">From sponsor reads in each episode's show notes. Dates are the episodes' publish dates.</p>
   </div>
 <% end %>

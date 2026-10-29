@@ -51,10 +51,11 @@ RSpec.describe Sponsors::Notes do
     expect(candidates.first.url).to eq("https://notion.com/hardreset")
   end
 
-  it "reads a dashed Sponsors list with codes" do
-    expect(summary(candidates_for("sponsors_list_dashes"))).to eq([
-      [ "Delete Me", "joindeleteme.com", "DARKWIRE", true ], [ "Vanta", "vanta.com", nil, true ]
-    ])
+  it "reads a dashed Sponsors list with codes, quoting each line without its bullet" do
+    candidates = candidates_for("sponsors_list_dashes")
+
+    expect(summary(candidates)).to eq([ [ "Delete Me", "joindeleteme.com", "DARKWIRE", true ], [ "Vanta", "vanta.com", nil, true ] ])
+    expect(candidates.map(&:evidence)).to eq([ "Delete Me - joindeleteme.com/darkwire, use code DARKWIRE for 20% off", "Vanta: vanta.com/darkwire" ])
   end
 
   it "finds no sponsor in self promotion, Patreon, social links, a book, a guest, a negation or a news mention" do

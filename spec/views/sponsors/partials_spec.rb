@@ -4,7 +4,7 @@ RSpec.describe "Sponsor history partials", type: :view do
   let(:podcast) { create(:podcast, :active, title: "Signal Lost") }
   let(:notion) { create(:brand, name: "Notion", domain: "notion.so") }
 
-  before { view.extend(SponsorsHelper, UiHelper, ArtworkHelper) }
+  before { view.extend(SponsorsHelper, ArtworkHelper) }
 
   def read(brand, at:, show: podcast, **fields)
     episode = create(:episode, podcast: show, title: "Night #{at.to_date}", published_at: at)
@@ -24,14 +24,14 @@ RSpec.describe "Sponsor history partials", type: :view do
       expect(page).to have_text("2 brands found in this show's episode notes")
       items = page.all("li")
       expect(items.map { |li| li.find("h3").text.squish }).to eq([ "Notion notion.so", "Ramp ramp.com" ])
-      expect(items.first).to have_text("2 episodes, Aug 2026 to Oct 2026")
-      expect(items.first).to have_css(".badge", text: "Code SIGNAL")
+      expect(items.first.find(".ep-meta").text.squish).to eq("2 episodes Aug 2026 to Oct 2026 Code SIGNAL Free for a month")
+      expect(items.first).to have_css(".chip", text: "Code SIGNAL")
       expect(items.first).to have_text("Free for a month")
       expect(items.first).to have_css("blockquote", text: "Thanks to our sponsors: Notion.")
       episode = Episode.find_by!(title: "Night 2026-10-01")
       expect(items.first).to have_link("Night 2026-10-01", href: %r{/podcasts/#{podcast.slug}/episodes/#{episode.slug}\z})
       expect(items.first).to have_link("Notion", href: %r{/brands/#{notion.slug}\z})
-      expect(items.last).to have_text("1 episode, Sep 12, 2026")
+      expect(items.last.find(".ep-meta").text.squish).to eq("1 episode Sep 12, 2026")
       expect(rendered).not_to match(/[—–]/)
     end
 
@@ -58,12 +58,20 @@ RSpec.describe "Sponsor history partials", type: :view do
       render partial: "brands/sponsored_shows", locals: { brand: notion }
       page = Capybara.string(rendered)
 
-      expect(page).to have_text("2 shows where we found Notion in the episode notes")
       expect(page.all("li h3").map(&:text).map(&:squish)).to eq([ "Hard Reset", "Signal Lost" ])
       expect(page.all("li").first).to have_link("Hard Reset", href: %r{/podcasts/#{other.slug}\z})
-      expect(page.all("li").first).to have_css(".badge", text: "Code RESET")
+      expect(page.all("li").first).to have_css(".chip", text: "Code RESET")
       expect(page.all("li").first).to have_css("blockquote", text: "Thanks to our sponsors: Notion.")
       expect(page.all("li").first).to have_css("img")
+    end
+
+    it "lists only the shows the directory lists" do
+      read(notion, at: 2.days.ago, show: create(:podcast, status: "failed", title: "Gone Quiet"))
+      read(notion, at: 3.days.ago)
+
+      render partial: "brands/sponsored_shows", locals: { brand: notion }
+
+      expect(Capybara.string(rendered).all("li h3").map(&:text).map(&:squish)).to eq([ "Signal Lost" ])
     end
 
     it "takes rows the page already has, and renders nothing for a brand with none" do

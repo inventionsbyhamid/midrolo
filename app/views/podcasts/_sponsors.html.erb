@@ -1,25 +1,25 @@
 <%# locals: (podcast:) -%>
 <%#
-  Podcast page: the body of the Sponsors section (lane L2), from Sponsors::History.for (one query). The page (lane L3)
-  gives the section its heading and #sponsors anchor. With no sponsor reads it renders nothing, so the page's empty
-  state shows instead.
+  Podcast page: the body of the Sponsors section (lane L2), from Sponsors::History.for (one query). The page (lane L3,
+  podcasts/_sponsors_section) gives the section its heading and #sponsors anchor. With no sponsor reads it renders
+  nothing, so the page's empty state shows instead.
 %>
 <% rows = Sponsors::History.for(podcast) %>
 <% if rows.any? %>
-  <div class="flex flex-col gap-3" data-testid="sponsor-history">
-    <p class="text-sm text-ink-soft">
+  <div data-testid="sponsor-history">
+    <p class="pod-note">
       <%= pluralize(rows.size, "brand") %> found in this show's episode notes, newest first.
       Ads added when an episode plays aren't in the notes, so they aren't listed.
     </p>
-    <ul class="flex flex-col divide-y divide-line" role="list">
+    <ul class="sponsored-list" role="list">
       <% rows.first(SponsorsHelper::SHOWN).each do |row| %>
         <%= render "sponsors/brand_row", row: row, podcast: podcast %>
       <% end %>
     </ul>
     <% if rows.size > SponsorsHelper::SHOWN %>
-      <details>
+      <details class="mt-3">
         <summary class="disclosure disclosure-sm"><span>Show <%= pluralize(rows.size - SponsorsHelper::SHOWN, "more brand") %></span></summary>
-        <ul class="flex flex-col divide-y divide-line" role="list">
+        <ul class="sponsored-list" role="list">
           <% rows.drop(SponsorsHelper::SHOWN).each do |row| %>
             <%= render "sponsors/brand_row", row: row, podcast: podcast %>
           <% end %>

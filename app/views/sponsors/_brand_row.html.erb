@@ -1,15 +1,12 @@
 <%# locals: (row:, podcast:) -%>
 <%# One brand in a podcast's sponsor history (podcasts/_sponsors): when it was seen, its codes and offer, and the read itself. %>
-<li class="flex flex-col gap-2 py-4">
-  <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-    <h3 class="type-h3">
-      <%= link_to row.brand.name, sponsors_brand_path(row.brand), class: "link" %>
-      <% if (domain = sponsors_domain(row.brand)) && domain != row.brand.name %>
-        <span class="text-sm font-normal text-ink-soft"><%= domain %></span>
-      <% end %>
-    </h3>
-    <p class="text-sm text-ink-soft tabular-nums"><%= sponsors_seen(row) %></p>
-  </div>
-  <%= render "sponsors/offer", row: row %>
+<li class="flex flex-col gap-1 border-b border-line py-3.5">
+  <h3 class="ep-title">
+    <%= link_to row.brand.name, sponsors_brand_path(row.brand) %>
+    <% if (domain = sponsors_domain(row.brand)) && domain != row.brand.name %>
+      <span class="ml-1 text-sm font-normal text-ink-soft"><%= domain %></span>
+    <% end %>
+  </h3>
+  <%= render "sponsors/meta", row: row %>
   <%= render "sponsors/evidence", row: row, podcast: podcast %>
 </li>
