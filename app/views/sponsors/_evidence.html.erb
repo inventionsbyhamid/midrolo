@@ -1,0 +1,10 @@
+<%# locals: (row:, podcast:) -%>
+<%# The sponsor read in the show's own words, and the episode it's from. %>
+<% if row.evidence.present? %>
+  <figure class="flex flex-col gap-1 text-sm">
+    <blockquote class="border-l-2 border-line pl-3 text-ink-soft">&ldquo;<%= row.evidence %>&rdquo;</blockquote>
+    <% if row.evidence_episode_title.present? && (path = sponsors_episode_path(podcast, row.evidence_episode_slug)) %>
+      <figcaption class="pl-3 text-xs text-ink-soft">From <%= link_to row.evidence_episode_title, path, class: "link" %></figcaption>
+    <% end %>
+  </figure>
+<% end %>
