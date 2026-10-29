@@ -19,7 +19,7 @@ Coolify runs many other apps and databases there. Everything below keeps to thes
 | Resource | What it is |
 | --- | --- |
 | `midrolo` | The web app: this repo's `Dockerfile` (Thruster in front of Puma, port 80) at https://midrolo.com, with `www` redirected to the apex. Health check `GET /up`. On start it runs `db:prepare` (`bin/docker-entrypoint`). |
-| `midrolo-worker` | The same image with `MIDROLO_PROCESS=jobs`, which starts Solid Queue (`bin/jobs`) instead of the web server. No domain, no health check. `RAILS_MAX_THREADS=9`: every job thread in `config/queue.yml` (3 + 3 + 1), plus 2. |
+| `midrolo-worker` | The same image with `MIDROLO_PROCESS=jobs`, which starts Solid Queue (`bin/jobs`) instead of the web server. No domain, no health check. `RAILS_MAX_THREADS=13`: every job thread in `config/queue.yml` (3 + 3 + 1 + 2 + 1 + 1), plus 2. |
 | `midrolo-db` | Postgres 18, not reachable from outside the server. It holds `midrolo_production` and the cache, queue and cable databases, which `db:prepare` creates. |
 
 Each app is capped at 2 CPUs and 2 GB.
@@ -49,10 +49,14 @@ midrolo, midrolo-worker ─ coolify network ─▶ midrolo-db:5432
 Each app holds every variable in [`.env.example`](../.env.example) that production uses, set in Coolify as
 **runtime only** (Coolify's build variable switch off). The `Dockerfile` refuses to build when a secret would be passed
 as a build argument (`# check=error=true`), and the build needs none: assets compile with a dummy secret key. Both
-apps hold the same values; the worker adds `MIDROLO_PROCESS=jobs` and `RAILS_MAX_THREADS=9`.
+apps hold the same values; the worker adds `MIDROLO_PROCESS=jobs` and `RAILS_MAX_THREADS=13`.
 
 - `DB_HOST` is the database resource's container name, `MIDROLO_DATABASE_PASSWORD` its password (user `midrolo`).
 - `APP_URL=https://midrolo.com`; `SECRET_KEY_BASE` was made with `bin/rails secret`.
+- `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` and
+  `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT` were made with `bin/rails db:encryption:init`. They encrypt feed owner
+  emails, verification addresses and stats credentials: keep them with the backups, since changing one makes what it
+  encrypted unreadable.
 - The rest are the service keys: Qloo, Podcast Index, OpenRouter, Resend, Google OAuth, Cloudflare R2 (uploads),
   the admin login and `PROMO_PRO_UNTIL` (the hackathon trial's last day).
 

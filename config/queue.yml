@@ -3,9 +3,10 @@ default: &default
     - polling_interval: 1
       batch_size: 500
   # Every queue is named (spec/config/queue_spec.rb checks each job has a worker): a catch-all "*" worker would also
-  # take the artwork fetches, which wait on outside hosts and so get a thread of their own. Reports (full and
-  # Snapshot) get threads of their own too (R133): a full report runs up to 6 minutes. compose.yml's jobs container
-  # sizes its database pool to every thread here, plus 2.
+  # take the artwork fetches, which wait on outside hosts and so get a thread of their own (with Active Storage's
+  # analysis and variant jobs). Reports (full and Snapshot) get threads of their own too (R133): a full report runs up
+  # to 6 minutes. The marketplace's catalog ingest, sponsor detection and stats syncs each get their own, few threads,
+  # since ioflood is shared. compose.yml's jobs container sizes its database pool to every thread here, plus 2.
   workers:
     - queues: [ default, solid_queue_recurring ]
       threads: 3
@@ -16,6 +17,18 @@ default: &default
       processes: 1
       polling_interval: 1
     - queues: [ artwork ]
+      threads: 1
+      processes: 1
+      polling_interval: 1
+    - queues: [ catalog ]
+      threads: 2
+      processes: 1
+      polling_interval: 1
+    - queues: [ sponsors ]
+      threads: 1
+      processes: 1
+      polling_interval: 1
+    - queues: [ stats ]
       threads: 1
       processes: 1
       polling_interval: 1

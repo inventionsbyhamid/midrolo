@@ -33,6 +33,19 @@ RSpec.describe "Job queues" do
     end
   end
 
+  it "runs the marketplace's catalog, sponsor and stats jobs on queues of their own, with few threads" do
+    expect(Catalog::IngestPodcastJob.new.queue_name).to eq("catalog")
+    expect([ ActiveStorage::TransformJob.new.queue_name, ActiveStorage::AnalyzeJob.new.queue_name ]).to eq(%w[artwork artwork])
+
+    %w[development production].each do |env|
+      threads = { "catalog" => 2, "sponsors" => 1, "stats" => 1 }.to_h do |queue, _|
+        worker = workers(env).find { |w| Array(w["queues"]) == [ queue ] }
+        [ queue, worker&.fetch("threads") ]
+      end
+      expect(threads).to eq("catalog" => 2, "sponsors" => 1, "stats" => 1), env
+    end
+  end
+
   # The jobs Active Storage, Turbo and Solid Queue enqueue in this app. (ActiveJob::Base.descendants would also hold
   # Mission Control's job proxies once an admin spec has loaded them.)
   let(:framework_jobs) do

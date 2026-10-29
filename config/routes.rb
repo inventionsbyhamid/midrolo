@@ -59,6 +59,13 @@ Rails.application.routes.draw do
   end
   get "pipeline", to: "pipeline#index", as: :pipeline
 
+  # The marketplace (build spec section 10): each lane draws its routes from its own file in config/routes/.
+  draw(:catalog)
+  draw(:claims)
+  draw(:stats)
+  draw(:brands)
+  draw(:conversations)
+
   # Billing (Task 17): checkout and the customer portal through Billing::Provider, the founding-member waitlist, and
   # provider webhooks (an unknown provider is a 404).
   resources :checkouts, only: :create

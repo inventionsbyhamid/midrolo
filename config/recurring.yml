@@ -19,3 +19,14 @@ production:
   purge_unattached_blobs:
     class: PurgeUnattachedBlobsJob
     schedule: every day at 4:40am
+  # The marketplace (build spec section 7): feed checks for podcasts that are due, stats syncs for pending invites and
+  # active connections, and readings that expired.
+  refresh_due_podcasts:
+    class: Catalog::RefreshDueJob
+    schedule: every 10 minutes
+  sync_due_stats:
+    class: Stats::SyncDueJob
+    schedule: every 15 minutes
+  expire_stat_readings:
+    class: Stats::ExpireReadingsJob
+    schedule: every day at 3:20am

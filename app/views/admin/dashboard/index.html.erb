@@ -34,10 +34,11 @@
       <%= admin_budget_meter("Promo", budgets[:promo]) %>
       <%= admin_budget_meter("Judge", budgets[:judge]) %>
       <%= admin_budget_meter("Today, all buckets", budgets[:daily]) %>
+      <%= admin_budget_meter("Today, catalog", budgets[:catalog]) %>
     </div>
     <p class="mt-3 text-sm text-ink-soft">
       Promo and judge count all their spend, not just today's. The judge ceiling is its reserve plus unspent promo. The daily cap stops promo
-      and paid work.
+      and paid work. The catalog's work (sponsor detection) has its own daily cap and doesn't count toward the other.
     </p>
   <% end %>
 
@@ -210,5 +211,10 @@
         </table>
       </div>
     <% end %>
+  <% end %>
+
+  <%# One panel per marketplace lane (build spec section 10), each in its own partial the lane fills. %>
+  <% Admin::DashboardController::PANELS.each do |panel| %>
+    <%= render "admin/dashboard/#{panel}", stats: @stats %>
   <% end %>
 </div>
