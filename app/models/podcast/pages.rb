@@ -1,4 +1,5 @@
-# Podcast: the public pages (Podcast.for_page, search, categories, SEO, removal).
+# Podcast: the public pages (Podcast.for_page, categories, languages, similar shows, removal). Search is
+# Podcast.search_catalog, lane L1's (Podcast::Catalog), so the directory and Catalog::LazyAdd find the same shows.
 # Lane L3 adds its methods here, and only here (build spec section 10), so lanes don't edit the same model file.
 module Podcast::Pages
   extend ActiveSupport::Concern
@@ -6,13 +7,9 @@ module Podcast::Pages
   # The statuses the directory, category pages and similar shows list. A pending podcast is still being read (search
   # shows it as "Adding this show"); a failed or removed one isn't listed anywhere.
   LISTED_STATUSES = %w[active dormant].freeze
-  # The podcast page and its episode pages answer for these; a removed podcast answers 410.
-  PAGE_STATUSES = %w[pending active dormant failed].freeze
   SIMILAR_LIMIT = 6
   SIMILAR_CACHE = 6.hours
   CATEGORY_CACHE = 10.minutes
-  # Words a search takes, so a pasted paragraph can't build a huge query.
-  SEARCH_WORDS = 6
 
   included do
     # Everything the podcast page reads in one go (spec section 10): the stored artwork, the owner's workspace and its
@@ -28,23 +25,6 @@ module Podcast::Pages
   end
 
   class_methods do
-    # Catalog podcasts matching a typed query: words as prefixes against title and author ("darkn diar"), the
-    # description stemmed in English, and the title as a substring (trigram index). Ranked by the full-text match, then
-    # how close the title is. Returns none for a query with no letters or digits.
-    def search_catalog(query)
-      query = query.to_s.squish.first(100)
-      words = query.scan(/[\p{Alnum}]+/).first(SEARCH_WORDS)
-      return none if words.empty?
-
-      prefix = words.map { |word| "#{word}:*" }.join(" & ")
-      like = "%#{sanitize_sql_like(query)}%"
-      rank = sanitize_sql_array([ "ts_rank(podcasts.searchable, to_tsquery('simple', ?)) + similarity(podcasts.title, ?)",
-                                  prefix, query ])
-      where("podcasts.searchable @@ to_tsquery('simple', :prefix) OR podcasts.searchable @@ plainto_tsquery('english', :query) " \
-            "OR podcasts.title ILIKE :like", prefix: prefix, query: query, like: like)
-        .order(Arel.sql("#{rank} DESC"), id: :asc)
-    end
-
     # [[name, count]] of every category a listed podcast has, the biggest first (cached a few minutes).
     def category_counts
       Rails.cache.fetch("pages/category_counts", expires_in: CATEGORY_CACHE) do

@@ -79,7 +79,7 @@ class PodcastDirectory
 
   def scope
     relation = Podcast.listed.for_cards.strict_loading
-    relation = relation.search_catalog(query) if search?
+    relation = relation.search_catalog(query) if search? # lane L1's search, best match first
     relation = relation.in_category(category) if category
     relation = relation.in_language(language) if language
     relation = relation.where(downloads_per_episode: SIZES.fetch(size)) if size

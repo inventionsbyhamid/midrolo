@@ -1,32 +1,6 @@
 require "rails_helper"
 
 RSpec.describe Podcast::Pages do
-  describe ".search_catalog" do
-    let!(:darknet) { create(:podcast, :active, title: "Darknet Diaries", author: "Jack Rhysider", description: "True stories from the dark side of the internet.") }
-    let!(:ledger) { create(:podcast, :active, title: "The Founder's Ledger", author: "Maya Brandt", description: "Money lessons for founders running companies.") }
-
-    it "matches words as prefixes of the title and author, and the title as a substring" do
-      expect(Podcast.search_catalog("darkn diar")).to eq([ darknet ])
-      expect(Podcast.search_catalog("rhysid")).to eq([ darknet ])
-      expect(Podcast.search_catalog("under's Led")).to eq([ ledger ])
-    end
-
-    it "matches the description stemmed in English" do
-      expect(Podcast.search_catalog("company run")).to eq([ ledger ])
-    end
-
-    it "returns none for a query without letters or digits, and keeps a long query to a few words" do
-      expect(Podcast.search_catalog("!!! ---")).to be_empty
-      expect(Podcast.search_catalog("darknet #{'word ' * 50}").to_a).to eq([])
-    end
-
-    it "ranks the closest title first" do
-      other = create(:podcast, :active, title: "Diaries of a Darknet Researcher", author: "Someone Else")
-      expect(Podcast.search_catalog("darknet diaries").first).to eq(darknet)
-      expect(Podcast.search_catalog("darknet diaries")).to include(other)
-    end
-  end
-
   describe "categories and languages" do
     before do
       create(:podcast, :active, categories: [ "Technology", "News" ], language: "en-us")
