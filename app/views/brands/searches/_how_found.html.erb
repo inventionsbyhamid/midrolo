@@ -1,0 +1,38 @@
+<%# locals: (search:) -%>
+<%#
+  "How we found these" (review BR-7): the agent's seven steps as a rundown near the top once it's done, each with what
+  came back. The Qloo work is the point of the search, so it stays in view; every step's question and answer open
+  below for anyone who wants the detail.
+%>
+<% steps = search.agent_steps.sort_by(&:position) %>
+<% if steps.any? %>
+  <section class="agent-panel" aria-labelledby="how-found-heading" data-how-found>
+    <header class="agent-panel-head">
+      <svg viewBox="0 0 24 24" class="size-6 flex-none text-tally" aria-hidden="true"><path d="M3 12h2m3-5v10m4-13v16m4-11v6m4-3h1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <div class="min-w-0">
+        <h2 id="how-found-heading" class="agent-panel-title">How we found these</h2>
+        <p class="agent-panel-sub"><%= pluralize(search.taste_calls, "call") %> to Qloo's taste data, then sponsor history from the shows' own feeds. Fit is taste 50, proof 25, price 15 and trust 10; shows you can book come first.</p>
+      </div>
+    </header>
+    <ol class="agent-steps">
+      <% steps.each do |step| %>
+        <li class="<%= class_names("agent-step", "agent-step-warning" => step.warning?, "agent-step-error" => step.error?) %>">
+          <span class="agent-step-mark" aria-hidden="true">
+            <% if step.ok? %>
+              <svg viewBox="0 0 16 16" class="size-3.5"><path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <% else %>!<% end %>
+          </span>
+          <span class="sr-only"><%= { "ok" => "Done", "warning" => "Done with a warning", "error" => "Failed", "running" => "Running" }.fetch(step.status) %>:</span>
+          <p class="agent-step-title"><%= brand_step_title(step) %></p>
+          <% if step.output_summary.present? %><p class="agent-step-text"><%= step.output_summary %></p><% end %>
+        </li>
+      <% end %>
+    </ol>
+    <details class="agent-more">
+      <summary>What the agent asked at each step</summary>
+      <div class="agent-rail mt-3">
+        <%= render "brands/searches/trace", search: search %>
+      </div>
+    </details>
+  </section>
+<% end %>

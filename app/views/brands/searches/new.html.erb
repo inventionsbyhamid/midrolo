@@ -21,14 +21,7 @@
       </div>
       <fieldset>
         <legend class="label">Categories <span class="font-normal text-ink-soft">(up to 3)</span></legend>
-        <div class="mt-1 flex flex-wrap gap-2">
-          <% FitSearch::Categories.names.each do |name| %>
-            <label class="chip cursor-pointer gap-2 has-[:checked]:border-plum has-[:checked]:bg-plum-soft">
-              <%= check_box_tag "fit_search[categories][]", name, chosen.include?(name), id: "category_#{name.parameterize}", class: "accent-plum" %>
-              <span><%= name %></span>
-            </label>
-          <% end %>
-        </div>
+        <%= render "brands/searches/category_chips", chosen: chosen %>
       </fieldset>
       <div class="max-w-xs">
         <%= label_tag "fit_search_budget", "Budget per episode, in US dollars", class: "label" %>

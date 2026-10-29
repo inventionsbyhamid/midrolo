@@ -1,0 +1,765 @@
+/*
+ * The brand workspace (lane design-brand): fit search results, the agent's trace, the side switch and the role
+ * chooser. The agent panel is the one loud element: the ink of the podcast page's waveform banner with the amber
+ * tally light, because the Qloo search is the brand side's story. Everything else stays on the quiet card system.
+ */
+@layer components {
+  /* ---------- The agent on air ---------- */
+
+  .agent-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    border-radius: var(--radius-card);
+    background: var(--color-ink);
+    color: #fff;
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.08) inset;
+
+    @media (width >= 40rem) {
+      padding: 1.5rem 1.75rem;
+    }
+  }
+
+  .agent-panel-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+  }
+
+  .agent-panel-head .busy-dot {
+    margin-top: 0.625rem;
+    width: 0.625rem;
+    height: 0.625rem;
+  }
+
+  .agent-panel-title {
+    font-size: 1.3125rem;
+    font-weight: 750;
+    font-stretch: 112.5%;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .agent-panel-sub {
+    margin-top: 0.25rem;
+    max-width: 68ch;
+    font-size: 0.9375rem;
+    color: rgb(255 255 255 / 0.74);
+  }
+
+  /* The done rundown: a numbered sequence on a timeline rule. */
+  .agent-steps {
+    display: grid;
+    gap: 1rem 1.25rem;
+    counter-reset: agent-step;
+
+    @media (width >= 40rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (width >= 64rem) {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .agent-step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+    padding-top: 0.875rem;
+    border-top: 2px solid rgb(255 255 255 / 0.16);
+    counter-increment: agent-step;
+  }
+
+  .agent-step-mark {
+    position: absolute;
+    top: -0.6875rem;
+    left: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    background: var(--color-tally);
+    color: var(--color-ink);
+    font-size: 0.75rem;
+    font-weight: 800;
+    box-shadow: 0 0 0 3px var(--color-ink);
+  }
+
+  .agent-step-warning .agent-step-mark {
+    background: var(--color-ink);
+    color: var(--color-tally);
+    box-shadow: 0 0 0 3px var(--color-ink), inset 0 0 0 2px var(--color-tally);
+  }
+
+  .agent-step-error .agent-step-mark {
+    background: #f6b7b9;
+  }
+
+  .agent-step-title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .agent-step-title::before {
+    content: counter(agent-step) ". ";
+    color: rgb(255 255 255 / 0.55);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .agent-step-text {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: rgb(255 255 255 / 0.74);
+    overflow-wrap: anywhere;
+
+    @media (width < 40rem) {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+    }
+  }
+
+  /* The phone menu marks the page it's on with the tally light, as the desktop row does. */
+  .nav-sheet-link[aria-current] {
+    box-shadow: inset 3px 0 0 var(--color-tally);
+    padding-left: 0.75rem;
+  }
+
+  .agent-more > summary {
+    display: inline-flex;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgb(255 255 255 / 0.86);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  /* The live rail (and the full steps under "What the agent asked"): the reports' step partial, recoloured for ink. */
+  .agent-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+
+  .agent-rail-placeholder {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px dashed rgb(255 255 255 / 0.24);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    color: rgb(255 255 255 / 0.86);
+  }
+
+  /* Once the first real step lands, the stand-in goes. */
+  .agent-rail:has(details) .agent-rail-placeholder {
+    display: none;
+  }
+
+  /* ---------- Results ---------- */
+
+  .glance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+
+  .glance-proof::marker {
+    color: var(--color-success);
+  }
+
+  .result-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .result-group-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .result-group-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    margin-left: 0.25rem;
+    padding-inline: 0.375rem;
+    border-radius: 999px;
+    background: var(--color-plum-soft);
+    color: var(--color-plum);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    vertical-align: 0.15em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .result-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .result {
+    display: flex;
+    gap: 1rem;
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-edge);
+  }
+
+  .result-featured {
+    padding: 1.25rem;
+    border-color: var(--color-line-strong);
+    box-shadow: inset 4px 0 0 var(--color-tally), var(--shadow-edge);
+
+    @media (width >= 40rem) {
+      padding: 1.5rem;
+    }
+  }
+
+  .result-skeleton {
+    display: block;
+  }
+
+  .result-art {
+    width: 3.5rem;
+    height: 3.5rem;
+    flex: none;
+
+    @media (width >= 40rem) {
+      width: 4.5rem;
+      height: 4.5rem;
+    }
+  }
+
+  .result-featured .result-art {
+    @media (width >= 40rem) {
+      width: 6.5rem;
+      height: 6.5rem;
+    }
+  }
+
+  .result-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.625rem;
+    min-width: 0;
+  }
+
+  .result-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .result-rank {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    color: var(--color-ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .result-tier {
+    font-weight: 600;
+  }
+
+  .result-tier-ready { color: var(--color-success); }
+  .result-tier-dormant { color: var(--color-warning); }
+
+  .result-title {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+  .result-featured .result-title {
+    font-size: var(--text-xl);
+    font-stretch: 106%;
+  }
+
+  .result-link {
+    text-decoration: none;
+  }
+
+  .result-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .result-by {
+    font-size: 0.875rem;
+    color: var(--color-ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .result-fit {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .result-fit-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    font-stretch: 118%;
+    line-height: 1;
+    color: var(--color-plum);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .result-featured .result-fit-value {
+    font-size: 2rem;
+  }
+
+  .result-fit-word {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 650;
+    color: var(--color-ink-soft);
+    white-space: nowrap;
+  }
+
+  .result-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem 1.25rem;
+    font-size: 0.875rem;
+  }
+
+  .result-facts dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .result-reasons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding-left: 1.125rem;
+    list-style: disc;
+    font-size: 0.875rem;
+  }
+
+  .result-proof {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    font-size: 0.875rem;
+  }
+
+  .result-proof li {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* A quiet action whose label lines up with the text above it; its hover fill still reaches past the edge. */
+  .result-ask {
+    margin-left: -0.75rem;
+  }
+
+  .result-why {
+    flex-basis: 100%;
+    font-size: 0.875rem;
+
+    @media (width >= 40rem) {
+      flex-basis: auto;
+    }
+  }
+
+  .result-why > summary {
+    cursor: pointer;
+    color: var(--color-ink-soft);
+    padding-block: 0.25rem;
+  }
+
+  .result-why[open] {
+    flex-basis: 100%;
+  }
+
+  .result-why-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.375rem;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
+  }
+
+  .result-parts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    color: var(--color-ink-soft);
+  }
+
+  .result-more > summary {
+    list-style: none;
+  }
+
+  .result-more > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .result-more[open] > summary {
+    display: none;
+  }
+
+  .no-matches {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+    border: 1px dashed var(--color-line-strong);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+
+  /* ---------- Podcaster or brand: the side switch in the nav ---------- */
+
+  .side-switch {
+    display: inline-flex;
+    padding: 0.1875rem;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+    background: var(--color-surface);
+  }
+
+  .side-switch form {
+    display: contents;
+  }
+
+  .side-switch-option {
+    display: inline-flex;
+    align-items: center;
+    height: 1.75rem;
+    padding-inline: 0.75rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--color-ink-soft);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .side-switch-option:hover {
+    color: var(--color-ink);
+  }
+
+  .side-switch-option[aria-current="true"] {
+    background: var(--color-ink);
+    color: #fff;
+    cursor: default;
+  }
+
+  .side-switch-sheet {
+    display: flex;
+    margin-bottom: 1rem;
+  }
+
+  .side-switch-sheet .side-switch-option {
+    flex: 1;
+    justify-content: center;
+    height: 2.5rem;
+    font-size: 0.9375rem;
+  }
+
+  /* ---------- The first sign in: podcaster or brand ---------- */
+
+  .role-choices {
+    display: grid;
+    gap: 1rem;
+
+    @media (width >= 48rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .role-choice {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: 100%;
+    padding: 1.5rem;
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-edge);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+
+  .role-choice:hover {
+    border-color: var(--color-ink);
+    box-shadow: inset 0 -4px 0 var(--color-tally), var(--shadow-edge);
+  }
+
+  .role-choice-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.875rem;
+    background: var(--color-plum-soft);
+    color: var(--color-plum);
+  }
+
+  .role-choice-title {
+    font-size: 1.5rem;
+    font-weight: 760;
+    font-stretch: 115%;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .role-choice-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+  }
+
+  .role-choice-list > span {
+    display: block;
+  }
+
+  .role-choice-list > span::before {
+    content: "";
+    display: inline-block;
+    width: 0.375rem;
+    height: 0.375rem;
+    margin-right: 0.5rem;
+    border-radius: 999px;
+    background: var(--color-tally);
+    vertical-align: 0.15em;
+  }
+}
+
+@layer components {
+  /* ---------- Request a spot: the show's rate card in the form ---------- */
+
+  .request-looking {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
+  }
+
+  .spot-slots {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+
+    @media (width >= 40rem) {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .spot-slot {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    cursor: pointer;
+  }
+
+  .spot-slot:hover {
+    border-color: var(--color-ink);
+  }
+
+  .spot-slot:has(input:checked) {
+    border-color: var(--color-plum);
+    background: var(--color-plum-soft);
+    box-shadow: inset 0 0 0 1px var(--color-plum);
+  }
+
+  .spot-slot:has(input:focus-visible) {
+    outline: 3px solid var(--color-tally);
+    outline-offset: 2px;
+  }
+
+  .spot-slot-name {
+    font-size: 0.875rem;
+    font-weight: 650;
+  }
+
+  .spot-slot-price {
+    font-size: 1.375rem;
+    font-weight: 780;
+    font-stretch: 115%;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .spot-slot-note {
+    font-size: 0.75rem;
+    color: var(--color-ink-soft);
+  }
+
+  .spot-slot-any {
+    justify-content: center;
+  }
+
+  .month-chip-tag {
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+
+  .month-chip-open {
+    border-color: var(--color-success);
+  }
+
+  .month-chip-open .month-chip-tag {
+    color: var(--color-success);
+  }
+
+  .month-chip-closed {
+    background: var(--color-paper);
+  }
+
+  .month-chip-closed .month-chip-tag {
+    color: var(--color-ink-soft);
+    font-weight: 600;
+  }
+
+  .month-chip:has(input:checked) {
+    border-color: var(--color-plum);
+    background: var(--color-plum-soft);
+    color: var(--color-plum);
+  }
+}
+
+@layer components {
+  /* ---------- Brand dashboard ---------- */
+
+  .dash-counters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .dash-counter {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-edge);
+    text-decoration: none;
+  }
+
+  .dash-counter:hover {
+    border-color: var(--color-line-strong);
+  }
+
+  .dash-counter:hover .stat-label {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  /* ---------- Saved shows ---------- */
+
+  .saved-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-edge);
+  }
+
+  .saved-row-main {
+    display: flex;
+    flex: 1 1 18rem;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+
+  .saved-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+/* The reports' step partial on the ink panel. Unlayered on purpose: its Tailwind colour utilities (text-success,
+   border-line...) sit in the utilities layer, which beats anything in components. */
+.agent-panel .agent-rail details {
+  border-color: rgb(255 255 255 / 0.16);
+  background: rgb(255 255 255 / 0.04);
+}
+
+.agent-panel .agent-rail .text-ink-soft { color: rgb(255 255 255 / 0.72); }
+.agent-panel .agent-rail .text-success { color: var(--color-tally); }
+.agent-panel .agent-rail .text-warning { color: #ffd27a; }
+.agent-panel .agent-rail .text-danger { color: #f6b7b9; }
+
+.agent-panel .agent-rail details > summary {
+  min-height: 1.75rem;
+}
+
+/* The step still running breathes like the busy dot. */
+.agent-panel .agent-rail [title="In progress"] {
+  color: var(--color-tally);
+  animation: var(--animate-breathe);
+}

@@ -6,7 +6,7 @@
         <%= link_to search.query, brand_search_path(search), class: "font-semibold underline-offset-4 hover:underline" %>
         <p class="text-sm text-ink-soft">
           <%= time_ago_in_words(search.created_at) %> ago
-          <% if search.done? %> · <%= pluralize(result_counts.fetch(search.id, 0), "show") %><% end %>
+          <% if search.done? %>, <%= pluralize(result_counts.fetch(search.id, 0), "show") %><% end %>
         </p>
       </div>
       <%= brand_search_status_badge(search) %>

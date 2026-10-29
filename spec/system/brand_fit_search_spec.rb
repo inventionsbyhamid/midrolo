@@ -51,7 +51,11 @@ RSpec.describe "Brand fit search" do
       expect(page).to have_button("Saved")
     end
 
-    find("summary", text: "How the agent searched").click
+    # How we found these (review BR-7): the agent's steps sit above the results; each step's question opens below.
+    expect(page).to have_text("How we found these")
+    expect(page).to have_text("Found your brand on Qloo")
+    expect(page).to have_text("Ready to book")
+    find("summary", text: "What the agent asked at each step").click
     expect(page).to have_text("Finding Notion on Qloo…")
     expect(page).to have_text("Writing your brief…")
 
