@@ -1,1 +1,33 @@
-<%# Podcast page: Similar shows. Lane L8 fills it; lane L3's page renders it with podcast: (from Podcast.for_page). %>
+<%# locals: (podcast:) -%>
+<%#
+  Podcast page sidebar: Qloo similar shows (lane L8), for signed-in people only (build spec section 10), read from the
+  show's latest owner or sample report (Podcast#taste_report), so a page view never calls Qloo. The ones in the catalog
+  come first, each linked to its page. Renders nothing for a visitor or without a report, and lane L3's page then lists
+  similar shows from shared sponsors and categories.
+%>
+<% report = match_taste_report(podcast) if match_signed_in? %>
+<% items = report ? match_page_similar(report) : [] %>
+<% if items.any? %>
+  <%= render "components/card", title: "Similar shows", heading: :h2 do %>
+    <ul class="grid gap-3" data-match-similar>
+      <% items.each do |item| %>
+        <li class="flex items-center gap-3">
+          <% if item.podcast %>
+            <%= podcast_artwork_tag(item.podcast, class: "size-10") %>
+          <% else %>
+            <span class="flex size-10 flex-none items-center justify-center rounded-lg bg-plum-soft text-xs font-bold text-plum" aria-hidden="true"><%= Podcast.initials_for(item.name) %></span>
+          <% end %>
+          <div class="min-w-0">
+            <p class="truncate text-sm font-semibold">
+              <%= item.podcast ? link_to(item.podcast.title, match_podcast_path(item.podcast), class: "link") : item.name %>
+            </p>
+            <% if item.podcast&.author.present? %>
+              <p class="truncate text-xs text-ink-soft"><%= item.podcast.author %></p>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+    <p class="mt-2 text-xs text-ink-soft">Shows whose listeners share this audience's tastes. Taste data from Qloo.</p>
+  <% end %>
+<% end %>
