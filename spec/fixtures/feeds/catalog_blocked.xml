@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hand-written (lane L1): a show that asks directories not to list it. -->
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Private Notes</title>
+    <description>Not for directories.</description>
+    <itunes:block>Yes</itunes:block>
+    <item>
+      <title>One</title>
+      <pubDate>Tue, 20 Oct 2026 09:00:00 GMT</pubDate>
+      <guid>private-1</guid>
+    </item>
+  </channel>
+</rss>

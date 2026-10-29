@@ -1,0 +1,79 @@
+# Podcast hosting providers, detected from a feed's enclosure (media) URLs by Catalog::Detection, then from the feed
+# URL itself: key => { name: what people read, hosts: domains }. A URL's host matches a domain when it is that domain
+# or ends with "." and that domain. Measurement prefixes (config/measurement_prefixes.yml) come off an enclosure URL
+# first, so the host compared is the media file's own. The key is what podcasts.hosting_provider stores.
+acast:
+  name: Acast
+  hosts: [acast.com, acastcdn.com]
+art19:
+  name: ART19
+  hosts: [art19.com]
+audioboom:
+  name: Audioboom
+  hosts: [audioboom.com]
+ausha:
+  name: Ausha
+  hosts: [ausha.co]
+blubrry:
+  name: Blubrry
+  hosts: [blubrry.com, blubrry.net]
+buzzsprout:
+  name: Buzzsprout
+  hosts: [buzzsprout.com]
+captivate:
+  name: Captivate
+  hosts: [captivate.fm]
+castos:
+  name: Castos
+  hosts: [castos.com]
+fireside:
+  name: Fireside
+  hosts: [fireside.fm]
+libsyn:
+  name: Libsyn
+  hosts: [libsyn.com, libsyncdn.com, libsynpro.com]
+megaphone:
+  name: Megaphone
+  hosts: [megaphone.fm]
+omny:
+  name: Omny Studio
+  hosts: [omny.fm, omnycontent.com]
+pinecast:
+  name: Pinecast
+  hosts: [pinecast.com, pinecast.net]
+podbean:
+  name: Podbean
+  hosts: [podbean.com]
+podigee:
+  name: Podigee
+  hosts: [podigee.io, podigee-cdn.net]
+podomatic:
+  name: Podomatic
+  hosts: [podomatic.com]
+redcircle:
+  name: RedCircle
+  hosts: [redcircle.com]
+rss_com:
+  name: RSS.com
+  hosts: [rss.com]
+simplecast:
+  name: Simplecast
+  hosts: [simplecast.com, simplecastaudio.com]
+soundcloud:
+  name: SoundCloud
+  hosts: [soundcloud.com, sndcdn.com]
+spotify:
+  name: Spotify for Creators
+  hosts: [anchor.fm, podcasters.spotify.com, creators.spotify.com, d3ctxlq1ktw2nl.cloudfront.net]
+spreaker:
+  name: Spreaker
+  hosts: [spreaker.com]
+squarespace:
+  name: Squarespace
+  hosts: [squarespace.com]
+substack:
+  name: Substack
+  hosts: [substack.com, substackcdn.com]
+transistor:
+  name: Transistor
+  hosts: [transistor.fm]
