@@ -207,8 +207,8 @@ RSpec.describe Podcast do
       create(:media_kit, :published, show: show, open_to_sponsors: true, bands_only: true,
                                      rate_card_overrides: { "midroll" => "300", "preroll" => "120" })
       podcast.refresh_listing!
-      expect(podcast).to have_attributes(open_to_sponsors: true, min_price_cents: be_between(1, 12_000),
-                                         downloads_bands_only: true)
+      # The from price is the show's own cheapest (UX review PP-7), never a lower suggestion for the slot it left blank.
+      expect(podcast).to have_attributes(open_to_sponsors: true, min_price_cents: 12_000, downloads_bands_only: true)
     end
 
     # Code review L8: numbers belong to a claim. Unclaimed (never, or the owner's account went), the columns that drive

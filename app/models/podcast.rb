@@ -211,9 +211,16 @@ class Podcast < ApplicationRecord
     rates = MediaKit::Content.new(published).rates if published
     reading = best_downloads_reading if claimed?
     update!(open_to_sponsors: published&.open_to_sponsors? || false,
-            min_price_cents: rates && [ rates.midroll, rates.preroll, rates.postroll ].compact.min&.*(100),
+            min_price_cents: rates && listing_from_price(published, rates)&.*(100),
             downloads_per_episode: reading&.value, downloads_trust: reading&.trust,
             downloads_bands_only: reading.present? && (kit&.bands_only? || false))
+  end
+
+  # The "from" price: the cheapest of the show's own prices when it set any (PP-7: a suggestion never undercuts
+  # them), else the cheapest suggested one.
+  def listing_from_price(kit, rates)
+    own = kit.rate_card_overrides.values.grep(Integer)
+    own.any? ? own.min : [ rates.midroll, rates.preroll, rates.postroll ].compact.min
   end
 
   # Links the podcast to its Qloo entity once. An id another podcast already holds stays with it (unique index).

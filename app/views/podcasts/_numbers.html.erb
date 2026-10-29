@@ -37,10 +37,15 @@
       <% end %>
     </div>
 
-    <p class="text-sm text-ink-soft">
-      Verified numbers are read by Midrolo straight from the show's own Spotify for Creators or Apple Podcasts Connect,
-      with the show's permission, and checked every day.
-      <% if numbers.bands? %>The show shares them as ranges.<% end %>
-    </p>
+    <%# The how-we-verify line only under verified numbers (PP-9); a show's own figure carries its own badge. %>
+    <% if numbers.groups.any? || numbers.per_episode&.trust_verified? %>
+      <p class="text-sm text-ink-soft">
+        Verified numbers are read by Midrolo straight from the show's own Spotify for Creators or Apple Podcasts Connect,
+        with the show's permission, and checked every day.
+        <% if numbers.bands? %>The show shares them as ranges.<% end %>
+      </p>
+    <% elsif numbers.bands? %>
+      <p class="text-sm text-ink-soft">The show shares its numbers as ranges.</p>
+    <% end %>
   </section>
 <% end %>
