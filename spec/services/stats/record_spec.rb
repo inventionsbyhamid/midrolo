@@ -49,6 +49,19 @@ RSpec.describe Stats::Record do
     expect(readings("spotify")["spotify_audience"].breakdown).to eq("age" => { "18-22" => 0.5 }, "country_rank" => [ "US" ])
   end
 
+  it "keeps the last audience when the breakdown couldn't be read this time" do
+    described_class.call(spotify, spotify_result, now: now - 1.day)
+    failed = spotify_result(breakdowns: {}).merge("unavailable" => %w[audience_listeners age gender country])
+    described_class.call(spotify, failed, now: now)
+    expect(readings("spotify")["spotify_audience"]).to have_attributes(captured_at: now - 1.day, breakdown: include("age"))
+
+    described_class.call(spotify, spotify_result(breakdowns: {}), audience: fetch_error("failed"), now: now)
+    expect(readings("spotify")["spotify_audience"].captured_at).to eq(now - 1.day)
+
+    described_class.call(spotify, spotify_result(breakdowns: {}), audience: spotify_result(breakdowns: {}, days: 365), now: now)
+    expect(readings("spotify")["spotify_audience"]).to have_attributes(captured_at: now, breakdown: {}, period_days: 365)
+  end
+
   it "saves Apple's numbers and its plays by country" do
     described_class.call(apple, apple_result, now: now)
     saved = readings("apple")

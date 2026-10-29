@@ -6,9 +6,10 @@ module Stats
   # audience breakdown (age, gender, country) on a "<platform>_audience" reading. Then it refreshes plays per episode
   # and the podcast's listing columns. Returns the readings written.
   #
-  # The breakdown comes from audience: (a fetch over a longer window, when the 30-day one had none) if given, else
-  # from the result. An audience reading with an empty breakdown means the platform had none to give, which the
-  # audience card says plainly.
+  # The breakdown comes from the result, or, when the 30 days had none, from audience: (the fetch over the last 12
+  # months that Stats::SyncJob then makes; nil when it wasn't asked). An audience reading with an empty breakdown means
+  # the platform answered with none to give, which the audience card says plainly. When the call behind the breakdown
+  # failed this time (the helper lists its keys as unavailable), the last audience reading is kept as it was.
   class Record
     # Counts over the fetch's window; the helper names them bare ("streams"), or with _30d.
     WINDOW_COUNTS = %w[streams starts listeners plays engaged_listeners].freeze
@@ -44,7 +45,7 @@ module Stats
       @connection = connection
       @podcast = connection.podcast
       @result = result
-      @audience = audience&.dig("ok") ? audience : nil
+      @audience = audience
       @now = now
     end
 
@@ -52,7 +53,7 @@ module Stats
       rows = metric_rows
       return [] if rows.empty?
 
-      rows << audience_row
+      rows << audience_row if audience_row
 
       StatReading.transaction do
         StatReading.upsert_all(rows, unique_by: %i[podcast_id metric source])
@@ -83,15 +84,25 @@ module Stats
       end.uniq { |row| row[:metric] }
     end
 
-    # Always written once the platform answers, so the card can tell "no breakdown yet" from "never fetched".
+    # Written whenever the platform answered for the breakdown, even with none, so the card can tell "not enough
+    # listens yet" from "never fetched"; nil when it couldn't be read this time.
     def audience_row
-      @audience_row ||= begin
-        fetch = audience && breakdowns(audience).any? ? audience : result
-        count = fetch.dig("metrics", AUDIENCE_COUNT.fetch(source, "listeners"))
-        row("#{source}_audience", count.is_a?(Integer) && count >= 0 ? count : 0,
-            period_days: period_days(fetch), breakdown: breakdowns(fetch), fetch: fetch)
-      end
+      return @audience_row if defined?(@audience_row)
+
+      fetch = audience_fetch
+      count = fetch&.dig("metrics", AUDIENCE_COUNT.fetch(source, "listeners"))
+      @audience_row = fetch && row("#{source}_audience", count.is_a?(Integer) && count >= 0 ? count : 0,
+                                   period_days: period_days(fetch), breakdown: breakdowns(fetch), fetch: fetch)
     end
+
+    def audience_fetch
+      return result if breakdowns(result).any?
+      return (result if breakdown_answered?(result)) if audience.nil?
+
+      audience if audience["ok"] && breakdown_answered?(audience)
+    end
+
+    def breakdown_answered?(fetch) = (Array(fetch["unavailable"]) & SHARE_BREAKDOWNS).empty?
 
     # Only what the screen draws, cleaned: shares are floats from 0 to 1 under short keys, ranks are short codes.
     def breakdowns(fetch = result)

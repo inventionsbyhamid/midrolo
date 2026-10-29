@@ -166,10 +166,19 @@ RSpec.describe Stats::SyncJob do
       expect(audience.evidence["period_start"]).to eq((Time.now.utc.to_date - 365).iso8601)
     end
 
-    it "keeps an empty audience when 12 months have none either" do
+    it "saves an empty audience when 12 months have none either" do
       stub_fetch(spotify_result(breakdowns: {}), spotify_result(breakdowns: {}, days: 365))
       run
-      expect(readings["spotify_audience"]).to have_attributes(breakdown: {}, period_days: 30)
+      expect(readings["spotify_audience"]).to have_attributes(breakdown: {}, period_days: 365)
+    end
+
+    it "keeps the last audience when the 12-month call fails" do
+      create(:stat_reading, podcast: podcast, source: "spotify", metric: "spotify_audience", trust: "verified",
+                            breakdown: { "age" => { "28-34" => 1.0 } }, captured_at: 2.days.ago)
+      stub_fetch(spotify_result(breakdowns: {}), fetch_error("failed", "Timed out"))
+      run
+      expect(connection.reload.status).to eq("active")
+      expect(readings["spotify_audience"].breakdown).to eq("age" => { "28-34" => 1.0 })
     end
   end
 

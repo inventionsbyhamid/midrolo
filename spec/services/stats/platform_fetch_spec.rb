@@ -56,6 +56,11 @@ RSpec.describe Stats::PlatformFetch do
     end
   end
 
+  it "passes on which keys the platform didn't give this time" do
+    stub_helper(stdout: helper_json("unavailable" => [ "age", "gender", "bad key!" ]))
+    expect(described_class.call(connection)["unavailable"]).to eq(%w[age gender])
+  end
+
   it "keeps only whole, non-negative numbers under plain keys" do
     stub_helper(stdout: helper_json("metrics" => { "streams" => 5, "starts" => -1, "listeners" => 2.5, "bad key!" => 1, "x" => "9" }))
     expect(described_class.call(connection)["metrics"]).to eq("streams" => 5)

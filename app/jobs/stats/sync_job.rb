@@ -73,12 +73,12 @@ module Stats
                          last_checked_at: now, last_error: nil)
     end
 
-    # The last 12 months, when 30 days gave no breakdown; nil when that call fails or there was one already.
+    # The last 12 months, when 30 days gave no breakdown (coordinator ruling, 2026-10-30): Stats::Record reads its
+    # breakdown, or keeps the last one when this call fails. nil when 30 days had one.
     def longer_audience(connection, session, result)
       return nil if result.fetch("breakdowns", {}).any?
 
-      audience = ::Stats::PlatformFetch.call(connection, session: session, days: ::Stats::PlatformFetch::AUDIENCE_DAYS)
-      audience if audience["ok"]
+      ::Stats::PlatformFetch.call(connection, session: session, days: ::Stats::PlatformFetch::AUDIENCE_DAYS)
     end
 
     def no_access(connection, now)

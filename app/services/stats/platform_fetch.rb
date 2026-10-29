@@ -7,7 +7,8 @@ module Stats
   # count a day once it has ended), or a longer window (days:) for an audience a month can't show. The answer is one JSON object on stdout, checked and returned with string keys:
   #
   #   { "ok" => true, "platform" =>, "show" => { "id", "name", "rss_url" }, "period" => { "start", "end", "days" },
-  #     "metrics" => { "streams" => 50, ... }, "breakdowns" => { "age" => { "18-22" => 0.25, ... }, ... } }
+  #     "metrics" => { "streams" => 50, ... }, "breakdowns" => { "age" => { "18-22" => 0.25, ... }, ... },
+  #     "unavailable" => [ keys a call the platform didn't answer this time would have given ] }
   #   { "ok" => false, "error" => "expired" | "forbidden" | "not_found" | "failed" | "unavailable", "message" => ... }
   #
   # "unavailable" is this class's own: there is no working session for the platform, so nothing was asked.
@@ -155,9 +156,10 @@ module Stats
 
       show = hash(body["show"]).slice("id", "name", "rss_url").transform_values { |value| scrub(value.to_s).first(300) }
       period = hash(body["period"]).slice("start", "end", "days")
-      log("ok, #{metrics.size} metrics")
+      unavailable = Array(body["unavailable"]).map(&:to_s).grep(SAFE_KEY).first(50)
+      log("ok, #{metrics.size} metrics#{", unavailable: #{unavailable.join(' ')}" if unavailable.any?}")
       { "ok" => true, "platform" => connection.provider, "show" => show, "period" => period, "metrics" => metrics,
-        "breakdowns" => breakdowns }
+        "breakdowns" => breakdowns, "unavailable" => unavailable }
     end
 
     def error(body)
