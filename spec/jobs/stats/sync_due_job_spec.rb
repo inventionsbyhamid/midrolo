@@ -37,6 +37,29 @@ RSpec.describe Stats::SyncDueJob do
     expect(enqueued_ids & not_due.map(&:id)).to be_empty
   end
 
+  # Code review M6: invites nobody accepted mustn't run the helper against the platforms every 15 minutes for 14 days.
+  it "polls a pending invite every run for 2 hours, hourly until a day old, then every 6 hours" do
+    create(:service_session, platform: "spotify")
+    due = [
+      connection("pending_invite", created_at: 30.minutes.ago, last_checked_at: 14.minutes.ago),
+      connection("pending_invite", created_at: 5.hours.ago, last_checked_at: 61.minutes.ago),
+      connection("pending_invite", created_at: 5.hours.ago, last_checked_at: 57.minutes.ago), # a run lands a bit late
+      connection("pending_invite", created_at: 5.hours.ago, last_checked_at: nil),
+      connection("pending_invite", created_at: 3.days.ago, last_checked_at: 7.hours.ago),
+      connection("pending_invite", created_at: 15.days.ago, last_checked_at: 7.hours.ago) # SyncJob lapses it
+    ]
+    not_due = [
+      connection("pending_invite", created_at: 5.hours.ago, last_checked_at: 20.minutes.ago),
+      connection("pending_invite", created_at: 3.days.ago, last_checked_at: 2.hours.ago),
+      connection("pending_invite", created_at: 10.days.ago, last_checked_at: 5.hours.ago)
+    ]
+
+    described_class.perform_now(now)
+
+    expect(enqueued_ids).to match_array(due.map(&:id))
+    expect(enqueued_ids & not_due.map(&:id)).to be_empty
+  end
+
   it "enqueues nothing while no session works" do
     create(:service_session, platform: "spotify", status: "expired")
     connection("pending_invite")
