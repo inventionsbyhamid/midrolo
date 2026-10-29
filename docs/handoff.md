@@ -31,7 +31,9 @@ an absolute http(s) `APP_URL` and the rest of the uncommented lines in `.env.exa
 - [ ] The judge's walk (judging.md, section 4) passes on a local run with the Fake adapters.
 - [ ] Merge `marketplace` into `main`. Push only when you decide to: it deploys both apps.
 - [ ] Follow deploy.md, "The marketplace: first deploy", steps 1 to 11: backup, re-read feeds, the catalog seed,
-      sponsor detection, similar shows for the samples, the demo show, the Spotify session.
+      sponsor detection, similar shows for the samples, the demo show, the Spotify session. For the seed, set
+      `qloo_daily_call_limit` to 500 in `/admin` first, then `bin/rails "catalog:seed_paced[1000,6]"` in the
+      worker's Terminal: it runs for about 6 hours, so start it early (`bin/rails catalog:seed_stop` stops it).
 
 ## 3. Our own show, verified
 
@@ -54,7 +56,10 @@ The Devpost points judges at **AiGM by AiHunt** (feed `https://anchor.fm/s/12d45
       to 90 calls (120 at most), and a brand search up to 10.
 - [ ] Measure one real report and one real brand search: `/admin` shows each run's Qloo calls and LLM cost. Compare
       them with the judge reserve and the daily cap, and raise either if a few judges wouldn't fit.
-- [ ] Raise `llm_catalog_daily_usd` if sponsor detection still has episodes waiting.
+- [ ] Raise `llm_catalog_daily_usd` if sponsor detection still has episodes waiting (the daily sponsors sweep,
+      `sweep_sponsors` in `config/recurring.yml`, picks them up at 4:10am, up to 100 podcasts a day).
+- [ ] `/admin/stat_connections` has no connection waiting for review: Approve or Reject each (deploy.md, "Connections
+      held for review").
 - [ ] Billing stays on the founding member waitlist (`BILLING_MODE` unset or `waitlist`). Live billing stays refused
       until an admin enters Qloo's cost per call and every paid plan keeps a 60% margin with every cap used.
 - [ ] Keep the site up through judging: check `/admin` and the project in Coolify once a day.
@@ -68,7 +73,6 @@ The Devpost points judges at **AiGM by AiHunt** (feed `https://anchor.fm/s/12d45
 
 ## Later
 
-- [ ] A recurring `sponsors:scan` in `config/recurring.yml`, so episodes that waited for budget are picked up daily.
 - [ ] Before switching `LLM_AGENT_MODEL` or the provider, add 8 to 10 real shows to `config/eval_shows.yml` and run
       `bin/rails eval:run` with live keys.
 - [ ] After the hackathon, deploy.md's "Taking it down" lists everything to remove, on the server and outside it.

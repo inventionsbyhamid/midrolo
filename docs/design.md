@@ -311,7 +311,7 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 
 **Security**
 - CSRF protection and a CSP.
-- Rate limits through Rails' built in `rate_limit` (R84): per user on reports, pitches, show search and the judge code, per show on verification mail, and a global per IP guard.
+- Rate limits through Rails' built in `rate_limit` (R84): per user on reports, pitches, show search and the judge code, per show on verification mail, and a global per IP guard (60 a minute). Search engine crawlers confirmed by reverse and forward DNS (`VerifiedCrawler`, never the user agent alone) may read past the global guard on GET and HEAD; every other limit still applies to them.
 - Signed webhook verification.
 - Authorization checks so users only see their own shows, reports and kits. Public kits and samples are read-only.
 - Secrets never reach the browser.
