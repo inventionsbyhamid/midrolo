@@ -1,12 +1,19 @@
 <% content_for :title, "Pricing" %>
-<% content_for :meta, social_meta(description: "Midrolo pricing: a free Snapshot, then Creator and Pro plans for full sponsor reports and pitch packs. No commission on any deal you land.") %>
+<% content_for :meta, social_meta(description: "Midrolo pricing: listing your podcast is free, brands search free during the trial, and podcasters can add AI sponsor reports and pitch packs. No commission on any deal.") %>
 <div class="wrap page-head">
   <h1 class="type-h1">Pricing</h1>
-  <p class="type-lead mt-4 max-w-2xl">Start with a free Snapshot. Pay when you're ready to pitch. No commission on any deal you land.</p>
+  <p class="type-lead mt-4 max-w-2xl">Listing your show is free. Brands search free during the trial. No commission on any deal.</p>
 </div>
-<section class="page-section pt-0" aria-label="Plans">
+<section class="page-section pt-0" aria-label="Listing and brands">
   <div class="wrap">
-    <%= render "pages/plans", heading: :h2 %>
+    <%= render "pages/sides", heading: :h2 %>
+  </div>
+</section>
+<section class="page-section" aria-labelledby="toolkit-title">
+  <div class="wrap">
+    <h2 id="toolkit-title" class="type-h2">Sponsor reports and pitches, for podcasters</h2>
+    <p class="section-lead">Start with a free Snapshot. Pay when you're ready to pitch.</p>
+    <%= render "pages/plans", heading: :h3 %>
   </div>
 </section>
 <section class="page-section" aria-labelledby="faq-title">

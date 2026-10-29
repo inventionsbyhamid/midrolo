@@ -16,7 +16,7 @@ RSpec.describe "Public pages" do
   end
 
   describe "SEO tags" do
-    pages = { "/" => "Midrolo: find sponsors who already love your listeners", "/pricing" => "Pricing | Midrolo",
+    pages = { "/" => "Midrolo: where independent podcasts get sponsored", "/pricing" => "Pricing | Midrolo",
               "/privacy" => "Privacy | Midrolo", "/terms" => "Terms | Midrolo", "/about" => "About | Midrolo",
               "/samples" => "Sample sponsor reports | Midrolo", "/users/sign_in" => "Sign in | Midrolo" }
 
@@ -82,40 +82,151 @@ RSpec.describe "Public pages" do
     end
   end
 
-  describe "GET / (R78)" do
-    it "shows the landing page to a visitor, with Sign in in the header" do
+  describe "GET / (R78, lane L9)" do
+    def header = page.at_css("header.site-header")
+    def nav_links = header.css("nav[aria-label='Main'] a").to_h { |link| [ link.text.squish, link["href"] ] }
+
+    it "shows a visitor the two sides, with Podcasts, For brands, Pricing and Sign in in the header" do
       get "/"
 
       expect(response).to have_http_status(:ok)
-      expect(page.at_css("h1").text.squish).to eq("Find sponsors who already love your listeners")
-      header = page.at_css("header.site-header")
-      expect(header.at_xpath(".//a[normalize-space()='Sign in']")["href"]).to eq("/users/sign_in")
-      expect(header.text).not_to include("Go to my shows")
-      expect(page.at_xpath("//main//a[normalize-space()='Get my free Snapshot']")["href"]).to eq("/users/sign_in")
+      expect(page.at_css("h1").text.squish).to eq("Where independent podcasts get sponsored")
+      expect(nav_links).to eq("Podcasts" => "/podcasts", "For brands" => "/#for-brands", "Pricing" => "/pricing",
+                              "Sign in" => "/users/sign_in")
+      expect(header.text).not_to include("Your shows", "Inbox", "Sign out")
+      actions = page.css("#hero .hero-actions a").to_h { |link| [ link.text.squish, link["href"] ] }
+      expect(actions).to eq("Find podcasts your customers love" => "/brand/searches/new",
+                            "Get your show sponsored" => "#for-podcasters")
     end
 
-    it "shows the landing page to a signed-in user too, with Go to my shows instead of Sign in" do
+    it "gives a signed-in person their own links: Podcasts, Your shows, Inbox and Account, and Sign out" do
       sign_in create(:user)
       get "/"
 
       expect(response).to have_http_status(:ok)
-      header = page.at_css("header.site-header")
-      expect(header.at_xpath(".//a[normalize-space()='Go to my shows']")["href"]).to eq("/shows")
-      expect(header.text).not_to include("Sign in")
-      expect(page.at_xpath("//main//a[normalize-space()='Get my free Snapshot']")["href"]).to eq("/shows/new")
+      expect(nav_links).to eq("Podcasts" => "/podcasts", "Your shows" => "/shows", "Inbox" => "/inbox", "Account" => "/account")
+      expect(header.at_css("form[action='/users/sign_out'] button").text.squish).to eq("Sign out")
+      expect(header.text).not_to include("Sign in", "Pipeline")
     end
 
-    it "sends See a sample report to /samples until a sample is done, then to the first done sample" do
+    it "adds Brand for a brand's member and counts the unread conversations on Inbox" do
+      user = create(:user)
+      member = create(:brand_member, user: user)
+      create(:conversation, brand: member.brand, started_by: user)
+      sign_in user
       get "/"
-      expect(page.at_xpath("//main//a[normalize-space()='See a sample report']")["href"]).to eq("/samples")
+
+      expect(nav_links.keys).to eq([ "Podcasts", "Your shows", "Inbox 1 1 unread", "Brand", "Account" ])
+      expect(nav_links["Brand"]).to eq("/brand")
+      inbox = header.at_css("nav[aria-label='Main'] a[href='/inbox']")
+      expect(inbox.at_css(".nav-count").text).to eq("1")
+      expect(inbox.at_css(".nav-count")["aria-hidden"]).to eq("true")
+      expect(inbox.at_css(".sr-only").text).to eq("1 unread")
+      expect(header.at_css("button[aria-haspopup='dialog']").text.squish).to eq("Menu 1 1 unread")
+    end
+
+    it "keeps Pipeline in the podcaster's workspace nav" do
+      sign_in create(:user)
+      get "/account"
+
+      expect(nav_links.keys).to eq([ "Podcasts", "Your shows", "Pipeline", "Inbox", "Account" ])
+      expect(header.at_css("nav[aria-label='Main'] a[href='/account'][aria-current='page']")).to be_present
+    end
+
+    it "says Creator Lab closes on November 1 until it has, then that it closed, and links to the free listing" do
+      travel_to(Date.new(2026, 10, 30)) { get "/" }
+      news = page.at_css("#hero a.hero-news")
+      expect(news["href"]).to eq("#creator-lab")
+      expect(news.text.squish).to eq("Audacy Creator Lab (formerly Podcorn) closes November 1. List your show free.")
+      creator_lab = page.at_css("#creator-lab")
+      expect(creator_lab.at_css("h2").text.squish).to eq("Coming from Creator Lab?")
+      expect(creator_lab.text.squish).to include("closes November 1. List your show free.", "No commission on any deal")
+      expect(creator_lab.text.squish).to include("We are not affiliated with Audacy, Creator Lab or Podcorn.")
+      expect(creator_lab.at_xpath(".//a[normalize-space()='Find your show']")["href"]).to eq("/podcasts")
+
+      travel_to(Date.new(2026, 11, 1)) { get "/" }
+      expect(page.at_css("#hero a.hero-news").text.squish).to start_with("Audacy Creator Lab (formerly Podcorn) closed November 1.")
+    end
+
+    it "shows the proof strip with the product's own badges, and the catalog's counts once there's a directory" do
+      get "/"
+
+      proof = page.at_css("#proof")
+      expect(proof.css("h3").map { |h| h.text.squish })
+        .to eq([ "Verified Spotify and Apple numbers", "Sponsor history with evidence", "Matched by audience taste" ])
+      expect(proof.text.squish).to include("Verified with Spotify for Creators", "From the feed", "Taste data from Qloo")
+      expect(proof.text.squish).not_to match(/\d/) # no number until the catalog has one to give
+      expect(proof.at_css(".proof-facts")).to be_nil
+
+      stub_const("PagesController::CATALOG_FACTS_FROM", 2)
+      episode = create(:episode, podcast: create(:podcast, :active))
+      create(:podcast, :active)
+      create(:sponsor_mention, episode: episode)
+      get "/"
+      expect(page.at_css("#proof .proof-facts").text.squish)
+        .to eq("In the directory now: 2 podcasts, 1 sponsor read and 1 brand, read from the shows' own feeds.")
+    end
+
+    it "shows real shows from the directory on the brand side, open to sponsors first, never the demo show" do
+      get "/"
+      expect(page.at_css("#for-brands .side-shot")).to be_nil
+
+      create(:podcast, :indexable, title: "Older Show", last_published_at: 30.days.ago)
+      create(:podcast, :indexable, title: "Open Show", open_to_sponsors: true, last_published_at: 90.days.ago)
+      create(:podcast, :active, title: "Thin Show") # not indexable
+      create(:podcast, :indexable, title: "Demo", podcast_guid: Podcast::DEMO_GUID)
+      get "/"
+
+      cards = page.css("#for-brands .side-shot .dir-card-title").map { |title| title.text.squish }
+      expect(cards).to eq([ "Open Show", "Older Show" ])
+      expect(page.at_css("#for-brands .side-shot a[href='/podcasts/open-show']")).to be_present
+      steps = page.css("#for-brands .side-step h3").map { |h| h.text.squish }
+      expect(steps).to eq([ "Name your brand", "See who fits, and why", "Request a spot" ])
+    end
+
+    it "lets a podcaster search for their show, and shows the demo show's listing once demo:setup has run" do
+      get "/"
+
+      podcasters = page.at_css("#for-podcasters")
+      search = podcasters.at_css("form[role='search']")
+      expect(search["action"]).to eq("/podcasts")
+      expect(search["method"]).to eq("get")
+      expect(search.at_css("input[name='q']")).to be_present
+      expect(podcasters.css(".side-step h3").map { |h| h.text.squish })
+        .to eq([ "Claim your page", "Invite Midrolo to your stats", "Answer brand requests" ])
+      expect(podcasters.at_xpath(".//a[normalize-space()='Get a free Snapshot']")["href"]).to eq("/users/sign_in")
+      expect(podcasters.at_css(".side-shot")).to be_nil
+      expect(page.at_css("#explore").text).not_to include("demo show")
+
+      create(:user, admin: true)
+      demo = Claims::DemoSetup.call
+      get "/"
+
+      listing = page.at_css("#for-podcasters .side-shot")
+      expect(listing.text.squish).to include("Midrolo Demo Show", "Demo show", "Midroll", "Open to sponsors")
+      expect(listing.at_css("a[href='/podcasts/#{demo.slug}#rates']")).to be_present
+      expect(page.at_css("#explore a[href='/podcasts/#{demo.slug}']").text.squish).to include("Open the demo show", "Demo")
+    end
+
+    it "links to the directory and a sample report to look around, and the blog only once a post is out" do
+      get "/"
+
+      explore = page.at_css("#explore")
+      expect(explore.at_css("a[href='/podcasts']").text.squish).to start_with("Browse podcasts")
+      expect(explore.at_css("a[href='/samples']").text.squish).to start_with("Read a sample report")
+      expect(explore.at_css("a[href='/blog']")).to be_nil
+
+      create_sample(Samples.slugs[0])
+      get "/"
+      expect(page.at_css("#explore a[href='/samples/#{Samples.slugs[0]}']")).to be_present
+    end
+
+    it "keeps the hero's match card an illustration until a sample is done, never inventing brands or numbers" do
+      get "/"
+
       hero = page.at_css("#hero").text
       expect(hero).to include("An illustration of a match list", "Coffee roaster", "Notes app", "Budgeting app")
       expect(hero).not_to match(/Fieldnote|Ledgerly|Northwind|Affinity \d/) # no invented brands or numbers (R89)
-
-      create_sample(Samples.slugs[1], title: "Index Fund Mornings")
-      create_sample(Samples.slugs[0])
-      get "/"
-      expect(page.at_xpath("//main//a[normalize-space()='See a sample report']")["href"]).to eq("/samples/#{Samples.slugs[0]}")
     end
 
     it "previews the first sample's top matches in the hero" do
@@ -141,25 +252,28 @@ RSpec.describe "Public pages" do
                "RSS.com podcaster survey")
     end
 
-    it "explains how it works, what makes it different and the old way, then the FAQ" do
+    it "compares the old way with both sides of Midrolo, then answers the questions both sides ask" do
       get "/"
 
-      expect(page.at_css("#how-it-works").css("ol > li").size).to eq(3)
-      expect(page.at_css("#different").text).to include("Qloo taste data", "Proven sponsors", "Honest labels")
-      expect(page.at_css("#different").text.squish).to include("modeled from Qloo taste data, not measured")
-      expect(page.at_css("#old-way").text).to include("The old way", APP_NAME)
+      expect(page.css("#old-way tbody th").map { |th| th.text.squish })
+        .to eq([ "Finding shows", "Trusting the numbers", "Proving fit", "Pricing a spot", "Booking" ])
       faq = page.at_css("#faq").text.squish
+      expect(faq).to include("Is listing my show free?", "How do verified numbers work?", "Can brands contact me directly?")
       expect(faq).to include("Where does the data come from?", "Is this my real audience?", "What's a proxy profile?")
-      expect(faq).to include("modeled from Qloo taste data, not measured")
+      expect(faq).to include("modeled from Qloo taste data, not measured", "Analytics access only", "Analyst role")
     end
 
-    it "says it in plain words" do
+    it "shows what each side pays above the podcaster plans, from the limits the code enforces" do
       get "/"
 
-      expect(page.at_css(".hero-lead").text.squish).to include("Qloo taste data", "brands your audience will likely love")
-      expect(page.at_css("#different").text.squish).to include("Brands people like your listeners love more than most.")
-      expect(page.at_css("main").text).not_to include("over-index")
-      expect(page.at_css("#how-it-works").text.squish).to include("In a few minutes")
+      sides = page.at_css("#pricing .sides")
+      expect(sides.css(".plan-name").map { |name| name.text.squish }).to eq([ "Listing your show", "For brands" ])
+      brands = sides.css(".sides-card").last.text.squish
+      expect(brands).to include("Free during the trial",
+                                "#{User::Brands::DAILY_SEARCHES[:unverified]} fit searches a day, " \
+                                "#{User::Brands::DAILY_SEARCHES[:verified]} with a verified work email",
+                                "#{User::Brands::DAILY_REQUESTS[:unverified]} requests a day")
+      expect(sides.css(".sides-card").first.text.squish).to include("Free forever", "No commission on any deal")
     end
 
     # R97: short headline, one line subhead, short bullets. The FAQ may run long, but stays collapsed.
@@ -168,21 +282,21 @@ RSpec.describe "Public pages" do
       get "/"
 
       expect(words.(page.at_css(".hero-lead"))).to be <= 15
-      expect(page.css("#hero .hero-actions a").map { |a| a.text.squish }).to eq([ "Get my free Snapshot", "See a sample report" ])
-      expect(page.css("#hero p").map { |p| p["class"] }).not_to include("hero-note")
+      expect(words.(page.at_css(".hero-news"))).to be <= 14
+      page.css("#proof .proof-item > p:last-child").each { |line| expect(words.(line)).to be <= 10, line.text.squish }
+      page.css(".side .section-lead").each { |lead| expect(words.(lead)).to be <= 16, lead.text.squish }
+      page.css(".side-step p").each { |step| expect(words.(step)).to be <= 10, step.text.squish }
       page.css("#quotes blockquote").each { |quote| expect(words.(quote)).to be <= 12, quote.text.squish }
-      page.css("#how-it-works li p").each { |step| expect(words.(step)).to be <= 10, step.text.squish }
-      expect(page.css("#different dd").size).to eq(3)
-      page.css("#different dd").each { |point| expect(words.(point)).to be <= 12, point.text.squish }
-      expect(page.css("#old-way tbody tr").size).to eq(4)
+      expect(page.css("#old-way tbody tr").size).to eq(5)
       page.css("#old-way th, #old-way td").each { |cell| expect(words.(cell)).to be <= 6, cell.text.squish }
+      page.css("#creator-lab li").each { |point| expect(words.(point)).to be <= 8, point.text.squish }
       expect(page.css("#samples p.section-lead")).to be_empty
       page.css("#pricing .plan-features").each { |list| expect(list.css("li").size).to be <= 5 }
       expect(page.css("#faq details").size).to be >= 8
       expect(page.css("#faq details[open]")).to be_empty
       closing = page.at_css(".closing")
       expect(closing.css("p")).to be_empty
-      expect(closing.css("a").map { |a| a.text.squish }).to eq([ "Get my free Snapshot", "See a sample report" ])
+      expect(closing.css("a").map { |a| a.text.squish }).to eq([ "Find podcasts your customers love", "Get your show sponsored" ])
     end
   end
 
@@ -275,7 +389,10 @@ RSpec.describe "Public pages" do
       expect(footer.at_xpath(".//a[normalize-space()='Privacy']")["href"]).to eq("/privacy")
       expect(footer.at_xpath(".//a[normalize-space()='Terms']")["href"]).to eq("/terms")
       expect(footer.at_xpath(".//a[normalize-space()='Contact']")["href"]).to eq("mailto:hello@midrolo.com")
-      expect(footer.text).to include("Built for the Qloo Agentic Hackathon")
+      expect(footer.text).to include("Built for the Qloo Agentic Hackathon", "Where independent podcasts get sponsored.")
+      links = footer.css("nav[aria-label='Footer'] a").to_h { |link| [ link.text.squish, link["href"] ] }
+      expect(links).to include("Podcasts" => "/podcasts", "For brands" => "/#for-brands", "Sample reports" => "/samples",
+                               "Pricing" => "/pricing", "Data sources" => "/data-sources")
     end
   end
 

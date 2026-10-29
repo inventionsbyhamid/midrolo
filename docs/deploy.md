@@ -27,14 +27,20 @@ Each app is capped at 2 CPUs and 2 GB.
 ## How a request gets in
 
 ```
-browser ─https─▶ Traefik (Coolify's proxy, ports 80/443, Let's Encrypt)
+browser ─https─▶ Cloudflare (proxy on) ─https─▶ Traefik (Coolify's proxy, ports 80/443, Let's Encrypt)
                    └─ coolify network ─▶ midrolo:80 (Thruster) ─▶ Puma :3000
 midrolo, midrolo-worker ─ coolify network ─▶ midrolo-db:5432
 ```
 
 - Coolify writes the Traefik labels: `midrolo.com` on `https` with a Let's Encrypt certificate, `http` redirected to
   `https`, and `www.midrolo.com` redirected to the apex. DNS is two `A` records, `midrolo.com` and `www`, pointing at
-  the server, DNS only (no Cloudflare proxy) and no `AAAA`.
+  the server, with no `AAAA`.
+- **Cloudflare's proxy is on** (orange cloud, since 2026-10-29). Pages are dynamic and never cached at the edge.
+  Catalog artwork, served through Active Storage's proxy with a long, public, immutable Cache-Control, is cached at
+  the edge (`cf-cache-status: HIT` on a second request). A removed show's artwork may stay in Cloudflare's cache for
+  up to its TTL; the data sources page says so, and an urgent takedown gets a manual purge in Cloudflare.
+- Rails reads the client from CF-Connecting-IP, but only when the nearest hop that isn't our own proxy is a
+  Cloudflare address, which a visitor can't fake (`config/initializers/client_ip.rb`, cloudflare-rails).
 - TLS ends at Traefik, so Rails runs with `assume_ssl` and `force_ssl` (secure cookies, HSTS) and never redirects.
 - Rails answers only for `midrolo.com` and `www.midrolo.com`; `/up`, the health check, answers any host.
 - The client's IP (`request.remote_ip`, which the rate limits use) comes from X-Forwarded-For, which Traefik and
@@ -59,6 +65,9 @@ apps hold the same values; the worker adds `MIDROLO_PROCESS=jobs` and `RAILS_MAX
   encrypted unreadable.
 - The rest are the service keys: Qloo, Podcast Index, OpenRouter, Resend, Google OAuth, Cloudflare R2 (uploads),
   the admin login and `PROMO_PRO_UNTIL` (the hackathon trial's last day).
+- Optional for the marketplace: `MIDROLO_SPOTIFY_EMAIL` and `MIDROLO_APPLE_EMAIL` (the stats address podcasters
+  invite; unset means stats@midrolo.com), `LLM_CHEAP_MODEL` (sponsor checks and brand briefs) and
+  `LLM_CATALOG_DAILY_USD` (their own daily cap; `/admin` overrides it).
 
 Production stops at boot, naming the variable, when a required one is blank (`lib/required_env.rb`). After changing a
 variable, redeploy (or restart) both apps.
@@ -86,6 +95,21 @@ package's hashes in `requirements-stats.txt`.
 - **Upgrading a connector.** Change its pin and hashes (from `https://pypi.org/pypi/<name>/<version>/json`) and
   `PINNED` in the script. The helper replaces the connectors' HTTP loop, so read their changes first, then run the
   tests and a live fetch from /admin.
+
+### Service sessions: Midrolo's own Spotify and Apple accounts
+
+Podcasters invite the stats address (stats@midrolo.com, which forwards to the team's inbox) to their show. The helper
+then signs in as that account with its saved session.
+
+- **Accept each invite** from the email Spotify or Apple sends to the stats address. `/admin/stat_connections` lists
+  the pending invites oldest first, with how long each has waited. Midrolo checks a pending invite every 15 minutes
+  for 14 days; the first fetch that works makes it Active.
+- **Save the session** at `/admin/service_sessions` (Spotify needs `sp_dc`; `sp_key` is optional; Apple takes
+  `myacinfo` and `itctx`). The form is never prefilled and never shows a saved value. Or, in the worker's Terminal,
+  `bin/rails "stats:session[spotify]" < file`, which reads JSON or `KEY=value` lines from stdin and prints only the
+  key names. Then press **Test fetch** with a connection or a Spotify show link.
+- **When a session expires,** syncs pause, the session shows Expired, and one email goes to the admins. Save a new
+  session and syncs resume on their own.
 
 ## Payments
 
@@ -135,6 +159,33 @@ docker exec -it "$(docker ps -q --filter label=coolify.projectName=midrolo --fil
 - The live Qloo check (8 calls, at most 10): `bin/rails qloo:smoke` ([live-smoke.md](live-smoke.md)).
 - The sample reports (Qloo calls plus a few cents of LLM each): `bin/rails samples:generate`.
 
+## The marketplace: first deploy
+
+The marketplace adds the catalog, sponsor detection, verified stats, brand searches and conversations. Its first
+deploy needs these steps once, in order. Commands run in the **worker's** Terminal (they queue work for it).
+
+1. **Back up the database** (Backups, below) and check the file exists.
+2. **Encryption keys** are set on both apps (Settings, above). Production refuses to boot without them.
+3. **Deploy** (push to `main`) and watch both apps come up. The migrations move each show onto a podcast record.
+4. **Read every existing feed again**, which refills owner emails and feed facts:
+   `bin/rails catalog:refresh`.
+5. **Seed the catalog.** Raise `qloo_daily_call_limit` in `/admin` first (the seed reads 21 genre tags, 50 shows a
+   call, and needs roughly 60 to 150 calls for 1,000 shows). Then `bin/rails "catalog:seed[1000]"`. Directory
+   searches run about one a second, so expect 20 to 40 minutes. It's safe to stop and run again. Watch the Catalog
+   panel in `/admin` and the catalog and artwork queues in `/admin/jobs`.
+6. **Sponsor detection.** New episodes are scanned as they're read. For the backfill, raise `llm_catalog_daily_usd`
+   in `/admin` (about $5 to $10 covers 1,000 shows), then `bin/rails sponsors:scan`, again if episodes are still
+   waiting. Strong pattern reads are saved even when the budget runs out.
+7. **Similar shows for the samples:** `bin/rails matching:similar_backfill` (one Qloo call per sample report).
+8. **The demo show:** `bin/rails demo:setup`. `DEMO_OWNER_EMAIL` picks the owner account; unset means the first admin.
+   It prints the page's address.
+9. **Add a show by hand** when you need one: `bin/rails "catalog:add[<feed URL, Apple link or name>]"`. Spotify links
+   are refused; use the show's RSS feed.
+10. **Verified stats:** save the Spotify session (above), then `bin/rails stats:backfill_provided` turns owners' typed
+    downloads into "provided by the show" numbers.
+11. **Check `/admin`:** catalog counts and feed errors, sponsor detection, stats connections, Qloo calls and LLM
+    spend.
+
 ## After every deploy: checks
 
 1. **Health.** All three resources are running (healthy) in Coolify, and from anywhere:
@@ -143,15 +194,18 @@ docker exec -it "$(docker ps -q --filter label=coolify.projectName=midrolo --fil
 2. **Content Security Policy.** Open the landing page, a report with its map, and a public kit with the browser's
    console open: nothing may say "Content Security Policy". The map must draw.
 3. **The client's IP.** Request `https://midrolo.com/pricing` once plainly and once with
-   `-H 'X-Forwarded-For: 203.0.113.9' -H 'Forwarded: for=203.0.113.9'`. In the app's logs, the address after `for` must
-   be yours on both lines, never `203.0.113.9` or a Docker address (`10.x`, `172.x`). A request whose `Client-IP`
-   disagrees with X-Forwarded-For gets `400`.
+   `-H 'X-Forwarded-For: 203.0.113.9' -H 'CF-Connecting-IP: 203.0.113.9' -H 'Forwarded: for=203.0.113.9'`. In the
+   app's logs, the address after `for` must be yours on both lines, never `203.0.113.9`, a Cloudflare address or a
+   Docker address (`10.x`, `172.x`). A request whose `Client-IP` disagrees with X-Forwarded-For gets `400`.
 4. **Share images.** `bin/rails runner 'p ShareImages::Renderer.text_width("Midrolo", family: "ArchivoWide", weight: 800, size: 100)'`
    prints `447` (the bundled font was found), and `https://midrolo.com/samples/<a sample slug>/og.png` answers
    `200 image/png`.
 5. **Jobs.** Run a Snapshot from the site and see it finish; the worker's logs show no errors.
 6. **A backup.** The database's Backups tab in Coolify lists a recent successful run.
 7. **The stats helper.** `bin/platform-stats --self-test` in the app's Terminal prints `{"ok":true,"self_test":true}`.
+8. **The marketplace.** `/podcasts`, a podcast page, a brand page and `/sitemap.xml` answer 200. A podcast's artwork
+   answers `cf-cache-status: HIT` on its second request. `/admin` shows no new feed errors in a row and a working
+   Spotify session.
 
 ## Backups
 
@@ -163,5 +217,7 @@ Import Backups tabs in Coolify.
 ## Taking it down
 
 Take a last backup, then delete the `midrolo` project in Coolify (its apps, the database and its volume). Outside the
-server: the DNS records, the uploads R2 bucket and its token, the Google OAuth client, the Resend domain, and the
-Coolify API token made for this project.
+server: the DNS records and the Cloudflare proxy settings, the uploads R2 bucket and its token, the Google OAuth
+client, the Resend domain, the Coolify API token made for this project, the stats address's forwarding rule, and the
+Spotify and Apple accounts behind it (remove Midrolo from every show team that invited it first, or let podcasters
+know).

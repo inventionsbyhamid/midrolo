@@ -10,9 +10,7 @@
     <%= render "shared/masquerade_banner" %>
     <%= render "components/demo_banner" if demo_mode? %>
     <%= render "shared/promo_banner" %>
-    <%= render "components/nav",
-          links: [ [ "Shows", shows_path ], [ "Pipeline", pipeline_path ], [ "Account", account_path ] ],
-          sign_out: true %>
+    <%= render "components/nav", links: nav_member_links(pipeline: true), sign_out: true %>
     <%= render "components/flash" %>
     <% if (upgrade = flashed_upgrade) %>
       <div class="wrap mt-4">

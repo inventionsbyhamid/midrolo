@@ -1,7 +1,7 @@
 /*
- * The landing page's sections below the hero (app/views/pages/home), imported from application.css: the podcaster
- * quotes, how it works, what makes this different and the closing call to action (a headline and the two buttons).
- * The hero is in hero.css.
+ * The landing page's sections below the hero (app/views/pages/home), imported from application.css: the proof strip,
+ * each side of the marketplace (brands, podcasters), the podcaster quotes, Creator Lab, the explore links and the
+ * closing call to action (a headline and the two buttons). The hero is in hero.css; the pricing cards in pricing.css.
  */
 @layer components {
   /* ---------- What podcasters say: the page's one dark band ---------- */
@@ -80,68 +80,31 @@
     color: #c9bacf;
   }
 
-  /* ---------- How it works: three stops along a timeline ---------- */
+  /* ---------- Proof strip: what a listing carries, each with the product's own badge ---------- */
 
-  .steps {
-    display: grid;
-    gap: 2.25rem;
-    margin-top: 2.5rem;
+  .proof {
+    padding-block: 2.5rem;
+    border-block: 1px solid var(--color-line);
+    background: var(--color-surface);
 
     @media (width >= 48rem) {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 2.5rem;
+      padding-block: 3rem;
     }
   }
 
-  .step {
-    position: relative;
-    padding-top: 1.5rem;
-    border-top: 2px solid var(--color-ink);
-  }
-
-  .step::before {
-    content: "";
-    position: absolute;
-    top: -6px;
-    left: 0;
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    background: var(--color-ink);
-  }
-
-  .step-number {
-    display: block;
-    margin-bottom: 0.75rem;
-    font-size: 3.25rem;
-    font-weight: 800;
-    font-stretch: 125%;
-    line-height: 1;
-    letter-spacing: -0.04em;
+  .proof-title {
+    font-size: 1rem;
+    font-weight: 700;
+    font-stretch: 112.5%;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: var(--color-plum);
   }
 
-  .step p {
-    margin-top: 0.5rem;
-    color: var(--color-ink-soft);
-  }
-
-  /* ---------- What makes this different ---------- */
-
-  .different {
-    padding: 2rem 1.25rem;
-    border-radius: var(--radius-card);
-    background: var(--color-plum-soft);
-
-    @media (width >= 48rem) {
-      padding: 2.5rem;
-    }
-  }
-
-  .different-list {
+  .proof-list {
     display: grid;
     gap: 1.75rem;
-    margin-top: 1.75rem;
+    margin-top: 1.5rem;
 
     @media (width >= 48rem) {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -149,17 +112,227 @@
     }
   }
 
-  .different-list dt {
-    padding-left: 0.75rem;
-    border-left: 3px solid var(--color-plum);
+  .proof-name {
+    margin-top: 0.75rem;
     font-size: 1.125rem;
     font-weight: 750;
     font-stretch: 112.5%;
     line-height: 1.3;
   }
 
-  .different-list dd {
-    margin-top: 0.625rem;
+  .proof-item > p:last-child {
+    margin-top: 0.375rem;
+    color: var(--color-ink-soft);
+  }
+
+  .proof-facts {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-line);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Each side: copy and steps beside a piece of the real product ---------- */
+
+  .side-grid {
+    display: grid;
+    gap: 2.5rem;
+
+    @media (width >= 64rem) {
+      grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+      gap: 4rem;
+      align-items: start;
+    }
+  }
+
+  /* The podcaster side mirrors the brand side on a desktop: the product on the left. */
+  #for-podcasters .side-shot {
+    @media (width >= 64rem) {
+      order: -1;
+    }
+  }
+
+  #for-podcasters .side-grid {
+    @media (width >= 64rem) {
+      grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    }
+  }
+
+  .side + .side {
+    border-top: 1px solid var(--color-line);
+  }
+
+  .side-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin-top: 2rem;
+    counter-reset: side-step;
+  }
+
+  /* A numbered stop on a timeline: the number in plum, a rule down the side. */
+  .side-step {
+    position: relative;
+    padding-left: 3rem;
+    counter-increment: side-step;
+  }
+
+  .side-step::before {
+    content: counter(side-step);
+    position: absolute;
+    top: -0.125rem;
+    left: 0;
+    width: 2rem;
+    font-size: 1.75rem;
+    font-weight: 800;
+    font-stretch: 125%;
+    line-height: 1;
+    color: var(--color-plum);
+  }
+
+  .side-step-title {
+    font-size: 1.125rem;
+    font-weight: 750;
+    font-stretch: 106%;
+    line-height: 1.3;
+  }
+
+  .side-step p {
+    margin-top: 0.25rem;
+    color: var(--color-ink-soft);
+  }
+
+  .side-search {
+    display: flex;
+    gap: 0.5rem;
+    max-width: 30rem;
+    margin-top: 1.5rem;
+  }
+
+  .side-search .input {
+    flex: 1;
+    min-width: 0;
+    box-shadow: var(--shadow-edge);
+  }
+
+  .side-search .btn {
+    flex: none;
+    height: auto;
+  }
+
+  .side-aside {
+    margin-top: 1.75rem;
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
+  }
+
+  .side-shot-caption {
+    margin-bottom: 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    font-stretch: 112.5%;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-soft);
+  }
+
+  /* The directory's cards, one under another beside the copy. */
+  .side-cards.dir-grid {
+    margin-top: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* ---------- Coming from Creator Lab ---------- */
+
+  .creator-lab {
+    padding: 2rem 1.25rem;
+    border-radius: var(--radius-card);
+    background: var(--color-tally-soft);
+    box-shadow: inset 4px 0 0 var(--color-tally);
+
+    @media (width >= 48rem) {
+      padding: 2.5rem 2.75rem;
+    }
+  }
+
+  .creator-lab-points {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.75rem;
+    margin-top: 1.25rem;
+    font-weight: 650;
+  }
+
+  .creator-lab-points li {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .creator-lab-points li::before {
+    content: "";
+    flex: none;
+    width: 0.625rem;
+    height: 0.3125rem;
+    margin-top: 0.6rem;
+    border-radius: 1px;
+    background: var(--color-ink);
+  }
+
+  .creator-lab-note {
+    margin-top: 1.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* ---------- See it for yourself ---------- */
+
+  .explore-list {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+
+    @media (width >= 48rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    @media (width >= 72rem) {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .explore-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    height: 100%;
+    padding: 1.125rem 1.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-edge);
+    text-decoration: none;
+    transition: border-color 120ms ease;
+  }
+
+  .explore-link:hover {
+    border-color: var(--color-ink);
+  }
+
+  .explore-name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 750;
+    font-stretch: 106%;
+    color: var(--color-plum);
+  }
+
+  .explore-text {
+    font-size: 0.9375rem;
+    color: var(--color-ink-soft);
   }
 
   /* ---------- Closing call to action ---------- */

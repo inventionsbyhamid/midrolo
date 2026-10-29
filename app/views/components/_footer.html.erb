@@ -7,14 +7,18 @@
     <% unless compact %>
       <div class="flex flex-col gap-1">
         <%= link_to brand_logo(size: :sm), "/", class: "logo", aria: { label: "#{APP_NAME} home" } %>
-        <p class="mt-1">Sponsor research for independent podcasts.</p>
+        <p class="mt-1">Where independent podcasts get sponsored.</p>
         <p>Built for the Qloo Agentic Hackathon.</p>
       </div>
-      <nav aria-label="Footer" class="flex flex-wrap gap-x-5 gap-y-1">
-        <%= link_to "About", about_path, class: "link text-ink-soft" %>
+      <nav aria-label="Footer" class="flex max-w-xl flex-wrap gap-x-5 gap-y-1">
+        <%= link_to "Podcasts", podcasts_path, class: "link text-ink-soft" %>
+        <%= link_to "For brands", NavigationHelper::FOR_BRANDS_PATH, class: "link text-ink-soft" %>
+        <%= link_to "Sample reports", samples_path, class: "link text-ink-soft" %>
+        <%= link_to "Pricing", pricing_path, class: "link text-ink-soft" %>
         <% if blog_listed? %>
           <%= link_to "Blog", blog_path, class: "link text-ink-soft" %>
         <% end %>
+        <%= link_to "About", about_path, class: "link text-ink-soft" %>
         <%= link_to "Privacy", privacy_path, class: "link text-ink-soft" %>
         <%= link_to "Data sources", data_sources_path, class: "link text-ink-soft" %>
         <%= link_to "Terms", terms_path, class: "link text-ink-soft" %>

@@ -71,7 +71,7 @@ RSpec.describe "Content Security Policy", :network do
     ActionController::Base.allow_forgery_protection = true
     page.driver.resize(375, 812)
     visit "/"
-    expect(page).to have_css("h1", text: "Find sponsors who already love your listeners")
+    expect(page).to have_css("h1", text: "Where independent podcasts get sponsored")
     wait_for_menu
     first_nonce = find("meta[name='csp-nonce']", visible: :all)[:content]
     execute_script("window.firstDocument = true")

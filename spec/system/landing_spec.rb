@@ -34,10 +34,21 @@ RSpec.describe "Landing and public pages" do
     page.save_screenshot(dir.join("#{name}-#{width}.png").to_s, full: true)
   end
 
+  # What the landing page shows once there's something real to show: the demo show's listing and shows from the
+  # directory, so the layout checks cover them too.
+  def fill_the_marketplace
+    create(:user, admin: true)
+    Claims::DemoSetup.call
+    [ "Index Fund Mornings", "The Founder's Ledger", "Cold Case Cafe" ].each_with_index do |title, i|
+      create(:podcast, :indexable, :with_artwork, title: title, author: "Host #{i + 1}", open_to_sponsors: i.zero?)
+    end
+  end
+
   # One example walks every page at both widths: a browser session per page would cost seconds each.
   it "lays out every public page at 375px and 1440px with ordered headings, labelled images and AA contrast",
      :aggregate_failures do
     generate_sample
+    fill_the_marketplace
 
     pages.each do |name, path|
       widths.each do |width, (w, h)|
@@ -59,13 +70,33 @@ RSpec.describe "Landing and public pages" do
   it "shows the focus ring on the hero's call to action when tabbed to" do
     visit "/"
     20.times do
-      break if evaluate_script("document.activeElement.textContent.trim()") == "Get my free Snapshot"
+      break if evaluate_script("document.activeElement.textContent.trim()") == "Find podcasts your customers love"
 
       page.driver.browser.keyboard.type(:tab)
     end
 
     expect(evaluate_script("document.activeElement.closest('#hero') !== null")).to be(true)
     expect(focus_outline_style).to eq("solid")
+  end
+
+  it "takes a brand to the fit search and a podcaster to their show from the landing page" do
+    fill_the_marketplace
+    page.driver.resize(1440, 900)
+    visit "/"
+
+    expect(page).to have_css("#for-brands .dir-card", count: 3)
+    expect(page).to have_css("#for-podcasters .listing-rates", text: "Demo show")
+    within("#hero") { click_link "Find podcasts your customers love" }
+    expect(page).to have_current_path("/users/sign_in") # the fit search needs an account; sign in comes back to it
+
+    visit "/"
+    within("#hero") { click_link "Get your show sponsored" }
+    within("#for-podcasters") do
+      fill_in "Your show's name", with: "Cold Case"
+      click_button "Find my show"
+    end
+    expect(page).to have_current_path(%r{\A/podcasts\?q=Cold})
+    expect(page).to have_css(".dir-card", text: "Cold Case Cafe")
   end
 
   it "has checks that catch what they look for" do

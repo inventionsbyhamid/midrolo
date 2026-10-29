@@ -1,17 +1,34 @@
 # How we use Qloo
 
-Midrolo asks Qloo one question in several ways: **what do people with this show's taste love, more than most people
-do?** The answers become the evidence in a sponsor report. Every brand in a report comes from a Qloo result in that
-run.
+Midrolo is a marketplace where independent podcasts get sponsored, and Qloo does the matching on both sides. It asks
+Qloo one question in several ways: **what do people with this taste love, more than most people do?** For a
+podcaster, the taste is the show's audience and the answer is brands. For a brand, the taste is its customers' and the
+answer is podcasts. Every brand in a podcaster's report, and every taste score in a brand's search, comes from a Qloo
+result in that run.
 
 ## The problem
 
 Independent podcasters want sponsors but can't show brands who listens. Hosting stats give downloads and countries,
-nothing about taste. So hosts guess which brands to pitch, and most pitches get ignored.
+nothing about taste. Brands, for their part, can't find small shows that fit: rates are hidden, numbers can't be
+checked, and nothing says whether a show's listeners are their customers.
 
-An LLM on its own can only guess too ("tech listeners like gadgets"). Qloo's taste graph gives us what a small show
-never had: the brands, podcasts and places that this taste loves more than most, how it leans by age and gender, and
-where it lives. Without Qloo, Midrolo has no report to show.
+An LLM on its own can only guess ("tech listeners like gadgets"). Qloo's taste graph gives both sides what they never
+had: the brands, podcasts and places a taste loves more than most, how it leans by age and gender, and where it lives.
+Sponsor history from the shows' own feeds then proves who already pays shows like this, and verified Spotify and Apple
+numbers say how big a show is. Without Qloo, neither side has a match to show.
+
+## Where Qloo is used
+
+Qloo is called only when a person starts something (a report, a brand search) or an admin seeds the catalog. Page
+views and crawlers never call it.
+
+| Flow | Qloo calls | Cap | What the user sees |
+| --- | --- | --- | --- |
+| **The podcaster's sponsor report** (an agent) | `/search`, `/v2/tags`, `/v2/insights` for brands, podcasts, tags, demographics and the heatmap | soft 30, hard 40 uncached calls a report | A taste profile, leans, a map and up to 50 brands ranked by fit, with reasons |
+| **Similar shows**, a step in every report | `/v2/insights`, `filter.type=urn:entity:podcast`, from the show's entity | 1 call a report | "Shows with a similar audience" and "Brands that already sponsor shows like yours" |
+| **The brand side fit search** (an agent) | `/search` for the brand, then `/v2/insights` for podcasts, affinity scores, brands in the category and audience tags | soft 8, hard 10 uncached calls a search | Shows ranked by taste, sponsor proof, price and verified numbers, each with why it fits |
+| **Competitors** for the brand search | none extra: the brand entity's own properties from `/search` | 0 | "Your competitors sponsor these shows" |
+| **Seeding the catalog** (admin, once) | `/v2/insights`, `filter.type=urn:entity:podcast`, one genre tag at a time | the daily cap | The directory's first shows (the target is 1,000), each matched to its real feed |
 
 ## Endpoints we use, and why
 
@@ -25,6 +42,13 @@ Every call is a GET to `https://hackathon.api.qloo.com` with the key in the `X-A
 | `/v2/insights`, `filter.type=urn:entity:brand` | seed signals, `filter.popularity.max=0.97`, `filter.tags`, `take` | Brand recommendations: one broad pass, plus one pass per brand category. |
 | `/v2/insights`, `filter.type=urn:entity:brand` | seed signals, `filter.results.entities` (50 ids at a time) | Score every candidate brand against the same seeds. Qloo has no batch affinity call, so this is how we get one. |
 | `/v2/insights`, `filter.type=urn:entity:podcast` | seed signals | Similar podcasts: shown in the profile, and read by the proven sponsor scan. |
+| `/v2/insights`, `filter.type=urn:entity:podcast` | the show's own entity (the seed signals when the show isn't on Qloo), `take=10` | Shows with a similar audience: one call per report (Snapshot and full), matched to the Midrolo catalog (podcasts not yet in it are added from the directory). The report lists them with the brands their own feeds show sponsoring them, and a sponsor match that sponsors one says so ("Sponsors 3 shows with your audience"). |
+| `/search`, `types=urn:entity:brand` | the brand's name, `take=5` | The brand search's first step: find the brand, picked by exact name, then its website, then a close name. Its properties carry its tags, categories, competitors and the brands its customers also buy. |
+| `/v2/insights`, `filter.type=urn:entity:podcast` | the brand entity as the signal, `filter.popularity.max=0.9`, `take=50` | The brand search's first list: podcasts people with the brand's taste love. |
+| `/v2/insights`, `filter.type=urn:entity:podcast` | the brand entity, `filter.results.entities` (up to 100 catalog shows, 50 at a time) | Taste scores for the catalog's shows in the brand's categories that the first list missed. |
+| `/v2/insights`, `filter.type=urn:entity:brand` | the brand entity, `filter.tags` with its category tag, `take=15` | Brands in the same category, when Qloo names fewer than 5 competitors: more brands whose sponsorships count as proof. |
+| `/v2/insights`, `filter.type=urn:tag` | the brand entity, `take=25` | The brand audience's taste tags. A show's reason names the tags it shares with them. |
+| `/v2/insights`, `filter.type=urn:entity:podcast` | `filter.tags` with one `urn:tag:genre:media` tag, `filter.popularity.max=0.9`, `take=50`, `offset` | Seeding the catalog: Qloo's podcasts genre by genre, each matched to its feed through Podcast Index. |
 | `/v2/insights`, `filter.type=urn:tag` | seed signals | The audience's taste tags. A brand's reason names the tags it shares with them. |
 | `/v2/insights`, `filter.type=urn:demographics` | seed signals | Age and gender leans. Qloo answers one block per signal, and we average each bucket. |
 | `/v2/insights`, `filter.type=urn:heatmap` | seed signals, `filter.location.query` | Where the taste is strongest, on the documented geohash grid: the country first, then up to 3 metros if that comes back empty. |
@@ -42,7 +66,7 @@ default (`match_explainer_compares: 0` in `config/research.yml`), and `explain_m
 a brand's own Qloo tags and the audience's taste tags, which we already have. That costs no extra call. The compare
 code stays in place, unused unless the setting is raised.
 
-## Two kinds of report
+## The podcaster's report: two kinds
 
 | | Free Snapshot | Full agent report |
 | --- | --- | --- |
@@ -56,6 +80,66 @@ code stays in place, unused unless the setting is raised.
 The agent makes the judgment calls: which seeds stand for the audience, whether a thin profile needs new seeds, which
 brand categories fit the show, which matches to keep and how to explain them. Ruby makes every Qloo call, does the
 scoring and the tiers (`config/scoring.yml`), and checks what the agent saves.
+
+## The brand side agent: one search, step by step
+
+A brand member types the brand's name (and, optionally, its website, categories and budget) and watches seven steps
+fill in, each with what it asked and what came back (`app/services/fit_search/run.rb`). Ruby makes every call; one
+call to a cheap model writes the three line brief at the end, and a template does it when the model isn't available.
+
+1. **Find the brand.** `/search` for the brand. Search is fuzzy, so the hit must match by exact name, the brand's
+   website or a close name. Its tags, categories, competitors (`competitive_set`) and complementary brands are kept
+   on the brand for 7 days, so the next search reuses them with no call. A brand Qloo doesn't know is no dead end: its
+   categories, as brand genre tags, become the signal.
+2. **Ask Qloo for podcasts.** Insights for podcasts with the brand as the signal, matched to the catalog by Qloo id.
+   Up to 10 shows the catalog lacks are added from the directory.
+3. **Score the catalog.** Up to 100 catalog shows in the brand's categories that step 2 didn't return get an affinity
+   score against the same signal. Shows open to sponsors that Qloo doesn't know join with no taste score, and say so.
+4. **Proof.** Sponsor history from the shows' own feeds, for the brand, its competitors, the brands its customers also
+   buy, and (when Qloo names fewer than 5) brands in its category. This is the "your competitors sponsor these shows"
+   join. Brand names resolve only to brands already in the catalog.
+5. **Price and trust.** Each show's published rate card against the budget, and how its numbers are verified.
+6. **Rank.** Out of 100: taste 50, proof 25, price 15, trust 10 (`FitSearch::Scoring`). Each show's reasons name its
+   Qloo rank or taste match, the taste tags the brand's audience shares with it, and the proof.
+7. **Brief.** Three bullets for the brand, from the results only.
+
+At most 6 Qloo calls are planned per search (4 on the Fake provider), with a soft cap of 8 and a hard ceiling of 10.
+Only step 1 must succeed: a later Qloo failure leaves a warning on its step, and the search finishes with what it has.
+An unverified brand member gets 5 searches a day, a verified one 20.
+
+We don't call compare for a brand against a podcast. In our live probe it found nothing shared between a podcast and
+its top brand (see "Compare: built, then turned off" above), so the reasons use the tags both entities already carry.
+
+## Seeding the catalog
+
+The directory started from Qloo's own podcast lists (`bin/rails "catalog:seed[1000]"`, `Catalog::SeedFromQloo`):
+insights for podcasts, one media genre tag at a time (21 genres, from business and technology to true crime and
+music), popularity at most 0.9 so the giants stay out, 50 a page. Each entity is matched to a real feed through
+Podcast Index (equal title, then a close author), English shows only, one directory search a second. The page then
+comes from the show's own feed, never from Qloo or the directory. The seed runs inside the call guard, waits out the
+minute cap and stops at the daily cap; running it again picks up where it stopped.
+
+## Similar shows, and the brands that sponsor them
+
+Every report, Snapshot or full, asks Qloo once for podcasts like the show (its own entity, or the seeds when the show
+isn't on Qloo). Each result is matched to the catalog or added from the directory. The report lists them, with the
+brands their feeds show sponsoring them, and a sponsor match that sponsors one of them carries "Sponsors 3 shows with
+your audience". The proof is read at render time, so it grows as sponsor detection reads more feeds, with no new call.
+
+The podcast page reads the show's latest report (the owner's, or a sample's) for its Audience section and its Qloo
+similar shows, so a page view never calls Qloo; both render only for signed in people, labelled "Taste data from
+Qloo". Visitors see similar shows from shared sponsors and categories instead.
+
+## Where Qloo isn't used
+
+Cheaper, more direct signals do these jobs, so Qloo isn't forced into them:
+
+- **Sponsor history on show and brand pages.** Patterns and a cheap model read each show's own episode notes, with no
+  Qloo call. (A report's proven sponsor scan is different: it keeps only names Qloo confirms as brands.)
+- **Verified numbers.** Read from Spotify for Creators and Apple Podcasts Connect with Midrolo's own account, after
+  the show invites it.
+- **Similar shows for visitors.** Shared sponsors and categories, in SQL.
+- **Brand pages.** Sponsor history only. A brand's Qloo profile never appears on a public page.
 
 ## Call discipline
 
@@ -72,7 +156,9 @@ Qloo's hackathon key has a limited allowance, so every live call is counted and 
 - **Reports wait out the minute cap.** In a background job, a refused minute waits for the next one, at most twice per
   call. The daily cap refuses at once.
 - **Free and promo runs share 40% of the day** (`qloo_free_share`), so judges and paying users keep most of each day's
-  calls.
+  calls. Brand searches by free accounts run in the same capped lane.
+- **A brand search has its own caps:** a soft 8 and a hard 10 uncached calls, a brand profile reused for 7 days, and a
+  daily number of searches per member.
 - **A soft cap per report** of 30 uncached calls (`max_taste_calls` in `config/research.yml`). Past it, optional calls
   are skipped.
 - **A hard ceiling per report** of 40 uncached calls (`hard_taste_calls`). Past it, no Qloo call is made at all: the
@@ -229,8 +315,11 @@ This run made 14 uncached Qloo calls. Another report on the same seeds within a 
   never the key.
 - **Summaries, not responses.** The agent trace on a report stores short summaries only.
 - **Group, not person.** Reports describe an audience as a group ("people with these tastes"), never one listener.
-- **Honest labels.** Leans say "Modeled from Qloo taste data, not measured." Public kits say "Stats as reported by
-  the verified owner." Sample reports say "Sample report. Not affiliated with the show."
+- **Signed in only on public pages.** A podcast page's Audience section and its Qloo similar shows render for
+  signed in people only, so crawlers never see Qloo output and never cause a call. A brand's Qloo profile stays off
+  its public brand page.
+- **Honest labels.** Qloo panels say "Taste data from Qloo". Leans say "Modeled from Qloo taste data, not measured."
+  Verified numbers name their service and date. Sample reports say "Sample report. Not affiliated with the show."
 
 ## Limitations
 
@@ -244,6 +333,10 @@ This run made 14 uncached Qloo calls. Another report on the same seeds within a 
 - **Proven sponsors come from text.** The scan matches common sponsor read phrases in feed notes. It can miss a read
   that isn't written down, or catch a mention that wasn't paid. Only names Qloo confirms as brands are kept.
 - **Fresh within a week.** Cached answers can be up to 7 days old (30 for lookups).
+- **Brand data shapes.** The brand search reads competitors and complementary brands from the brand entity's
+  `properties`. Where Qloo has none, the category brands step supplies the proof instead.
+- **Brands Qloo doesn't know.** The brand search then works from the brand's categories, which is a coarser signal,
+  and says so on its first step.
 
 **What a result does not establish:**
 
@@ -251,7 +344,10 @@ This run made 14 uncached Qloo calls. Another report on the same seeds within a 
 - that any listener buys from, or even knows, a brand;
 - the show's real size, age mix or gender mix (downloads are what the host enters);
 - that a proven sponsor is still spending, or was happy with the results;
-- that a fit score forecasts anything: it ranks brands inside one report, and isn't comparable across reports.
+- that a fit score forecasts anything: it ranks brands inside one report (or shows inside one brand search), and isn't
+  comparable across reports or searches;
+- that a show's listeners are a brand's customers: a high taste score means their tastes overlap, not that they're
+  the same people.
 
 ## Reproduce it
 

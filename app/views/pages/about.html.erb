@@ -1,28 +1,31 @@
 <% content_for :title, "About" %>
-<% content_for :meta, social_meta(description: "Why Midrolo exists, where its data comes from, and what it is built on: Qloo taste data, Podcast Index and an AI model.") %>
+<% content_for :meta, social_meta(description: "Why Midrolo exists, where its data comes from, and what it is built on: Qloo taste data, each show's own feed, verified Spotify and Apple numbers and an AI model.") %>
 <div class="wrap page-head">
   <article class="prose-page">
     <h1 class="type-h1">About <%= APP_NAME %></h1>
     <p class="type-lead">
-      <%= APP_NAME %> does a sponsorship team's research for one independent podcast at a time. The name comes from the
-      midroll, the ad slot that pays best in an episode.
+      <%= APP_NAME %> is where independent podcasts get sponsored: brands find shows their customers love, and podcasters
+      list their show free. The name comes from the midroll, the ad slot that pays best in an episode.
     </p>
 
     <h2>Why it exists</h2>
     <p>
       Small shows want sponsors but can't show brands who their listeners are: hosting stats count downloads and countries,
-      not taste. The tools that could help are priced for agencies, and the marketplaces built for small shows keep closing.
-      <%= APP_NAME %> gives a podcaster the evidence a brand wants to see, for the price of one sponsor spot.
+      not taste. Brands can't find small shows that fit, rates are rarely published, and the numbers can't be checked.
+      The tools that could help are priced for agencies, and the marketplaces built for small shows keep closing.
+      <%= APP_NAME %> gives both sides the evidence: taste matching from Qloo, sponsor history from each show's own feed,
+      and numbers verified at the source.
     </p>
 
     <h2>Where the data comes from</h2>
     <ul>
       <li><strong>Qloo</strong>'s taste graph: what people with your listeners' tastes love more than most people do, how they lean by age and gender, and where they live.</li>
       <li><strong>Podcast Index</strong>: podcast search and show details. Podcast data from <a class="link" href="https://podcastindex.org">Podcast Index</a>, the open podcast directory.</li>
-      <li><strong>Public RSS feeds</strong>: your episodes, and the sponsors mentioned on similar shows.</li>
-      <li><strong>An AI model</strong>, through OpenRouter: plans the research and writes the reasons and pitches from those results.</li>
+      <li><strong>Public RSS feeds</strong>: each show's page, its episodes, and the sponsor reads in its episode notes.</li>
+      <li><strong>Spotify for Creators and Apple Podcasts Connect</strong>: a show's verified numbers, read with our own account once the show invites <%= APP_NAME %>.</li>
+      <li><strong>AI models</strong>, through OpenRouter: plan the research, check sponsor reads, and write the reasons, pitches and briefs from those results.</li>
     </ul>
-    <p>Audiences are modeled from Qloo taste data, not measured, and every report says so.</p>
+    <p>Audiences are modeled from Qloo taste data, not measured, and every report says so. Every number on a show's page says where it came from and when.</p>
 
     <h2>Where it's at</h2>
     <p>

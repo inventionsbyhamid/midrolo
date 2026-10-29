@@ -28,7 +28,7 @@ What the stack creates, and nothing else:
 | Volumes | `midrolo-db` (the database), `midrolo-backup-state` (whether the last backup failed) |
 | Traefik | routers `midrolo-http`, `midrolo-https`, `midrolo-www`; service `midrolo-web`; middlewares `midrolo-https-redirect`, `midrolo-www-redirect` (labels on `midrolo-web`, gone when it is) |
 | Files | `/root/midrolo` (the code and `.env`) |
-| Outside the server | DNS records for midrolo.com and www, two R2 buckets and their two tokens, the Google OAuth client, the Resend domain |
+| Outside the server | DNS records for midrolo.com and www, two R2 buckets and their two tokens, the Google OAuth client, the Resend domain, the stats address and its Spotify and Apple accounts |
 
 Every `docker compose` command below runs in `/root/midrolo` and names these services: `midrolo-web`, `midrolo-jobs`,
 `midrolo-db`, `midrolo-backup`.
@@ -136,6 +136,9 @@ each one that's missing or, for `APP_URL`, not an absolute `https://` address (`
 refuses to start the backup container without its own:
 
 - `APP_URL=https://midrolo.com`, `SECRET_KEY_BASE`, `MIDROLO_DATABASE_PASSWORD`
+- `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY`,
+  `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT` (make them with `bin/rails db:encryption:init` on a development
+  checkout, since production won't boot without them, and keep a copy with the backups)
 - `RESEND_API_KEY`
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` (the app's token and bucket)
 - `R2_BACKUP_BUCKET`, `BACKUP_R2_ACCESS_KEY_ID`, `BACKUP_R2_SECRET_ACCESS_KEY` (the backups' bucket and token)
@@ -178,6 +181,23 @@ Once the API keys are in `.env` (this spends Qloo and LLM calls):
 docker compose exec midrolo-web bin/rails samples:generate
 ```
 
+### 9. The marketplace
+
+The catalog, sponsor detection, verified stats and the demo show need a few one time steps: back up, read the feeds,
+seed the catalog from Qloo, scan for sponsors, backfill similar shows, make the demo show and save the Spotify
+session. They're listed in order in [deploy.md](deploy.md), "The marketplace: first deploy"; run each command in the
+jobs container, for example:
+
+```bash
+docker compose exec midrolo-jobs bin/rails catalog:refresh
+docker compose exec midrolo-jobs bin/rails "catalog:seed[1000]"
+docker compose exec midrolo-jobs bin/rails sponsors:scan
+docker compose exec midrolo-jobs bin/rails demo:setup
+docker compose exec -T midrolo-jobs bin/rails "stats:session[spotify]" < spotify-session.env   # prints key names only
+```
+
+The session file holds Midrolo's own Spotify cookie (`sp_dc=...`): keep it out of the repo and delete it after.
+
 ## After every deploy: checks
 
 1. **Health.** `docker compose ps` shows all four `healthy`, and from anywhere:
@@ -213,6 +233,10 @@ docker compose exec midrolo-web bin/rails samples:generate
    errors.
 6. **A backup upload.** `docker compose exec midrolo-backup backup` prints `backup: uploaded midrolo-....sql.gz`, and
    `docker compose exec midrolo-backup backup list` lists it.
+7. **The stats helper.** `docker compose exec midrolo-web bin/platform-stats --self-test` prints
+   `{"ok":true,"self_test":true}`.
+8. **The marketplace.** `/podcasts`, a podcast page and `/sitemap.xml` answer 200, and `/admin` shows no new feed
+   errors in a row.
 
 ## Updates
 
@@ -288,4 +312,5 @@ run it again (or restore an older backup) before starting `midrolo-web` and `mid
 `docker compose down` in `/root/midrolo` stops and removes the four containers and `midrolo-net`, and keeps the
 volumes. Removing the data too is `docker volume rm midrolo-db midrolo-backup-state` (it cannot be undone: take a
 backup first), then `docker image rm midrolo-app:latest midrolo-backup:latest` and `rm -rf /root/midrolo`. Outside the
-server: the DNS records, the R2 buckets and both tokens, the Google OAuth client and the Resend domain.
+server: the DNS records, the R2 buckets and both tokens, the Google OAuth client, the Resend domain, and the stats
+address with its Spotify and Apple accounts.
