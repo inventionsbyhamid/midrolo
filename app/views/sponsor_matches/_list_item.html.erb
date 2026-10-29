@@ -2,7 +2,7 @@
 <%# One row in the report's match lists, with what the filter controller sorts and filters on. %>
 <% match = sponsor_match %>
 <li data-filter-target="item" data-category="<%= match.category %>" data-tier="<%= match.tier %>"
-    data-tier-rank="<%= tier_rank(match.tier) %>" data-proven="<%= proven_sponsor?(match) %>"
+    data-tier-rank="<%= tier_rank(match.tier) %>" data-proven="<%= match_proven?(match) %>"
     data-fit="<%= match.fit_score.to_i %>" data-position="<%= match.position.to_i %>">
   <%= render "sponsor_matches/sponsor_match", sponsor_match: match, read_only: read_only %>
 </li>

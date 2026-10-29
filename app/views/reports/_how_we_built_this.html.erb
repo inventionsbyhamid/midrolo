@@ -30,6 +30,15 @@
               and where they live. It describes the audience as a group, modeled from the taste profile above, not measured.
             </dd>
           </div>
+          <% if report.similar_podcasts.present? %>
+            <div>
+              <dt>Similar shows</dt>
+              <dd>
+                Podcasts whose listeners share this audience's tastes, from Qloo, matched to the shows on <%= APP_NAME %>. The
+                brands that sponsor them come from each show's own episode notes.
+              </dd>
+            </div>
+          <% end %>
           <% if report.agent? %>
             <div>
               <dt>Proven sponsors</dt>
