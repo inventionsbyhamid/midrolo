@@ -1,0 +1,30 @@
+<% content_for :title, "Verify your work email" %>
+<% member = current_brand_member %>
+<div class="mx-auto flex max-w-2xl flex-col gap-6">
+  <header>
+    <p class="text-sm font-semibold text-plum"><%= current_brand.name %></p>
+    <h1 class="type-h1">Check your inbox</h1>
+  </header>
+  <%= render "components/card", title: "Enter your code" do %>
+    <p>We sent a 6-digit code to <%= Shows::OwnerEmail.mask(member.code_sent_to) %>. It works for 30 minutes.</p>
+    <% if member.attempts >= Brands::WorkEmail::MAX_ATTEMPTS %>
+      <p class="field-error"><%= Brands::WorkEmail::LOCKED_MESSAGE %></p>
+    <% elsif !member.code_expires_at&.future? %>
+      <p class="field-error"><%= Brands::WorkEmail::EXPIRED_MESSAGE %></p>
+    <% else %>
+      <%= form_with url: brand_verification_path, method: :patch, class: "mt-5 flex flex-wrap items-end gap-3" do |f| %>
+        <div>
+          <%= f.label :code, "6-digit code", class: "label" %>
+          <%= f.text_field :code, class: "input verify-code", inputmode: "numeric", autocomplete: "one-time-code",
+                maxlength: 7, required: true, autofocus: true, spellcheck: false %>
+        </div>
+        <%= f.submit "Verify", class: "btn btn-primary btn-lg" %>
+      <% end %>
+    <% end %>
+    <div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-4 text-sm">
+      <span class="text-ink-soft">No email? Check your spam folder, or</span>
+      <%= button_to "Send a new code", brand_verification_path, params: { email: member.code_sent_to }, class: "link-button" %>
+      <%= link_to "Use another address", new_brand_verification_path, class: "link" %>
+    </div>
+  <% end %>
+</div>

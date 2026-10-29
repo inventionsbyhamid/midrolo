@@ -41,12 +41,26 @@ RSpec.describe Podcast do
   end
 
   describe "slugs" do
-    it "is the parameterized title plus 6 characters of the public id, and the URL's param" do
+    it "is the parameterized title, and the URL's param" do
       podcast = create(:podcast, title: "The Founder's Ledger")
-      expect(podcast.slug).to eq("the-founder-s-ledger-#{podcast.public_id.first(6)}")
-      expect(podcast.to_param).to eq(podcast.slug)
+      expect(podcast.slug).to eq("the-founder-s-ledger")
+      expect(podcast.to_param).to eq("the-founder-s-ledger")
       expect(podcast.to_key).to eq([ podcast.public_id ])
-      expect(create(:podcast, title: "!!!").slug).to start_with("podcast-")
+      expect(create(:podcast, title: "!!!").slug).to eq("podcast")
+    end
+
+    it "takes the host, then a number, when the title's slug is taken" do
+      create(:podcast, title: "Daily Brief", author: "Ann Lee")
+      expect(create(:podcast, title: "Daily Brief", author: "Bo Chen").slug).to eq("daily-brief-bo-chen")
+      expect(create(:podcast, title: "Daily Brief", author: "Bo Chen").slug).to eq("daily-brief-2")
+      expect(create(:podcast, title: "Daily Brief", author: nil).slug).to eq("daily-brief-3")
+    end
+
+    it "never takes a word a route uses, or another podcast's old slug" do
+      expect(create(:podcast, title: "Search", author: nil).slug).to eq("search-2")
+      moved = create(:podcast, title: "Old Name")
+      moved.update!(title: "Fresh Name")
+      expect(create(:podcast, title: "Old Name", author: nil).slug).to eq("old-name-2")
     end
 
     it "moves with the title, and the old slug still finds the podcast" do
@@ -54,7 +68,7 @@ RSpec.describe Podcast do
       old = podcast.slug
       podcast.update!(title: "New Name")
 
-      expect(podcast.slug).to start_with("new-name-")
+      expect(podcast.slug).to eq("new-name")
       expect(described_class.find_by_slug_or_redirect(old)).to eq(podcast)
       expect(described_class.find_by_slug_or_redirect(podcast.slug)).to eq(podcast)
       expect(described_class.find_by_slug_or_redirect("nothing-here")).to be_nil

@@ -1,0 +1,40 @@
+<% content_for :title, "Find podcasts your customers love" %>
+<div class="mx-auto flex max-w-2xl flex-col gap-8">
+  <header>
+    <p class="text-sm font-semibold text-plum">For brands</p>
+    <h1 class="type-h1">Find podcasts your customers love</h1>
+    <p class="type-lead mt-2 text-ink-soft">Tell us your brand. Our agent asks Qloo which podcasts your customers listen to, then checks who already sponsors them, what a spot costs and whether their numbers are verified.</p>
+  </header>
+
+  <%= render "components/card", title: "Your brand" do %>
+    <%= form_with url: brand_profile_path, method: :post, class: "flex flex-col gap-4" do |f| %>
+      <div>
+        <%= f.label :name, "Brand name", class: "label" %>
+        <%= f.text_field :name, value: @name, class: "input", required: true, maxlength: Brand::NAME_LIMIT,
+              autocomplete: "organization", autofocus: true %>
+      </div>
+      <div>
+        <%= f.label :website, "Website", class: "label" %>
+        <%= f.text_field :website, value: @website, class: "input", placeholder: "yourbrand.com", inputmode: "url",
+              autocomplete: "url", spellcheck: false, aria: { describedby: "website-hint" } %>
+        <p id="website-hint" class="hint">Your work email at this website verifies your brand later.</p>
+      </div>
+      <%= f.submit "Continue", class: "btn btn-primary btn-md self-start" %>
+    <% end %>
+  <% end %>
+
+  <% members = current_user.brand_members.includes(:brand).order(:created_at).to_a %>
+  <% if members.size > 1 %>
+    <%= render "components/card", title: "Switch brand" do %>
+      <ul class="flex flex-col gap-2">
+        <% members.each do |member| %>
+          <li class="flex items-center justify-between gap-3">
+            <span><%= member.brand.name %></span>
+            <%= button_to "Work on this brand", brand_profile_path, method: :patch, params: { member_id: member.id },
+                  class: "btn btn-ghost btn-sm" %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  <% end %>
+</div>

@@ -1,0 +1,46 @@
+<% content_for :title, "Find podcasts" %>
+<% chosen = Array(@search.categories) %>
+<div class="mx-auto flex max-w-2xl flex-col gap-8">
+  <header>
+    <p class="text-sm font-semibold text-plum"><%= current_brand.name %></p>
+    <h1 class="type-h1">Find podcasts your customers love</h1>
+    <p class="type-lead mt-2 text-ink-soft">Our agent asks Qloo which podcasts your customers listen to, checks which brands like yours already sponsor them, and ranks each show by taste, proof, price and trust. It takes about a minute.</p>
+  </header>
+
+  <%= render "components/card", title: "Search" do %>
+    <%= form_with model: @search, url: brand_searches_path, method: :post, class: "flex flex-col gap-5" do |f| %>
+      <div>
+        <%= f.label :query, "Brand to search for", class: "label" %>
+        <%= f.text_field :query, class: "input", required: true, maxlength: FitSearch::QUERY_LIMIT, autocomplete: "organization",
+              aria: { describedby: "query-hint" } %>
+        <p id="query-hint" class="hint">Usually your own brand. Qloo knows many brands by name; if it doesn't know yours, your categories lead the search.</p>
+      </div>
+      <div>
+        <%= f.label :website, "Website", class: "label" %>
+        <%= f.text_field :website, class: "input", placeholder: "yourbrand.com", inputmode: "url", spellcheck: false %>
+      </div>
+      <fieldset>
+        <legend class="label">Categories <span class="font-normal text-ink-soft">(up to 3)</span></legend>
+        <div class="mt-1 flex flex-wrap gap-2">
+          <% FitSearch::Categories.names.each do |name| %>
+            <label class="chip cursor-pointer gap-2 has-[:checked]:border-plum has-[:checked]:bg-plum-soft">
+              <%= check_box_tag "fit_search[categories][]", name, chosen.include?(name), id: "category_#{name.parameterize}", class: "accent-plum" %>
+              <span><%= name %></span>
+            </label>
+          <% end %>
+        </div>
+      </fieldset>
+      <div class="max-w-xs">
+        <%= label_tag "fit_search_budget", "Budget per episode, in US dollars", class: "label" %>
+        <%= number_field_tag "fit_search[budget]", (@search.budget_cents / 100 if @search.budget_cents), id: "fit_search_budget",
+              class: "input", min: 0, step: 1, inputmode: "numeric", placeholder: "Optional" %>
+      </div>
+      <% searches_left = current_user.brand_daily_search_limit(current_brand_member) - current_user.brand_searches_today %>
+      <div class="flex flex-wrap items-center gap-3">
+        <%= f.submit "Find podcasts", class: "btn btn-primary btn-lg", disabled: AppSettings.runs_paused? %>
+        <span class="text-sm text-ink-soft"><%= pluralize([ searches_left, 0 ].max, "search") %> left today</span>
+      </div>
+    <% end %>
+  <% end %>
+  <p class="text-sm text-ink-soft">Taste data from Qloo. Sponsor history comes from the shows' own feeds.</p>
+</div>

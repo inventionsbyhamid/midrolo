@@ -37,14 +37,26 @@ RSpec.describe "Catalog records" do
   end
 
   describe Episode do
-    it "slugs the title with 6 hex of the guid's SHA256, set on insert only" do
-      episode = create(:episode, title: "Pricing your first product", guid: "abc-123")
-      expect(episode.slug).to eq("pricing-your-first-product-#{Digest::SHA256.hexdigest('abc-123').first(6)}")
-      expect(described_class.slug_for("!!!", "abc-123")).to start_with("episode-")
+    it "slugs the title, set on insert only, with 6 hex of the guid's SHA256 when the podcast has it already" do
+      podcast = create(:podcast)
+      episode = create(:episode, podcast: podcast, title: "Pricing your first product", guid: "abc-123")
+      expect(episode.slug).to eq("pricing-your-first-product")
       expect(episode.to_param).to eq(episode.slug)
 
+      twin = create(:episode, podcast: podcast, title: "Pricing your first product", guid: "def-456")
+      expect(twin.slug).to eq("pricing-your-first-product-#{Digest::SHA256.hexdigest('def-456').first(6)}")
+      expect(create(:episode, title: "Pricing your first product").slug).to eq("pricing-your-first-product")
+
       episode.update!(title: "Renamed")
-      expect(episode.reload.slug).to start_with("pricing-your-first-product-")
+      expect(episode.reload.slug).to eq("pricing-your-first-product")
+    end
+
+    it "gives a batch readable slugs when told which are taken, and a guid suffix when it can't check" do
+      taken = Set["intro"]
+      expect(described_class.slug_for("Intro", "g1", taken: taken)).to eq("intro-#{Digest::SHA256.hexdigest('g1').first(6)}")
+      expect(described_class.slug_for("New", "g2", taken: taken)).to eq("new-#{Digest::SHA256.hexdigest('g2').first(6)}")
+      expect(described_class.slug_for("Part two", "g3", taken: taken)).to eq("part-two")
+      expect(described_class.slug_for("!!!", "abc-123")).to start_with("episode-")
     end
 
     it "is unique by guid within its podcast, and keeps descriptions to 4,000 characters" do

@@ -1,0 +1,25 @@
+<% content_for :title, "Verify your work email" %>
+<div class="mx-auto flex max-w-2xl flex-col gap-6">
+  <header>
+    <p class="text-sm font-semibold text-plum"><%= current_brand.name %></p>
+    <h1 class="type-h1">Verify your work email</h1>
+    <p class="type-lead mt-2 text-ink-soft">Podcasters reply faster to a verified brand. You can send <%= User::Brands::DAILY_REQUESTS[:verified] %> requests a day instead of <%= User::Brands::DAILY_REQUESTS[:unverified] %>, and you see your team's searches and saved shows.</p>
+  </header>
+
+  <%= render "components/card", title: "Email a code to your work address" do %>
+    <% if current_brand.domain.present? %>
+      <%= form_with url: brand_verification_path, method: :post, class: "flex flex-col gap-3 sm:flex-row sm:items-end" do |f| %>
+        <div class="flex-1">
+          <%= f.label :email, "Work email at #{current_brand.domain}", class: "label" %>
+          <%= f.email_field :email, value: @email, class: "input", required: true, autocomplete: "email",
+                placeholder: "you@#{current_brand.domain}", spellcheck: false %>
+        </div>
+        <%= f.submit "Email me a code", class: "btn btn-primary btn-md" %>
+      <% end %>
+    <% else %>
+      <p class="text-ink-soft">Your brand has no website yet, so we can't tell which addresses are yours. Start again with your website and you can verify right after.</p>
+      <%= ui_button "Add your website", brand_start_path, variant: :secondary, class: "mt-4" %>
+    <% end %>
+  <% end %>
+  <p class="text-sm"><%= link_to "Skip for now", brand_root_path, class: "link" %></p>
+</div>
