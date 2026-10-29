@@ -67,11 +67,6 @@ module Stats
       if (problem = ::Stats::Ownership.show_problem(connection, result.fetch("show", {})))
         return connection.update!(status: "mismatch", last_error: problem, last_checked_at: now)
       end
-      # A mismatched or failed connection coming back while another page's connection holds the platform show: nothing
-      # is saved (a live one holds it already, so this never stops one).
-      if connection.platform_show_taken?
-        return connection.update!(status: "mismatch", last_error: StatConnection::TAKEN_MESSAGE, last_checked_at: now)
-      end
 
       ::Stats::Record.call(connection, result, audience: longer_audience(connection, session, result), now: now)
       connection.update!(status: "active", activated_at: connection.activated_at || now, last_synced_at: now,

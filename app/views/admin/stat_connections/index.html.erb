@@ -61,7 +61,13 @@
                   </td>
                   <td class="py-3 pr-4 text-ink-soft"><%= connection.last_error.presence || "" %></td>
                   <td class="py-3">
-                    <%= button_to "Check now", check_admin_stat_connection_path(connection), class: "btn btn-secondary btn-sm" %>
+                    <div class="flex flex-wrap gap-2">
+                      <% if Stats::Ownership.needs_review?(connection) %>
+                        <%= button_to "Approve", approve_admin_stat_connection_path(connection), class: "btn btn-primary btn-sm",
+                              form: { data: { turbo_confirm: "Approve after checking that #{Stats.platform_name(connection.provider)} #{connection.external_id} is #{connection.podcast.title}?" } } %>
+                      <% end %>
+                      <%= button_to "Check now", check_admin_stat_connection_path(connection), class: "btn btn-secondary btn-sm" %>
+                    </div>
                   </td>
                 </tr>
               <% end %>

@@ -546,11 +546,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_120000) do
     t.datetime "file_checked_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "approved_at"
     t.index ["podcast_id", "provider"], name: "index_stat_connections_on_podcast_id_and_provider", unique: true
     t.index ["show_id"], name: "index_stat_connections_on_show_id"
     t.index ["status"], name: "index_stat_connections_on_status"
     t.index ["user_id"], name: "index_stat_connections_on_user_id"
-    t.index ["provider", "external_id"], name: "index_stat_connections_one_live_per_platform_show", unique: true, where: "((status)::text = ANY ((ARRAY['pending_invite'::character varying, 'active'::character varying])::text[]))"
+    t.index ["provider", "external_id"], name: "index_stat_connections_one_per_platform_show", unique: true, where: "((status)::text <> 'disconnected'::text)"
   end
 
   create_table "stat_readings", force: :cascade do |t|

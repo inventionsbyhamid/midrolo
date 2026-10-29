@@ -93,15 +93,22 @@ RSpec.describe "Stats screen" do
         expect(podcast.stat_connections).to be_empty
       end
 
-      it "takes the platform show over from a draft's pending invite on another page, which says why it stopped" do
+      it "takes the platform show over from a draft's connection on another page that never counted, which says why it stopped" do
         squatter = create(:user)
         other = create(:podcast, title: "Someone Else's Pod")
         draft = create(:stat_connection, podcast: other, user: squatter, show: create(:show, user: squatter, podcast: other),
-                                         provider: "spotify", external_id: "2nel53b14wqMRDx2toN28f")
+                                         provider: "spotify", external_id: "2nel53b14wqMRDx2toN28f", status: "mismatch")
 
         post show_stat_connections_path(show), params: { provider: "spotify", show_link: spotify_link }
         expect(podcast.stat_connections.sole).to have_attributes(status: "pending_invite", external_id: "2nel53b14wqMRDx2toN28f")
-        expect(draft.reload).to have_attributes(status: "failed", last_error: StatConnection::RELEASED_MESSAGE)
+        expect(draft.reload).to have_attributes(status: "disconnected", last_error: StatConnection::RELEASED_MESSAGE)
+      end
+
+      it "says a connection held for a name check is being checked" do
+        create(:stat_connection, podcast: podcast, show: show, user: user, status: "mismatch",
+                                 last_error: Stats::Ownership::NEEDS_REVIEW)
+        get show_stats_path(show)
+        expect(response.body).to include("Being checked", "Midrolo will check it by hand")
       end
 
       it "replaces a connection another account left on the owner's podcast" do

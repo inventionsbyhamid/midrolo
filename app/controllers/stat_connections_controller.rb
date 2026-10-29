@@ -29,7 +29,7 @@ class StatConnectionsController < ApplicationController
 
     connection = StatConnection.transaction do
       existing&.destroy!
-      StatConnection.release_unowned_invites!(provider: provider, external_id: show_id, except_podcast_id: @podcast.id) if owner?
+      StatConnection.release_unowned!(provider: provider, external_id: show_id, except_podcast_id: @podcast.id) if owner?
       @podcast.stat_connections.create!(provider: provider, external_id: show_id, show: @show, user: current_user,
                                         status: "pending_invite")
     end
@@ -39,7 +39,7 @@ class StatConnectionsController < ApplicationController
     redirect_to show_stats_path(@show, anchor: provider), alert: Copy.and_list(e.record.errors.full_messages), status: :see_other
   rescue ActiveRecord::RecordNotUnique
     # Another page took the platform show at the same moment, or a double click made this connection already.
-    taken = StatConnection.where(provider: provider, external_id: show_id, status: StatConnection::LIVE_STATUSES)
+    taken = StatConnection.where(provider: provider, external_id: show_id, status: StatConnection::HOLDING_STATUSES)
                           .where.not(podcast_id: @podcast.id).exists?
     alert = taken ? StatConnection::TAKEN_MESSAGE : "That connection was just made. Have a look below."
     redirect_to show_stats_path(@show), alert: alert, status: :see_other

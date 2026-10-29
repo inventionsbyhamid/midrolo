@@ -20,5 +20,7 @@ namespace :admin do
   # Pending invites (oldest first, so the admin knows which to accept) and every other connection.
   resources :stat_connections, only: :index do
     post :check, on: :member
+    # A connection held because another show has the same name (Stats::Ownership::NEEDS_REVIEW), checked by hand.
+    post :approve, on: :member
   end
 end

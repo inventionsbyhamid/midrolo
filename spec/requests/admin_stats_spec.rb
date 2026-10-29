@@ -19,7 +19,8 @@ RSpec.describe "Admin stats" do
     user = create(:user)
     [ -> { get admin_service_sessions_path }, -> { get admin_stat_connections_path },
       -> { patch admin_service_session_path("spotify"), params: { credentials: { sp_dc: cookie } } },
-      -> { post test_admin_service_session_path("spotify"), params: { show_id: "2nel53b14wqMRDx2toN28f" } } ].each do |request|
+      -> { post test_admin_service_session_path("spotify"), params: { show_id: "2nel53b14wqMRDx2toN28f" } },
+      -> { post approve_admin_stat_connection_path(create(:stat_connection)) } ].each do |request|
       sign_in user # a 404 doesn't keep the test sign-in for the next request
       request.call
       expect(response).to have_http_status(:not_found)
@@ -110,6 +111,21 @@ RSpec.describe "Admin stats" do
       expect(body).to include("Syncs are paused for Spotify and Apple Podcasts")
 
       expect { post check_admin_stat_connection_path(older) }.to have_enqueued_job(Stats::SyncJob).with(older.id)
+    end
+
+    it "approves a connection held because another show has the same name, and syncs it at once" do
+      held = create(:stat_connection, status: "mismatch", last_error: Stats::Ownership::NEEDS_REVIEW,
+                                      podcast: create(:podcast, title: "Twin Name Pod"))
+      other = create(:stat_connection, status: "mismatch", last_error: "Not the same show")
+
+      get admin_stat_connections_path
+      page = Nokogiri::HTML(response.body)
+      expect(page.css("form[action='#{approve_admin_stat_connection_path(held)}']")).to be_present
+      expect(page.css("form[action='#{approve_admin_stat_connection_path(other)}']")).to be_empty
+
+      expect { post approve_admin_stat_connection_path(held) }.to have_enqueued_job(Stats::SyncJob).with(held.id)
+      expect(held.reload.approved_at).to be_present
+      expect(flash[:notice]).to eq("Approved. Syncing Twin Name Pod now.")
     end
 
     it "shows the stats panel on the dashboard" do
