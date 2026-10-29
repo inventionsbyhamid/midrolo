@@ -53,7 +53,8 @@ module ShareImages
 
     def episode_fields
       host = ", hosted by #{@podcast.author}" if @podcast.author.present?
-      { label: "Episode", title: @episode.title.presence || "An episode of #{@podcast.title}", subline: "#{@podcast.title}#{host}",
+      { label: "Episode", title: @episode.title.presence || "An episode of #{@podcast.title}", title_lines: 3,
+        subline: "#{@podcast.title}#{host}",
         note: episode_note, marks: marks, seed: @podcast.public_id }
     end
 
