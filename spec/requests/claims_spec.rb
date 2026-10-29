@@ -79,6 +79,44 @@ RSpec.describe "Claims" do
       expect(response.body).not_to include("host@example.com")
     end
 
+    it "claims with an emailed code when the feed's owner email isn't yours" do
+      stub_claim_feed(podcast.feed_url, owner_email: "host@example.com")
+      post podcast_claim_path(podcast)
+      show = user.shows.sole
+
+      perform_enqueued_jobs { post show_verification_path(show), params: { kind: "email" } }
+      mail = ActionMailer::Base.deliveries.last
+      expect(mail.to).to eq([ "host@example.com" ])
+      patch show_verification_path(show), params: { code: mail.text_part.body.to_s[/\b\d{6}\b/] }
+
+      expect(response).to redirect_to(edit_show_media_kit_path(show))
+      expect(show.reload).to be_verified
+      expect(podcast.reload).to be_claimed
+    end
+
+    it "claims with the feed token in the show description" do
+      stub_claim_feed(podcast.feed_url)
+      post podcast_claim_path(podcast)
+      show = user.shows.sole
+      stub_claim_feed(podcast.feed_url, description: "About us. #{ShowVerification.sole.token_line}")
+
+      patch show_verification_path(show)
+
+      expect(response).to redirect_to(edit_show_media_kit_path(show))
+      expect(show.reload).to be_verified
+      expect(podcast.reload.owner_show).to eq(show)
+    end
+
+    it "claims with the feed token in a podcast:txt tag" do
+      stub_claim_feed(podcast.feed_url)
+      post podcast_claim_path(podcast)
+      stub_claim_feed(podcast.feed_url, txt: ShowVerification.sole.token_line)
+
+      patch show_verification_path(user.shows.sole)
+
+      expect(user.shows.sole).to be_verified
+    end
+
     it "goes straight to the feed token, with Spotify for Creators steps, when a Spotify feed lists no owner email" do
       podcast.update!(feed_url: "https://anchor.fm/s/abc123/podcast/rss")
       stub_claim_feed(podcast.feed_url)

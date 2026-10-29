@@ -24,7 +24,7 @@
         <li>Set up your listing while you wait. It goes live on your show's page once the show is verified.</li>
       </ol>
       <%= button_to (@show ? "Continue" : "Claim this show"), podcast_claim_path(@podcast), class: "btn btn-primary btn-lg mt-6" %>
-      <p class="hint mt-3">Not you? <%= button_to "Sign out", destroy_user_session_path, method: :delete, class: "link-button", form_class: "inline" %> and sign in with the account you use for the show.</p>
+      <div class="hint mt-3">Not you? <%= button_to "Sign out", destroy_user_session_path, method: :delete, class: "link-button", form_class: "inline" %> and sign in with the account you use for the show.</div>
     <% end %>
   <% end %>
 </div>

@@ -14,7 +14,7 @@
     <li>Come back here and press Check my feed. <%= help.wait %></li>
   </ol>
   <% if verification.expired? %>
-    <p class="field-error mt-4">That token has expired. <%= button_to "Get a new token", show_verification_path(show), params: { kind: "feed_token" }, class: "link-button", form_class: "inline" %></p>
+    <div class="field-error mt-4">That token has expired. <%= button_to "Get a new token", show_verification_path(show), params: { kind: "feed_token" }, class: "link-button", form_class: "inline" %></div>
   <% else %>
     <%= button_to "Check my feed", show_verification_path(show), method: :patch, class: "btn btn-primary btn-lg mt-5" %>
     <p class="hint">We read your feed at <%= display_host(show.feed_url) %>. The line can sit anywhere in the description, and you can remove it once you're verified. It works for 7 days.</p>

@@ -1,8 +1,8 @@
-<%# locals: (f:, show:, kit:) -%>
+<%# locals: (f:, kit:) -%>
 <%# The listing (lane L4): what brands see in the directory and the podcast page's Rates section once it's published.
     It works on a draft workspace too; only the owner show's published listing is public. %>
 <% months = Podcast.listing_months %>
-<%= render "components/card", title: "Listing", aside: (ui_badge("Draft", tone: :warning) unless show.verified?) do %>
+<%= render "components/card", title: "Sponsorship details" do %>
   <div class="flex flex-col gap-6">
     <label class="listing-switch">
       <%= f.check_box :open_to_sponsors %>
