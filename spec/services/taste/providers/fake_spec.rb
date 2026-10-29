@@ -66,6 +66,12 @@ RSpec.describe Taste::Providers::Fake do
       expect(r.map(&:affinity)).to all(be_between(0, 1))
     end
 
+    it "pages with offset or page" do
+      all = fake.recommend(type: :brand, entity_ids: [ "x" ], take: 6)
+      expect(fake.recommend(type: :brand, entity_ids: [ "x" ], take: 3, offset: 3)).to eq(all.last(3))
+      expect(fake.recommend(type: :brand, entity_ids: [ "x" ], take: 3, page: 2)).to eq(all.last(3))
+    end
+
     it "honours filter_tags and popularity_max" do
       r = fake.recommend(type: :brand, entity_ids: [ "x" ], filter_tags: [ "urn:tag:genre:brand:finance" ], popularity_max: 0.8, take: 50)
       expect(r).not_to be_empty

@@ -54,9 +54,13 @@ module Taste
                                "filter.tag.types" => types }))
       end
 
-      def recommend(type:, entity_ids: [], tag_ids: [], filter_tags: [], popularity_max: nil, take: 20)
+      # offset (results to skip) or page (1 to 100) pages through a long list, as the catalog seed does; Qloo may
+      # ignore page for brands and podcasts, so prefer offset.
+      def recommend(type:, entity_ids: [], tag_ids: [], filter_tags: [], popularity_max: nil, take: 20, offset: nil,
+                    page: nil)
         params = { "filter.type" => Provider.urn_for(type), "filter.tags" => filter_tags,
-                   "filter.popularity.max" => popularity_max, "take" => take }.merge(signals(entity_ids, tag_ids))
+                   "filter.popularity.max" => popularity_max, "take" => take, "offset" => offset,
+                   "page" => page }.merge(signals(entity_ids, tag_ids))
         Mapping.entities(get("/v2/insights", params))
       end
 

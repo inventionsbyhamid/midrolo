@@ -44,7 +44,9 @@ module Taste
         end
       end
 
-      def recommend(type:, entity_ids: [], tag_ids: [], filter_tags: [], popularity_max: nil, take: 20)
+      def recommend(type:, entity_ids: [], tag_ids: [], filter_tags: [], popularity_max: nil, take: 20, offset: nil,
+                    page: nil)
+        skip = offset.to_i + ([ page.to_i, 1 ].max - 1) * take
         instrument("recommend") do
           Provider.urn_for(type)
           rng = rng_for("recommend", type, entity_ids, tag_ids, filter_tags, popularity_max)
@@ -52,7 +54,7 @@ module Taste
           pool = pool.select { |e| (Array(filter_tags) - e.tags.map(&:id)).empty? } if Array(filter_tags).any?
           pool = pool.select { |e| e.popularity <= popularity_max } if popularity_max
           pool.sort_by(&:id).map { |e| e.with(affinity: (0.3 + rng.rand * 0.7).round(3)) }
-              .sort_by { |e| [ -e.affinity, e.id ] }.first(take)
+              .sort_by { |e| [ -e.affinity, e.id ] }.drop(skip).first(take)
         end
       end
 

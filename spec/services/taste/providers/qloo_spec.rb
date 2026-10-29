@@ -55,6 +55,14 @@ RSpec.describe Taste::Providers::Qloo do
       expect(stub).to have_been_requested
     end
 
+    it "pages with offset or page, for the catalog seed" do
+      stub = stub_request(:get, "#{base}/v2/insights").with(
+        query: { "filter.type" => "urn:entity:podcast", "signal.interests.tags" => "T1", "take" => "50", "offset" => "100", "page" => "3" }
+      ).to_return(json("empty"))
+      adapter.recommend(type: :podcast, tag_ids: [ "T1" ], take: 50, offset: 100, page: 3)
+      expect(stub).to have_been_requested
+    end
+
     it "returns [] for an empty entities array" do
       stub_request(:get, "#{base}/v2/insights").with(query: hash_including({})).to_return(json("empty"))
       expect(adapter.recommend(type: :brand, entity_ids: [ "E1" ])).to eq([])
