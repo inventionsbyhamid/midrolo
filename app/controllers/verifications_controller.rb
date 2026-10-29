@@ -66,6 +66,8 @@ class VerificationsController < ApplicationController
   rescue Show::AlreadyClaimed => e
     # The claim page offers to ask the owner for access.
     redirect_to new_podcast_claim_path(@show.podcast), alert: e.message, status: :see_other
+  rescue Show::FeedMoved => e
+    redirect_to new_show_verification_path(@show), alert: e.message, status: :see_other
   end
 
   private
@@ -96,6 +98,7 @@ class VerificationsController < ApplicationController
     when :not_found
       "Not in your feed yet. Your host may not have updated it, so give it a few minutes and check again."
     when :unreadable then "We couldn't read your feed just now. Check that it's online, then try again in a few minutes."
+    when :feed_moved then Show::FeedMoved::MESSAGE
     else verification.email? ? ShowVerification::EXPIRED_CODE_MESSAGE : "That token has expired. Get a new one below."
     end
   end

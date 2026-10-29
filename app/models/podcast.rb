@@ -80,6 +80,31 @@ class Podcast < ApplicationRecord
     url.sub(%r{\A[a-z][a-z0-9+.-]*://[^/?#]*}i, &:downcase).sub(%r{/+\z}, "").presence
   end
 
+  # True when two feed URLs differ at most by scheme (http, https), a leading www., letter case or a trailing slash:
+  # one feed, so changing between them is no move (final review N2).
+  def self.same_feed_url?(one, other)
+    key = ->(url) { normalize_feed_url(url)&.sub(%r{\Ahttps?://}i, "")&.sub(/\Awww\./i, "")&.downcase }
+    first = key.call(one)
+    first.present? && first == key.call(other)
+  end
+
+  # The podcast namespace's UUIDv5.
+  PODCAST_GUID_NAMESPACE = [ "ead4c236bf5858c6a2c6a6b28d128cb6" ].pack("H*").freeze
+
+  # The podcast:guid a feed at this URL mints for itself (the namespace spec: UUIDv5 of the URL without its scheme and
+  # trailing slashes). A feed carrying the guid its URL minted was set up at that URL, so a later feed with the same
+  # guid is that show moving (Catalog::FeedMove).
+  def self.podcast_guid_for(url)
+    name = normalize_feed_url(url)&.sub(%r{\A[a-z][a-z0-9+.-]*://}i, "")
+    return nil if name.blank?
+
+    bytes = Digest::SHA1.digest(PODCAST_GUID_NAMESPACE + name).first(16).bytes
+    bytes[6] = (bytes[6] & 0x0f) | 0x50
+    bytes[8] = (bytes[8] & 0x3f) | 0x80
+    hex = bytes.pack("C*").unpack1("H*")
+    [ hex[0, 8], hex[8, 4], hex[12, 4], hex[16, 4], hex[20, 12] ].join("-")
+  end
+
   # The key names from Qloo and the directory match on ("The Founder's Ledger" => "foundersledger").
   def self.title_key_for(title) = Research::Names.normalize(title)
 

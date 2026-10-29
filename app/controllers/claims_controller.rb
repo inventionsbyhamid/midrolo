@@ -41,6 +41,8 @@ class ClaimsController < ApplicationController
     end
   rescue Show::AlreadyClaimed
     redirect_to new_podcast_claim_path(@podcast), status: :see_other
+  rescue Show::FeedMoved => e
+    redirect_to new_podcast_claim_path(@podcast), alert: e.message, status: :see_other
   end
 
   def access
