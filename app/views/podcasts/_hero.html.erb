@@ -38,7 +38,7 @@
     <% if offer %>
       <p class="pod-offer">
         <% if offer[:from] %><span>From <strong><%= offer[:from] %></strong> per spot</span><% end %>
-        <% if offer[:months].any? %><span>Open <%= offer[:months].to_sentence(two_words_connector: " and ", last_word_connector: " and ") %></span><% end %>
+        <% if offer[:months].any? %><span>Open <%= Copy.and_list(offer[:months]) %></span><% end %>
       </p>
     <% end %>
     <% if actions %>

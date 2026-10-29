@@ -68,10 +68,15 @@ RSpec.describe PodcastDirectory do
       expect(titles({ size: "0-500" })).to eq([ "Small Provided" ])
       expect(titles({ price: "100" })).to eq([ "Small Provided" ])
       expect(titles({ open: "1" })).to eq([ "Big Verified" ])
+      # "Stats verified" is Podcast#stats_verified?, as the page header says it: a fresh verified reading of a claimed show.
+      expect(titles({ verified: "1" })).to eq([])
+      reading = create(:stat_reading, podcast: big, source: "spotify", metric: "listeners_30d", trust: "verified")
       expect(titles({ verified: "1" })).to eq([ "Big Verified" ])
       big.update!(claimed_at: nil) # numbers belong to a claim (code review L8)
       expect(titles({ verified: "1" })).to eq([])
       big.update!(claimed_at: 1.day.ago)
+      reading.update!(expires_at: 1.minute.ago)
+      expect(titles({ verified: "1" })).to eq([])
       create(:sponsor_mention, episode: create(:episode, podcast: quiet))
       expect(titles({ sponsored: "1" })).to eq([ "Quiet Show" ])
     end

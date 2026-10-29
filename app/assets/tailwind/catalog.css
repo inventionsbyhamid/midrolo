@@ -673,6 +673,60 @@
     font-size: 0.6875rem;
   }
 
+  /* The platforms' verified numbers: one disclosure on a phone (PP-12), the cards side by side from 40rem. */
+  .pod-numbers-more {
+    flex: 4 1 100%;
+    min-width: 0;
+
+    @media (width >= 40rem) {
+      flex-basis: 48rem;
+    }
+  }
+
+  .pod-numbers-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: 0.875rem 1.25rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    font-weight: 650;
+    list-style: none;
+    cursor: pointer;
+
+    @media (width >= 40rem) {
+      display: none;
+    }
+  }
+
+  .pod-numbers-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .pod-numbers-summary > span:first-child::after {
+    content: " +";
+    color: var(--color-plum);
+  }
+
+  .pod-numbers-more[open] > .pod-numbers-summary > span:first-child::after {
+    content: " \2212";
+  }
+
+  .pod-numbers-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .pod-numbers-more[open] > .pod-numbers-summary + .pod-numbers-groups {
+    margin-top: 1rem;
+
+    @media (width >= 40rem) {
+      margin-top: 0;
+    }
+  }
+
   /* ---------- Tabs as anchored sections, under the sticky site header ---------- */
 
   .pod-tabs {

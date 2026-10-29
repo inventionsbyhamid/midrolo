@@ -73,6 +73,7 @@ RSpec.describe "Request a spot" do
   # The hero's Request a spot is the real control (PP-2): for a brand member it opens the form, and the sidebar's
   # button opens the same one.
   it "fits a phone with a long similar title, and the hero's Request a spot opens the form", :aggregate_failures do
+    podcast.update!(status: "active", last_published_at: 3.days.ago)
     long = create(:podcast, :active, title: "#{'Late Night Conversations With Teachers and Students ' * 3}".strip.first(120))
     report = create(:report, show: podcast.owner_show, status: "done", finished_at: 1.hour.ago)
     report.update_columns(similar_podcasts: [ { "name" => long.title, "podcast_id" => long.id, "score" => 0.9 },

@@ -16,7 +16,7 @@
     <% figure = podcast.public_downloads %>
     <p class="dir-card-facts">
       <% if figure %>
-        <span><strong><%= figure.amount(short: true) %></strong> <%= figure.unit %> per episode</span>
+        <span><strong><%= figure.amount %></strong> <%= figure.unit %> per episode</span>
       <% end %>
       <% if podcast.min_price_cents %>
         <span>From <strong><%= pages_money(podcast.min_price_cents) %></strong></span>
