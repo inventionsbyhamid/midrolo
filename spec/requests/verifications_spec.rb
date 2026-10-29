@@ -65,7 +65,7 @@ RSpec.describe "Verifications" do
       wrong = code == "000000" ? "111111" : "000000"
 
       patch show_verification_path(show), params: { code: wrong }
-      expect(flash[:alert]).to eq("That code didn't match. You have 4 tries left.")
+      expect(flash[:verify_note]).to eq("That code didn't match. You have 4 tries left.")
       4.times { patch show_verification_path(show), params: { code: wrong } }
       expect(flash[:alert]).to eq("Too many tries. Request a new code to try again.")
 
@@ -185,8 +185,10 @@ RSpec.describe "Verifications" do
         patch show_verification_path(show)
 
         expect(response).to redirect_to(show_verification_path(show))
-        expect(flash[:alert]).to include("We couldn't find midrolo-verify=#{ShowVerification.last.token} in your feed yet",
-                                         "a few minutes")
+        expect(flash[:verify_note]).to include("Not in your feed yet", "a few minutes")
+        follow_redirect!
+        expect(Nokogiri::HTML(response.body).at_css(".stats-alert").text).to include("Not in your feed yet")
+        expect(response.body).to include("Check again")
       end
     end
 
