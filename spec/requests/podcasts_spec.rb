@@ -185,6 +185,16 @@ RSpec.describe "Podcast pages" do
       expect(robots).to be_empty
     end
 
+    it "never hotlinks the feed's artwork or people's photos: stored pictures or initials only (code review L3)" do
+      podcast.update!(artwork_image: nil, artwork_url: "https://tracker.example.com/art.jpg")
+      create(:podcast_person, podcast: podcast, name: "Jack Rhysider", img_url: "https://tracker.example.com/jack.jpg")
+
+      visit "/podcasts/#{podcast.slug}"
+
+      expect(response.body).not_to include("tracker.example.com")
+      expect(doc.css(".person .person-photo").map(&:text)).to eq([ "JR" ])
+    end
+
     it "carries the PodcastSeries with sourced numbers and a breadcrumb, an Offer only with a published rate card" do
       visit "/podcasts/#{podcast.slug}"
       graph = json_ld.first["@graph"]

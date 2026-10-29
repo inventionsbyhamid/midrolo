@@ -4,7 +4,8 @@ module ArtworkHelper
   INITIALS_CLASSES = "flex flex-none items-center justify-center rounded-lg bg-plum-soft font-bold text-plum".freeze
 
   # The podcast's stored artwork at size (a square webp variant, Image::VARIANTS, through a rails_storage_proxy URL so
-  # Cloudflare caches it); until it's stored, the feed's artwork hotlinked as before; with none, an initials tile.
+  # Cloudflare caches it); until it's stored, or once it's taken down, an initials tile. A feed's artwork URL is never
+  # hotlinked: anyone can add a feed, and its host would see every visitor (code review L3, spec section 3).
   # class: sizes the element ("size-16"); other html options go on the tag. podcast may also be a Show (its podcast)
   # or a Podcasts::ShowInfo (a directory search result, which has no stored artwork).
   def podcast_artwork_tag(podcast, size: :thumb, **html)
@@ -15,8 +16,6 @@ module ArtworkHelper
       side = Image::VARIANTS.fetch(size.to_sym)
       image_tag rails_storage_proxy_path(variant), alt: "", width: side, height: side, loading: "lazy",
                                                    class: class_names(css, ARTWORK_CLASSES), **html
-    elsif (url = Show.http_url(podcast.artwork_url))
-      tag.img(src: url, alt: "", class: class_names(css, ARTWORK_CLASSES), loading: "lazy", referrerpolicy: "no-referrer", **html)
     else
       tag.span(Podcast.initials_for(podcast.title), class: class_names(css, INITIALS_CLASSES), "aria-hidden": "true", **html)
     end
