@@ -20,6 +20,7 @@ RSpec.describe "Admin stats" do
     [ -> { get admin_service_sessions_path }, -> { get admin_stat_connections_path },
       -> { patch admin_service_session_path("spotify"), params: { credentials: { sp_dc: cookie } } },
       -> { post test_admin_service_session_path("spotify"), params: { show_id: "2nel53b14wqMRDx2toN28f" } },
+      -> { patch limits_admin_service_sessions_path, params: { limits: { stats_min_gap_seconds: "60" } } },
       -> { post approve_admin_stat_connection_path(create(:stat_connection)) },
       -> { post reject_admin_stat_connection_path(create(:stat_connection, status: "mismatch", last_error: Stats::Ownership::NEEDS_REVIEW)) } ].each do |request|
       sign_in user # a 404 doesn't keep the test sign-in for the next request
@@ -92,9 +93,89 @@ RSpec.describe "Admin stats" do
         expect(session.reload.status).to eq("expired")
       end
 
+      it "waits for the platform's limits like any other run" do
+        session.update_columns(next_run_at: 2.minutes.from_now)
+        allow(Stats::PlatformFetch).to receive(:call)
+        post test_admin_service_session_path("spotify"), params: { connection_id: connection.id }
+
+        expect(response).to redirect_to(admin_service_sessions_path(anchor: "spotify"))
+        expect(flash[:alert]).to start_with("Not yet: Spotify's limits allow the next run at ")
+        expect(Stats::PlatformFetch).not_to have_received(:call)
+      end
+
+      it "counts as a run, and a rate limit cools the platform down" do
+        allow(Stats::PlatformFetch).to receive(:call).and_return(fetch_error("rate_limited", "Spotify answered 429 on metadata.", retry_after: 900))
+        post test_admin_service_session_path("spotify"), params: { connection_id: connection.id }
+
+        expect(response.body).to include("Rate limited").and include("Spotify answered 429 on metadata.").and include("Cooling down")
+        expect(session.reload).to have_attributes(status: "ok", rate_limits_in_a_row: 1, failures_in_a_row: 1)
+        expect(session.run_log.size).to eq(1)
+      end
+
+      # The helper's fresh Spotify token goes into the session's credentials and nowhere a person can see it.
+      it "keeps a fresh token out of the page and the log" do
+        token = "BQfreshTokenFromTheHelper-0123456789"
+        log = StringIO.new
+        allow(Rails).to receive(:logger).and_return(ActiveSupport::Logger.new(log))
+        status = instance_double(Process::Status, success?: true, exitstatus: 0)
+        answer = JSON.generate(spotify_result.merge("token" => { "value" => token, "expires_at" => 1.hour.from_now.utc.iso8601 }))
+        allow(Open3).to receive(:popen3) do |*, **, &block|
+          block.call(StringIO.new, StringIO.new(answer), StringIO.new(""), double("waiter", join: true, value: status, pid: 1))
+        end
+
+        post test_admin_service_session_path("spotify"), params: { connection_id: connection.id }
+        result_page = response.body
+        expect(result_page).to include("Worked")
+        get admin_service_sessions_path
+
+        expect(JSON.parse(session.reload.credentials)["bearer_token"]).to eq(token)
+        expect(result_page + response.body + log.string).not_to include(token)
+      end
+
       it "asks for a connection or a show id" do
         post test_admin_service_session_path("spotify"), params: { show_id: "nope" }
         expect(flash[:alert]).to eq("Choose a connection or enter a show id.")
+      end
+    end
+
+    describe "limits" do
+      def throttle_rows(platform)
+        page = Nokogiri::HTML(response.body)
+        page.css("##{platform}_throttle dt").map { |dt| dt.text.squish }.zip(page.css("##{platform}_throttle dd").map { |dd| dd.text.squish }).to_h
+      end
+
+      it "shows each platform's runs, next allowed run, cooldown, failures and last rate limit" do
+        create(:service_session, platform: "spotify", run_log: [ 5.minutes.ago.to_i, 3.hours.ago.to_i ], failures_in_a_row: 2,
+                                 cooldown_until: 1.hour.from_now, last_rate_limited_at: 10.minutes.ago)
+        get admin_service_sessions_path
+
+        rows = throttle_rows("spotify")
+        expect(rows).to include("Runs in the last hour" => "1 of 40", "Runs in the last 24 hours" => "2 of 300",
+                                "Failed runs in a row" => "2")
+        expect(rows["Cooldown until"]).to end_with("UTC")
+        expect(rows["Next run allowed"]).to eq(rows["Cooldown until"])
+        expect(rows["Last rate limited"]).to end_with("UTC")
+        expect(response.body).to include("Cooling down")
+      end
+
+      it "saves new limits" do
+        patch limits_admin_service_sessions_path, params: { limits: { stats_min_gap_seconds: "60", stats_gap_jitter_seconds: "20",
+                                                                      stats_runs_per_hour: "30", stats_runs_per_day: "200" } }
+        expect(response).to redirect_to(admin_service_sessions_path(anchor: "limits"))
+        expect(flash[:notice]).to eq("Limits saved.")
+        expect(Stats::Limits.current).to have_attributes(min_gap: 60, jitter: 20, per_hour: 30, per_day: 200)
+
+        get admin_service_sessions_path
+        expect(Nokogiri::HTML(response.body).at_css("input[name='limits[stats_min_gap_seconds]']")["value"]).to eq("60")
+      end
+
+      it "refuses limits that aren't allowed, and shows what was typed" do
+        patch limits_admin_service_sessions_path, params: { limits: { stats_min_gap_seconds: "1", stats_gap_jitter_seconds: "15",
+                                                                      stats_runs_per_hour: "40", stats_runs_per_day: "300" } }
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Seconds between runs must be a whole number from 10 to 3600.")
+        expect(Nokogiri::HTML(response.body).at_css("input[name='limits[stats_min_gap_seconds]']")["value"]).to eq("1")
+        expect(Stats::Limits.current.min_gap).to eq(30)
       end
     end
 

@@ -6,10 +6,12 @@ module Stats
   # audience breakdown (age, gender, country) on a "<platform>_audience" reading. Then it refreshes plays per episode
   # and the podcast's listing columns. Returns the readings written.
   #
-  # The breakdown comes from the result, or, when the 30 days had none, from audience: (the fetch over the last 12
-  # months that Stats::SyncJob then makes; nil when it wasn't asked). An audience reading with an empty breakdown means
-  # the platform answered with none to give, which the audience card says plainly. When the call behind the breakdown
-  # failed this time (the helper lists its keys as unavailable), the last audience reading is kept as it was.
+  # The breakdown comes from the result. When the 30 days had none, Stats::SyncJob passes audience: KEEP_LAST_AUDIENCE
+  # and the last audience reading stays as it was, since the fetch over the last 12 months runs on its own, at most
+  # weekly (Stats::AudienceJob, which saves its answer with Record.audience). An audience reading with an empty
+  # breakdown means the platform answered with none to give, which the audience card says plainly. When the call
+  # behind the breakdown failed this time (the helper lists its keys as unavailable), the last audience reading is
+  # kept as it was too.
   class Record
     # Counts over the fetch's window; the helper names them bare ("streams"), or with _30d.
     WINDOW_COUNTS = %w[streams starts listeners plays engaged_listeners].freeze
@@ -24,8 +26,14 @@ module Stats
     RANK_BREAKDOWNS = %w[country_rank].freeze
     BREAKDOWN_KEY = /\A[A-Za-z0-9_+\-]{1,40}\z/
     BREAKDOWN_LIMIT = 30
+    # audience: for "leave the audience reading as it is" (a fetch that wasn't made this time).
+    KEEP_LAST_AUDIENCE = { "ok" => false, "error" => "not_asked" }.freeze
 
     def self.call(connection, result, audience: nil, now: Time.current) = new(connection, result, audience, now).call
+
+    # Saves only the audience reading, from a fetch over a longer window (Stats::AudienceJob), when the platform
+    # answered for the breakdown (an empty one included). Returns the reading, or nil when there was nothing to save.
+    def self.audience(connection, fetch, now: Time.current) = new(connection, fetch, nil, now).save_audience
 
     # The reading's metric for one of the helper's metric keys on a platform, or nil for one Midrolo doesn't keep.
     def self.metric_for(provider, key)
@@ -64,6 +72,17 @@ module Stats
       podcast.stat_readings.where(source: source, metric: rows.pluck(:metric)).to_a
     end
 
+    def save_audience
+      return unless result["ok"] && breakdown_answered?(result)
+
+      row = audience_row_for(result)
+      StatReading.transaction do
+        StatReading.upsert_all([ row ], unique_by: %i[podcast_id metric source])
+        podcast.touch
+      end
+      podcast.stat_readings.find_by(source: source, metric: row[:metric])
+    end
+
     private
 
     attr_reader :connection, :podcast, :result, :audience, :now
@@ -90,9 +109,13 @@ module Stats
       return @audience_row if defined?(@audience_row)
 
       fetch = audience_fetch
-      count = fetch&.dig("metrics", AUDIENCE_COUNT.fetch(source, "listeners"))
-      @audience_row = fetch && row("#{source}_audience", count.is_a?(Integer) && count >= 0 ? count : 0,
-                                   period_days: period_days(fetch), breakdown: breakdowns(fetch), fetch: fetch)
+      @audience_row = fetch && audience_row_for(fetch)
+    end
+
+    def audience_row_for(fetch)
+      count = fetch.dig("metrics", AUDIENCE_COUNT.fetch(source, "listeners"))
+      row("#{source}_audience", count.is_a?(Integer) && count >= 0 ? count : 0, period_days: period_days(fetch),
+                                breakdown: breakdowns(fetch), fetch: fetch)
     end
 
     def audience_fetch

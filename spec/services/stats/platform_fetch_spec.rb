@@ -126,6 +126,94 @@ RSpec.describe Stats::PlatformFetch do
     expect(result.to_s + log.string).not_to include(cookie)
   end
 
+  it "maps a rate-limited answer, with the wait the platform asked for" do
+    stub_helper(stdout: JSON.generate("ok" => false, "error" => "rate_limited", "message" => "Spotify answered 429.", "retry_after" => 120))
+    expect(described_class.call(connection)).to eq("ok" => false, "error" => "rate_limited", "message" => "Spotify answered 429.",
+                                                   "retry_after" => 120)
+    stub_helper(stdout: JSON.generate("ok" => false, "error" => "rate_limited", "message" => "x", "retry_after" => "soon"))
+    expect(described_class.call(connection)).to include("error" => "rate_limited", "retry_after" => nil)
+    stub_helper(stdout: JSON.generate("ok" => false, "error" => "failed", "message" => "x", "retry_after" => 5))
+    expect(described_class.call(connection)).not_to have_key("retry_after")
+  end
+
+  describe "the cached bearer token (one sign in an hour, not one a fetch)" do
+    let(:token) { "BQfreshBearerTokenValue-0123456789abcdef" }
+    let(:raw_credentials) { ServiceSession.connection.select_value("SELECT credentials FROM service_sessions WHERE id = #{session.id}") }
+
+    def stored = JSON.parse(session.reload.credentials)
+
+    def store_token(value, expires_at)
+      session.update!(credentials: { "sp_dc" => cookie, "bearer_token" => value, "bearer_expires_at" => expires_at.utc.iso8601 }.to_json)
+    end
+
+    it "keeps a fresh token the helper returns, encrypted, out of the logs, the result and updated_at" do
+      saved_at = session.reload.updated_at
+      expires = 1.hour.from_now.utc.change(usec: 0)
+      stub_helper(stdout: helper_json("token" => { "value" => token, "expires_at" => expires.iso8601 }))
+      result = described_class.call(connection)
+
+      expect(result).to include("ok" => true)
+      expect(result.to_s).not_to include(token)
+      expect(log.string).to include("signed in")
+      expect(log.string).not_to include(token)
+      expect(stored).to eq("sp_dc" => cookie, "bearer_token" => token, "bearer_expires_at" => expires.iso8601)
+      expect(raw_credentials).not_to include(token) # encrypted at rest
+      expect(session.reload.updated_at).to eq(saved_at) # Stats::ServiceSessions.expired! compares it
+    end
+
+    it "keeps one that comes back with a failure too (the sign in worked)" do
+      stub_helper(stdout: JSON.generate("ok" => false, "error" => "forbidden", "message" => "No access.",
+                                        "token" => { "value" => token, "expires_at" => 1.hour.from_now.utc.iso8601 }))
+      expect(described_class.call(connection)).to eq("ok" => false, "error" => "forbidden", "message" => "No access.")
+      expect(stored["bearer_token"]).to eq(token)
+    end
+
+    it "passes a kept token while it has more than 5 minutes left, beside the session, never in it" do
+      expires = 30.minutes.from_now.utc.change(usec: 0)
+      store_token("BQkeptToken-abcdefghijkl", expires)
+      given = stub_helper(stdout: helper_json)
+      described_class.call(connection)
+      request = JSON.parse(given[:stdin].string)
+      expect(request["session"]).to eq("sp_dc" => cookie)
+      expect(request["token"]).to eq("value" => "BQkeptToken-abcdefghijkl", "expires_at" => expires.iso8601)
+      expect(log.string).not_to include("BQkeptToken")
+    end
+
+    it "lets the helper sign in when the kept token is about to expire" do
+      store_token("BQkeptToken-abcdefghijkl", 4.minutes.from_now)
+      given = stub_helper(stdout: helper_json)
+      described_class.call(connection)
+      expect(JSON.parse(given[:stdin].string)).not_to have_key("token")
+    end
+
+    it "doesn't keep a token when an admin replaced the session meanwhile" do
+      allow(Open3).to receive(:popen3) do |*, **, &block|
+        Stats::ServiceSessions.save!("spotify", { "sp_dc" => "AQBnewcookie-0000000000" })
+        status = instance_double(Process::Status, success?: true, exitstatus: 0)
+        out = helper_json("token" => { "value" => token, "expires_at" => 1.hour.from_now.utc.iso8601 })
+        block.call(StringIO.new, StringIO.new(out), StringIO.new(""), double("waiter", join: true, value: status, pid: 1))
+      end
+      described_class.call(connection)
+      expect(stored).to eq("sp_dc" => "AQBnewcookie-0000000000")
+    end
+
+    it "ignores a token that doesn't look right" do
+      [ { "value" => "has space #{token}", "expires_at" => 1.hour.from_now.utc.iso8601 },
+        { "value" => token, "expires_at" => 1.hour.ago.utc.iso8601 },
+        { "value" => token, "expires_at" => "later" }, token ].each do |bad|
+        stub_helper(stdout: helper_json("token" => bad))
+        expect(described_class.call(connection)).to include("ok" => true)
+        expect(stored).to eq("sp_dc" => cookie)
+      end
+    end
+
+    it "is dropped when an admin saves a new session" do
+      store_token(token, 30.minutes.from_now)
+      Stats::ServiceSessions.save!("spotify", { "sp_dc" => cookie })
+      expect(stored).to eq("sp_dc" => cookie)
+    end
+  end
+
   context "with a real process" do
     it "reads stdin and stdout through Open3, in a bare environment" do
       ENV["MIDROLO_SPEC_SECRET"] = "leak"

@@ -9,9 +9,17 @@ module Stats
   #   { "ok" => true, "platform" =>, "show" => { "id", "name", "rss_url" }, "period" => { "start", "end", "days" },
   #     "metrics" => { "streams" => 50, ... }, "breakdowns" => { "age" => { "18-22" => 0.25, ... }, ... },
   #     "unavailable" => [ keys a call the platform didn't answer this time would have given ] }
-  #   { "ok" => false, "error" => "expired" | "forbidden" | "not_found" | "failed" | "unavailable", "message" => ... }
+  #   { "ok" => false, "error" => "expired" | "forbidden" | "not_found" | "rate_limited" | "failed" | "unavailable",
+  #     "message" => ..., "retry_after" => seconds or nil (rate_limited only) }
   #
   # "unavailable" is this class's own: there is no working session for the platform, so nothing was asked.
+  # "rate_limited" means the platform asked for fewer requests; Stats::Throttle turns it into a cooldown for the whole
+  # platform (callers run the helper inside Stats::Throttle.track).
+  #
+  # Fewer sign ins: Spotify's bearer token is good for an hour. The helper returns a fresh one whenever it had to sign
+  # in; it is kept encrypted inside the session's credentials (TOKEN_KEYS) and passed back while it has more than
+  # TOKEN_MARGIN left, so the platform sees one sign in an hour at most instead of one per fetch. Like the cookies, it
+  # never reaches a log line, a job argument or a result.
   #
   # The session goes only to the helper's stdin. It is never in the command line, the environment, a log line, an
   # exception or the result, and the helper's stderr is scrubbed of it before a line of it is logged. The helper gets a
@@ -24,7 +32,14 @@ module Stats
     WINDOW_DAYS = 30
     AUDIENCE_DAYS = 365
     MAX_OUTPUT = 256 * 1024
-    ERRORS = %w[expired forbidden not_found failed unavailable].freeze
+    ERRORS = %w[expired forbidden not_found rate_limited failed unavailable].freeze
+    # The cached bearer token's keys inside ServiceSession#credentials, beside the cookies; and how long it must still
+    # be good for to be passed to the helper.
+    TOKEN_KEYS = %w[bearer_token bearer_expires_at].freeze
+    TOKEN_MARGIN = 5.minutes
+    TOKEN_FORMAT = %r{\A[A-Za-z0-9._~+/=-]{8,4096}\z}
+    # A platform's Retry-After longer than this is taken as this.
+    MAX_RETRY_AFTER = 7.days.to_i
     SAFE_KEY = /\A[a-z0-9_+\-]{1,40}\z/i
     # Environment variables the helper may see: where programs are, the locale, and an outbound proxy if the host has
     # one, and the Python a developer points it at. Nothing else (no database URL, no Rails or encryption keys).
@@ -40,7 +55,10 @@ module Stats
     # bin/platform-stats, unless a spec set another command.
     def self.helper_command = command || [ Rails.root.join("bin/platform-stats").to_s ]
 
-    def self.failure(error, message) = { "ok" => false, "error" => error, "message" => message }
+    def self.failure(error, message, retry_after: nil)
+      result = { "ok" => false, "error" => error, "message" => message }
+      error == "rate_limited" ? result.merge("retry_after" => retry_after) : result
+    end
 
     def initialize(connection, session:, days:, timeout:)
       @connection = connection
@@ -54,6 +72,7 @@ module Stats
       return values if values.is_a?(Hash) && values["ok"] == false
 
       @secrets = values.values.map(&:to_s).select { |value| value.length >= 4 }
+      @cookies = values.except(*TOKEN_KEYS)
       stdout, stderr, status = run(JSON.generate(request(values)))
       log_stderr(stderr, status)
       parse(stdout, status)
@@ -72,8 +91,55 @@ module Stats
 
     def request(values)
       last_day = Time.now.utc.to_date - 1
-      { platform: connection.provider, session: values, show_id: connection.external_id.to_s,
-        start: (last_day - (days - 1)).iso8601, end: last_day.iso8601 }
+      { platform: connection.provider, session: values.except(*TOKEN_KEYS), show_id: connection.external_id.to_s,
+        start: (last_day - (days - 1)).iso8601, end: last_day.iso8601, token: cached_token(values) }.compact
+    end
+
+    # The bearer token an earlier run returned, while it has more than TOKEN_MARGIN left; else nil (the helper signs in).
+    def cached_token(values)
+      value, expires_at = values.values_at(*TOKEN_KEYS)
+      expires = begin
+        Time.iso8601(expires_at.to_s)
+      rescue ArgumentError
+        nil
+      end
+      return unless value.to_s.match?(TOKEN_FORMAT) && expires && expires > Time.current + TOKEN_MARGIN
+
+      { value: value, expires_at: expires.utc.iso8601 }
+    end
+
+    # Keeps a fresh token the helper returned inside the session's credentials (encrypted), unless an admin replaced
+    # the session meanwhile. Written without touching updated_at, which Stats::ServiceSessions.expired! uses to tell a
+    # replaced session from the one a fetch used.
+    def keep_token(token)
+      value, expires = token_parts(token)
+      return unless value && session&.persisted?
+
+      @secrets << value
+      kept = ServiceSession.transaction do
+        row = ServiceSession.lock.find_by(id: session.id)
+        stored = row && parse_credentials(row.credentials)
+        next false unless stored && stored.except(*TOKEN_KEYS) == @cookies
+
+        row.update_columns(credentials: stored.merge(TOKEN_KEYS.zip([ value, expires.utc.iso8601 ]).to_h).to_json)
+      end
+      log("signed in; the new token is kept until #{expires.utc.strftime('%H:%M')} UTC") if kept
+    end
+
+    def token_parts(token)
+      return unless token.is_a?(Hash) && token["value"].is_a?(String) && token["value"].match?(TOKEN_FORMAT)
+
+      expires = Time.iso8601(token["expires_at"].to_s)
+      [ token["value"], expires ] if expires > Time.current && expires < Time.current + 1.day
+    rescue ArgumentError
+      nil
+    end
+
+    def parse_credentials(text)
+      values = JSON.parse(text.to_s)
+      values if values.is_a?(Hash)
+    rescue JSON::ParserError
+      nil
     end
 
     # The session's cookies as a Hash of strings, or a failure when there is none that works. The stored JSON is never
@@ -143,6 +209,7 @@ module Stats
         log("unreadable answer, exit #{status&.exitstatus.inspect}")
         return self.class.failure("failed", "The stats helper gave an answer we couldn't read.")
       end
+      keep_token(body.delete("token")) # first, so it's in @secrets before anything is logged
 
       body["ok"] == true && status&.success? ? success(body) : error(body)
     end
@@ -166,7 +233,8 @@ module Stats
       code = ERRORS.include?(body["error"]) ? body["error"] : "failed"
       message = scrub(body["message"].to_s).squish.first(300).presence || "The platform didn't give the numbers."
       log("#{code}: #{message}")
-      self.class.failure(code, message)
+      retry_after = body["retry_after"].clamp(0, MAX_RETRY_AFTER) if body["retry_after"].is_a?(Integer)
+      self.class.failure(code, message, retry_after: retry_after)
     end
 
     def hash(value) = value.is_a?(Hash) ? value : {}

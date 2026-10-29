@@ -16,6 +16,8 @@ namespace :admin do
   # Midrolo's own platform sessions: entered as a form, never shown again; a test fetch against a connection.
   resources :service_sessions, only: %i[index update], param: :platform do
     post :test, on: :member
+    # Stats::Throttle's limits (Stats::Limits), the same for every platform.
+    patch :limits, on: :collection
   end
   # Pending invites (oldest first, so the admin knows which to accept) and every other connection.
   resources :stat_connections, only: :index do
