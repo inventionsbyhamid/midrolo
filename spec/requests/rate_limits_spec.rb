@@ -352,7 +352,6 @@ RSpec.describe "Rate limits", :rate_limits do
       expect(flash[:alert]).to eq("Too many tries. Wait a minute, then try again.")
     end
   end
-
 end
 
 # Every other spec: RATE_LIMIT_STORE counts nowhere (config/initializers/rate_limit_store.rb), so however many requests

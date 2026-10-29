@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 526" role="img" aria-labelledby="t d" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+<title id="t">What a podcast ad earns per 1,000 downloads</title>
+<desc id="d">Typical 2026 rate card ranges per thousand downloads: programmatic $12 to $15, dynamic insertion in the back catalog $14 to $16, dynamic insertion in new episodes $18 to $22, host read ads $24 to $40, and host read ads on business or finance shows from $40.</desc>
+<rect width="800" height="526" fill="#ffffff"/>
+<text x="32" y="50" font-size="28" font-weight="700" fill="#22132b">What a podcast ad earns per 1,000 downloads</text>
+<text x="32" y="82" font-size="18" fill="#5a4a63">Typical 2026 rate card ranges (CPM), in US dollars</text>
+<line x1="300.0" y1="126" x2="300.0" y2="426" stroke="#e3dae3" stroke-width="1.5"/>
+<text x="300.0" y="452" font-size="16" fill="#5a4a63" text-anchor="middle">$0</text>
+<line x1="392.0" y1="126" x2="392.0" y2="426" stroke="#e3dae3" stroke-width="1.5"/>
+<text x="392.0" y="452" font-size="16" fill="#5a4a63" text-anchor="middle">$10</text>
+<line x1="484.0" y1="126" x2="484.0" y2="426" stroke="#e3dae3" stroke-width="1.5"/>
+<text x="484.0" y="452" font-size="16" fill="#5a4a63" text-anchor="middle">$20</text>
+<line x1="576.0" y1="126" x2="576.0" y2="426" stroke="#e3dae3" stroke-width="1.5"/>
+<text x="576.0" y="452" font-size="16" fill="#5a4a63" text-anchor="middle">$30</text>
+<line x1="668.0" y1="126" x2="668.0" y2="426" stroke="#e3dae3" stroke-width="1.5"/>
+<text x="668.0" y="452" font-size="16" fill="#5a4a63" text-anchor="middle">$40</text>
+<line x1="760.0" y1="126" x2="760.0" y2="426" stroke="#e3dae3" stroke-width="1.5"/>
+<text x="760.0" y="452" font-size="16" fill="#5a4a63" text-anchor="middle">$50</text>
+<text x="32" y="156" font-size="18" fill="#22132b">Programmatic</text>
+<rect x="410.4" y="138" width="27.6" height="24" rx="12" fill="#d6c3e4"/>
+<text x="448.0" y="156" font-size="17" font-weight="700" fill="#22132b">$12 to $15</text>
+<text x="32" y="214" font-size="18" fill="#22132b">Dynamic, back catalog</text>
+<rect x="428.8" y="196" width="18.4" height="24" rx="12" fill="#d6c3e4"/>
+<text x="457.2" y="214" font-size="17" font-weight="700" fill="#22132b">$14 to $16</text>
+<text x="32" y="272" font-size="18" fill="#22132b">Dynamic, new episodes</text>
+<rect x="465.6" y="254" width="36.8" height="24" rx="12" fill="#a77fc4"/>
+<text x="512.4" y="272" font-size="17" font-weight="700" fill="#22132b">$18 to $22</text>
+<text x="32" y="330" font-size="18" fill="#22132b">Host read</text>
+<rect x="520.8" y="312" width="147.2" height="24" rx="12" fill="#4a2266"/>
+<text x="678.0" y="330" font-size="17" font-weight="700" fill="#22132b">$24 to $40</text>
+<text x="32" y="388" font-size="18" fill="#22132b">Host read, business or finance</text>
+<rect x="668.0" y="370" width="78.0" height="24" rx="12" fill="#f3a712"/>
+<path d="M744.0 370 L760.0 382 L744.0 394 Z" fill="#f3a712"/>
+<text x="658.0" y="388" font-size="17" font-weight="700" fill="#22132b" text-anchor="end">$40 and up</text>
+<text x="32" y="500" font-size="15" fill="#5a4a63">Sources: Libsyn Ads 2026 benchmarks (via Podder), Acast. Rate cards, not audited averages.</text>
+</svg>
