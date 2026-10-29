@@ -20,8 +20,14 @@ class ShareImagesController < ApplicationController
     serve ShareImages::SampleCard.new(Samples.find!(params[:slug], preload: { show: :podcast }))
   end
 
+  # An earlier slug of the podcast 301s to the current one's card, as /k/:slug does to the page, so og.png links in
+  # pitches already sent keep working after a rename (code review L5).
   def kit
-    show = Podcast.find_by(slug: params[:slug].to_s)&.owner_show
+    podcast = Podcast.find_by_slug_or_redirect(params[:slug])
+    raise ActiveRecord::RecordNotFound if podcast.nil? || podcast.removed?
+    return redirect_to(kit_share_image_path(podcast), status: :moved_permanently) if podcast.slug != params[:slug].to_s
+
+    show = podcast.owner_show
     raise ActiveRecord::RecordNotFound unless show&.public_kit?
 
     ShareImages::ArtworkStore.request(show)
