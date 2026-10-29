@@ -38,7 +38,15 @@ class ApplicationController < ActionController::Base
 
   MASQUERADE_REFUSED = "Only the account's owner can do that. Go back to your own account first.".freeze
 
-  def after_sign_in_path_for(_resource) = shows_path
+  # The brand workspace's home (lane L6 draws it under /brand).
+  BRAND_HOME = "/brand".freeze
+
+  # Sign in keeps your place (build spec section 10): where you were going (Devise stores it when a page needs sign in;
+  # other pages call store_location_for(:user, path) before sending you to sign in), else your side's home: the brand
+  # workspace when you last worked as a brand, your shows otherwise.
+  def after_sign_in_path_for(resource)
+    stored_location_for(resource) || (resource.last_role == "brand" ? BRAND_HOME : shows_path)
+  end
   def after_sign_out_path_for(_scope) = "/"
 
   private
