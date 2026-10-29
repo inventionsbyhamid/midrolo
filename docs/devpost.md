@@ -177,8 +177,9 @@ and listings, verified Spotify and Apple numbers, the brand agent, request a spo
   sponsor history with evidence, details), a brand page from a show's sponsors, and the sample reports at
   https://midrolo.com/samples. Search for a show that isn't listed and watch it get added.
 - **Sign in** with any Google account. We never post to it.
-- **Try the brand side:** press "Find podcasts your customers love", name a real brand and its website, and watch the
-  agent's seven steps. Open the results, save a show, and request a spot. To send a request without bothering a real
+- **Try the brand side:** press "Find podcasts your customers love" and give any brand name with a website of your
+  own, or a made-up one unique to you (like yourname-test.com), not a real brand's site, so you never share a brand
+  with another judge. Then run a fit search for any real brand and watch the agent's seven steps. Open the results, save a show, and request a spot. To send a request without bothering a real
   show, use the **Midrolo Demo Show**: a fictional listing we run, linked from the home page and labelled Demo
   everywhere.
 - **Try the podcaster side:** add any show (it doesn't have to be yours) and run a Snapshot and a full report: watch
