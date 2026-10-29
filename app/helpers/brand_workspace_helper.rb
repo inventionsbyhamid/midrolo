@@ -10,9 +10,10 @@ module BrandWorkspaceHelper
   PROOF_RELATIONS = { "competitor" => "a competitor", "complementary" => "a brand your customers also buy",
                       "category" => "a brand in your category" }.freeze
 
+  # [label, href] pairs, and the Inbox's [label, href, count] (NavigationHelper's shape) with the brand side's unread.
   def brand_nav_links
     links = [ [ "Brand", brand_root_path ], [ "Find podcasts", new_brand_search_path ], [ "Saved", brand_saved_podcasts_path ],
-              [ "Inbox", brand_inbox_path ] ]
+              [ "Inbox", brand_inbox_path, inbox_unread_count(current_user, side: :brand) ] ]
     links << [ "Your shows", shows_path ] if current_user&.shows&.exists?
     links << [ "Account", account_path ]
   end

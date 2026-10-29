@@ -61,6 +61,19 @@ RSpec.describe Conversations::Start do
     expect(Conversation.count).to eq(0)
   end
 
+  # M1: handing an unverified member a colleague's conversation sent them to a thread they can't open.
+  it "tells an unverified member a colleague already asked, without handing over the request" do
+    first = call.conversation
+    teammate = brand_member_for(brand: membership.brand)
+
+    result = call(podcast, teammate)
+    expect(result).to have_attributes(ok?: false, conversation: nil, error: described_class::COLLEAGUE_ASKED)
+
+    teammate.update!(verified_at: Time.current)
+    expect(call(podcast, teammate)).to have_attributes(ok?: true, existing: true, conversation: first)
+    expect(Conversation.count).to eq(1)
+  end
+
   it "passes the form's errors back" do
     result = call(body: " ", budget: "lots")
 

@@ -47,7 +47,7 @@ module Brands
 
     def check_address!(brand, address)
       domain = brand.domain
-      raise Invalid, "Add your company's website to your brand first, so we know which addresses count." if domain.blank?
+      raise Invalid, "Your brand has no website yet. Start again with your company's website to verify." if domain.blank?
       raise Invalid, "Enter a work email address." unless address.match?(ADDRESS)
 
       host = address.split("@", 2).last

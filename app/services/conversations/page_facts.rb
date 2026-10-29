@@ -11,9 +11,10 @@ module Conversations
                     [ 7.days, "Usually replies within a week" ] ].freeze
 
     # state is one of :signed_out, :owner (the podcast is theirs), :no_brand (no brand account yet), :ongoing (one of
-    # their brands has a request running: conversation), :blocked (the show blocked every brand they're in) or :ready
-    # (memberships: the brands they may ask as, the first one the default: the brand they work as in the brand
-    # workspace, User::Brands#brand_member).
+    # their brands has a request running that they may open: conversation), :colleague_asked (someone else at their
+    # brand asked, and as an unverified member they may not open it: no conversation, review M1), :blocked (the show
+    # blocked every brand they're in) or :ready (memberships: the brands they may ask as, the first one the default:
+    # the brand they work as in the brand workspace, User::Brands#brand_member).
     Viewer = Data.define(:state, :memberships, :conversation) do
       def membership = memberships.first
     end
@@ -67,12 +68,21 @@ module Conversations
       memberships = [ current ] + (memberships - [ current ])
 
       brand_ids = memberships.map(&:brand_id)
-      ongoing = Conversation.ongoing.where(podcast_id: @podcast.id, brand_id: brand_ids).order(created_at: :desc).first
-      return viewer_in(:ongoing, conversation: ongoing) if ongoing
+      ongoing = Conversation.ongoing.where(podcast_id: @podcast.id, brand_id: brand_ids).order(created_at: :desc).to_a
+      if ongoing.any?
+        mine = ongoing.find { |conversation| opens?(conversation, memberships) }
+        return mine ? viewer_in(:ongoing, conversation: mine) : viewer_in(:colleague_asked)
+      end
 
       blocked = Block.where(podcast_id: @podcast.id, brand_id: brand_ids).pluck(:brand_id)
       open_to = memberships.reject { |member| blocked.include?(member.brand_id) }
       open_to.empty? ? viewer_in(:blocked) : viewer_in(:ready, memberships: open_to)
+    end
+
+    # Conversation.for_brand_user's rule, on the memberships in hand: the user started it, or is a verified member.
+    def opens?(conversation, memberships)
+      conversation.started_by_id == @user.id ||
+        memberships.any? { |member| member.brand_id == conversation.brand_id && member.verified? }
     end
 
     def viewer_in(state, memberships: [], conversation: nil)

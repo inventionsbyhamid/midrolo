@@ -30,7 +30,8 @@ RSpec.describe Brands::WorkEmail do
       .to raise_error(described_class::Invalid, /Free email addresses can't verify a brand/)
     expect { described_class.request_code!(member, "not an email") }.to raise_error(described_class::Invalid, "Enter a work email address.")
 
-    member.brand.update!(domain: nil)
+    Brand.where(id: member.brand_id).update_all(domain: nil) # only an admin changes a domain (Brand: attr_readonly)
+    member.brand.reload
     expect { described_class.request_code!(member, "ada@fieldnote.example") }.to raise_error(described_class::Invalid, /website/)
     expect(ActionMailer::Base.deliveries).to be_empty
   end

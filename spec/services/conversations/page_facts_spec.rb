@@ -72,5 +72,18 @@ RSpec.describe Conversations::PageFacts do
       Conversations::BlockBrand.block(podcast: podcast, brand: membership.brand)
       expect(described_class.new(podcast, user: user).viewer.state).to eq(:blocked)
     end
+
+    # M1: an unverified member can't open a colleague's request, so they get no link to it, only that it exists.
+    it "hands an unverified member no colleague's request, and a verified one the brand's" do
+      colleague = brand_member_for
+      asked = start_request(podcast, colleague)
+      member = brand_member_for(brand: colleague.brand)
+
+      viewer = described_class.new(podcast, user: member.user).viewer
+      expect(viewer).to have_attributes(state: :colleague_asked, conversation: nil, memberships: [])
+
+      member.update!(verified_at: Time.current)
+      expect(described_class.new(podcast, user: member.user).viewer).to have_attributes(state: :ongoing, conversation: asked)
+    end
   end
 end
