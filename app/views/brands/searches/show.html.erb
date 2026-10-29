@@ -1,0 +1,61 @@
+<% content_for :title, "Podcasts for #{@search.query}" %>
+<% content_for :head, turbo_refreshes_with(method: :morph, scroll: :preserve) %>
+<%= turbo_stream_from @search %>
+<div class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-4">
+    <div class="min-w-0">
+      <p class="text-sm font-semibold text-plum">Fit search</p>
+      <h1 class="type-h1">Podcasts for <%= @search.query %></h1>
+      <p class="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-soft" aria-live="polite">
+        <%= brand_search_status_badge(@search) %>
+        <% if @search.categories.any? %><span><%= Copy.and_list(@search.categories) %></span><% end %>
+        <% if @search.budget_cents %><span>Budget <%= number_to_currency(@search.budget_cents / 100, precision: 0) %> per episode</span><% end %>
+      </p>
+    </div>
+    <%= ui_button "New search", new_brand_search_path, variant: :secondary %>
+  </header>
+
+  <% if @search.active? %>
+    <p class="text-ink-soft" data-run-note>Our agent is working. Each step shows up below as it finishes, and the results appear here when it's done.</p>
+    <%= render "components/card", title: "Agent steps" do %>
+      <%= render "brands/searches/trace", search: @search %>
+    <% end %>
+  <% elsif @search.failed? %>
+    <%= render "components/card", title: "This search didn't finish" do %>
+      <p><%= @search.error_message.presence || FitSearch::Run::FAILURE_MESSAGE %></p>
+      <%= ui_button "Try again", new_brand_search_path, class: "mt-3" %>
+    <% end %>
+  <% else %>
+    <% bullets = brand_summary_bullets(@search) %>
+    <% if bullets.any? %>
+      <%= render "components/card", title: "At a glance", aside: ui_badge("Taste data from Qloo", tone: :accent) do %>
+        <ul class="list-disc space-y-1 pl-5" data-summary>
+          <% bullets.each do |bullet| %><li><%= bullet %></li><% end %>
+        </ul>
+      <% end %>
+    <% end %>
+
+    <section aria-labelledby="results-heading" class="flex flex-col gap-4">
+      <h2 id="results-heading" class="type-h2"><%= pluralize(@results.size, "show") %> ranked for you</h2>
+      <% if @results.any? %>
+        <% @results.each do |result| %>
+          <%= render "brands/searches/result", result: result, saved: @saved_ids.include?(result.podcast_id) %>
+        <% end %>
+      <% else %>
+        <%= render "components/empty_state", title: "No shows fit yet",
+              body: "The catalog has no podcasts in these categories yet. Try other categories, or search again as the catalog grows.",
+              action_label: "New search", action_href: new_brand_search_path %>
+      <% end %>
+    </section>
+  <% end %>
+
+  <% unless @search.active? %>
+    <details class="card">
+      <summary class="card-body cursor-pointer font-semibold">How the agent searched</summary>
+      <div class="card-body pt-0">
+        <p class="mb-3 text-sm text-ink-soft">Fit score: taste on Qloo 50, proof from sponsor history 25, price 15, trust in the numbers 10. <%= pluralize(@search.taste_calls, "Qloo call") %> made; answers are cached for a week.</p>
+        <%= render "brands/searches/trace", search: @search %>
+      </div>
+    </details>
+  <% end %>
+</div>
