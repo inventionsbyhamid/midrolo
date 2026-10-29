@@ -240,6 +240,20 @@ RSpec.describe "Podcast pages" do
       expect(response.body).not_to include("Host this show?")
     end
 
+    it "says Stats verified once, in the header, for verified platform numbers with no per-episode figure" do
+      create(:show, podcast: podcast, verified_at: 1.day.ago)
+      podcast.update!(claimed_at: 1.day.ago)
+      create(:stat_reading, podcast: podcast, metric: "streams_all_time", value: 18, source: "spotify", trust: "verified",
+                            period_days: nil)
+
+      visit "/podcasts/#{podcast.slug}"
+
+      expect(podcast.reload.downloads_trust).not_to eq("verified")
+      expect(doc.at_css(".pod-badges").text).to include("Stats verified")
+      expect(doc.text.scan("Stats verified").size).to eq(1)
+      expect(doc.at_css("#key-numbers")).to be_present
+    end
+
     it "offers the claim box on an unclaimed show" do
       visit "/podcasts/#{podcast.slug}"
       expect(response.body).to include("Host this show?", "Claim this show", "No rate card yet.")
@@ -306,6 +320,13 @@ RSpec.describe "Podcast pages" do
       expect(response.body).to include("We couldn't read this show's feed on our last try")
     end
 
+    it "keeps a claimed show whose feed keeps failing, saying it couldn't be read recently" do
+      podcast.update!(claimed_at: 1.day.ago, fetch_failures: 3, last_error: "feed_http_403")
+      visit "/podcasts/#{podcast.slug}"
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("We couldn't read this show's feed recently")
+    end
+
     describe "caching" do
       it "answers a visitor's repeat request with 304 until the podcast, its listing or a request changes" do
         visit "/podcasts/#{podcast.slug}"
@@ -323,6 +344,18 @@ RSpec.describe "Podcast pages" do
 
         etag = response.headers["ETag"]
         create(:conversation, podcast: podcast, brand: create(:brand), status: "waiting_for_claim")
+        visit "/podcasts/#{podcast.slug}", "If-None-Match" => etag
+        expect(response).to have_http_status(:ok)
+      end
+
+      it "changes the visitor's ETag when the report the page's Audience reads finishes" do
+        report = create(:report, show: create(:show, podcast: podcast, verified_at: 1.day.ago), status: "running")
+        visit "/podcasts/#{podcast.slug}"
+        etag = response.headers["ETag"]
+        visit "/podcasts/#{podcast.slug}", "If-None-Match" => etag
+        expect(response).to have_http_status(:not_modified)
+
+        report.update!(status: "done", finished_at: Time.current)
         visit "/podcasts/#{podcast.slug}", "If-None-Match" => etag
         expect(response).to have_http_status(:ok)
       end

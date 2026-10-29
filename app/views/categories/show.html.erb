@@ -1,7 +1,10 @@
 <% category_url = podcast_category_url(Podcast.category_slug(@category)) %>
 <% content_for :title, "#{@category} podcasts to sponsor: rates, sponsors and audience" %>
+<% card = ShareImages::ListCard.category(@category, count: @total, podcasts: @podcasts) if @directory.plain? %>
 <% content_for :meta, pages_meta(description: "#{@category} podcasts open to sponsors, with the sponsors each has run, rate cards and numbers with their source. Filter by size, price and verified stats.",
-                                  url: category_url) %>
+                                  url: category_url,
+                                  image: podcast_category_share_image_url(Podcast.category_slug(@category), v: card&.version),
+                                  image_alt: "#{@category} podcasts to sponsor on #{APP_NAME}") %>
 <% content_for :head, pages_list_json_ld(name: "#{@category} podcasts", url: category_url, podcasts: @podcasts,
                                           trail: [ [ "Podcasts", podcasts_url ], [ @category, category_url ] ]) %>
 <%# A category page (plan 4.2): the directory narrowed to one category, with the same filters. %>

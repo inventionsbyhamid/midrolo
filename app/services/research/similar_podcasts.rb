@@ -100,10 +100,12 @@ module Research
 
     def own?(entity) = entity.id.to_s == @own_id || Names.same?(entity.name, show.title)
 
-    # The catalog's podcast for a similar show: the one Catalog::QlooMatch gives, else one Catalog::LazyAdd finds or adds
-    # under the same name. nil when neither has it, past MAX_ADDS adds, or once the directory is down.
+    # The catalog's podcast for a similar show: the one Catalog::QlooMatch finds in the catalog, else one Catalog::LazyAdd
+    # finds or adds under the same name. nil when neither has it, past MAX_ADDS adds, or once the directory is down.
+    # QlooMatch stays inside the catalog (directory: false), so LazyAdd is the step's one way to the directory and
+    # MAX_ADDS bounds its outside calls.
     def catalog_podcast(entity, step)
-      podcast = ::Catalog::QlooMatch.call(entity)
+      podcast = ::Catalog::QlooMatch.call(entity, directory: false)
       return counted(:matched, podcast) if podcast
       return nil if @directory_down || @adds >= MAX_ADDS || entity.name.blank?
 

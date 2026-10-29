@@ -160,6 +160,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_130100) do
     t.index ["podcast_id", "guid"], name: "index_episodes_on_podcast_id_and_guid", unique: true
     t.index ["podcast_id", "published_at"], name: "index_episodes_on_podcast_id_and_published_at", order: { published_at: :desc }
     t.index ["podcast_id", "slug"], name: "index_episodes_on_podcast_id_and_slug", unique: true
+    t.index ["podcast_id"], name: "index_episodes_unscanned_on_podcast_id", where: "(sponsor_scanned_at IS NULL)"
   end
 
   create_table "fit_results", force: :cascade do |t|
@@ -558,10 +559,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_130100) do
     t.datetime "file_checked_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "approved_at"
     t.index ["podcast_id", "provider"], name: "index_stat_connections_on_podcast_id_and_provider", unique: true
     t.index ["show_id"], name: "index_stat_connections_on_show_id"
     t.index ["status"], name: "index_stat_connections_on_status"
     t.index ["user_id"], name: "index_stat_connections_on_user_id"
+    t.index ["provider", "external_id"], name: "index_stat_connections_one_per_platform_show", unique: true, where: "((status)::text <> 'disconnected'::text)"
   end
 
   create_table "stat_readings", force: :cascade do |t|

@@ -40,23 +40,61 @@ RSpec.describe "Brand workspace" do
       expect(user.reload.last_role).to eq("brand")
     end
 
-    it "joins a brand the catalog already knows by its website as a member" do
+    it "joins a brand the catalog already knows by its website as a member, leaving its name as it is" do
       create(:brand_member, brand: brand)
 
       post brand_profile_path, params: { name: "Fieldnote", website: "fieldnote.example" }
 
-      expect(user.brand_members.sole).to have_attributes(brand: brand, role: "member")
+      expect(user.brand_members.sole).to have_attributes(brand: brand, role: "member", verified_at: nil)
+      expect(brand.reload.name).to eq("Fieldnote Coffee")
       expect(Brand.count).to eq(1)
     end
 
-    it "refuses a free email domain as the website, and a blank name" do
+    it "refuses a free email domain as the website, a blank name and a missing website" do
       post brand_profile_path, params: { name: "Fieldnote", website: "gmail.com" }
       expect(response).to have_http_status(:unprocessable_content)
       expect(response.body).to include("Use your company&#39;s website, not a free email provider.")
 
       post brand_profile_path, params: { name: " ", website: "fieldnote.example" }
       expect(response).to have_http_status(:unprocessable_content)
+
+      [ "", "not a website" ].each do |website|
+        post brand_profile_path, params: { name: "Fieldnote", website: website }
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Enter your company&#39;s website")
+      end
       expect(Brand.count).to eq(0)
+    end
+
+    # C1: typing a brand's name with your own website used to give that brand your domain, and a code at it made you a
+    # verified member who could read the brand's requests, saved shows and searches.
+    it "never gives a same-named brand the typed website, so a code at that website can't open its work" do
+      acme = create(:brand, name: "Acme", domain: nil)
+      colleague = create(:brand_member, brand: acme, verified_at: Time.current).user
+      podcast = claimed_podcast(title: "Deep Work Daily")
+      thread = start_request(podcast, BrandMember.find_by!(user: colleague))
+      create(:saved_podcast, brand: acme, podcast: create(:podcast, title: "Acme Shortlist Show"), user: colleague)
+      create(:fit_search, brand: acme, user: colleague, query: "Acme budget plans", status: "done")
+
+      post brand_profile_path, params: { name: "Acme", website: "evil.example" }
+      membership = user.brand_members.sole
+      expect(membership.brand).not_to eq(acme)
+      expect(membership.brand).to have_attributes(name: "Acme", domain: "evil.example")
+      expect(acme.reload.domain).to be_nil
+
+      perform_enqueued_jobs { post brand_verification_path, params: { email: "me@evil.example" } }
+      patch brand_verification_path, params: { code: last_code }
+      expect(membership.reload).to be_verified
+      expect(acme.reload.verified_at).to be_nil
+
+      get brand_inbox_path
+      expect(response.body).not_to include("Deep Work Daily")
+      get conversation_path(thread)
+      expect(response).to have_http_status(:not_found)
+      get brand_saved_podcasts_path
+      expect(response.body).not_to include("Acme Shortlist Show")
+      get brand_searches_path
+      expect(response.body).not_to include("Acme budget plans")
     end
 
     it "shows a Save link that starts a brand, from the save button's frame" do
@@ -79,6 +117,19 @@ RSpec.describe "Brand workspace" do
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Fieldnote Coffee", "Unverified", "Verify your work email", "Run your first search")
       expect(user.reload.last_role).to eq("brand")
+    end
+
+    it "counts the brand side's unread conversations on the nav's Inbox, as the main nav does" do
+      create(:conversation, brand: brand, started_by: user)
+      create(:conversation, podcast: claimed_podcast(owner: user)) # the podcaster side: the brand inbox doesn't list it
+
+      get brand_root_path
+
+      header = Nokogiri::HTML(response.body).at_css("header.site-header")
+      inbox = header.at_css("nav[aria-label='Main'] a[href='#{brand_inbox_path}']")
+      expect(inbox.at_css(".nav-count").text).to eq("1")
+      expect(inbox.at_css(".sr-only").text).to eq("1 unread")
+      expect(header.at_css("button[aria-haspopup='dialog']").text.squish).to eq("Menu 1 1 unread")
     end
 
     describe "work email verification" do
@@ -170,6 +221,37 @@ RSpec.describe "Brand workspace" do
         expect(body.scan("<li>").size).to be >= 3 # the three summary bullets
       end
 
+      it "fails a search stuck queued or running for 15 minutes, says so plainly and offers to run it again" do
+        stuck = create(:fit_search, user: user, brand: brand, status: "running", started_at: 16.minutes.ago,
+                                    query: "Fieldnote Coffee", website: "fieldnote.example", categories: [ "Food & Beverage" ],
+                                    budget_cents: 80_000)
+        lost = create(:fit_search, user: user, brand: brand, status: "queued", created_at: 20.minutes.ago)
+        fresh = create(:fit_search, user: user, brand: brand, status: "running", started_at: 2.minutes.ago)
+
+        get brand_searches_path
+        expect([ stuck, lost, fresh ].map { |search| search.reload.status }).to eq(%w[failed failed running])
+        expect(lost.error_message).to eq(FitSearch::STALE_MESSAGE)
+
+        get brand_search_path(stuck)
+        page = Nokogiri::HTML(response.body)
+        expect(response.body).to include("This search didn&#39;t finish", "This search stopped before it finished. Run it again.")
+        form = page.at_css("form[action='#{brand_searches_path}']")
+        expect(form.at_css("button").text).to eq("Run it again")
+        fields = form.css("input[type=hidden]").to_h { |input| [ input["name"], input["value"] ] }
+        expect(fields).to include("fit_search[query]" => "Fieldnote Coffee", "fit_search[website]" => "fieldnote.example",
+                                  "fit_search[categories][]" => "Food & Beverage", "fit_search[budget]" => "800")
+
+        expect { post brand_searches_path, params: { fit_search: stuck.rerun_params } }.to have_enqueued_job(FitSearchJob)
+        expect(FitSearch.order(:id).last).to have_attributes(query: "Fieldnote Coffee", categories: [ "Food & Beverage" ],
+                                                             budget_cents: 80_000, status: "queued")
+      end
+
+      it "fails a stale search shown on the brand's dashboard too" do
+        stuck = create(:fit_search, user: user, brand: brand, status: "queued", created_at: 1.hour.ago)
+        get brand_root_path
+        expect(stuck.reload).to have_attributes(status: "failed", error_message: FitSearch::STALE_MESSAGE)
+      end
+
       it "404s for another user's search, and for an unverified teammate's" do
         stranger = create(:fit_search)
         teammate = create(:fit_search, brand: brand, user: create(:brand_member, brand: brand).user)
@@ -240,6 +322,23 @@ RSpec.describe "Brand workspace" do
         member.update!(verified_at: Time.current)
         get brand_saved_podcasts_path
         expect(response.body).to include("Deep Work Daily")
+      end
+
+      # L7: the colleague's row came back and the button said Saved, but the member's list hides it and Remove did nothing.
+      it "tells an unverified member a colleague already saved the show, instead of Saved" do
+        create(:saved_podcast, brand: brand, podcast: podcast, user: create(:brand_member, brand: brand).user)
+
+        post brand_saved_podcasts_path, params: { podcast_id: podcast.public_id }, as: :turbo_stream
+        expect(response.body).to include("save_podcast_#{podcast.public_id}", "On your brand&#39;s list")
+        expect(response.body).not_to include("Remove Deep Work Daily from your shortlist")
+
+        post brand_saved_podcasts_path, params: { podcast_id: podcast.public_id }
+        expect(flash[:notice]).to eq(Brands::SavedPodcastsController::COLLEAGUE_SAVED)
+        expect(brand.saved_podcasts.count).to eq(1)
+
+        member.update!(verified_at: Time.current)
+        post brand_saved_podcasts_path, params: { podcast_id: podcast.public_id }, as: :turbo_stream
+        expect(response.body).to include("Remove Deep Work Daily from your shortlist")
       end
 
       it "404s for a removed podcast" do

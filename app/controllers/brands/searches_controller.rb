@@ -9,6 +9,7 @@ module Brands
 
     def index
       @searches = visible_searches.includes(:brand).order(created_at: :desc, id: :desc).limit(INDEX_LIMIT).to_a
+      FitSearch.fail_stale(@searches)
       @result_counts = FitResult.where(fit_search_id: @searches.map(&:id)).group(:fit_search_id).count
     end
 
@@ -30,6 +31,8 @@ module Brands
 
     def show
       @search = visible_searches.includes(:agent_steps).find_by!(public_id: params[:id])
+      # A search whose job was lost says so and offers to run again, rather than searching forever.
+      @search.fail_if_stale!
       return unless @search.done?
 
       @results = @search.results.includes(RESULT_PRELOADS).to_a

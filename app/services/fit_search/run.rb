@@ -96,7 +96,7 @@ class FitSearch
           step.output_summary = "Reused #{@profile['name']}'s Qloo profile from #{subject_brand.qloo_profile_fetched_at.to_date.to_fs(:long)}, so no new lookup."
         elsif (entity = pick(taste.search(query: query, types: [ :brand ], take: 5)))
           @profile = BrandProfile.from_entity(entity)
-          subject_brand&.store_qloo_profile!(@profile)
+          subject_brand.store_qloo_profile!(@profile) if subject_brand && may_store_profile?(subject_brand)
           step.output_summary = profile_summary
         else
           step.warn!("Qloo doesn't know #{query} by name, so this search uses your categories' tastes.")
@@ -361,6 +361,14 @@ class FitSearch
       found = Brand.find_existing(name: query, domain: domain)
       found = nil if found && own && found.id == own.id
       @subject_brand = found
+    end
+
+    # The Qloo profile, categories and entity id a search finds are written onto a brand only by its verified members,
+    # or onto a brand nobody has joined yet (review L11): a search named after someone else's brand, or run by a member
+    # who hasn't proved a work email, uses the profile for this run only.
+    def may_store_profile?(brand)
+      members = BrandMember.where(brand_id: brand.id)
+      !members.exists? || members.verified.exists?(user_id: search.user_id)
     end
 
     def entity_id = @profile&.dig("entity_id").presence

@@ -5,11 +5,14 @@ module Podcast::Pages
   extend ActiveSupport::Concern
 
   # The statuses the directory, category pages and similar shows list. A pending podcast is still being read (search
-  # shows it as "Adding this show"); a failed or removed one isn't listed anywhere.
+  # shows it as "Adding this show"); a failed or removed one isn't listed anywhere, and neither is the demo show
+  # (Podcast::Listing, lane L4), whatever its status.
   LISTED_STATUSES = %w[active dormant].freeze
   SIMILAR_LIMIT = 6
   SIMILAR_CACHE = 6.hours
   CATEGORY_CACHE = 10.minutes
+  # The counts' SQL leaves the demo show out as Podcast.not_demo does.
+  NOT_DEMO_SQL = "podcasts.podcast_guid IS DISTINCT FROM '#{Podcast::Listing::DEMO_GUID}'".freeze
 
   included do
     # Everything the podcast page reads in one go (spec section 10): the stored artwork, the owner's workspace and its
@@ -20,7 +23,7 @@ module Podcast::Pages
     }
     # What a podcast card needs: its artwork.
     scope :for_cards, -> { includes(artwork_image: { file_attachment: :blob }) }
-    scope :listed, -> { where(status: LISTED_STATUSES) }
+    scope :listed, -> { where(status: LISTED_STATUSES).not_demo }
     scope :in_category, ->(name) { where("podcasts.categories @> ?", [ name.to_s ].to_json) }
   end
 
@@ -30,7 +33,7 @@ module Podcast::Pages
       Rails.cache.fetch("pages/category_counts", expires_in: CATEGORY_CACHE) do
         connection.select_rows(<<~SQL.squish).map { |name, count| [ name, count.to_i ] }
           SELECT category, COUNT(*) FROM podcasts, jsonb_array_elements_text(podcasts.categories) AS category
-          WHERE podcasts.status IN ('active', 'dormant') AND category <> ''
+          WHERE podcasts.status IN ('active', 'dormant') AND #{NOT_DEMO_SQL} AND category <> ''
           GROUP BY category ORDER BY COUNT(*) DESC, category
         SQL
       end
@@ -49,7 +52,8 @@ module Podcast::Pages
       Rails.cache.fetch("pages/language_counts", expires_in: CATEGORY_CACHE) do
         connection.select_rows(<<~SQL.squish).map { |code, count| [ code, count.to_i ] }
           SELECT lower(split_part(podcasts.language, '-', 1)) AS code, COUNT(*) FROM podcasts
-          WHERE podcasts.status IN ('active', 'dormant') AND podcasts.language IS NOT NULL AND podcasts.language <> ''
+          WHERE podcasts.status IN ('active', 'dormant') AND #{NOT_DEMO_SQL} AND podcasts.language IS NOT NULL
+            AND podcasts.language <> ''
           GROUP BY code ORDER BY COUNT(*) DESC, code
         SQL
       end

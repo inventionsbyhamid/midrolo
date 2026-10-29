@@ -6,7 +6,8 @@
 %>
 <% rows ||= Sponsors::History.for_brand(brand, podcasts: Podcast.listed) %>
 <% if rows.any? %>
-  <% ActiveRecord::Associations::Preloader.new(records: rows.map(&:podcast), associations: { artwork_image: { file_attachment: :blob } }).call %>
+  <%# By id: the brand page loaded the same artwork in that order, so these come from the request's query cache. %>
+  <% ActiveRecord::Associations::Preloader.new(records: rows.map(&:podcast).sort_by(&:id), associations: { artwork_image: { file_attachment: :blob } }).call %>
   <div data-testid="sponsored-shows">
     <ul class="sponsored-list" role="list">
       <% rows.each do |row| %>

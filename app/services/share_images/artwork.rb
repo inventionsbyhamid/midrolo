@@ -77,8 +77,8 @@ module ShareImages
     end
 
     # The header is read lazily, so a picture's size is checked before any pixels are decoded; thumbnail_buffer then
-    # shrinks while it decodes.
-    def picture(bytes, size)
+    # shrinks while it decodes. radius rounds the corners (a strip's smaller tiles take a smaller one).
+    def picture(bytes, size, radius: Layout::ARTWORK_RADIUS)
       loader = LOADERS.find { |magic, _| bytes.match?(magic) }&.last
       return unless loader
 
@@ -87,12 +87,12 @@ module ShareImages
 
       square = Vips::Image.thumbnail_buffer(bytes, size, height: size, crop: :centre).colourspace(:srgb).cast(:uchar)
       square = square.flatten(background: 255) if square.has_alpha?
-      square.bandjoin(corner_mask(size)).write_to_buffer(".png")
+      square.bandjoin(corner_mask(size, radius)).write_to_buffer(".png")
     end
 
-    def corner_mask(size)
+    def corner_mask(size, radius = Layout::ARTWORK_RADIUS)
       svg = %(<svg xmlns="http://www.w3.org/2000/svg" width="#{size}" height="#{size}">) +
-            %(<rect width="#{size}" height="#{size}" rx="#{Layout::ARTWORK_RADIUS}" fill="#fff"/></svg>)
+            %(<rect width="#{size}" height="#{size}" rx="#{radius}" fill="#fff"/></svg>)
       Renderer.load_svg(svg).extract_band(3)
     end
 

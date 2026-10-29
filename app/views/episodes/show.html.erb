@@ -2,8 +2,10 @@
 <% content_for :title, "#{episode.title} | #{podcast.title}" %>
 <% description = [ ("Sponsored by #{Copy.and_list(@mentions.map { |mention| mention.brand.name }.uniq.first(3))}." if @mentions.any?),
                    episode.description.to_s.squish.presence || "An episode of #{podcast.title}." ].compact.join(" ") %>
+<% card = ShareImages::PodcastCard.new(podcast, episode: episode) %>
 <% content_for :meta, pages_meta(description: description.truncate(PodcastPagesHelper::DESCRIPTION_LIMIT, separator: " "),
-                                  url: podcast_episode_url(podcast, episode)) %>
+                                  url: podcast_episode_url(podcast, episode),
+                                  image: podcast_episode_share_image_url(podcast, episode, v: card.version), image_alt: card.alt) %>
 <% content_for :head, pages_episode_json_ld(podcast, episode) %>
 <%#
   An episode's page (plan 4.2): the notes from the show's feed, the sponsors found in them with codes and offers, the

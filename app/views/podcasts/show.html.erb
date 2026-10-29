@@ -1,6 +1,8 @@
 <% podcast = @podcast %>
 <% content_for :title, pages_title(podcast) %>
-<% content_for :meta, pages_meta(description: pages_description(podcast, sponsors: @sponsors_90_days.to_i), url: podcast_url(podcast)) %>
+<% card = ShareImages::PodcastCard.new(podcast) %>
+<% content_for :meta, pages_meta(description: pages_description(podcast, sponsors: @sponsors_90_days.to_i), url: podcast_url(podcast),
+                                  image: podcast_share_image_url(podcast, v: card.version), image_alt: card.alt) %>
 <% unless podcast.pending? %>
   <% content_for :head, pages_podcast_json_ld(podcast, sponsors: @sponsors_90_days.to_i) %>
 <% end %>
@@ -38,6 +40,8 @@
       <div class="pod-main">
         <% if podcast.failed? %>
           <p class="lamp-note mt-6" role="note">We couldn't read this show's feed on our last try, so what's here may be out of date.</p>
+        <% elsif podcast.feed_unreachable? %>
+          <p class="lamp-note mt-6" role="note">We couldn't read this show's feed recently, so what's here may be out of date.</p>
         <% end %>
         <%= render "podcasts/about", podcast: podcast %>
         <% cache [ podcast, "episodes" ] do %>

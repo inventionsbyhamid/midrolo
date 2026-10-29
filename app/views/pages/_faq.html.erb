@@ -1,19 +1,57 @@
-<%# The questions podcasters (and judges) ask, answered plainly. Native <details>, so it works without JavaScript. %>
+<%# The questions podcasters, brands (and judges) ask, answered plainly. Native <details>, so it works without
+    JavaScript. %>
 <div class="faq">
   <h2 id="faq-title" class="type-h2">Questions</h2>
   <div class="faq-list">
     <details class="faq-item">
+      <summary class="faq-question">Is listing my show free?</summary>
+      <div class="faq-answer">
+        <p>
+          Yes. Claiming your page, setting your rates, verifying your numbers and answering brands are all free, and
+          <%= APP_NAME %> takes no commission on any deal. The paid plans are for the AI sponsor reports and pitch packs.
+        </p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-question">How do verified numbers work?</summary>
+      <div class="faq-answer">
+        <p>
+          You invite <%= APP_NAME %>'s stats account to your show: in Spotify for Creators with Analytics access only, or
+          in Apple Podcasts Connect with the Analyst role, which can only see analytics. <%= APP_NAME %> then reads your
+          numbers with its own account, every day, and labels them "Verified" with the service and the date.
+        </p>
+        <p>
+          You never share a password. Remove the access and the numbers stop updating; after
+          <%= StatReading::TTL.in_days.to_i %> days they read "Last verified" instead.
+        </p>
+      </div>
+    </details>
+
+    <details class="faq-item">
       <summary class="faq-question">Where does the data come from?</summary>
       <div class="faq-answer">
         <p>
-          Qloo's taste graph tells us what people with your listeners' tastes love more than most people do (brands,
-          music, TV, podcasts and places) and how they lean by age and gender. Podcast Index gives us your show's details. Your RSS feed, and the
-          feeds of similar shows, give us episode notes and the sponsors those shows mention.
+          A show's page is built from its own RSS feed: episodes, the people it names, and the sponsor reads, promo codes
+          and offers in recent show notes, each tied to its episode. Podcast Index helps us find shows. Verified numbers
+          come from Spotify for Creators and Apple Podcasts Connect, with the show's permission.
         </p>
         <p>
-          An AI model, reached through OpenRouter, plans the research and writes the reasons and pitches from those
-          results. Every brand
-          in a report comes from Qloo's data (results are cached for up to a week).
+          Qloo's taste graph tells us what people with a show's taste love more than most people do (brands, music, TV,
+          podcasts and places) and how they lean by age and gender. It ranks shows for brands and brands for shows, and
+          it's labelled "Taste data from Qloo" wherever it appears. An AI model, reached through OpenRouter, plans the
+          research and writes the reasons and pitches from those results.
+        </p>
+      </div>
+    </details>
+
+    <details class="faq-item">
+      <summary class="faq-question">Can brands contact me directly?</summary>
+      <div class="faq-answer">
+        <p>
+          No page shows contact details. Brands request a spot through <%= APP_NAME %>, and you hear about it only once
+          you've claimed your show. You can decline, block or report any brand. A brand gets
+          <%= User::Brands::DAILY_REQUESTS[:unverified] %> requests a day until it verifies a work email at its own domain.
         </p>
       </div>
     </details>
@@ -22,11 +60,13 @@
       <summary class="faq-question">Is this my real audience?</summary>
       <div class="faq-answer">
         <p>
-          No. It's modeled from Qloo taste data, not measured. We never see your listener list or your hosting stats. A
-          report describes people whose tastes match your show's: what they love, where they live and how they lean. Age and
-          gender are shown as leans, never as percentages.
+          A taste profile isn't. It's modeled from Qloo taste data, not measured: it describes people whose tastes match
+          your show's, what they love, where they live and how they lean. Age and gender are shown as leans, never as
+          percentages. That's strong evidence of fit to show a brand. It isn't a headcount.
         </p>
-        <p>That's strong evidence of fit to show a brand. It isn't a headcount.</p>
+        <p>
+          Verified numbers are different. They come from Spotify or Apple when you invite <%= APP_NAME %>, and they say so.
+        </p>
       </div>
     </details>
 
@@ -46,8 +86,8 @@
       <div class="faq-answer">
         <p>
           That a brand will say yes, or what it will pay. Fit scores rank brands by shared taste and sponsorship history; they
-          aren't a forecast. Downloads are the numbers you enter, and we don't look up contact emails. The pitch pack
-          tells you which role to look for.
+          aren't a forecast. Downloads are verified only when you invite <%= APP_NAME %>; otherwise they're the numbers you
+          enter, labelled as yours. We don't look up contact emails. The pitch pack tells you which role to look for.
         </p>
       </div>
     </details>
@@ -73,6 +113,17 @@
     </details>
 
     <details class="faq-item">
+      <summary class="faq-question">Can I remove my show's page?</summary>
+      <div class="faq-answer">
+        <p>
+          Yes. Every page has "Remove this page". The show's verified owner removes it at once; anyone else's request is
+          reviewed by hand. A removed show isn't added back. The <%= link_to "data sources page", data_sources_path, class: "link" %>
+          explains what we keep and why.
+        </p>
+      </div>
+    </details>
+
+    <details class="faq-item">
       <summary class="faq-question">Can I cancel?</summary>
       <div class="faq-answer">
         <p>
@@ -86,8 +137,9 @@
       <summary class="faq-question">What happens to my data?</summary>
       <div class="faq-answer">
         <p>
-          Your shows, reports, pitches and notes are visible only to you, unless you publish a media kit. Deleting your
-          account deletes all of it. The <%= link_to "privacy page", privacy_path, class: "link" %> has the details.
+          Your shows, reports, pitches and notes are visible only to you, unless you publish your listing. Deleting your
+          account deletes them. Messages you sent stay in the other side's copy of the conversation, from a deleted
+          account. The <%= link_to "privacy page", privacy_path, class: "link" %> has the details.
         </p>
       </div>
     </details>

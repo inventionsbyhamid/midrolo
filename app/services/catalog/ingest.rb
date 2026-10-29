@@ -169,10 +169,23 @@ module Catalog
     def fail!(code)
       @podcast.fetch_failures = @podcast.fetch_failures.to_i + 1
       @podcast.last_error = code.to_s.first(250)
-      @podcast.status = "failed" if @podcast.pending? || @podcast.fetch_failures >= Podcast::Catalog::FAILED_AFTER
+      @podcast.status = failure_status
       schedule(failed: true)
-      save_quietly
+      unreachable_now = @podcast.claimed? && @podcast.fetch_failures == Podcast::Catalog::FAILED_AFTER
+      # The page's note appears with the third failure, so its caches change then too.
+      @podcast.save!(touch: unreachable_now || @podcast.status_changed? || @podcast.indexable_changed?)
+      ClaimMailer.with(podcast: @podcast).feed_unreachable.deliver_later if unreachable_now
       outcome(:failed, [], code)
+    end
+
+    # A podcast never read fails at once, any other after FAILED_AFTER failures in a row. A claimed one that was read
+    # before keeps its last good status instead (active or dormant as time goes on), so it stays in the directory, on
+    # brand pages and in fit searches; its page says the feed couldn't be read lately and its owner is mailed once.
+    def failure_status
+      return "failed" if @podcast.pending?
+      return @podcast.feed_status(@now) if @podcast.claimed? && (@podcast.last_published_at || @podcast.episode_count.to_i.positive?)
+
+      @podcast.fetch_failures >= Podcast::Catalog::FAILED_AFTER ? "failed" : @podcast.status
     end
 
     # Taken out of the catalog: never fetched again, never indexed.

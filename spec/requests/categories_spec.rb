@@ -23,6 +23,14 @@ RSpec.describe "Category pages" do
     expect(list["itemListElement"].size).to eq(3)
   end
 
+  it "counts the whole category's indexable shows, as its sitemap does, not just the first page's" do
+    stub_const("PodcastDirectory::PER_PAGE", 1)
+    get "/podcasts/category/technology"
+
+    expect(doc.css(".dir-card-link").size).to eq(1)
+    expect(robots).to be_empty
+  end
+
   it "noindexes a thin category and a filtered one" do
     get "/podcasts/category/true-crime"
     expect(response).to have_http_status(:ok)

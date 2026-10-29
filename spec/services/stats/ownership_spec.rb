@@ -20,7 +20,8 @@ RSpec.describe Stats::Ownership do
   it "matches the platform's show by feed or by name", :aggregate_failures do
     expect(described_class.show_problem(connection, "rss_url" => "http://feeds.example.com/ledger/")).to be_nil
     expect(described_class.show_problem(connection, "name" => "Founder's Ledger")).to be_nil
-    expect(described_class.show_problem(connection, "name" => "Ledger")).to include("\"Ledger\"")
+    expect(described_class.show_problem(connection, "name" => "Ledger"))
+      .to eq("The Spotify show at that link isn't The Founder's Ledger. Check the link you pasted.")
     expect(described_class.show_problem(connection, "name" => "", "rss_url" => "https://feeds.example.com/other"))
       .to include("We couldn't confirm")
     expect(described_class.show_problem(connection, {})).to include("We couldn't confirm")

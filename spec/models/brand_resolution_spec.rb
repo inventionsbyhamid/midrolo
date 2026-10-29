@@ -26,15 +26,20 @@ RSpec.describe "Brand resolution" do
   it "works inside a transaction that goes on afterwards, and looks again when a parallel resolve wins" do
     winner = create(:brand, name: "Ramp", domain: "ramp.com")
     calls = 0
-    allow(Brand).to receive(:find_existing).and_wrap_original do |original, **args|
+    # The first look at the domain misses, as if the parallel resolve committed just after it.
+    allow(Brand).to receive(:find_by).and_wrap_original do |original, *args, **kwargs|
+      conditions = kwargs.presence || args.first
+      next original.call(*args, **kwargs) unless conditions == { domain: "ramp.com" }
+
       calls += 1
-      calls == 1 ? nil : original.call(**args)
+      calls == 1 ? nil : original.call(*args, **kwargs)
     end
 
     Brand.transaction do
       expect(Brand.resolve(name: "Ramp", domain: "ramp.com")).to eq(winner)
+      expect(Brand.for_onboarding(name: "Ramp", website: "ramp.com")).to eq(winner)
       expect(Brand.count).to eq(1)
     end
-    expect(calls).to eq(2)
+    expect(calls).to eq(3)
   end
 end

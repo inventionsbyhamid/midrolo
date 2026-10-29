@@ -78,6 +78,21 @@
     color: var(--color-ink-soft);
   }
 
+  /* What each side pays (pages/_sides): free listing and the brand side, side by side above the podcaster plans. */
+  .sides {
+    display: grid;
+    gap: 1rem;
+    margin-top: 2rem;
+
+    @media (width >= 48rem) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .sides-card .plan-action {
+    margin-top: auto;
+  }
+
   .plan-grid {
     display: grid;
     gap: 1rem;

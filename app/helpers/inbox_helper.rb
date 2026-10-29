@@ -57,11 +57,14 @@ module InboxHelper
     tag.time(words, datetime: time.iso8601)
   end
 
-  # Conversations with something new for the user, from both sides: the nav's Inbox count.
-  def inbox_unread_count(user = current_user)
+  # Conversations with something new for the user: the nav's Inbox count, from both sides, or from one (side: :brand
+  # for the brand workspace's Inbox, which lists only the brand side).
+  def inbox_unread_count(user = current_user, side: nil)
     return 0 unless user
 
-    Conversation.for_podcaster(user).unread_by_podcaster.count + Conversation.for_brand_user(user).unread_by_brand.count
+    podcaster = side.in?([ nil, :podcaster ]) ? Conversation.for_podcaster(user).unread_by_podcaster.count : 0
+    brand = side.in?([ nil, :brand ]) ? Conversation.for_brand_user(user).unread_by_brand.count : 0
+    podcaster + brand
   end
 
   # A message's author as both sides see it: the person's first name and their side ("Maya, The Founder's Ledger").
@@ -100,10 +103,8 @@ module InboxHelper
     end
   end
 
-  # The podcast's public page (lane L3's /podcasts/:slug), before and after that route exists.
-  def inbox_podcast_path(podcast)
-    respond_to?(:podcast_path) ? podcast_path(podcast) : "/podcasts/#{podcast.to_param}"
-  end
+  # The podcast's public page (lane L3's /podcasts/:slug).
+  def inbox_podcast_path(podcast) = podcast_path(podcast)
 
   # The inbox a side's list lives in.
   def inbox_path_for(side, show: nil)

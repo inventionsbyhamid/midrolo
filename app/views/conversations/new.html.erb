@@ -12,6 +12,9 @@
   <% if viewer.state == :blocked %>
     <%= render "components/empty_state", title: Conversations::Start::BLOCKED,
           body: "Find other shows that fit your brand.", action_label: "Find podcasts", action_href: ApplicationController::BRAND_HOME %>
+  <% elsif viewer.state == :colleague_asked %>
+    <%= render "components/empty_state", title: "Already asked",
+          body: Conversations::Start::COLLEAGUE_ASKED, action_label: "Verify your work email", action_href: new_brand_verification_path %>
   <% else %>
     <% if (membership = viewer.membership) %>
       <% left = Conversations::Start.remaining_today(membership) %>

@@ -4,16 +4,15 @@
     <%= render "layouts/head" %>
   </head>
 
-  <%# Public pages. Main is full-bleed: each section sets its own width with .wrap. The blog joins the nav once a post
-      is published (R148). %>
+  <%# Public pages. Main is full-bleed: each section sets its own width with .wrap. Visitors get the public links
+      (NavigationHelper: Podcasts, For brands, the blog once a post is published (R148), Pricing) and Sign in; a
+      signed-in person gets their own links and Sign out. %>
   <body class="flex min-h-dvh flex-col">
     <a href="#main" class="skip-link">Skip to content</a>
     <%= render "shared/masquerade_banner" %>
     <%= render "components/demo_banner" if demo_mode? %>
-    <%= render "components/nav",
-          links: [ [ "How it works", "/#how-it-works" ], [ "Samples", samples_path ], [ "Pricing", pricing_path ],
-                   ([ "Blog", blog_path ] if blog_listed?) ].compact,
-          cta: user_signed_in? ? [ "Go to my shows", shows_path ] : [ "Sign in", new_user_session_path ] %>
+    <%= render "components/nav", links: nav_site_links,
+          cta: ([ "Sign in", new_user_session_path ] unless user_signed_in?), sign_out: user_signed_in? %>
     <%= render "components/flash" %>
     <main id="main" tabindex="-1" class="flex-1">
       <%= yield %>

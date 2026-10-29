@@ -1,0 +1,55 @@
+<%# locals: (demo:) -%>
+<%# The podcaster side: find your show (the directory's own search, which adds a missing show), three steps from claim
+    to inbox, and the free Snapshot. demo is the demo show (bin/rails demo:setup), loaded with Podcast.for_page: its
+    published listing shows as brands see it (podcasts/_rates, labelled Demo show). Left out until it exists. %>
+<section id="for-podcasters" class="page-section side" aria-labelledby="for-podcasters-title">
+  <div class="wrap side-grid">
+    <div class="side-copy">
+      <p class="eyebrow">For podcasters</p>
+      <h2 id="for-podcasters-title" class="type-h2 mt-2">Get your show sponsored</h2>
+      <p class="section-lead">Find your show, claim it free, and let brands come to you.</p>
+      <%= form_with url: podcasts_path, method: :get, class: "side-search", html: { role: "search" } do |f| %>
+        <%= f.label :q, "Your show's name", class: "sr-only", for: "landing_show_search" %>
+        <%= f.search_field :q, id: "landing_show_search", class: "input", placeholder: "Your show's name",
+              autocomplete: "off", maxlength: PodcastDirectory::QUERY_LIMIT %>
+        <%= f.submit "Find my show", class: "btn btn-primary btn-md", name: nil %>
+      <% end %>
+      <ol class="side-steps">
+        <li class="side-step">
+          <h3 class="side-step-title">Claim your page</h3>
+          <p>Free. Prove it's yours through your RSS feed.</p>
+        </li>
+        <li class="side-step">
+          <h3 class="side-step-title">Invite Midrolo to your stats</h3>
+          <p>Verified Spotify and Apple numbers, without sharing a password.</p>
+        </li>
+        <li class="side-step">
+          <h3 class="side-step-title">Answer brand requests</h3>
+          <p>Set your rates and open months. Reply in your inbox.</p>
+        </li>
+      </ol>
+      <p class="side-aside">
+        Want to pitch brands yourself? <%= link_to "Get a free Snapshot", snapshot_start_path, class: "link" %> of the
+        brands that fit your listeners.
+      </p>
+    </div>
+
+    <% if demo&.published_listing %>
+      <figure class="side-shot">
+        <figcaption class="side-shot-caption">A listing, as brands see it</figcaption>
+        <div class="card">
+          <div class="card-body flex flex-col gap-4">
+            <div class="flex items-center gap-3">
+              <%= podcast_artwork_tag(demo, size: :thumb, class: "size-12 flex-none rounded-lg") %>
+              <div class="min-w-0">
+                <p class="font-semibold"><%= link_to demo.title, podcast_path(demo, anchor: "rates"), class: "underline-offset-4 hover:underline" %></p>
+                <p class="text-sm text-ink-soft"><%= demo.author %></p>
+              </div>
+            </div>
+            <%= render "podcasts/rates", podcast: demo %>
+          </div>
+        </div>
+      </figure>
+    <% end %>
+  </div>
+</section>

@@ -4,147 +4,206 @@ Paste each section into its Devpost field.
 
 **Name:** Midrolo
 
-**Tagline:** Find sponsors who already love your listeners.
+**Tagline:** Where independent podcasts get sponsored.
 
-**Built with:** Qloo, OpenRouter, RubyLLM, Ruby on Rails, PostgreSQL, Hotwire, Tailwind CSS, Solid Queue, MapLibre,
-Podcast Index, Dodo Payments, Resend, Cloudflare R2, Docker
+**Built with:** Qloo, OpenRouter, RubyLLM, Ruby on Rails, PostgreSQL, Hotwire, Tailwind CSS, Solid Queue, Python,
+Open Podcast connectors, Podcast Index, MapLibre, Dodo Payments, Resend, Cloudflare, Docker
 
 ---
 
 ## Inspiration
 
-Independent podcasters want sponsors, but they can't show a brand who listens. Hosting stats give downloads and
-countries, nothing about taste. So hosts guess which brands to pitch and send the same media kit to all of them.
+Sponsorship should be the easy part for a small podcast. It isn't, on either side.
 
-In their own words, on r/podcasting:
+**Podcasters can't get found.** Only 39% of podcasters make money from their show, and 48% of the rest say their
+audience is too small (RSS.com podcaster survey). Ad networks start far above them: Libsyn Ads reportedly wants about
+20,000 downloads an episode. The marketplace built for them is closing: **Audacy Creator Lab (formerly Podcorn)
+closes on November 1, 2026**, which Audacy called "a very small part of our overall podcasting business". Even while
+it ran, open calls rarely worked: two podcasters on r/podcasting reported one deal from almost 50 proposals, and two
+from 115.
 
-- "I get not so subtle hints that I'm not really big enough."
-- "We'll spend months reaching out, sending media kits and then maybe get one sponsor for one episode."
-- "Sponsorship pricing seems like a mysterious formula."
+**Brands can't buy small shows.** When Ahrefs spent $51,975 on podcast sponsorships, "most shows didn't publish
+rates." Acast says a deal takes four to six weeks from proposal to launch, and that "a $2,000 budget spread across 12
+shows usually isn't bookable." And the numbers can't be checked: when The Podcast Host compared real downloads with
+Rephonic's estimates on 14 shows, they averaged 51.6% accuracy.
 
-The tools that help are built for big shows and start around $99 a month. The marketplaces built for small shows keep
-closing: Podcorn's November 1, 2026 shutdown is the latest.
-
-What small shows lack is evidence of fit. Qloo has it.
+So brands guess, podcasters wait, and the shows with the most loyal audiences go unsponsored. What's missing on both
+sides is the same thing: evidence of fit, numbers you can trust, and a way to ask.
 
 ## What it does
 
-Midrolo is a sponsor research agent for one show.
+Midrolo is where independent podcasts get sponsored: a public directory of podcasts, a free listing for every
+podcaster, and an AI agent on each side that uses Qloo's taste graph to match brands and shows.
 
-1. **Add your show.** Search by name, or paste an RSS or Apple Podcasts link.
-2. **The agent researches it,** live on screen. Each step shows what it asked and what came back.
-3. **You get a report:**
-   - what people with your show's taste love more than most: brands, podcasts and taste tags;
-   - age and gender leans, modeled from Qloo taste data;
-   - a map of where that taste is strongest;
-   - up to 50 brands ranked by fit, each with a reach tier (easy yes, realistic, long shot) and a one line reason;
-   - **proven sponsors**: brands already sponsoring similar shows, found in those shows' own feeds.
-4. **Write the pitch.** One click gives an email, three ad read angles, an offer priced from your rate card and a
-   follow up. Copy it or open it in Gmail. Midrolo never emails brands for you.
-5. **Publish a media kit.** A public page with your taste profile, leans, map and rate card, once you prove you own
-   the show.
-6. **Track it.** A pipeline from saved to pitched, replied, won or lost.
+**Every show has a page,** built from its own RSS feed: episodes, the people it names, and its **sponsor history
+with evidence**. Midrolo reads each episode's notes for sponsor reads, promo codes and offers, and every brand it
+finds links to the episode and quotes the show's own sentence. Brand pages turn that around: "Podcasts Notion
+sponsors". Search for a show we don't have and it's added from the directory while you watch.
 
-A free **Snapshot** uses Qloo only, with no AI: taste tags, the map and your top 5 brand matches.
+**For brands: "Find podcasts your customers love."** Name your brand and the brand side agent runs seven steps you
+watch live:
 
-### Why it needs Qloo
+1. finds the brand on Qloo, with its competitors and the brands its customers also buy;
+2. asks Qloo which podcasts people with that taste love;
+3. scores the shows in your categories against the same taste;
+4. checks sponsor history: which of those shows your competitors already sponsor;
+5. checks each show's rate card against your budget, and how its numbers are verified;
+6. ranks them out of 100 (taste 50, proof 25, price 15, trust 10), each with why it fits;
+7. writes a three line brief.
 
-Take Qloo away and there is no report. Qloo supplies every brand, taste tag, lean and place. The agent decides what to
-ask and explains the answers, and the server rejects any brand that didn't come from a Qloo result in that run.
+Then save the shows you like and **request a spot**: a message thread with the show, no commission.
 
-We make six kinds of Qloo call across three endpoints: `/search`, `/v2/tags`, and four uses of `/v2/insights`: brand
-and podcast recommendations, taste tags (`urn:tag`), demographics (`urn:demographics`) and the heatmap
-(`urn:heatmap`). We also built `/v2/analysis/compare`, then turned it off by default (see What we learned). Every
-call, and why, is in `docs/how-we-use-qloo.md` in the repo, with a redacted request to result walkthrough of one
-report.
+**For podcasters: "Get your show sponsored."** Find your show and claim it, free:
+
+- **Claim** through your RSS feed: instantly when its owner email is your Google address, by email code, or with a
+  one line token in your show description (the route for Spotify hosted shows, whose feeds list no email).
+- **List** your show: open to sponsors, a rate card suggested from your numbers, the months you're open, who you want
+  and what you won't advertise.
+- **Verify your numbers with "Invite Midrolo".** No passwords and no screenshots. You add Midrolo's stats account to
+  your show, in Spotify for Creators with Analytics access only, or in Apple Podcasts Connect with the read only Analyst
+  role. Midrolo reads the numbers with its own account, every day, and your page shows them as "Verified with Spotify
+  for Creators" with the date. Streams, listeners, followers and the listeners' age, gender and countries. Numbers
+  older than 45 days stop saying verified.
+- **Answer requests** in one inbox: accept, decline with a reason, block or report. Brands never see your contact
+  details, and nobody hears about a request until the show is claimed.
+
+The podcaster's **sponsor research agent** is still here as the paid toolkit: it builds the audience's taste profile
+with Qloo, ranks up to 50 brands that fit, writes the pitch, and now adds **shows with a similar audience** and
+**brands that already sponsor shows like yours**.
+
+### Why it needs Qloo, on both sides
+
+Take Qloo away and neither agent can answer its question. Sponsor history says who has paid shows before; verified
+numbers say how big a show is. Only taste says who should fit, and Qloo is how both sides get it:
+
+- **Brands to shows.** Qloo's podcast recommendations, with the brand as the signal, are the brand agent's first
+  list. Its taste scores rank the rest of the catalog against the same taste. Qloo's brand data names the
+  competitors whose sponsorships become proof.
+- **Shows to brands.** Qloo's brand recommendations and taste scores, from the show's own entity or comparable
+  shows and topics, rank every brand in a podcaster's report. Every brand in a report comes from a Qloo result in
+  that run.
+- **Shows to shows.** Qloo's similar podcasts give each report "shows with a similar audience", and the brands that
+  sponsor those shows become proof for the podcaster.
+- **The catalog itself.** Midrolo's directory was seeded from Qloo's podcast lists by genre, each matched to its
+  real feed.
+
+The part that isn't obvious is the join. Qloo says who should fit; the feeds prove who already pays shows like this; the
+verified numbers say what it's worth. Every Qloo call, and why, is in `docs/how-we-use-qloo.md` in the repo.
+
+### Built during the submission period
+
+The first commit is October 24, 2026. The sponsor research agent, reports, pitches and media kits came first. Then,
+in the last two days, the marketplace: the catalog and its feed reader, sponsor detection, the public pages, claiming
+and listings, verified Spotify and Apple numbers, the brand agent, request a spot and the inbox.
 
 ## How we built it
 
-- **The agent.** A RubyLLM agent (any tool-calling model through OpenRouter, set by config) with eight coarse tools: read the feed,
-  find seeds on Qloo, save seeds, build the audience profile, find sponsor candidates, explain matches, save matches,
-  save the summary. The research tools do the Qloo, directory and feed calls in Ruby and return short summaries. The agent is capped at 40
-  tool calls and 6 minutes.
-- **The Qloo client.** One adapter behind a `Taste::Provider` interface, with a tolerant mapper for every answer shape
-  we met, a shared cache, and a call guard in front of every live request.
-- **The proven sponsor scan.** Plain Ruby, no LLM: read similar shows' recent episodes, match sponsor read phrases,
-  and keep only names Qloo confirms as brands.
-- **Scoring** is plain Ruby with weights in config: affinity 55, proven sponsor 20, shared taste tags 15, category 10.
-  Popularity sets the tier. Same data, same score.
-- **Provenance.** The save tools accept only brands the run showed the model, and reasons may cite only numbers in the
-  data. Feed text reaches the model marked as untrusted.
-- **Everything swappable.** Qloo, Podcast Index, the LLM and billing each sit behind an interface with a Fake twin. With
-  no keys the app runs end to end in demo mode, and the tests never touch a live API.
-- **The product around it.** Rails 8.1, PostgreSQL, Hotwire, Solid Queue, Google sign in, a media kit editor, owner
-  verification, a pipeline, Dodo billing with signed webhooks, and an admin page. It runs on our own server with Docker
-  Compose.
+- **Two agents.** The podcaster's sponsor research agent is a RubyLLM tool loop (any tool calling model through
+  OpenRouter) with eight coarse tools, capped at 40 tool calls and 6 minutes. The brand side agent is seven fixed
+  steps in Ruby with one call to a cheap model for the brief, so a search costs at most 10 Qloo calls. Both write
+  every step to a live trace the user watches.
+- **The Qloo client.** One adapter behind a `Taste::Provider` interface, a tolerant mapper for every answer shape we
+  met, a shared cache (7 days, 30 for lookups), and a call guard in front of every live request: per minute and daily
+  caps, a soft and a hard cap per run, and a capped share for free and trial users.
+- **The catalog.** A feed reader with conditional GET, adaptive polling (claimed shows hourly, quiet shows weekly),
+  leases with `FOR UPDATE SKIP LOCKED`, per host pacing, and an SSRF guard on every fetch. Artwork is stored once
+  per image hash.
+- **Sponsor detection.** Patterns first (lead ins, sponsor blocks, promo codes, vanity links), then a cheap model
+  confirms candidates. Nothing the model says is trusted: a brand counts only if its name or domain is in the notes,
+  and the evidence is always the show's own sentence.
+- **Verified stats.** A small Python helper runs Open Podcast's MIT licensed Spotify and Apple connectors, pinned with
+  hashes. Rails hands it Midrolo's own session on stdin only, never in arguments, logs or job data. A reading counts
+  only when the podcast is claimed by the person who invited Midrolo and the platform's show matches it.
+- **Trust labels.** Every number carries a badge with its source and date: from the feed, provided by the show, or
+  verified. Spotify and Apple plays per episode are labelled plays, never downloads.
+- **Safety.** No contact details on any page, no email to unclaimed shows, daily request limits until a brand
+  verifies a work email at its own domain, block and report on every thread, and "Remove this page" everywhere.
+- **Everything swappable.** Qloo, Podcast Index, the LLM and billing each sit behind an interface with a Fake twin.
+  With no keys the app runs end to end in demo mode, and the tests never touch a live API.
+- **The stack.** Rails 8.1, PostgreSQL, Hotwire, Solid Queue, Google sign in, Dodo billing with signed webhooks, an
+  admin page, and Cloudflare in front of our own server.
 
 ## Challenges we ran into
 
-- **Building before the key arrived.** We wrote the Qloo client against synthetic fixtures modeled on the docs, then
-  checked every shape with a live smoke test once the key came. The client now reads fields flat or nested, and several
-  coordinate spellings.
-- **A small call allowance.** A full report makes about 20 to 30 Qloo calls (40 at most), and the key's allowance is
-  limited. We added a shared cache, a per minute and daily call guard, a per report cap, and a lane that holds free and
-  trial users to a share of the day, so paying users and the sample reports always keep some of each day's calls.
-- **Small shows aren't on Qloo.** When a show isn't in the graph, the agent builds a **proxy** profile from comparable
-  shows and topics, and the report says so. With too little to go on, it asks the host for comparable shows instead of
-  showing an empty page.
-- **Keeping an LLM honest.** An agent will happily name a brand it never saw. Server side checks now reject any brand,
-  or number, the run didn't produce before it is saved.
+- **Verified numbers without passwords.** Asking podcasters for their Spotify cookies was never an option. The
+  answer was to let them invite Midrolo like a teammate, with the narrowest role each platform offers, and to check
+  ownership twice so one show can't borrow another's numbers.
+- **Spotify counts a day only after it ends.** Any range ending today answered 500. The helper ends every window
+  yesterday and keeps the window's length.
+- **Finding sponsors without inventing them.** Show notes are full of patrons, merch, the host's own course and
+  "advertise with us". The scan keeps precision first: a wrong sponsor is worse than a missed one.
+- **A small call allowance.** A full report makes about 20 to 30 Qloo calls and a brand search up to 10. A shared
+  cache, call caps per run and per day, and a lane for trial users keep everyone inside the key's allowance.
+- **Small shows aren't on Qloo.** When a show isn't in the graph, the podcaster's agent builds a **proxy** profile
+  from comparable shows and topics, and says so. When a brand isn't, its categories become the signal.
+- **Keeping an LLM honest.** The save tools reject any brand or number the run didn't produce.
 
 ## Accomplishments that we're proud of
 
-- A complete product, not a demo: sign in, onboarding, a live report, pitch packs, a verified media kit, a pipeline,
-  billing and admin.
-- Every brand in a report traces back to a Qloo result in that run, and the report shows its own working.
-- Honest by default: modeled data is labeled as modeled, proxy profiles say so, and leans are words, never percentages.
-- Profitable by construction: the code refuses live billing until the numbers work (see What's next).
+- A complete two sided product, not a demo: public pages, claiming, listings, verified numbers, two agents, requests
+  and an inbox, billing and admin.
+- Verified Spotify and Apple numbers that never ask a podcaster for a password.
+- Sponsor history with a quote and an episode behind every brand.
+- Honest by default: modeled taste is labelled modeled, every number names its source and date, and plays are never
+  called downloads.
+- Free for podcasters, for good. No commission on either side.
 - Anyone can clone the repo and run the whole flow with no keys.
 
 ## What we learned
 
-- **One probe turned compare off.** In our live probe, a podcast and its own top brand shared no compare tags: each
-  side came back with its own tags and nothing in common. So compare is off by default, and we explain a match by the
-  tags a brand shares with the audience's taste tags, which we already have, at no extra call.
-- **Use the documented shape.** An undocumented heatmap parameter answered 502. The documented geohash grid works, but
-  ignores `take`: 8,421 cells for the United States. We keep the top 200 and name them from a table of 163 metros.
-- **Search is fuzzy.** A nonsense query still returns the nearest shows, so we match names ourselves.
-- **Coarse tools beat chatty ones.** Bundling Qloo calls inside each tool keeps the agent focused on judgment, and keeps
-  both LLM and Qloo costs predictable.
+- **Taste is the missing signal.** Brands and podcasters already have downloads and categories. What neither had was
+  who the listeners are as people, and that's what makes a match feel obvious once you see it.
+- **Compare isn't for brand and podcast.** In our live probe, compare found no shared tags between a podcast and its
+  top brand. So reasons come from the taste tags both entities already carry, at no extra call.
+- **Search is fuzzy.** A nonsense query still returns the nearest entity, so we match names ourselves: exact name,
+  then the brand's website, then a close name.
+- **Verified beats estimated.** A number with a source and a date does more for trust than a bigger number without
+  one.
 
 ## What's next
 
-- **A commercial Qloo agreement,** then billing opens. The business model is plan based subscriptions with no
-  commission: Free (a Snapshot a month), Creator at $19 a month or $190 a year, Pro at $49 a month or $490 a year, and
-  a one time $49 Sprint (Pro for 30 days).
-- **Profitable from day 1.** Qloo has no public commercial price yet, so billing runs as a founding member waitlist.
-  Live billing stays refused until an admin enters Qloo's cost per call and every paid plan keeps at least a 60%
-  margin with every cap used. Free Snapshots use no AI, so free users cost no LLM spend.
-- **An eval set of real shows** to tune seeds and scoring before any model change.
-- **Plans for producers and small networks** with several shows.
+- **A commercial Qloo agreement,** then billing opens. Podcasters list free forever. The paid toolkit is plan based
+  (Creator at $19 a month, Pro at $49, a one time $49 Sprint), brands get a plan later, and there's no commission.
+- **Profitable from day 1.** Billing runs as a founding member waitlist until an admin enters Qloo's cost per call and
+  every paid plan keeps at least a 60% margin with every cap used.
+- **Deals:** agreed terms, an air window, and proof that the read aired, spotted in the feed.
+- **More verified sources:** hosting providers' own analytics, and YouTube.
+- **A guide for Creator Lab podcasters** whose feeds may still carry its analytics prefix.
 
 ## Testing instructions
 
 - **Live site:** https://midrolo.com
-- **No sign in needed:** the sample reports at https://midrolo.com/samples. Each is labeled "Sample report. Not
-  affiliated with the show."
+- **No sign in needed:** browse the directory at https://midrolo.com/podcasts, open any show's page (episodes,
+  sponsor history with evidence, details), a brand page from a show's sponsors, and the sample reports at
+  https://midrolo.com/samples. Search for a show that isn't listed and watch it get added.
 - **Sign in** with any Google account. We never post to it.
+- **Try the brand side:** press "Find podcasts your customers love", name a real brand and its website, and watch the
+  agent's seven steps. Open the results, save a show, and request a spot. To send a request without bothering a real
+  show, use the **Midrolo Demo Show**: a fictional listing we run, linked from the home page and labelled Demo
+  everywhere.
+- **Try the podcaster side:** add any show (it doesn't have to be yours) and run a Snapshot and a full report: watch
+  the agent work, then see the similar shows and the brands that already sponsor them. Write a pitch. The listing
+  editor and the stats screen work as a draft until you claim a show you own.
+- **Verified numbers:** search for **AiGM by AiHunt**, a small show of ours that invited Midrolo on Spotify. Its page
+  shows its Spotify numbers with the Verified badge and the date.
 - **Free trial, no code or card:** every new account gets Pro features through Nov 6: up to 3 shows, each with a
-  Snapshot and a full agent report, plus 60 pitches.
-- **Try the flow:** add any podcast (it doesn't have to be yours), run a full report and watch the agent work, open a
-  brand and press Write my pitch, then edit and preview the media kit. Publishing a kit needs proof of ownership (a code
-  sent to the owner email in the show's RSS feed), so use the preview, or open a finished one from any sample report
-  (See the sample media kit).
+  Snapshot and a full agent report, plus 60 pitches. Brands get 5 searches a day (20 after verifying a work email).
+- **Sample media kit:** open any sample report and press See the sample media kit.
 - **Billing** shows the founding member waitlist. Nothing can be bought during judging.
 
 ## Known limitations
 
-- **Modeled, not measured.** A report describes people whose tastes match the show's, not the show's real listeners.
+- **Modeled, not measured.** A taste profile describes people whose tastes match a show's, not its real listeners.
+  Verified numbers are the measured part, and only for shows that invite Midrolo.
 - **Proxy profiles** for shows Qloo doesn't know are only as good as their seeds. The report names every seed.
-- **Data gaps** in the hackathon data: some seeds return few brands, and brand websites are mostly missing.
-- **Proven sponsors come from feed text,** so a read nobody wrote down is missed.
+- **Sponsor history comes from show notes,** so a read nobody wrote down is missed, and a mention that wasn't paid can
+  slip in. Each one shows its evidence so you can judge.
+- **Apple Podcasts verification** uses the same invite and connector as Spotify, but we have only checked Spotify
+  live.
+- **Data gaps** in the hackathon data: some brands and shows aren't on Qloo, and some seeds return few results.
 - **What a result does not establish:** that a brand will say yes or what it will pay, that any listener buys from a
-  brand, or the show's real size, age or gender mix. A fit score ranks brands within one report; it is not a forecast.
+  brand, or a show's real age or gender mix. A fit score ranks results within one search or report; it is not a
+  forecast.
 
 ## For the judges: where each item lives
 
@@ -159,8 +218,10 @@ report.
 
 | Judging consideration | What to look at |
 | --- | --- |
-| Usefulness | A sponsor list, pitch and media kit for one show, in one sitting |
-| Technical execution | Six kinds of Qloo call across three endpoints, an agent with coarse tools, deterministic scoring, a test suite |
-| Provenance and user clarity | The live trace, "How we built this" on every report, seeds with sources, brands checked against the run |
-| Responsible data handling | No Qloo data in the repo, a private cache, leans as words, honest labels |
+| Technical implementation | Two agents on Qloo, a catalog seeded from Qloo, sponsor detection, verified stats through official accounts, a test suite |
+| Design | Public pages, both sides' flows, live agent traces, trust badges on every number |
+| Potential impact | Small shows lost their marketplace on November 1; brands can't find or trust them. Free listing, verified numbers and taste matching fix both |
+| Quality of idea | Taste from Qloo, joined with sponsor proof from feeds and numbers verified at the source |
+| Provenance and user clarity | Agent traces, sources and dates on every number, evidence quotes, "Taste data from Qloo" labels |
+| Responsible data handling | No Qloo data in the repo, a private cache, no passwords, no contact details on pages, encrypted owner emails and sessions |
 | Reproducibility | Demo mode with no keys, synthetic fixtures, a live smoke test with a fixed call budget |

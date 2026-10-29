@@ -3,9 +3,13 @@
 <div class="flex flex-col gap-6">
   <header class="flex flex-wrap items-baseline justify-between gap-3">
     <h1 class="type-h1">Admin</h1>
-    <nav class="flex gap-4" aria-label="Admin">
+    <nav class="flex flex-wrap gap-x-4 gap-y-1" aria-label="Admin">
       <%= link_to "Sign-ups", admin_users_path, class: "link" %>
       <%= link_to "Move a show", new_admin_claim_transfer_path, class: "link" %>
+      <% pending_removals = RemovalRequest.pending.count %>
+      <%= link_to(pending_removals.positive? ? "Removal requests (#{pending_removals})" : "Removal requests", admin_removal_requests_path, class: "link") %>
+      <%= link_to "Stats connections", admin_stat_connections_path, class: "link" %>
+      <%= link_to "Service sessions", admin_service_sessions_path, class: "link" %>
       <%= link_to "Jobs", mission_control_jobs_path, class: "link", data: { turbo: false } %>
     </nav>
   </header>

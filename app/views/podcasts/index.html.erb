@@ -1,7 +1,9 @@
 <% search = @directory.search? %>
 <% content_for :title, search ? "Podcasts matching \"#{@directory.query}\"" : "Find podcasts to sponsor" %>
+<% card = ShareImages::ListCard.directory(@podcasts) if @directory.plain? %>
 <% content_for :meta, pages_meta(description: "Independent podcasts with their sponsors, rates and numbers, each with its source. Search by name or browse by category, size and price.",
-                                  url: podcasts_url) %>
+                                  url: podcasts_url, image: podcasts_share_image_url(v: card&.version),
+                                  image_alt: "Find podcasts to sponsor on #{APP_NAME}") %>
 <% categories = Podcast.category_counts %>
 <div class="wrap dir-head">
   <p class="eyebrow">The <%= APP_NAME %> catalog</p>
