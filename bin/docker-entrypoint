@@ -1,5 +1,10 @@
 #!/bin/bash -e
 
+# Coolify's midrolo-worker runs this same image with MIDROLO_PROCESS=jobs: Solid Queue instead of the web server.
+if [ "${MIDROLO_PROCESS}" == "jobs" ]; then
+  set -- ./bin/jobs
+fi
+
 # If running the rails server then create or migrate existing database
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
   ./bin/rails db:prepare
