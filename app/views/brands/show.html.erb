@@ -94,7 +94,7 @@
         <div class="lamp-note">
           <h2 class="font-bold">Is this your brand?</h2>
           <p class="mt-1">Find the podcasts your customers already love, ranked by fit, proof and price.</p>
-          <%= ui_button "Find shows for #{brand.name}", user_signed_in? ? ApplicationController::BRAND_HOME : new_user_session_path, size: :sm, class: "mt-3", rel: "nofollow" %>
+          <%= ui_button "Find shows for #{brand.name}", user_signed_in? ? brand_root_path : brand_start_path, size: :sm, class: "mt-3", rel: "nofollow" %>
         </div>
       <% end %>
       <div class="fine-print">

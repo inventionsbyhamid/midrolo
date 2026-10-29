@@ -68,7 +68,7 @@ RSpec.describe "Sitemaps" do
   it "keeps crawlers out of searches (they can add shows), polls and the removal form, and in the catalog's pages" do
     get "/robots.txt"
     rules = response.body.lines.map(&:strip)
-    expect(rules).to include("Disallow: /podcasts?q=", "Disallow: /podcasts?*&q=", "Disallow: /podcasts/adding",
+    expect(rules).to include("Disallow: /podcasts?q=", "Disallow: /podcasts?*&q=", "Disallow: /podcasts/search/adding",
                              "Disallow: /podcasts/*/status", "Disallow: /podcasts/*/sign_in", "Disallow: /podcasts/*/remove")
     expect(rules).not_to include("Disallow: /podcasts", "Disallow: /brands")
   end

@@ -61,7 +61,7 @@ RSpec.describe "Podcast pages" do
       expect(response.body).to include("Results for", "Darknet Diaries", "Found in the podcast directory", "Darknet Daily", "Adding this show")
       expect(response.body).not_to include("Old Radio")
       poll = doc.at_css("turbo-frame#adding_podcasts [data-controller='poll']")
-      expect(poll["data-poll-url-value"]).to eq("/podcasts/adding?ids=#{added.public_id}&n=2")
+      expect(poll["data-poll-url-value"]).to eq("/podcasts/search/adding?ids=#{added.public_id}&n=2")
       expect(robots).to eq([ "noindex, follow" ])
     end
 
@@ -98,26 +98,26 @@ RSpec.describe "Podcast pages" do
     end
   end
 
-  describe "GET /podcasts/adding" do
+  describe "GET /podcasts/search/adding" do
     it "shows each podcast's state and polls only while one is pending, and never past the cap" do
       pending_show = create(:podcast, status: "pending", title: "Still Reading")
       ready = create(:podcast, :active, title: "Ready Now")
       removed = create(:podcast, status: "removed", title: "Gone Show")
       ids = [ pending_show, ready, removed ].map(&:public_id).join(",")
 
-      visit "/podcasts/adding?ids=#{ids}&n=3", "Turbo-Frame" => "adding_podcasts"
+      visit "/podcasts/search/adding?ids=#{ids}&n=3", "Turbo-Frame" => "adding_podcasts"
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Still Reading", "Adding this show", "Ready Now")
       expect(response.body).not_to include("Gone Show")
       expect(doc.at_css("[data-controller='poll']")["data-poll-url-value"]).to include("n=4")
       expect(response.headers["X-Robots-Tag"]).to eq("noindex")
 
-      visit "/podcasts/adding?ids=#{ids}&n=#{PodcastsController::MAX_POLLS}"
+      visit "/podcasts/search/adding?ids=#{ids}&n=#{PodcastsController::MAX_POLLS}"
       expect(doc.at_css("[data-controller='poll']")).to be_nil
       expect(response.body).to include("Still reading.")
 
       pending_show.update!(status: "active")
-      visit "/podcasts/adding?ids=#{ids}&n=5"
+      visit "/podcasts/search/adding?ids=#{ids}&n=5"
       expect(doc.at_css("[data-controller='poll']")).to be_nil
       expect(doc.css(".dir-card-link").map(&:text)).to eq([ "Still Reading", "Ready Now" ])
     end

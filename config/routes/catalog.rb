@@ -2,8 +2,9 @@
 # /podcasts/category/:category (drawn before /podcasts/:slug), /podcasts/:slug and its episodes, removal, the public
 # brand page /brands/:slug, the data sources page and the sitemaps. Lane L1 adds nothing public.
 get "podcasts", to: "podcasts#index", as: :podcasts, format: false
-# Search hits still being read from their feeds, reloaded into a Turbo Frame until they're ready.
-get "podcasts/adding", to: "podcasts#adding", as: :adding_podcasts, format: false
+# Search hits still being read from their feeds, reloaded into a Turbo Frame until they're ready. Under "search", which
+# FriendlySlug never gives a podcast, so no show's page can be shadowed by it.
+get "podcasts/search/adding", to: "podcasts#adding", as: :adding_podcasts, format: false
 get "podcasts/category/:category", to: "categories#show", as: :podcast_category, format: false
 get "podcasts/:slug", to: "podcasts#show", as: :podcast, format: false
 # A page whose feed is still being read polls this until the podcast is ready.

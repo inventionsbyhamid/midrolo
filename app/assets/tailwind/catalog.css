@@ -511,6 +511,13 @@
     margin-top: 1.25rem;
   }
 
+  /* One size for the row, whichever lane drew the button (Save is lane L6's). */
+  .pod-actions .btn {
+    height: 2.5rem;
+    padding-inline: 1.125rem;
+    font-size: 0.9375rem;
+  }
+
   /* ---------- The facts strip: big wide numerals, each on its own rule ---------- */
 
   .fact-strip {

@@ -25,7 +25,7 @@ class PodcastsController < ApplicationController
     noindex! unless @directory.plain?
   end
 
-  # GET /podcasts/adding?ids=a,b&n=2: the "Adding this show" cards for those podcasts, polled until none is pending.
+  # GET /podcasts/search/adding?ids=a,b&n=2: the "Adding this show" cards for those podcasts, polled until none is pending.
   def adding
     noindex!
     ids = params[:ids].to_s.split(",").map(&:strip).compact_blank.first(ADDING_LIMIT)
