@@ -38,6 +38,14 @@ module ListingHelper
     line
   end
 
+  # The figure alone, for the podcast page's Rates note, whose trust badge names the source and date:
+  # "2,140 Spotify and Apple plays per episode", "1,000 to 2,500 downloads per episode".
+  def listing_basis_figure(basis, bands: false)
+    figure = bands ? Podcast.listing_band(basis.value) : number_with_delimiter(basis.value)
+    unit = basis.reading&.source == Podcast::Stats::PLAYS_SOURCE ? "Spotify and Apple plays" : "downloads"
+    "#{figure} #{unit} per episode"
+  end
+
   # "downloads per episode, provided by the show" for a reading's source; a figure typed into the workspace has none.
   def listing_reading_source(reading)
     return "downloads per episode you entered" unless reading
