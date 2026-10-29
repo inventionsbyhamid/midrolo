@@ -20,12 +20,14 @@ RSpec.describe "Admin stats" do
     [ -> { get admin_service_sessions_path }, -> { get admin_stat_connections_path },
       -> { patch admin_service_session_path("spotify"), params: { credentials: { sp_dc: cookie } } },
       -> { post test_admin_service_session_path("spotify"), params: { show_id: "2nel53b14wqMRDx2toN28f" } },
-      -> { post approve_admin_stat_connection_path(create(:stat_connection)) } ].each do |request|
+      -> { post approve_admin_stat_connection_path(create(:stat_connection)) },
+      -> { post reject_admin_stat_connection_path(create(:stat_connection, status: "mismatch", last_error: Stats::Ownership::NEEDS_REVIEW)) } ].each do |request|
       sign_in user # a 404 doesn't keep the test sign-in for the next request
       request.call
       expect(response).to have_http_status(:not_found)
     end
     expect(ServiceSession.count).to eq(0)
+    expect(StatConnection.where(status: "disconnected")).to be_empty
   end
 
   context "as an admin" do
@@ -126,6 +128,67 @@ RSpec.describe "Admin stats" do
       expect { post approve_admin_stat_connection_path(held) }.to have_enqueued_job(Stats::SyncJob).with(held.id)
       expect(held.reload.approved_at).to be_present
       expect(flash[:notice]).to eq("Approved. Syncing Twin Name Pod now.")
+    end
+
+    describe "reject" do
+      let(:podcast) { create(:podcast, :claimed, title: "Twin Name Pod") }
+      let(:owner) { create(:user, email: "maker@example.com") }
+      let!(:held) do
+        create(:stat_connection, status: "mismatch", last_error: Stats::Ownership::NEEDS_REVIEW, podcast: podcast,
+                                 user: owner, show: create(:show, user: owner, podcast: podcast, verified_at: Time.current),
+                                 external_id: "2nel53b14wqMRDx2toN28f")
+      end
+
+      it "shows Reject next to Approve, for connections held for review only" do
+        other = create(:stat_connection, status: "mismatch", last_error: "Not the same show")
+
+        get admin_stat_connections_path
+        page = Nokogiri::HTML(response.body)
+        expect(page.css("form[action='#{reject_admin_stat_connection_path(held)}'] button").map(&:text)).to eq([ "Reject" ])
+        expect(page.css("form[action='#{reject_admin_stat_connection_path(other)}']")).to be_empty
+      end
+
+      it "disconnects it with a note, takes that platform's numbers off the page and frees the platform show" do
+        create(:stat_reading, podcast: podcast, source: "spotify", trust: "verified", metric: "streams_30d", value: 900)
+        create(:stat_reading, podcast: podcast, source: "platforms", trust: "verified", value: 225)
+        apple = create(:stat_reading, podcast: podcast, source: "apple", trust: "verified", metric: "followers", value: 40)
+        podcast.refresh_listing!
+        expect(podcast.reload).to have_attributes(downloads_per_episode: 225, downloads_trust: "verified")
+
+        expect { post reject_admin_stat_connection_path(held) }.not_to have_enqueued_job(Stats::SyncJob)
+        expect(response).to redirect_to(admin_stat_connections_path)
+        expect(flash[:notice]).to eq("Rejected. Twin Name Pod's Spotify connection is disconnected.")
+
+        expect(held.reload).to have_attributes(status: "disconnected", last_error: StatConnection::REJECTED_MESSAGE,
+                                               approved_at: nil, last_checked_at: be_present)
+        expect(podcast.stat_readings.reload).to contain_exactly(apple)
+        expect(podcast.reload).to have_attributes(downloads_per_episode: nil, downloads_trust: nil)
+
+        real = create(:stat_connection, podcast: create(:podcast), provider: "spotify", external_id: held.external_id)
+        expect(real).to be_persisted
+      end
+
+      it "tells the maker on their Stats screen, without saying the platform removed access" do
+        post reject_admin_stat_connection_path(held)
+
+        sign_in owner
+        get show_stats_path(held.show)
+        card = Nokogiri::HTML(response.body).at_css("#spotify")
+        expect(card.text.squish).to include("Stopped", StatConnection::REJECTED_MESSAGE)
+        expect(card.text).not_to include("access was removed", "Access removed")
+        expect(card.css("input[type='submit']").map { |button| button["value"] }).to include("I've invited Midrolo")
+      end
+
+      it "changes nothing once it isn't held for review" do
+        held.update!(status: "active", last_error: nil, approved_at: Time.current)
+        reading = create(:stat_reading, podcast: podcast, source: "spotify", trust: "verified", metric: "followers", value: 12)
+
+        post reject_admin_stat_connection_path(held)
+        expect(response).to redirect_to(admin_stat_connections_path)
+        expect(flash[:alert]).to eq("That connection isn't waiting for review any more.")
+        expect(held.reload.status).to eq("active")
+        expect(reading.reload).to be_persisted
+      end
     end
 
     it "shows the stats panel on the dashboard" do

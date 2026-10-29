@@ -65,6 +65,8 @@
                       <% if Stats::Ownership.needs_review?(connection) %>
                         <%= button_to "Approve", approve_admin_stat_connection_path(connection), class: "btn btn-primary btn-sm",
                               form: { data: { turbo_confirm: "Approve after checking that #{Stats.platform_name(connection.provider)} #{connection.external_id} is #{connection.podcast.title}?" } } %>
+                        <%= button_to "Reject", reject_admin_stat_connection_path(connection), class: "btn btn-secondary btn-sm",
+                              form: { data: { turbo_confirm: "Reject after checking that #{Stats.platform_name(connection.provider)} #{connection.external_id} isn't #{connection.podcast.title}? The connection is disconnected and its #{Stats.platform_name(connection.provider)} numbers come off the page." } } %>
                       <% end %>
                       <%= button_to "Check now", check_admin_stat_connection_path(connection), class: "btn btn-secondary btn-sm" %>
                     </div>
