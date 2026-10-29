@@ -78,27 +78,50 @@ module Podcast::Pages
     self.class.for_cards.listed.where(id: ids).in_order_of(:id, ids).to_a
   end
 
-  # Takes the podcast out of the catalog for good ("Remove this page"): its page answers 410, it leaves the directory
-  # and sitemaps, its guid and feed are suppressed so no seed or search brings it back, and its artwork and people's
-  # photos are hidden and purged. Cloudflare may serve a cached image until it expires (the data rights page says so).
-  def remove!
+  # Who removes a page (remove!): its verified owner at once, or an admin approving a removal request.
+  REMOVERS = %i[owner admin].freeze
+
+  # Takes the podcast out of the catalog for good ("Remove this page"): its page answers 410 and it leaves the directory
+  # and sitemaps. Cloudflare may serve a cached image until it expires (the data rights page says so).
+  #
+  # by: :owner, the verified owner's instant removal, suppresses only the podcast's own feed URL (the feed they proved
+  # control of), so no seed or search brings that feed back, and detaches its artwork and people's photos, deleting the
+  # files no other podcast or person uses. It never suppresses a podcast:guid or a picture: a feed can declare another
+  # show's guid or use its artwork, and the owner proved neither (code review H2).
+  # by: :admin, an approved removal request, also suppresses the podcast:guid and the pictures' sha256s, and hides and
+  # purges those pictures wherever they are used.
+  def remove!(by: :owner)
+    raise ArgumentError, "unknown remover #{by.inspect}" unless REMOVERS.include?(by)
+
     images = [ artwork_image, *Image.where(id: people.where.not(image_id: nil).select(:image_id)) ].compact.uniq
     transaction do
       update!(status: "removed", indexable: false, open_to_sponsors: false)
-      suppress!(images)
-      images.each { |image| image.update!(suppressed_at: Time.current) }
+      by == :admin ? take_down!(images) : release_images!(images)
     end
-    images.each { |image| image.file.purge_later if image.file.attached? }
+    images.each { |image| image.file.purge_later if image.file.attached? } if by == :admin
     self
   end
 
   private
 
-  def suppress!(images)
-    rows = [ ([ "podcast", podcast_guid ] if podcast_guid.present?), [ "podcast", Suppression.feed_digest(feed_url) ],
-             *images.map { |image| [ "image", image.sha256 ] } ].compact
-    Suppression.upsert_all(rows.map { |kind, value| { kind: kind, value: value, reason: "removal request" } },
-                           unique_by: %i[kind value])
+  def take_down!(images)
+    suppress!([ ([ "podcast", podcast_guid ] if podcast_guid.present?), feed_suppression,
+                *images.map { |image| [ "image", image.sha256 ] } ].compact, reason: "removal request")
+    images.each { |image| image.update!(suppressed_at: Time.current) }
+  end
+
+  # Unlinks the podcast's pictures, and deletes those nothing else links to (their files go with them).
+  def release_images!(images)
+    suppress!([ feed_suppression ], reason: "removed by the owner")
+    update!(artwork_image: nil) if artwork_image_id
+    people.where.not(image_id: nil).update_all(image_id: nil)
+    images.each { |image| image.destroy! unless image.podcasts.exists? || image.podcast_people.exists? }
+  end
+
+  def feed_suppression = [ "podcast", Suppression.feed_digest(feed_url) ]
+
+  def suppress!(rows, reason:)
+    Suppression.upsert_all(rows.map { |kind, value| { kind: kind, value: value, reason: reason } }, unique_by: %i[kind value])
   end
 
   def similar_podcast_ids(limit)
