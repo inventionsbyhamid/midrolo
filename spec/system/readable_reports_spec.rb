@@ -80,7 +80,7 @@ RSpec.describe "Readable reports" do
     login_as(owner, scope: :user)
     check_layout("agent", show_report_path(report.show, report))
     expanded_screenshot("agent-open")
-    check_layout("kit", public_kit_path(report.show.reload.slug))
+    check_layout("kit", show_media_kit_path(report.show))
     login_as(snapshot.show.user, scope: :user)
     check_layout("snapshot", show_report_path(snapshot.show, snapshot))
     expect(page).to have_css("[data-locked-match]", minimum: 1)

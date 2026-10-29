@@ -186,7 +186,7 @@ RSpec.describe "Copy has no dashes", type: :request do
       create(:media_kit, :published, show: show)
 
       reports = [ show_report_path(show, report), show_report_path(show, snapshot), "/samples/#{sample.sample_slug}",
-                  public_kit_path(show.reload.slug) ]
+                  show_media_kit_path(show) ]
       private_paths = [ "/shows", "/shows/new", show_path(show), *reports.values_at(0, 1), sponsor_match_pitch_path(match),
                         "/pipeline", "/account", edit_show_media_kit_path(show), show_media_kit_path(show), reports.last ]
       private_paths.each { |path| rendered[path] = get(path) && [ response.status, response.body ] }

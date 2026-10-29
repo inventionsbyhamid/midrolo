@@ -1,1 +1,61 @@
-<%# Podcast page: Rates section (the published listing and rate card). Lane L4 fills it; lane L3's page renders it with podcast: (from Podcast.for_page). %>
+<%# locals: (podcast:) -%>
+<%# Podcast page: the published listing and rate card (lane L4), inside lane L3's Rates section (#rates; /k/:slug
+    redirects here). Nothing until the owner show publishes, so L3's empty state shows. Reads only what Podcast.for_page
+    preloads: the owner show with its kit and podcast, and the readings. %>
+<% kit = podcast.published_listing %>
+<% if kit %>
+  <% content = MediaKit::Content.new(kit, podcast: podcast) %>
+  <% rates = content.rates %>
+  <% basis = content.downloads_basis %>
+  <% months = kit.open_months.select { |month| month >= Date.current.strftime("%Y-%m") } %>
+  <div class="listing-rates">
+    <p class="flex flex-wrap items-center gap-2">
+      <%= kit.open_to_sponsors? ? ui_badge("Open to sponsors", tone: :success) : ui_badge("Not taking sponsors right now") %>
+      <%= listing_demo_badge(podcast) %>
+    </p>
+
+    <dl class="listing-slots">
+      <% [ [ "Preroll", rates.preroll, "Before the episode starts" ], [ "Midroll", rates.midroll, "Read by the host, midway through" ],
+           [ "Postroll", rates.postroll, "After the episode ends" ] ].each do |name, price, note| %>
+        <div class="<%= class_names("listing-slot", "listing-slot-mid" => name == "Midroll") %>">
+          <dt class="text-sm font-semibold"><%= name %></dt>
+          <dd class="listing-slot-price"><%= kit_money(price) %></dd>
+          <dd class="text-sm text-ink-soft"><%= note %></dd>
+        </div>
+      <% end %>
+    </dl>
+    <p><%= kit_bundle_line(rates) %></p>
+    <p class="text-sm text-ink-soft">
+      <%= rates.custom? ? "Rates set by the show." : "Suggested rates: #{rates.basis}." %> Per episode, in US dollars.
+    </p>
+    <% if basis&.reading %>
+      <p class="flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+        <span>Based on <%= listing_downloads_basis(basis, bands: kit.bands_only?) %>.</span>
+        <%= trust_badge(basis.reading, source: basis.reading.source, at: basis.reading.captured_at) %>
+      </p>
+    <% end %>
+
+    <% if months.any? || kit.looking_for.present? || kit.exclusions.any? %>
+      <dl class="listing-facts">
+        <% if months.any? %>
+          <div>
+            <dt>Open months</dt>
+            <dd><ul class="flex flex-wrap gap-2"><% months.each do |month| %><li class="chip"><%= listing_month_label(month) %></li><% end %></ul></dd>
+          </div>
+        <% end %>
+        <% if kit.looking_for.present? %>
+          <div>
+            <dt>Who we're looking for</dt>
+            <dd class="whitespace-pre-line"><%= kit.looking_for %></dd>
+          </div>
+        <% end %>
+        <% if kit.exclusions.any? %>
+          <div>
+            <dt>We don't advertise</dt>
+            <dd><%= kit.exclusions.join(", ") %></dd>
+          </div>
+        <% end %>
+      </dl>
+    <% end %>
+  </div>
+<% end %>

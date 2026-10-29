@@ -167,13 +167,11 @@ RSpec.describe "Media kits (owner)" do
         expect(response).to redirect_to(edit_show_media_kit_path(show))
         expect(flash[:notice]).to include("Published")
         expect(show.media_kit.reload).to be_published
-        get public_kit_path(show.reload.slug)
-        expect(response).to have_http_status(:ok)
+        expect(show.podcast.reload.min_price_cents).to be_positive
 
         patch unpublish_show_media_kit_path(show)
         expect(show.media_kit.reload).not_to be_published
-        get public_kit_path(show.slug)
-        expect(response).to have_http_status(:not_found)
+        expect(show.podcast.reload.min_price_cents).to be_nil
       end
 
       it "shows the publish and unpublish controls on the edit page" do
@@ -186,7 +184,81 @@ RSpec.describe "Media kits (owner)" do
 
         patch publish_show_media_kit_path(show)
         get edit_show_media_kit_path(show)
-        expect(response.body).to include(unpublish_show_media_kit_path(show), "/k/#{show.slug}")
+        expect(response.body).to include(unpublish_show_media_kit_path(show), "/podcasts/#{show.slug}#rates")
+      end
+
+      it "sends a show another account manages to ask for access instead" do
+        create(:show, podcast: show.podcast).verify!(via: "admin")
+        get edit_show_media_kit_path(show)
+
+        expect(response.body).to include("Another account manages this show", new_podcast_claim_path(show.podcast))
+        expect(response.body).not_to include(new_show_verification_path(show))
+      end
+    end
+
+    describe "the listing" do
+      let(:months) { Podcast.listing_months }
+
+      def save_listing(**fields)
+        patch show_media_kit_path(show), params: { media_kit: { open_months: [ "" ] }.merge(fields) }
+      end
+
+      it "offers the next 6 months, open to sponsors, who you're looking for, exclusions and bands, as a draft before the claim" do
+        get edit_show_media_kit_path(show)
+
+        expect(response).to have_http_status(:ok)
+        text = Nokogiri::HTML(response.body).text.squish
+        expect(text).to include("Open to sponsors", "Months you're open", "Who you're looking for",
+                                "What you won't advertise", "Show my numbers as a range", "Draft")
+        months.each { |month| expect(response.body).to include(%(value="#{month}")) }
+        expect(response.body).not_to include(%(value="#{(Date.current >> 6).strftime('%Y-%m')}"))
+      end
+
+      it "saves the listing, splitting exclusions on commas" do
+        save_listing(open_to_sponsors: "1", open_months: [ "", months[1], months[0] ], looking_for: "Coffee and banks",
+                     exclusions_text: "Gambling, alcohol ,, Gambling", bands_only: "1")
+
+        expect(response).to redirect_to(edit_show_media_kit_path(show))
+        expect(show.media_kit).to have_attributes(open_to_sponsors: true, open_months: months.first(2),
+                                                  looking_for: "Coffee and banks", exclusions: %w[Gambling alcohol],
+                                                  bands_only: true)
+      end
+
+      it "refuses a month that isn't one" do
+        save_listing(open_months: [ "2026-13" ])
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.body).to include("Open months must be calendar months")
+      end
+
+      it "updates the podcast's directory columns when the owner's published listing is saved, and not for a draft" do
+        save_listing(open_to_sponsors: "1", rate_card_overrides: { midroll: "150", preroll: "90", postroll: "60" })
+        expect(show.podcast.reload).to have_attributes(open_to_sponsors: false, min_price_cents: nil)
+
+        show.verify!(via: "admin")
+        patch publish_show_media_kit_path(show)
+        expect(show.podcast.reload).to have_attributes(open_to_sponsors: true, min_price_cents: 6_000)
+
+        save_listing(open_to_sponsors: "0", rate_card_overrides: { midroll: "150", preroll: "90", postroll: "45" })
+        expect(show.podcast.reload).to have_attributes(open_to_sponsors: false, min_price_cents: 4_500)
+      end
+
+      it "suggests rates from the podcast's best downloads reading and names its source" do
+        create(:stat_reading, podcast: show.podcast, value: 12_000, source: "provided", trust: "provided",
+                              captured_at: Time.zone.local(2026, 10, 29, 12))
+        get edit_show_media_kit_path(show)
+
+        expect(response.body).to include("It uses 12,000 downloads per episode, provided by the show (Oct 29).")
+        expect(response.body).to include('placeholder="450"') # $25 CPM x 1.5 (business) on 12,000, not the typed 3,000
+      end
+
+      it "falls back to the downloads you entered, and asks for them when there are none" do
+        get edit_show_media_kit_path(show)
+        expect(response.body).to include("It uses 3,000 downloads per episode you entered.")
+
+        show.update!(downloads_per_episode: nil)
+        get edit_show_media_kit_path(show)
+        expect(response.body).to include("We don't have your downloads yet.")
       end
     end
 

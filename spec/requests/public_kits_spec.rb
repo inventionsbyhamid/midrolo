@@ -1,5 +1,7 @@
 require "rails_helper"
 
+# /k/:slug was the public media kit; the listing now lives on the podcast page, so it 301s to its Rates section (lane
+# L4). The kit itself is still the owner's printable preview, checked further down.
 RSpec.describe "Public media kits" do
   let(:user) { create(:user) }
   let(:show) do
@@ -13,56 +15,58 @@ RSpec.describe "Public media kits" do
   end
   let(:browser) { "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15" }
 
-  def visit_kit(slug = show.slug, agent: browser) = get(public_kit_path(slug), headers: { "User-Agent" => agent })
+  describe "GET /k/:slug" do
+    it "301s to the podcast page's rates, published kit or not" do
+      get public_kit_path(show.slug), headers: { "User-Agent" => browser }
+      expect(response).to have_http_status(:moved_permanently)
+      expect(response).to redirect_to("/podcasts/#{show.slug}#rates")
 
-  it "404s for an unknown slug" do
-    visit_kit("unknown")
-    expect(response).to have_http_status(:not_found)
+      create(:media_kit, :published, show: show)
+      get public_kit_path(show.slug)
+      expect(response).to redirect_to("/podcasts/#{show.slug}#rates")
+    end
+
+    it "sends an earlier slug to the current page" do
+      old = show.slug
+      show.podcast.update!(title: "The Founder's Ledger, Renamed")
+
+      get public_kit_path(old)
+      expect(response).to have_http_status(:moved_permanently)
+      expect(response).to redirect_to("/podcasts/#{show.podcast.reload.slug}#rates")
+    end
+
+    it "opens in an older browser, since a brand may follow an old link from anywhere" do
+      get public_kit_path(show.slug), headers: { "User-Agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36" }
+      expect(response).to have_http_status(:moved_permanently)
+    end
+
+    it "404s for an unknown slug or a removed podcast" do
+      get public_kit_path("unknown")
+      expect(response).to have_http_status(:not_found)
+
+      show.podcast.update!(status: "removed")
+      get public_kit_path(show.slug)
+      expect(response).to have_http_status(:not_found)
+    end
   end
 
-  it "is at the podcast's slug, and an earlier slug 301s there" do
-    create(:media_kit, :published, show: show)
-    old = show.slug
-    show.podcast.update!(title: "The Founder's Ledger, Renamed")
-
-    visit_kit(old)
-    expect(response).to have_http_status(:moved_permanently)
-    expect(response).to redirect_to(public_kit_path(show.reload.slug))
-    visit_kit(show.slug)
-    expect(response).to have_http_status(:ok)
-  end
-
-  it "404s for a podcast whose only published kit belongs to a workspace that isn't the owner's" do
-    create(:media_kit, show: show, published_at: Time.current)
-    visit_kit
-    expect(response).to have_http_status(:not_found)
-  end
-
-  it "404s for an unpublished kit while the owner's preview still works" do
-    create(:media_kit, show: show)
-    show.verify!(via: "admin")
-
-    visit_kit
-    expect(response).to have_http_status(:not_found)
-
+  # The kit content, on the owner's printable preview (the public page it used to be is the podcast page now).
+  def visit_kit
     sign_in user
     get show_media_kit_path(show)
-    expect(response).to have_http_status(:ok)
-    expect(response.body).to include("kit-watermark", "The Founder&#39;s Ledger")
   end
 
   describe "a published kit" do
     let!(:kit) { create(:media_kit, :published, show: show, hidden_brand_ids: [ "b2" ]) }
     let!(:report) { create(:report, show: show, status: "done", audience: audience) }
 
-    it "shows the kit with the self-reported note and without hidden brands or the watermark" do
+    it "shows the kit with the self-reported note and without hidden brands" do
       visit_kit
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Stats as reported by the verified owner.", "4,200", "148", "Weekly",
                                        "Fieldnote Coffee", "Personal finance", "Plain-English money lessons")
       expect(response.body).not_to include("Rival Pods")
-      expect(response.body).not_to include("kit-watermark")
     end
 
     it "names the host of the verified RSS feed, and nothing else from its URL" do
@@ -83,7 +87,7 @@ RSpec.describe "Public media kits" do
                      heatmap: { "location" => "US", "points" => [ { "lat" => 30.3, "lng" => -97.7, "affinity" => 1.0, "label" => "Austin" },
                                                                  { "lat" => 39.7, "lng" => -105.0, "affinity" => 0.5, "label" => "Denver" } ] })
       show.update!(contact_email: "sponsors@example.com")
-      get public_kit_path(show.slug), headers: { "User-Agent" => browser }
+      visit_kit
       doc = Nokogiri::HTML(response.body)
 
       chips = doc.css(".taste-chips [data-taste-chip]").map(&:text)
@@ -118,55 +122,6 @@ RSpec.describe "Public media kits" do
       expect(response.body).not_to include("Secret Sponsor Co")
     end
 
-    it "carries every share tag once, points them at the kit's own share image and stays indexable" do
-      visit_kit
-      doc = Nokogiri::HTML(response.body)
-
-      expect_share_tags(doc, url: "http://www.example.com/k/#{show.slug}",
-                             image: %r{\Ahttp://www\.example\.com/k/#{show.slug}/og\.png\?v=\h{12}\z})
-      tags = share_tags(doc)
-      expect(tags["og:title"]).to eq([ "The Founder's Ledger media kit" ])
-      expect(tags["og:description"]).to eq([ "Plain-English money lessons for first-time founders" ])
-      expect(tags["og:image:alt"]).to eq([ "Media kit for The Founder's Ledger" ])
-      # The version follows the card, so link previews pick up a changed kit.
-      versions = [ tags["og:image"].first ]
-      travel(1.minute) { kit.update!(headline: "A new headline") }
-      visit_kit
-      versions << share_tags(Nokogiri::HTML(response.body))["og:image"].first
-      expect(versions.uniq.size).to eq(2)
-      expect(response.body).not_to include("noindex")
-      expect(response.headers["X-Robots-Tag"]).to be_nil
-    end
-
-    it "counts views from visitors but not from the owner or bots" do
-      visit_kit
-      visit_kit(agent: "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)")
-      visit_kit(agent: "facebookexternalhit/1.1")
-      visit_kit(agent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/120.0 Safari/537.36")
-      expect(kit.reload.views_count).to eq(1)
-
-      sign_in user
-      visit_kit
-      expect(kit.reload.views_count).to eq(1)
-    end
-
-    it "counts a returning visitor once per 30 minutes" do
-      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
-      3.times { visit_kit }
-      get public_kit_path(show.slug), headers: { "User-Agent" => browser, "REMOTE_ADDR" => "198.51.100.4" }
-      expect(kit.reload.views_count).to eq(2)
-
-      travel 31.minutes
-      visit_kit
-      expect(kit.reload.views_count).to eq(3)
-    end
-
-    it "opens in an older browser, since a brand may use whatever their company provides" do
-      visit_kit(agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
-      expect(response).to have_http_status(:ok)
-      expect(kit.reload.views_count).to eq(1)
-    end
-
     it "offers a print button wired to Stimulus, with no inline script" do
       visit_kit
       expect(response.body).to include('data-action="print#print"')
@@ -190,13 +145,6 @@ RSpec.describe "Public media kits" do
         expect(response.body).not_to include("owner@example.com")
         expect(response.body).not_to include("mailto:")
       end
-
-      it "is left out when there is neither, with no prompt for the owner on the public page" do
-        visit_kit
-        expect(response.body).not_to include("Work with us")
-        expect(response.body).not_to include("Add a contact email")
-        expect(response.body).not_to include("owner@example.com")
-      end
     end
 
     it "shows the Made with Midrolo badge only when the plan has one" do
@@ -219,6 +167,5 @@ RSpec.describe "Public media kits" do
 
     expect(response.body).to include("Stats as reported by the verified owner.", "Every week we sit down")
     expect(response.body).not_to include("Fieldnote Coffee")
-    expect(response.body).not_to include("Run a Snapshot")
   end
 end

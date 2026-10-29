@@ -48,6 +48,23 @@ RSpec.describe "Shows" do
         expect(done_card.at_css("a[href='#{show_report_path(done, report)}']").text.squish).to eq("Latest report: Report ready")
         expect(done_card.at_css("form")).to be_nil
       end
+
+      it "says which shows are claimed, which are drafts and which another account manages (lane L4)" do
+        claimed = create(:show, user: user, title: "Claimed Show")
+        claimed.verify!(via: "admin")
+        draft = create(:show, user: user, title: "Draft Show")
+        elsewhere = create(:show, user: user, title: "Taken Show")
+        create(:show, podcast: elsewhere.podcast).verify!(via: "admin")
+        get "/shows"
+        cards = Nokogiri::HTML(response.body).css("main li.card").index_by { |card| card.at_css(".type-h3").text }
+
+        expect(cards["Claimed Show"].text.squish).to include("Claimed Your listing")
+        expect(cards["Claimed Show"].at_css("a[href='#{edit_show_media_kit_path(claimed)}']")).to be_present
+        expect(cards["Draft Show"].text.squish).to include("Draft Verify you own it")
+        expect(cards["Draft Show"].at_css("a[href='#{new_show_verification_path(draft)}']")).to be_present
+        expect(cards["Taken Show"].text.squish).to include("Managed by someone else Ask for access")
+        expect(cards["Taken Show"].at_css("a[href='#{new_podcast_claim_path(elsewhere.podcast)}']")).to be_present
+      end
     end
 
     describe "GET /shows/new" do

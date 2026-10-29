@@ -11,6 +11,8 @@
     </div>
   <% end %>
 
+  <%= render "media_kits/listing", f: f, show: show, kit: kit %>
+
   <%= render "components/card", title: "Your story" do %>
     <div class="flex flex-col gap-6">
       <div>
@@ -86,8 +88,10 @@
       <% end %>
     </div>
     <p id="rates-basis" class="hint">Our suggestion: <%= suggested.basis %>.</p>
-    <% unless show.downloads_per_episode %>
-      <p class="hint"><%= link_to "Add your downloads per episode", edit_show_path(show), class: "link" %> for a sharper suggestion.</p>
+    <% if (basis = listing_downloads_basis(content.downloads_basis)) %>
+      <p class="hint">It uses <%= basis %>.</p>
+    <% else %>
+      <p class="hint">We don't have your downloads yet. <%= link_to "Add your downloads per episode", edit_show_path(show), class: "link" %> for a sharper suggestion.</p>
     <% end %>
   <% end %>
 
@@ -110,7 +114,7 @@
   <% end %>
 
   <div class="flex flex-wrap items-center gap-3">
-    <%= f.submit "Save kit", class: "btn btn-primary btn-lg" %>
+    <%= f.submit "Save listing", class: "btn btn-primary btn-lg" %>
     <%= ui_button "Preview", show_media_kit_path(show), variant: :ghost, size: :lg %>
   </div>
 <% end %>

@@ -7,9 +7,9 @@
     <p class="min-w-0">
       <strong>Preview.</strong> Only you can see this page.
       <% if @show.public_kit? %>
-        It's published at <%= link_to public_kit_url(@show.slug), public_kit_path(@show.slug), class: "link" %>.
+        Your rates are live on <%= link_to "your show's page", listing_podcast_path(@show.podcast, anchor: "rates"), class: "link" %>.
       <% else %>
-        Brands see it once you publish it.
+        Print it or save it as a PDF to send to brands. Your rates go on your show's page once you publish.
       <% end %>
     </p>
     <div class="flex flex-wrap items-center gap-2">
