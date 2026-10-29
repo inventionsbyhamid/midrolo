@@ -103,6 +103,30 @@ RSpec.describe FitSearch::Run do
     expect(client.reload.qloo_profile["entity_id"]).to eq("fake:brand:notion")
   end
 
+  # L11: a search named after another brand overwrote that brand's Qloo profile, categories and entity id.
+  it "writes Qloo data only onto a brand the searcher is a verified member of, or one nobody has joined" do
+    agency = create(:brand, name: "Acme Agency", domain: "acme.example")
+    client = create(:brand, name: "Notion")
+    create(:brand_member, brand: client, verified_at: Time.current)
+    create(:brand_member, brand: agency, user: user, verified_at: Time.current)
+
+    described_class.call(create(:fit_search, user: user, brand: agency, query: "Notion", website: "acme.example"))
+
+    expect(client.reload).to have_attributes(qloo_profile: {}, qloo_entity_id: nil, categories: [])
+  end
+
+  it "keeps an unverified member's search from writing onto their brand while it has members" do
+    create(:brand_member, brand: brand, user: user)
+
+    described_class.call(search)
+    expect(search.reload).to have_attributes(status: "done", qloo_brand_entity_id: "fake:brand:notion")
+    expect(brand.reload).to have_attributes(qloo_profile: {}, qloo_entity_id: nil, categories: [])
+
+    BrandMember.find_by!(brand: brand, user: user).update!(verified_at: Time.current)
+    described_class.call(create(:fit_search, user: user, brand: brand, query: "Notion"))
+    expect(brand.reload.qloo_entity_id).to eq("fake:brand:notion")
+  end
+
   it "uses the brand's categories as Qloo's signal when Qloo doesn't know the brand by name" do
     podcast("Index Fund Mornings")
     unknown = create(:fit_search, user: user, brand: create(:brand, name: "Zzyzx Ledgerworks"), query: "Zzyzx Ledgerworks",

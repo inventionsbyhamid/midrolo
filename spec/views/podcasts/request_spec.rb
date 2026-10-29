@@ -41,6 +41,18 @@ RSpec.describe "podcasts/_request" do
     expect(render_box(claimed, user: membership.user).at_css("#request a")["href"]).to eq("/conversations/#{conversation.public_id}")
   end
 
+  it "says a colleague asked, with no link or date, to an unverified member" do
+    colleague = brand_member_for
+    start_request(claimed, colleague)
+    member = brand_member_for(brand: colleague.brand)
+
+    box = render_box(claimed, user: member.user)
+
+    expect(box.at_css("#request").text).to include(Conversations::Start::COLLEAGUE_ASKED)
+    expect(box.css("#request a, #request form")).to be_empty
+    expect(box.text).not_to include("You asked on")
+  end
+
   it "points the owner at their requests" do
     expect(render_box(claimed, user: owner).at_css("#request a").text).to eq("Requests to your show")
   end

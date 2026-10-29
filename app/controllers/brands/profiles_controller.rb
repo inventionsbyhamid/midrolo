@@ -1,13 +1,15 @@
 module Brands
-  # "I'm a brand" (onboarding): the brand's name and website make or find the Brand (Brand.resolve) and the user
-  # becomes its member, unverified until they prove a work email. update switches the workspace to another of the
-  # user's brands.
+  # "I'm a brand" (onboarding): the website finds the brand already at its domain, or makes a new one with the typed
+  # name (Brand.for_onboarding); the user becomes its member, unverified until they prove a work email there. A name
+  # never joins a brand, and onboarding never changes a brand's name or domain (review C1). update switches the
+  # workspace to another of the user's brands.
   class ProfilesController < BaseController
     skip_before_action :require_brand_member, only: %i[new create]
     throttle to: 10, within: 1.hour, only: :create, by: -> { current_user.id }, name: "brand_profiles"
 
     WEBMAIL = "Use your company's website, not a free email provider.".freeze
     NEEDS_NAME = "Enter your brand's name.".freeze
+    NEEDS_WEBSITE = "Enter your company's website, like yourbrand.com. A work email there verifies you.".freeze
 
     def new
       @name = current_brand&.name
@@ -17,10 +19,12 @@ module Brands
     def create
       @name = params[:name].to_s.squish.first(Brand::NAME_LIMIT)
       @website = params[:website].to_s.strip.first(200)
+      domain = Brand.normalize_domain(@website)
       return refuse(NEEDS_NAME) if @name.blank?
-      return refuse(WEBMAIL) if @website.present? && Brand.webmail?(Brand.normalize_domain(@website))
+      return refuse(NEEDS_WEBSITE) if domain.nil?
+      return refuse(WEBMAIL) if Brand.webmail?(domain)
 
-      member = join(Brand.resolve(name: @name, domain: @website.presence))
+      member = join(Brand.for_onboarding(name: @name, website: domain))
       session[:brand_member_id] = member.id
       current_user.working_as_brand!
       # Back to where the brand was going (a Request a spot form stores itself before sending them here), else search.

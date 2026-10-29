@@ -38,6 +38,21 @@ RSpec.describe Sponsors::Record do
     expect(brand.reload).to have_attributes(name: "Manscaped", sponsor_mentions_count: 2)
   end
 
+  # C1: anyone can add a feed, so its show notes must never give an existing brand a domain (which a work email at it
+  # would then verify into) or another name.
+  it "never gives a brand a domain or a new name from a feed" do
+    acme = create(:brand, name: "Acme", domain: nil)
+    create(:brand_member, brand: acme, verified_at: Time.current)
+    manscaped = create(:brand, name: "manscaped.com", domain: "manscaped.com")
+
+    described_class.call(podcast, result([ detection("Acme", domain: "evil.example"), detection("Totally Legit", domain: "manscaped.com") ]))
+
+    expect(acme.reload).to have_attributes(name: "Acme", domain: nil)
+    expect(manscaped.reload.name).to eq("manscaped.com")
+    expect(SponsorMention.where(episode: episode).map { |m| m.brand.domain }).to contain_exactly("evil.example", "manscaped.com")
+    expect(Brand.find_by!(domain: "evil.example")).to have_attributes(name: "Acme", sponsor_mentions_count: 1)
+  end
+
   it "replaces a checked episode's mentions, but only adds to an episode the patterns alone read" do
     old = create(:sponsor_mention, episode: episode, podcast: podcast, brand: create(:brand, name: "Gone"), detected_by: "llm")
     kept = create(:sponsor_mention, episode: create(:episode, podcast: podcast), podcast: podcast, brand: create(:brand, name: "Kept"))

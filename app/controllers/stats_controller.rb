@@ -10,10 +10,10 @@ class StatsController < ApplicationController
 
   def show
     @podcast = @show.podcast
-    @connections = @podcast.stat_connections.where(provider: Stats::PLATFORMS.keys).index_by(&:provider)
-    @readings = @podcast.stat_readings.to_a
     @owner = owner?
     @claimed_elsewhere = @podcast.claimed? && !@owner
+    @connections = visible_connections.index_by(&:provider)
+    @readings = @podcast.stat_readings.to_a
   end
 
   # Saves the downloads per episode on the workspace, and for the owner also as the podcast's provided reading.
@@ -43,4 +43,11 @@ class StatsController < ApplicationController
 
   # The podcast's owner is this workspace: it is verified (one owner per podcast).
   def owner? = @show.verified? && @show.podcast.claimed?
+
+  # The owner sees every connection on the podcast (and may replace one another account left); any other workspace
+  # sees only the user's own, never another account's platform show, error or buttons (review L10).
+  def visible_connections
+    connections = @podcast.stat_connections.where(provider: Stats::PLATFORMS.keys)
+    @owner ? connections : connections.where(user_id: current_user.id)
+  end
 end

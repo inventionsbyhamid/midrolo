@@ -107,6 +107,22 @@ RSpec.describe "Stats screen" do
       expect(response.body).not_to include("I&#39;ve invited Midrolo")
     end
 
+    # L10: a draft workspace saw another account's pending connection: its Spotify show, its error, and buttons that 404.
+    it "shows a draft workspace only its own connections, and the owner every connection on the podcast" do
+      stranger = create(:user)
+      theirs = create(:stat_connection, podcast: podcast, user: stranger, show: create(:show, user: stranger, podcast: podcast),
+                                        external_id: "0StrangersShow0000000", last_error: "Spotify says the stranger's invite is missing.")
+
+      get show_stats_path(show)
+      expect(response.body).not_to include("0StrangersShow0000000", "the stranger&#39;s invite is missing",
+                                           check_show_stat_connection_path(show, theirs))
+      expect(response.body).to include('id="show_link_spotify"')
+
+      claim!
+      get show_stats_path(show)
+      expect(response.body).to include("0StrangersShow0000000", check_show_stat_connection_path(show, theirs))
+    end
+
     it "lets a draft user set up an invite, which waits for the claim" do
       expect { post show_stat_connections_path(show), params: { provider: "apple", show_link: "id1234567890" } }
         .to change(StatConnection, :count).by(1)

@@ -187,6 +187,23 @@ RSpec.describe "Conversations" do
       expect(conversation.messages.count).to eq(1)
     end
 
+    # M1: new and create used to redirect an unverified colleague to this thread, which 404s for them.
+    it "tells an unverified colleague the brand already asked, without the thread, its date or a second request" do
+      colleague = brand_member_for(brand: brand)
+      sign_in colleague.user
+
+      get new_conversation_path(podcast: podcast.slug)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(Conversations::Start::COLLEAGUE_ASKED)
+      expect(response.body).not_to include(conversation_path(conversation), "spot_request[body]")
+
+      ask
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.body).to include(Conversations::Start::COLLEAGUE_ASKED)
+      expect(response.body).not_to include(conversation_path(conversation))
+      expect(Conversation.count).to eq(1)
+    end
+
     it "keeps an unverified member of the brand out, and lets a verified one in" do
       colleague = brand_member_for(brand: brand)
       sign_in colleague.user
