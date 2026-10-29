@@ -119,6 +119,45 @@ RSpec.describe "Brand workspace" do
       expect(user.reload.last_role).to eq("brand")
     end
 
+    it "links each dashboard counter to its list and shows the latest requests with their status (review BR-15)" do
+      podcast = claimed_podcast(owner: create(:user), title: "Shipping Soon")
+      create(:conversation, brand: brand, started_by: user, podcast: podcast, status: "accepted")
+
+      get brand_root_path
+
+      page = Nokogiri::HTML(response.body)
+      counters = page.css(".dash-counter").to_h { |link| [ link.at_css(".stat-label").text, link["href"] ] }
+      expect(counters).to eq("Searches" => brand_searches_path, "Saved shows" => brand_saved_podcasts_path,
+                             "Requests sent" => brand_inbox_path)
+      requests = page.at_css("section[aria-labelledby='requests-heading']").text.squish
+      expect(requests).to include("Shipping Soon", "Accepted")
+      expect(page.at_css("section[aria-labelledby='saved-heading'] .empty-state").text).to include("Nothing saved yet")
+    end
+
+    it "lists saved shows with their fit, price and where the request stands (review BR-11)" do
+      asked = claimed_podcast(owner: create(:user), title: "Shipping Soon")
+      waiting = create(:podcast, :active, title: "Main Street Stories")
+      [ asked, waiting ].each { |podcast| create(:saved_podcast, brand: brand, podcast: podcast, user: user) }
+      search = create(:fit_search, user: user, brand: brand, status: "done")
+      create(:fit_result, fit_search: search, podcast: waiting, position: 1, score: 59)
+      create(:conversation, brand: brand, started_by: user, podcast: asked, status: "open")
+
+      get brand_saved_podcasts_path
+
+      rows = Nokogiri::HTML(response.body).css(".saved-row").to_h { |row| [ row.at_css(".result-title").text, row.text.squish ] }
+      expect(rows["Main Street Stories"]).to include("Strong fit 59", "Hasn't joined Midrolo yet", "Not asked yet", "Ask anyway")
+      expect(rows["Shipping Soon"]).to include("Open", "Asked", "Open your request")
+    end
+
+    it "shows a brand-only account its brand limits instead of the podcaster's plan (review BR-2)" do
+      get account_path
+
+      card = Nokogiri::HTML(response.body).css(".card").find { |c| c.at_css(".card-title")&.text == "Brand" }
+      expect(card.text.squish).to include("Fit searches left today 5 of 5", "Requests left today 3 of 3", "Unverified",
+                                          "Fieldnote Coffee", "Working on this one", "Verify your work email")
+      expect(response.body).not_to include("Snapshot")
+    end
+
     it "counts the brand side's unread conversations on the nav's Inbox, as the main nav does" do
       create(:conversation, brand: brand, started_by: user)
       create(:conversation, podcast: claimed_podcast(owner: user)) # the podcaster side: the brand inbox doesn't list it
@@ -187,7 +226,7 @@ RSpec.describe "Brand workspace" do
 
         create(:agent_step, run: search, label: "Finding Fieldnote Coffee on Qloo…", status: "running")
         get brand_search_path(search)
-        expect(response.body).to include("Our agent is working", "Finding Fieldnote Coffee on Qloo…", "turbo-cable-stream-source",
+        expect(response.body).to include("Our agent is searching Qloo", "Finding Fieldnote Coffee on Qloo…", "turbo-cable-stream-source",
                                          "agent_steps_fit_search_#{search.public_id}")
       end
 
@@ -210,15 +249,66 @@ RSpec.describe "Brand workspace" do
                             proof: { "brands" => [ { "brand" => "Trade Coffee", "relation" => "competitor", "episodes" => 4 } ],
                                      "points" => { "taste" => 45, "proof" => 24, "price" => 15, "trust" => 10 } })
 
+        create(:agent_step, run: search, tool: "find_brand", label: "Finding Fieldnote Coffee on Qloo…", status: "ok",
+                            output_summary: "Found Fieldnote Coffee on Qloo in Food & Beverage.")
+
         get brand_search_path(search)
 
         body = response.body
-        expect(body).to include("The Founder&#39;s Ledger", "87", "Qloo ranks it #2 of 50 podcasts",
+        expect(body).to include("The Founder&#39;s Ledger", "87", "Strong fit", "Qloo ranks it #2 of 50 podcasts",
                                 "Trade Coffee, a competitor, sponsored 4 episodes", "From $400 per episode",
                                 "Within your budget", "2,400 plays per episode", "Request a spot", "/podcasts/#{podcast.slug}#request",
-                                "Taste data from Qloo", "45 of 50", "How the agent searched")
+                                "Taste data from Qloo", "45 of 50", "Ready to book")
         expect(body).to include(brand_saved_podcasts_path) # the Save button
         expect(body.scan("<li>").size).to be >= 3 # the three summary bullets
+        # How we found these (review BR-7): the agent's steps in a panel above the results.
+        panel = Nokogiri::HTML(body).at_css("[data-how-found]")
+        expect(panel.text.squish).to include("How we found these", "Found your brand on Qloo", "Found Fieldnote Coffee on Qloo in Food & Beverage.")
+        expect(body.index("How we found these")).to be < body.index("The Founder&#39;s Ledger")
+      end
+
+      it "groups the results: bookable shows first, then shows that haven't joined, with one shared proof line" do
+        search = create(:fit_search, user: user, brand: brand, status: "done", summary: "One.")
+        ready = create(:podcast, :active, title: "Ready Show", open_to_sponsors: true, claimed_at: 1.day.ago, min_price_cents: 20_000)
+        shared = { "brand" => "HelloFresh", "relation" => "category", "episodes" => 1 }
+        unclaimed = Array.new(4) { |i| create(:podcast, :active, title: "Unclaimed #{i + 1}") }
+        dormant = create(:podcast, title: "Quiet Show", status: "dormant", last_published_at: 14.months.ago)
+        create(:fit_result, fit_search: search, podcast: ready, position: 1, score: 41, price_fit: "within",
+                            proof: { "tier" => "ready", "brands" => [ shared ] })
+        unclaimed.each_with_index do |podcast, i|
+          create(:fit_result, fit_search: search, podcast: podcast, position: i + 2, score: 59 - i, price_fit: "ask",
+                              proof: { "tier" => "unclaimed", "brands" => [ shared ] })
+        end
+        create(:fit_result, fit_search: search, podcast: dormant, position: 6, score: 70, price_fit: "ask", proof: {})
+
+        get brand_search_path(search)
+
+        page = Nokogiri::HTML(response.body)
+        expect(page.css("[data-group]").map { |group| group["data-group"] }).to eq(%w[ready unclaimed dormant])
+        expect(page.at_css("[data-group=ready] h3").text.squish).to eq("Ready to book 1")
+        expect(page.css("[data-group=ready] .result-featured").size).to eq(1)
+        expect(page.at_css("[data-group=ready]").text).to include("Request a spot")
+        unclaimed_text = page.at_css("[data-group=unclaimed]").text
+        expect(unclaimed_text).to include("Ask anyway")
+        expect(unclaimed_text).not_to include("Request a spot", "No rate card yet")
+        expect(page.at_css("[data-group=dormant]").text).to include("No new episode in")
+        expect(page.at_css("[data-common-proof]").text.squish).to eq("HelloFresh, a brand in your category, sponsored 5 of these shows.")
+        expect(page.css("[data-proof]")).to be_empty # said once above the list instead
+      end
+
+      it "asks for categories when Qloo didn't know the brand and none were picked (review BR-9)" do
+        search = create(:fit_search, user: user, brand: brand, query: "Oatlyfe", website: "oatlyfe.com", status: "done",
+                                     categories: [], qloo_brand_entity_id: nil)
+
+        get brand_search_path(search)
+
+        page = Nokogiri::HTML(response.body)
+        expect(response.body).to include("No matches yet", "Qloo doesn't know Oatlyfe yet. Pick up to 3 categories")
+        expect(response.body).not_to include("0 shows ranked")
+        form = page.at_css(".no-matches form[action='#{brand_searches_path}']")
+        expect(form.at_css("input[name='fit_search[query]']")["value"]).to eq("Oatlyfe")
+        expect(form.css("input[type=checkbox][name='fit_search[categories][]']").size).to eq(FitSearch::Categories.names.size)
+        expect(page.css("a.btn, button").map { |b| b.text.squish }.count("New search")).to eq(1)
       end
 
       it "fails a search stuck queued or running for 15 minutes, says so plainly and offers to run it again" do

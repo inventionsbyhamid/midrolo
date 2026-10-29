@@ -33,7 +33,10 @@
       <% end %>
     <% end %>
 
-    <%= button_to "Report this conversation", report_conversation_path(conversation), method: :post, class: "btn btn-ghost btn-md w-full",
-          form: { data: { turbo_confirm: "Report this conversation to #{APP_NAME}? We'll review it." } } %>
+    <%# The brand reports once the show has answered; their own unanswered request has nothing to report (review BR-14). %>
+    <% if side == :podcaster || conversation.first_reply_at.present? %>
+      <%= button_to "Report this conversation", report_conversation_path(conversation), method: :post, class: "btn btn-ghost btn-md w-full",
+            form: { data: { turbo_confirm: "Report this conversation to #{APP_NAME}? We'll review it." } } %>
+    <% end %>
   </div>
 <% end %>

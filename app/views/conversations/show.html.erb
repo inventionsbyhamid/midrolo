@@ -13,8 +13,11 @@
       <h1 class="type-h2"><%= inbox_counterparty(@conversation, @side) %></h1>
       <%# One structure both ways (review C-4): who asked about which show. %>
       <p class="text-ink-soft">
-        <%= @conversation.brand.name %>
-        asked about sponsoring <%= link_to podcast.title, inbox_podcast_path(podcast), class: "link" %>
+        <% if @side == :podcaster %>
+          Asked about sponsoring <%= link_to podcast.title, inbox_podcast_path(podcast), class: "link" %>
+        <% else %>
+          <%= @conversation.brand.name %> asked about sponsoring <%= link_to podcast.title, inbox_podcast_path(podcast), class: "link" %>
+        <% end %>
       </p>
       <p class="mt-2 flex flex-wrap gap-2">
         <%= inbox_status_badge(@conversation) %>
@@ -28,6 +31,7 @@
   <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
     <div class="flex min-w-0 flex-col gap-4">
       <%= render "conversations/status_note", conversation: @conversation, side: @side %>
+      <%= render "conversations/brand_next", conversation: @conversation if @side == :brand && @conversation.declined? %>
       <ol id="<%= dom_id(@conversation, :messages) %>" class="flex flex-col gap-3" aria-label="Messages">
         <%= render partial: "messages/message", collection: @messages,
               locals: { conversation: @conversation, brand_user_ids: @brand_user_ids, viewer: current_user } %>

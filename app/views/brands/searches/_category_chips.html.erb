@@ -1,0 +1,9 @@
+<%# locals: (chosen: []) -%>
+<div class="mt-1 flex flex-wrap gap-2">
+  <% FitSearch::Categories.names.each do |name| %>
+    <label class="chip cursor-pointer gap-2 has-[:checked]:border-plum has-[:checked]:bg-plum-soft has-[:checked]:text-plum">
+      <%= check_box_tag "fit_search[categories][]", name, chosen.include?(name), id: "category_#{name.parameterize}", class: "accent-plum" %>
+      <span><%= name %></span>
+    </label>
+  <% end %>
+</div>

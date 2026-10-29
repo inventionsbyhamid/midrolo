@@ -1,19 +1,22 @@
-<%# locals: (links: [], cta: nil, sign_out: false) -%>
+<%# locals: (links: [], cta: nil, sign_out: false, side: nil) -%>
 <%# links is a list of [label, href] or [label, href, count] (NavigationHelper); cta is one [label, href] pair or nil.
-    The full row shows from 64rem: a signed-in nav carries up to six links, too many for a tablet. %>
+    The full row shows from 64rem: a signed-in nav carries up to six links, too many for a tablet. Signed in, the side
+    switch (Podcaster or Brand) sits before Sign out; side says which is on (the brand layout passes :brand). %>
+<% hrefs = links.map(&:second) %>
 <header class="site-header">
   <div class="wrap flex h-16 items-center justify-between gap-4">
     <%= link_to brand_logo, "/", class: "logo", aria: { label: "#{APP_NAME} home" } %>
 
     <nav aria-label="Main" class="hidden items-center gap-1 lg:flex">
       <% links.each do |label, href, count| %>
-        <%= link_to nav_label(label, count), href, class: "nav-link", aria: { current: nav_current(href) } %>
+        <%= link_to nav_label(label, count), href, class: "nav-link", aria: { current: nav_current_in(href, hrefs) } %>
       <% end %>
       <% if cta %>
         <%= ui_button cta.first, cta.last, size: :sm, class: "ml-3" %>
       <% end %>
       <% if sign_out %>
-        <%= button_to "Sign out", destroy_user_session_path, method: :delete, class: "btn btn-ghost btn-sm ml-3" %>
+        <%= render "components/side_switch", side: side, class: "ml-3" %>
+        <%= button_to "Sign out", destroy_user_session_path, method: :delete, class: "btn btn-ghost btn-sm ml-1" %>
       <% end %>
     </nav>
 
@@ -23,9 +26,12 @@
         Menu<% if (waiting = links.sum { |link| link[2].to_i }).positive? %> <span class="nav-count" aria-hidden="true"><%= waiting > 99 ? "99+" : waiting %></span> <span class="sr-only"><%= waiting %> unread</span><% end %>
       </button>
       <%= render "components/dialog", title: "Menu", id: "nav-menu", sheet: true do %>
+        <% if sign_out %>
+          <%= render "components/side_switch", side: side, class: "side-switch-sheet" %>
+        <% end %>
         <nav aria-label="Main menu">
           <% links.each do |label, href, count| %>
-            <%= link_to nav_label(label, count), href, class: "nav-sheet-link", aria: { current: nav_current(href) } %>
+            <%= link_to nav_label(label, count), href, class: "nav-sheet-link", aria: { current: nav_current_in(href, hrefs) } %>
           <% end %>
         </nav>
         <% if cta %>

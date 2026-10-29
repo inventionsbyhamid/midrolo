@@ -3,6 +3,7 @@ module Brands
   class DashboardController < BaseController
     SEARCHES_SHOWN = 10
     SAVED_SHOWN = 6
+    REQUESTS_SHOWN = 5
 
     def show
       current_user.working_as_brand!
@@ -18,6 +19,7 @@ module Brands
       requests = current_brand.conversations
       requests = requests.where(started_by_id: current_user.id) unless current_brand_member.verified?
       @requests_count = requests.count
+      @requests = requests.includes(podcast: SavedPodcastsController::PODCAST_PRELOADS).latest_first.limit(REQUESTS_SHOWN).to_a
     end
   end
 end

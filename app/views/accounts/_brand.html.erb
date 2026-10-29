@@ -1,0 +1,41 @@
+<%# locals: (user:) -%>
+<%# The brand side of an account (review BR-2): today's searches and requests against the member's limits, whether the
+    work email is verified, and the brands the user works on, with a switch between them. %>
+<% current = user.brand_member(session[:brand_member_id]) %>
+<% members = user.brand_members.includes(:brand).order(:created_at).to_a %>
+<% searches_left = [ user.brand_daily_search_limit(current) - user.brand_searches_today, 0 ].max %>
+<% requests_left = Conversations::Start.remaining_today(current) %>
+<%= render "components/card", title: "Brand", aside: (current.verified? ? ui_badge("Verified", tone: :success) : ui_badge("Unverified", tone: :warning)) do %>
+  <dl class="grid gap-4 sm:grid-cols-2">
+    <div>
+      <dt class="text-sm text-ink-soft">Fit searches left today</dt>
+      <dd class="text-2xl font-extrabold tabular-nums"><%= searches_left %> <span class="text-base font-semibold text-ink-soft">of <%= user.brand_daily_search_limit(current) %></span></dd>
+    </div>
+    <div>
+      <dt class="text-sm text-ink-soft">Requests left today</dt>
+      <dd class="text-2xl font-extrabold tabular-nums"><%= requests_left %> <span class="text-base font-semibold text-ink-soft">of <%= user.brand_daily_request_limit(current) %></span></dd>
+    </div>
+  </dl>
+  <% unless current.verified? %>
+    <p class="mt-4 text-sm text-ink-soft">Verify a work email at <%= current.brand.domain.presence || "your company's domain" %> to send <%= User::Brands::DAILY_REQUESTS[:verified] %> requests a day and drop the Unverified brand label.</p>
+    <%= ui_button "Verify your work email", new_brand_verification_path, variant: :secondary, size: :sm, class: "mt-3" %>
+  <% end %>
+
+  <h3 class="mt-6 text-sm font-semibold">Your brands</h3>
+  <ul class="mt-2 flex flex-col divide-y divide-line rounded-[var(--radius-control)] border border-line">
+    <% members.each do |member| %>
+      <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <span class="min-w-0">
+          <span class="font-semibold"><%= member.brand.name %></span>
+          <% if member.brand.domain.present? %><span class="text-sm text-ink-soft"> <%= member.brand.domain %></span><% end %>
+        </span>
+        <% if member.id == current.id %>
+          <%= ui_badge "Working on this one", tone: :accent %>
+        <% else %>
+          <%= button_to "Work on this brand", brand_profile_path, method: :patch, params: { member_id: member.id }, class: "btn btn-ghost btn-sm" %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+  <p class="mt-3 text-sm"><%= link_to "Add another brand", brand_start_path, class: "link" %></p>
+<% end %>

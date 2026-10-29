@@ -1,0 +1,26 @@
+<%# locals: (search:) -%>
+<%#
+  While the agent runs (review BR-7): its steps on air, live. The steps arrive over the search's stream into the rail
+  (reports/_progress_rail, AgentStep's broadcasts); until the first one lands, the first step stands in as running, so
+  a queued search never shows an empty box. Skeleton rows mark where the results land.
+%>
+<section class="agent-panel agent-panel-live" aria-labelledby="agent-live-heading">
+  <header class="agent-panel-head">
+    <span class="busy-dot" aria-hidden="true"></span>
+    <div class="min-w-0">
+      <h2 id="agent-live-heading" class="agent-panel-title">Our agent is searching Qloo</h2>
+      <p class="agent-panel-sub" data-run-note>It asks which podcasts <%= search.query %>'s customers love, then checks proof, price and trust. About a minute. This page fills in by itself.</p>
+    </div>
+  </header>
+  <div class="agent-rail">
+    <%= render "brands/searches/trace", search: search %>
+    <p class="agent-rail-placeholder" aria-hidden="true">
+      <span class="busy-dot"></span> Finding <%= search.query %> on Qloo…
+    </p>
+  </div>
+</section>
+<div class="flex flex-col gap-3" aria-hidden="true">
+  <% 3.times do %>
+    <div class="result result-skeleton"><%= render "components/skeleton", lines: 2, label: "Loading results" %></div>
+  <% end %>
+</div>

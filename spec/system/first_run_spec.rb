@@ -62,7 +62,10 @@ RSpec.describe "First run" do
     screenshot("sign-in")
     click_button "Continue with Google"
 
-    # No shows yet, so the app goes straight to adding one, and the welcome email is on its way.
+    # A new account picks its side first (review G-1); as a podcaster with no shows yet, the app goes straight to
+    # adding one, and the welcome email is on its way.
+    expect(page).to have_current_path("/welcome")
+    click_button "I run a podcast"
     expect(page).to have_current_path("/shows/new")
     expect(ActionMailer::Base.deliveries.map { |mail| [ mail.to, mail.subject ] }).to eq([ [ [ "new@example.com" ], "Welcome to Midrolo" ] ])
     expect(page).to have_css("h1", text: "Find your show")

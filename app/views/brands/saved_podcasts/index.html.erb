@@ -4,6 +4,7 @@
     <div>
       <p class="text-sm font-semibold text-plum"><%= current_brand.name %></p>
       <h1 class="type-h1">Saved shows</h1>
+      <% if @saved.any? %><p class="mt-1 text-ink-soft">Your shortlist, with each show's fit, price and where your request stands.</p><% end %>
     </div>
     <%= ui_button "Find podcasts", new_brand_search_path, variant: :secondary %>
   </header>
@@ -11,22 +12,36 @@
     <ul class="flex flex-col gap-3">
       <% @saved.each do |saved| %>
         <% podcast = saved.podcast %>
-        <li class="card">
-          <div class="card-body flex flex-wrap items-center gap-4">
-            <%= podcast_artwork_tag(podcast, size: :thumb, class: "size-16") %>
-            <div class="min-w-0 flex-1">
-              <%= link_to podcast.title, brand_podcast_href(podcast), class: "type-h3 block truncate underline-offset-4 hover:underline" %>
-              <p class="mt-1 flex flex-wrap gap-x-4 text-sm text-ink-soft">
-                <% if (price = brand_price_text(podcast)) %><span><%= price %></span><% end %>
-                <% if (downloads = brand_downloads_text(podcast)) %><span><%= downloads %></span><% end %>
-                <% if (months = brand_open_months_text(podcast)) %><span><%= months %></span><% end %>
-                <span>Saved <%= time_ago_in_words(saved.created_at) %> ago</span>
-              </p>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <%= ui_button "Request a spot", brand_podcast_href(podcast, anchor: "request"), size: :sm %>
-              <%= render "podcasts/save", podcast: podcast, saved: true %>
-            </div>
+        <% fit = @fits[podcast.id] %>
+        <% conversation = @requests[podcast.id] %>
+        <li class="saved-row">
+          <%= podcast_artwork_tag(podcast, size: :thumb, class: "size-16 flex-none") %>
+          <div class="saved-row-main">
+            <%= link_to podcast.title, brand_podcast_href(podcast), class: "result-title result-link", title: podcast.title %>
+            <p class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              <% if fit %><span class="font-semibold text-plum"><%= FitSearch::Scoring.fit_word(fit.score) %> <span class="tabular-nums"><%= fit.score %></span></span><% end %>
+              <span><%= brand_price_text(podcast) || (podcast.claimed? ? "No rates yet" : "Hasn't joined #{APP_NAME} yet") %></span>
+              <% if (downloads = brand_downloads_text(podcast)) %>
+                <span class="flex items-center gap-2"><%= downloads %><%= trust_badge(podcast.downloads_trust) if podcast.downloads_trust.present? %></span>
+              <% end %>
+              <% if (months = brand_open_months_text(podcast)) %><span><%= months %></span><% end %>
+            </p>
+            <p class="flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+              <% if conversation %>
+                <%= inbox_status_badge(conversation) %> <span>Asked <%= inbox_time(conversation.created_at) %></span>
+              <% else %>
+                <span>Saved <%= time_ago_in_words(saved.created_at) %> ago. Not asked yet.</span>
+              <% end %>
+            </p>
+          </div>
+          <div class="saved-row-actions">
+            <% if conversation %>
+              <%= ui_button "Open your request", conversation_path(conversation), size: :sm, variant: :secondary %>
+            <% else %>
+              <%= ui_button podcast.claimed? ? "Request a spot" : "Ask anyway", brand_podcast_href(podcast, anchor: "request"), size: :sm,
+                    variant: podcast.claimed? ? :primary : :secondary %>
+            <% end %>
+            <%= render "podcasts/save", podcast: podcast, saved: true %>
           </div>
         </li>
       <% end %>

@@ -1,0 +1,24 @@
+<%# locals: (search:) -%>
+<%#
+  A search that ranked nothing (review BR-9). When Qloo didn't know the brand and nobody picked a category, the search
+  had nothing to go on: say so and offer the categories right here, with the same search ready to run again.
+%>
+<% chosen = Array(search.categories) %>
+<section class="no-matches" aria-labelledby="no-matches-heading">
+  <h2 id="no-matches-heading" class="type-h2">No matches yet</h2>
+  <% if brand_search_needs_categories?(search) %>
+    <p class="type-lead">Qloo doesn't know <%= search.query %> yet. Pick up to 3 categories and we'll search by the tastes of people who buy in them.</p>
+  <% else %>
+    <p class="type-lead">The catalog has no podcasts in <%= chosen.any? ? Copy.and_list(chosen) : "these categories" %> yet. Try other categories, or search again as the catalog grows.</p>
+  <% end %>
+  <%= form_with url: brand_searches_path, method: :post, class: "flex flex-col gap-4" do %>
+    <%= hidden_field_tag "fit_search[query]", search.query, id: nil %>
+    <%= hidden_field_tag "fit_search[website]", search.website, id: nil %>
+    <%= hidden_field_tag "fit_search[budget]", (search.budget_cents / 100 if search.budget_cents), id: nil %>
+    <fieldset>
+      <legend class="label">Categories <span class="font-normal text-ink-soft">(up to 3)</span></legend>
+      <%= render "brands/searches/category_chips", chosen: chosen %>
+    </fieldset>
+    <%= submit_tag "Search these categories", class: "btn btn-primary btn-lg self-start", name: nil, disabled: AppSettings.runs_paused? %>
+  <% end %>
+</section>
