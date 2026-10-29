@@ -6,7 +6,7 @@ module MatchingHelper
   BRAND_CATEGORY_LIMIT = 5
   # Brands named under each similar show in the report.
   SHOW_SPONSOR_NAMES = 3
-  # Brands listed under "Brands that already sponsor shows like yours" before Show all.
+  # Brands listed under "Brands that already sponsor shows like yours", the most proven first.
   TOP_SPONSORS = 8
 
   # ---- The report ----
@@ -114,7 +114,7 @@ module MatchingHelper
     leans if leans.is_a?(Hash) && (leans["age"].present? || leans["gender"].present?)
   end
 
-  # Where the report says it came from: "From the show's report, Oct 28" or "From a sample report, Oct 28".
+  # Where the section's data came from: "From the show's Midrolo report, Oct 28." or "From a Midrolo sample report, ...".
   def match_report_source(report)
     from = report.show.verified? ? "the show's #{APP_NAME} report" : "a #{APP_NAME} sample report"
     date = report.finished_at || report.updated_at
