@@ -2,12 +2,40 @@
 namespace :catalog do
   desc "Seed the catalog from Qloo's podcasts, matched to their feeds: catalog:seed[1000]"
   task :seed, [ :target ] => :environment do |_task, args|
-    target = Integer(args[:target].presence || Catalog::SeedFromQloo::DEFAULT_TARGET, 10)
+    target = Integer((args[:target].presence || Catalog::SeedFromQloo::DEFAULT_TARGET).to_s, 10)
     abort "catalog:seed: the target must be at least 1" unless target.positive?
 
     result = Catalog::SeedFromQloo.call(target: target, log: ->(line) { puts "catalog:seed: #{line}" })
     puts "catalog:seed: #{result.linked} linked to Qloo; this run matched #{result.matched} (#{result.added} new), " \
          "missed #{result.missed}, read #{result.pages} pages; stopped: #{result.stopped}"
+  end
+
+  desc "Seed from Qloo a page at a time, spread over hours (Catalog::SeedStepJob): catalog:seed_paced[1000,6]"
+  task :seed_paced, [ :target, :hours ] => :environment do |_task, args|
+    target = Integer((args[:target].presence || Catalog::SeedFromQloo::DEFAULT_TARGET).to_s, 10)
+    hours = Float((args[:hours].presence || Catalog::SeedProgress::DEFAULT_HOURS).to_s)
+    abort "catalog:seed_paced: the target must be at least 1" unless target.positive?
+    abort "catalog:seed_paced: the hours must be more than 0" unless hours.positive?
+
+    start = Catalog::SeedProgress.start!(target: target, hours: hours)
+    progress = start.progress
+    case start.status
+    when :started
+      puts "catalog:seed_paced: started: #{progress.linked} of #{target} linked to Qloo now; the first page is queued, " \
+           "then one about every #{(progress.interval / 60.0).round} minutes, aiming to end by " \
+           "#{progress.finish_by.utc.strftime('%b %-d %H:%M')} UTC. Watch /admin (Catalog)."
+    when :running
+      puts "catalog:seed_paced: a paced seed is running already (#{progress.pages} pages read, #{progress.linked} linked, " \
+           "next page #{progress.next_run_at&.utc&.strftime('%b %-d %H:%M')} UTC); nothing started"
+    when :reached
+      puts "catalog:seed_paced: #{Podcast.where.not(qloo_entity_id: nil).count} podcasts are linked to Qloo already, " \
+           "at least the target of #{target}; nothing started"
+    end
+  end
+
+  desc "Stop the paced seed after the page it is on"
+  task seed_stop: :environment do
+    puts(Catalog::SeedProgress.stop! ? "catalog:seed_stop: stopped" : "catalog:seed_stop: no paced seed is running")
   end
 
   desc "Queue feed reads: every podcast never read yet (low priority), then those due (as the 10 minute loop does)"
