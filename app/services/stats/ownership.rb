@@ -26,10 +26,10 @@ module Stats
       name = show["name"].to_s.squish
       return nil if name.present? && Podcast.title_key_for(name).present? && Podcast.title_key_for(name) == podcast.title_key
 
+      # Never the platform show's own name: it would tell this user about a show that isn't theirs.
       platform = ::Stats.platform_name(connection.provider)
       if name.present?
-        "The #{platform} show we can see is called \"#{name.truncate(80)}\", which isn't #{podcast.title.truncate(80)}. " \
-          "Check the link you pasted."
+        "The #{platform} show at that link isn't #{podcast.title.truncate(80)}. Check the link you pasted."
       else
         "We couldn't confirm that the #{platform} show is #{podcast.title.truncate(80)}. Check the link you pasted."
       end

@@ -8,6 +8,10 @@ class StatConnection < ApplicationRecord
   STATUSES = %w[pending_invite active mismatch failed disconnected].freeze
   # How long a pending invite is polled before it gives up.
   INVITE_WINDOW = 14.days
+  # The statuses that hold a platform show: one Midrolo page at a time (a partial unique index backs the validation).
+  LIVE_STATUSES = %w[pending_invite active].freeze
+  TAKEN_MESSAGE = "This show is already connected to another Midrolo page.".freeze
+  RELEASED_MESSAGE = "The show's owner connected it to their own Midrolo page, so this invite stopped.".freeze
 
   belongs_to :podcast
   belongs_to :show, optional: true
@@ -23,4 +27,35 @@ class StatConnection < ApplicationRecord
 
   validates :provider, uniqueness: { scope: :podcast_id }
   validates :external_id, length: { maximum: 200 }
+  validate :platform_show_free, if: :claims_platform_show?
+
+  # Pending invites for this platform show on other podcasts, made by someone who doesn't own that podcast, stop: the
+  # owner connecting their own show takes it over, so a draft workspace can't hold someone else's show for the whole
+  # invite window. Their maker sees RELEASED_MESSAGE, which names no show.
+  def self.release_unowned_invites!(provider:, external_id:, except_podcast_id:)
+    where(provider: provider, external_id: external_id, status: "pending_invite").where.not(podcast_id: except_podcast_id)
+      .includes(podcast: :owner_show).find_each do |connection|
+        owner_id = connection.podcast.owner_show&.user_id
+        next if owner_id.present? && owner_id == connection.user_id
+
+        connection.update!(status: "failed", last_error: RELEASED_MESSAGE)
+      end
+  end
+
+  # Another podcast's pending invite or active connection holds this platform show.
+  def platform_show_taken?
+    external_id.present? &&
+      self.class.where(provider: provider, external_id: external_id, status: LIVE_STATUSES).where.not(id: id).exists?
+  end
+
+  private
+
+  def claims_platform_show?
+    external_id.present? && status.in?(LIVE_STATUSES) &&
+      (new_record? || will_save_change_to_status? || will_save_change_to_external_id? || will_save_change_to_provider?)
+  end
+
+  def platform_show_free
+    errors.add(:base, TAKEN_MESSAGE) if platform_show_taken?
+  end
 end

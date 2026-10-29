@@ -82,7 +82,17 @@ RSpec.describe Stats::SyncJob do
       stub_fetch(spotify_result(show_name: "Someone Else's Pod"))
       run
       expect(connection.reload.status).to eq("mismatch")
-      expect(connection.last_error).to include("Someone Else's Pod").and include("Check the link")
+      expect(connection.last_error).to include("Check the link")
+      expect(connection.last_error).not_to include("Someone Else") # never names a show that isn't theirs
+      expect(readings).to be_empty
+    end
+
+    it "saves nothing when another page's connection holds the platform show by now" do
+      connection.update!(status: "mismatch")
+      create(:stat_connection, provider: "spotify", external_id: connection.external_id, status: "active")
+      stub_fetch(spotify_result)
+      run
+      expect(connection.reload).to have_attributes(status: "mismatch", last_error: StatConnection::TAKEN_MESSAGE)
       expect(readings).to be_empty
     end
 

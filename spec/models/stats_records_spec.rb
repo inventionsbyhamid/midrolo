@@ -38,6 +38,23 @@ RSpec.describe "Stats records" do
       expect(build(:stat_connection, provider: "myspace")).not_to be_valid
       expect(build(:stat_connection, podcast: connection.podcast, provider: "spotify")).not_to be_valid
     end
+
+    it "lets one page at a time hold a platform show, while pending or active, with a message naming no show" do
+      held = create(:stat_connection, provider: "spotify", external_id: "show-1", status: "active")
+
+      twin = build(:stat_connection, provider: "spotify", external_id: "show-1")
+      expect(twin).not_to be_valid
+      expect(twin.errors.full_messages).to eq([ "This show is already connected to another Midrolo page." ])
+      expect(build(:stat_connection, provider: "apple", external_id: "show-1")).to be_valid
+      expect(build(:stat_connection, provider: "spotify", external_id: "show-1", status: "mismatch")).to be_valid
+
+      held.update!(status: "disconnected")
+      expect(twin).to be_valid
+      twin.save!
+      expect { held.update!(status: "active") }.to raise_error(ActiveRecord::RecordInvalid)
+      # The database holds the line too, past the validation.
+      expect { held.update_column(:status, "pending_invite") }.to raise_error(ActiveRecord::RecordNotUnique)
+    end
   end
 
   describe ServiceSession do
