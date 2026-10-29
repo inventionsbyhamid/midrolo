@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%= render "layouts/head" %>
+  </head>
+
+  <%# The brand workspace (lane L6): the app layout's frame with the brand side's links. %>
+  <body class="flex min-h-dvh flex-col">
+    <a href="#main" class="skip-link">Skip to content</a>
+    <%= render "shared/masquerade_banner" %>
+    <%= render "components/demo_banner" if demo_mode? %>
+    <%= render "shared/promo_banner" %>
+    <%= render "components/nav", links: brand_nav_links, sign_out: true %>
+    <%= render "components/flash" %>
+    <main id="main" tabindex="-1" class="wrap flex-1 py-8 sm:py-10">
+      <%= yield %>
+    </main>
+    <%= render "components/footer" %>
+  </body>
+</html>

@@ -1,0 +1,61 @@
+<% content_for :title, current_brand.name %>
+<% member = current_brand_member %>
+<div class="flex flex-col gap-8">
+  <header class="flex flex-wrap items-center justify-between gap-4">
+    <div class="min-w-0">
+      <p class="text-sm font-semibold text-plum">Brand</p>
+      <h1 class="type-h1 truncate"><%= current_brand.name %></h1>
+      <p class="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+        <% if current_brand.domain.present? %><span><%= current_brand.domain %></span><% end %>
+        <%= member.verified? ? ui_badge("Verified", tone: :success) : ui_badge("Unverified", tone: :warning) %>
+      </p>
+    </div>
+    <%= ui_button "Find podcasts", new_brand_search_path, size: :lg %>
+  </header>
+
+  <% unless member.verified? %>
+    <%= render "components/card", title: "Verify your work email" do %>
+      <p class="text-ink-soft">Podcasters see an "Unverified brand" label on your requests until you do. Verified brands send <%= User::Brands::DAILY_REQUESTS[:verified] %> requests a day instead of <%= User::Brands::DAILY_REQUESTS[:unverified] %>.</p>
+      <%= ui_button "Verify now", new_brand_verification_path, variant: :secondary, class: "mt-4" %>
+    <% end %>
+  <% end %>
+
+  <div class="grid gap-4 sm:grid-cols-3">
+    <%= render "components/stat", value: number_with_delimiter(@searches_count), label: "Searches" %>
+    <%= render "components/stat", value: number_with_delimiter(@saved_count), label: "Saved shows" %>
+    <%= render "components/stat", value: number_with_delimiter(@requests_count), label: "Requests sent" %>
+  </div>
+
+  <section aria-labelledby="searches-heading" class="flex flex-col gap-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 id="searches-heading" class="type-h2">Searches</h2>
+      <% if @searches.any? %><%= link_to "See all", brand_searches_path, class: "link text-sm" %><% end %>
+    </div>
+    <% if @searches.any? %>
+      <%= render "brands/searches/list", searches: @searches, result_counts: @result_counts %>
+    <% else %>
+      <%= render "components/empty_state", title: "No searches yet",
+            body: "Our agent asks Qloo which podcasts your customers love, then checks proof, price and trust.",
+            action_label: "Run your first search", action_href: new_brand_search_path %>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="saved-heading" class="flex flex-col gap-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 id="saved-heading" class="type-h2">Saved shows</h2>
+      <% if @saved_count.positive? %><%= link_to "See all #{@saved_count}", brand_saved_podcasts_path, class: "link text-sm" %><% end %>
+    </div>
+    <% if @saved.any? %>
+      <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <% @saved.each do |saved| %>
+          <li class="card"><div class="card-body flex items-center gap-3">
+            <%= podcast_artwork_tag(saved.podcast, size: :thumb, class: "size-12") %>
+            <%= link_to saved.podcast.title, brand_podcast_href(saved.podcast), class: "min-w-0 flex-1 truncate font-semibold underline-offset-4 hover:underline" %>
+          </div></li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="text-ink-soft">Save shows from your search results to build a shortlist.</p>
+    <% end %>
+  </section>
+</div>
