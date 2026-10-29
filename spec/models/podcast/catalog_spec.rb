@@ -34,7 +34,7 @@ RSpec.describe Podcast::Catalog do
   end
 
   describe "#meets_index_rule?" do
-    let(:podcast) { create(:podcast, :active, :with_artwork, description: "About things.") }
+    let(:podcast) { create(:podcast, :active, :with_artwork, description: "About things.", podcast_index_id: 4_242) }
 
     it "needs an active or dormant show with 3 episodes, a description and stored artwork" do
       expect(podcast.meets_index_rule?).to be(true)
@@ -50,6 +50,25 @@ RSpec.describe Podcast::Catalog do
       podcast.artwork_image.update!(suppressed_at: Time.current)
       expect(podcast.meets_index_rule?).to be(false)
       expect(build(:podcast, :active, description: "x").meets_index_rule?).to be(false)
+    end
+  end
+
+  # Code review M4: anyone could add a feed by its URL, so a page needs someone to vouch for the show.
+  describe "a feed added by its URL alone" do
+    let(:podcast) { create(:podcast, :active, :with_artwork, description: "About things.", source: "search") }
+
+    it "stays out of search engines until it is claimed" do
+      expect(podcast.meets_index_rule?).to be(false)
+      expect(podcast.tap { |p| p.claimed_at = Time.current }.meets_index_rule?).to be(true)
+    end
+
+    it "is indexable once a directory lists it, or when an admin added it" do
+      expect(podcast.tap { |p| p.apple_id = 1_234 }.meets_index_rule?).to be(true)
+      podcast.reload
+      expect(podcast.tap { |p| p.podcast_index_id = 1_234 }.meets_index_rule?).to be(true)
+      podcast.reload
+      expect(podcast.tap { |p| p.source = "admin" }.meets_index_rule?).to be(true)
+      expect(create(:podcast, :active, :with_artwork, description: "x", feed_url: "fake://fake-2").meets_index_rule?).to be(true)
     end
   end
 

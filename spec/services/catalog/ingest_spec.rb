@@ -50,10 +50,16 @@ RSpec.describe Catalog::Ingest do
       expect(podcast.next_fetch_at).to be_between(12.hours.from_now, (12.hours * 1.05).from_now)
     end
 
-    it "is indexable once its artwork is stored" do
-      podcast.update!(artwork_image: create(:image, :with_file))
+    it "is indexable once its artwork is stored, when a directory lists it" do
+      podcast.update!(artwork_image: create(:image, :with_file), podcast_index_id: 77)
       described_class.call(podcast)
       expect(podcast.reload.indexable).to be(true)
+    end
+
+    it "stays noindex while a feed added by its URL alone is unclaimed (code review M4)" do
+      podcast.update!(artwork_image: create(:image, :with_file))
+      described_class.call(podcast)
+      expect(podcast.reload.indexable).to be(false)
     end
 
     it "stores the people the feed names, counting their episodes, and drops anyone it stops naming" do

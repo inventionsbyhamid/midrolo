@@ -61,7 +61,10 @@
     <%= render "podcasts/pager", directory: @directory, path: ->(params) { podcasts_path(params) } %>
   <% elsif @adding.none? %>
     <div class="mt-4">
-      <% if search %>
+      <% if search && @sign_in_to_add %>
+        <%= render "components/empty_state", title: "We don't have that feed yet.",
+              body: "Sign in to add a show by its RSS feed, or search for it by name.", action_label: "Sign in", action_href: new_user_session_path %>
+      <% elsif search %>
         <%= render "components/empty_state", title: "No podcasts match \"#{@directory.query}\" yet.",
               body: "Try the show's exact name, or fewer words. Shows we don't have yet are added from the podcast directory when you search for them." %>
       <% else %>

@@ -57,7 +57,7 @@ RSpec.describe "Podcast pages" do
       visit "/podcasts?q=darknet"
 
       expect(response).to have_http_status(:ok)
-      expect(Catalog::LazyAdd).to have_received(:call).with("darknet")
+      expect(Catalog::LazyAdd).to have_received(:call).with("darknet", signed_in: false)
       expect(response.body).to include("Results for", "Darknet Diaries", "Found in the podcast directory", "Darknet Daily", "Adding this show")
       expect(response.body).not_to include("Old Radio")
       poll = doc.at_css("turbo-frame#adding_podcasts [data-controller='poll']")
@@ -85,6 +85,18 @@ RSpec.describe "Podcast pages" do
       lazy_add_returns
       visit "/podcasts?q=zzzzqqq"
       expect(response.body).to include("No podcasts match")
+    end
+
+    it "tells a visitor who pasted a feed URL the catalog lacks to sign in to add it (code review M4)" do
+      lazy_add_returns
+      visit "/podcasts?q=#{CGI.escape('https://feeds.example.com/unknown.xml')}"
+      expect(Catalog::LazyAdd).to have_received(:call).with("https://feeds.example.com/unknown.xml", signed_in: false)
+      expect(response.body).to include("Sign in to add a show by its RSS feed")
+
+      sign_in create(:user)
+      visit "/podcasts?q=#{CGI.escape('https://feeds.example.com/unknown.xml')}"
+      expect(Catalog::LazyAdd).to have_received(:call).with("https://feeds.example.com/unknown.xml", signed_in: true)
+      expect(response.body).not_to include("Sign in to add a show by its RSS feed")
     end
 
     it "marks the search form as a search landmark" do

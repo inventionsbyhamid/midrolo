@@ -1,9 +1,10 @@
 module Catalog
   # A search that grows the catalog. Searches the catalog first (full text and trigram, Podcast.search_catalog); with
-  # fewer than 5 hits, asks Podcasts::Directory.current (it caches its answers), creates up to 5 missing podcasts as
-  # pending (source "search") and queues their ingest at high priority. A feed URL or an Apple Podcasts link is looked
-  # up directly (ShowLookup). The directory being down never fails the search: it answers with what the catalog has.
-  # The caller throttles.
+  # fewer than 5 hits, asks Podcasts::Directory.current (it caches its answers) and creates up to MAX_ADDED missing
+  # podcasts as pending (source "search"), their ingest queued at normal priority, never a claim's (code review M5).
+  # A feed URL or an Apple Podcasts link is looked up directly (ShowLookup): from the directory for anyone, and by
+  # reading a feed the directory doesn't list only for a signed-in user (code review M4). The directory being down
+  # never fails the search: it answers with what the catalog has. The caller throttles.
   #
   #   result = Catalog::LazyAdd.call("darknet diaries")
   #   result.found # podcasts already in the catalog, best match first
@@ -15,15 +16,21 @@ module Catalog
 
     # Fewer local hits than this asks the directory.
     MIN_FOUND = 5
-    MAX_ADDED = 5
+    # The most podcasts one search adds, so a burst of random searches can't flood the catalog queue.
+    MAX_ADDED = 2
+    PRIORITY = :normal
     LOCAL_LIMIT = 20
     DIRECTORY_LIMIT = 10
     URL = %r{\Ahttps?://}i
 
-    def self.call(query) = new(query).call
+    # signed_in: whether a signed-in user searched (only they may add a feed by its URL alone).
+    def self.call(query, signed_in: false) = new(query, signed_in).call
 
-    def initialize(query)
+    def self.url?(query) = query.to_s.strip.match?(URL)
+
+    def initialize(query, signed_in = false)
       @query = query.to_s.squish.first(Podcast::Catalog::QUERY_LIMIT)
+      @signed_in = signed_in
     end
 
     def call
@@ -37,7 +44,7 @@ module Catalog
       directory_hits.each do |info|
         break if added.size >= MAX_ADDED
 
-        podcast, created = NewPodcast.find_or_create(info, source: "search", priority: :high)
+        podcast, created = NewPodcast.find_or_create(info, source: "search", priority: PRIORITY)
         next if podcast.nil? || podcast.removed?
 
         created ? added << podcast : found << podcast
@@ -55,10 +62,13 @@ module Catalog
     end
 
     def from_url
-      lookup = ShowLookup.call(feed_url: @query)
+      known = Podcast.where.not(status: "removed").find_by(feed_url: Podcast.normalize_feed_url(@query))
+      return Result.new(found: [ known ], added: []) if known
+
+      lookup = ShowLookup.call(feed_url: @query, read_feed: @signed_in)
       return Result.new(found: [], added: []) unless lookup.ok?
 
-      podcast, created = NewPodcast.find_or_create(lookup.attributes, source: "search", priority: :high)
+      podcast, created = NewPodcast.find_or_create(lookup.attributes, source: "search", priority: PRIORITY)
       return Result.new(found: [], added: []) if podcast.nil? || podcast.removed?
 
       created ? Result.new(found: [], added: [ podcast ]) : Result.new(found: [ podcast ], added: [])
