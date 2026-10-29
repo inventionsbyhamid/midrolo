@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Hand-written (lane L1): a podcast namespace feed with itunes tags, measurement prefixes, people, transcripts, a
+     repeated guid, an item without a guid and items out of date order. Not real data. -->
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+     xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"
+     xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>The Tidepool Hour</title>
+    <atom:link href="https://feeds.example.com/tidepool.xml" rel="self" type="application/rss+xml"/>
+    <link>https://tidepool.example.com/</link>
+    <description><![CDATA[<p>A made-up show about <b>tide pools</b> &amp; the people who study them.</p><script>alert(1)</script><p>New every other Monday.</p>]]></description>
+    <language>en-US</language>
+    <itunes:author>Marina Reyes</itunes:author>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:type>episodic</itunes:type>
+    <itunes:image href="https://img.example.com/tidepool.jpg"/>
+    <itunes:owner>
+      <itunes:name>Marina Reyes</itunes:name>
+      <itunes:email>marina@tidepool.example.com</itunes:email>
+    </itunes:owner>
+    <itunes:category text="Science">
+      <itunes:category text="Nature"/>
+    </itunes:category>
+    <itunes:category text="Education"/>
+    <podcast:guid>917393e3-1b1e-5cef-ace4-edaa54e1f810</podcast:guid>
+    <podcast:locked owner="marina@tidepool.example.com">yes</podcast:locked>
+    <podcast:block id="spotify">yes</podcast:block>
+    <podcast:medium>podcast</podcast:medium>
+    <podcast:txt purpose="verify">midrolo-verify=abc123</podcast:txt>
+    <podcast:funding url="https://tidepool.example.com/support">Support the show</podcast:funding>
+    <podcast:person role="host" href="https://tidepool.example.com/marina" img="https://img.example.com/marina.jpg">Marina Reyes</podcast:person>
+    <podcast:person role="producer" href="javascript:alert(1)">Sam Ortiz</podcast:person>
+    <item>
+      <title>Episode 1: Why tide pools matter</title>
+      <description>Marina explains the basics.</description>
+      <pubDate>Tue, 22 Sep 2026 09:00:00 GMT</pubDate>
+      <guid isPermaLink="false">tide-1</guid>
+      <itunes:duration>1800</itunes:duration>
+      <enclosure url="https://traffic.libsyn.com/tidepool/ep1.mp3" length="1000" type="audio/mpeg"/>
+      <podcast:person role="host">Marina Reyes</podcast:person>
+    </item>
+    <item>
+      <title>Episode 3: Anemones up close</title>
+      <description>Short summary that content:encoded replaces.</description>
+      <content:encoded><![CDATA[<p>Dr. Ana Lima joins Marina.</p><p>This episode is sponsored by Kelpwise. Use code TIDE for 20% off at kelpwise.example.com.</p>]]></content:encoded>
+      <pubDate>Tue, 20 Oct 2026 09:00:00 GMT</pubDate>
+      <guid isPermaLink="false">tide-3</guid>
+      <link>https://tidepool.example.com/3</link>
+      <itunes:duration>1:02:03</itunes:duration>
+      <itunes:season>2</itunes:season>
+      <itunes:episode>3</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <enclosure url="https://op3.dev/e/dts.podtrac.com/redirect.mp3/traffic.libsyn.com/tidepool/ep3.mp3" length="1000" type="audio/mpeg"/>
+      <podcast:transcript url="https://tidepool.example.com/3.html" type="text/html"/>
+      <podcast:transcript url="https://tidepool.example.com/3.vtt" type="text/vtt"/>
+      <podcast:person role="host">Marina Reyes</podcast:person>
+      <podcast:person role="guest" href="https://ana.example.com">Dr. Ana Lima</podcast:person>
+    </item>
+    <item>
+      <title><![CDATA[Episode 2: Starfish &amp; <i>sea stars</i>]]></title>
+      <description>Plain text, no HTML.</description>
+      <pubDate>Tue, 06 Oct 2026 09:00:00 GMT</pubDate>
+      <guid isPermaLink="false">tide-2</guid>
+      <link>javascript:alert(1)</link>
+      <itunes:duration>45:30</itunes:duration>
+      <enclosure url="https://op3.dev/e/https://traffic.libsyn.com/tidepool/ep2.mp3" length="1000" type="audio/mpeg"/>
+      <podcast:person role="Guest">dr. ana lima</podcast:person>
+    </item>
+    <item>
+      <title>Episode 2 (repeat)</title>
+      <description>The same guid again: the newer one wins.</description>
+      <pubDate>Tue, 29 Sep 2026 09:00:00 GMT</pubDate>
+      <guid isPermaLink="false">tide-2</guid>
+      <enclosure url="https://traffic.libsyn.com/tidepool/ep2-repeat.mp3" length="1000" type="audio/mpeg"/>
+    </item>
+    <item>
+      <title>Trailer</title>
+      <description>Coming soon.</description>
+      <pubDate>Tue, 15 Sep 2026 09:00:00 GMT</pubDate>
+      <itunes:episodeType>trailer</itunes:episodeType>
+      <enclosure url="https://traffic.libsyn.com/tidepool/trailer.mp3" length="1000" type="audio/mpeg"/>
+    </item>
+  </channel>
+</rss>

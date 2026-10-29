@@ -189,6 +189,9 @@ RSpec.describe FitSearch::Run do
   end
 
   it "ends done with no results and a plain brief when nothing fits" do
+    # Nothing in the catalog, and the directory has none of Qloo's shows either (the real Catalog::QlooMatch would add
+    # the demo directory's).
+    allow(Catalog::QlooMatch).to receive(:call).and_return(nil)
     described_class.call(search)
 
     expect(search.reload.status).to eq("done")

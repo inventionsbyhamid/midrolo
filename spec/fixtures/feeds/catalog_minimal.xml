@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- Hand-written (lane L1): an old-style feed: Latin-1, undeclared itunes prefix, no guids, dates only partly valid. -->
+<rss version="2.0">
+  <channel>
+    <title>Caf&#233; Chats</title>
+    <description>Talk over coffee at the café.</description>
+    <itunes:author>Ren&#233;e Blanc</itunes:author>
+    <managingEditor>renee@cafe.example.com (Renee Blanc)</managingEditor>
+    <item>
+      <title>Second</title>
+      <pubDate>not a date</pubDate>
+      <enclosure url="http://cafe.example.com/2.mp3" type="audio/mpeg"/>
+    </item>
+    <item>
+      <title>First</title>
+      <pubDate>2026-08-01T10:00:00Z</pubDate>
+      <link>http://cafe.example.com/1</link>
+    </item>
+  </channel>
+</rss>
