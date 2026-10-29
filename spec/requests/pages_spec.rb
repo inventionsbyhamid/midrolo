@@ -1,7 +1,7 @@
 require "rails_helper"
 
 # The public pages (Task 19, R78): the landing page, pricing, the legal pages and about, with their SEO tags, plus
-# robots.txt and the sitemap.
+# robots.txt. The sitemaps are spec/requests/sitemaps_spec.rb's.
 RSpec.describe "Public pages" do
   around { |example| with_billing_env { example.run } }
 
@@ -303,31 +303,6 @@ RSpec.describe "Public pages" do
 
     it "isn't shadowed by a static file" do
       expect(Rails.root.join("public/robots.txt")).not_to exist
-    end
-  end
-
-  describe "GET /sitemap.xml" do
-    def locs = Nokogiri::XML(response.body).remove_namespaces!.xpath("//url/loc").map(&:text)
-
-    it "lists the public pages, the done samples and the published kits only" do
-      create_sample(Samples.slugs[0])
-      unfinished = create_sample(Samples.slugs[1], title: "Index Fund Mornings")
-      unfinished.update!(status: "failed")
-      published = create(:show, title: "Published Show")
-      create(:media_kit, :published, show: published)
-      published.verify!(via: "admin")
-      unpublished = create(:show, title: "Unpublished Show")
-      create(:media_kit, show: unpublished)
-      unpublished.verify!(via: "admin")
-      unverified = create(:show, title: "Unverified Show", slug: "unverified-show")
-      create(:media_kit, show: unverified, published_at: Time.current)
-
-      get "/sitemap.xml"
-
-      expect(response).to have_http_status(:ok)
-      expect(response.media_type).to eq("application/xml")
-      expect(locs).to eq((%w[/ /pricing /samples /about /privacy /terms] + [ "/samples/#{Samples.slugs[0]}", "/k/#{published.slug}" ])
-                           .map { |path| "http://www.example.com#{path}" })
     end
   end
 end

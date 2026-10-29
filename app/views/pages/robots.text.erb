@@ -1,6 +1,7 @@
-<%# Public pages (the landing page, pricing, about, the legal pages, sample reports, published media kits at /k/:slug
-    and the blog) are open to crawlers; signed-in pages are not. A kit's private preview lives under /shows and also sends
-    noindex. The sitemap's address is this request's host, never a hard-coded domain (R88). -%>
+<%# Public pages (the landing page, pricing, about, the legal pages, sample reports, published media kits at /k/:slug,
+    the blog and the catalog's podcast, episode, category and brand pages) are open to crawlers; signed-in pages are
+    not, and nor are catalog searches (they can add shows), polls and the removal form. A kit's private preview lives
+    under /shows and also sends noindex. The sitemap's address is this request's host, never a hard-coded domain (R88). -%>
 User-agent: *
 Allow: /
 Disallow: /admin
@@ -12,5 +13,11 @@ Disallow: /users
 Disallow: /checkouts
 Disallow: /billing
 Disallow: /waitlist_entries
+Disallow: /podcasts?q=
+Disallow: /podcasts?*&q=
+Disallow: /podcasts/adding
+Disallow: /podcasts/*/status
+Disallow: /podcasts/*/sign_in
+Disallow: /podcasts/*/remove
 
 Sitemap: <%= sitemap_url %>
