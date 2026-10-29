@@ -17,11 +17,16 @@ class Episode < ApplicationRecord
 
   scope :newest_first, -> { order(published_at: :desc, id: :desc) }
 
-  # The title, parameterized and capped at 60 characters, then 6 hex of the guid's SHA256: stable for the episode
-  # whatever its title becomes, and unique within the podcast in practice.
-  def self.slug_for(title, guid)
+  # A readable slug for an episode, unique within its podcast: the title parameterized ("the-spy"). taken is the set of
+  # slugs the podcast already uses (pass it from a batch insert, adding each slug as it is given out); a clash takes
+  # 6 hex of the guid's SHA256, then a number. Without taken (nothing to check against), the guid suffix keeps it unique.
+  def self.slug_for(title, guid, taken: nil)
     base = title.to_s.parameterize.first(SLUG_LENGTH).delete_suffix("-").presence || "episode"
-    "#{base}-#{Digest::SHA256.hexdigest(guid.to_s).first(6)}"
+    hashed = "#{base.first(SLUG_LENGTH - 7)}-#{Digest::SHA256.hexdigest(guid.to_s).first(6)}"
+    return hashed if taken.nil?
+
+    [ base, hashed ].find { |slug| !taken.include?(slug) && !FriendlySlug::RESERVED.include?(slug) } ||
+      (2..).lazy.map { |n| "#{hashed}-#{n}" }.find { |slug| !taken.include?(slug) }
   end
 
   def to_param = slug_in_database
@@ -29,6 +34,9 @@ class Episode < ApplicationRecord
   private
 
   def assign_slug
-    self.slug ||= self.class.slug_for(title, guid) if guid.present?
+    return if slug.present? || guid.blank?
+
+    taken = self.class.where(podcast_id: podcast_id).pluck(:slug).to_set if podcast_id
+    self.slug = self.class.slug_for(title, guid, taken: taken)
   end
 end

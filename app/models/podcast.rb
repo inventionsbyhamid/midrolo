@@ -6,6 +6,7 @@
 # name those concerns, so the service and job namespaces are written `::Catalog::...`, `::Sponsors::...`, `::Stats::...`.
 class Podcast < ApplicationRecord
   include HasPublicId
+  include FriendlySlug
   include Catalog
   include Sponsors
   include Pages
@@ -16,7 +17,6 @@ class Podcast < ApplicationRecord
   STATUSES = %w[pending active dormant failed removed].freeze
   SOURCES = %w[qloo_seed search claim sample admin].freeze
   DESCRIPTION_LIMIT = 4000
-  SLUG_LENGTH = 60
   # Solid Queue priorities, lower first (spec section 10): a claim or a search waits on the ingest (high), a refresh
   # doesn't (normal), and a seed fills in behind both (low).
   INGEST_PRIORITIES = { high: 0, normal: 10, low: 20 }.freeze
@@ -82,7 +82,18 @@ class Podcast < ApplicationRecord
   # The key names from Qloo and the directory match on ("The Founder's Ledger" => "foundersledger").
   def self.title_key_for(title) = Research::Names.normalize(title)
 
-  def self.slug_base(title) = title.to_s.parameterize.first(SLUG_LENGTH).delete_suffix("-").presence || "podcast"
+  def self.slug_base(title) = friendly_slug_base(title, "podcast")
+
+  # A readable slug no other podcast has, now or as an old slug: the title, then the title and host, then numbered.
+  def self.free_podcast_slug(title, author, except: nil) = free_slug(title, fallback: "podcast", qualifiers: [ author ], except: except)
+
+  # An old slug of another podcast still redirects there, so it can't be given out again.
+  def self.reserved_slugs_like(base, like, except)
+    redirects = PodcastRedirect.where(from_slug: base).or(PodcastRedirect.where("from_slug LIKE ?", like))
+    redirects = redirects.where.not(podcast_id: except.id) if except&.persisted?
+    redirects.pluck(:from_slug)
+  end
+  private_class_method :reserved_slugs_like
 
   # The first letters of a title's first two words, for an artwork tile ("The Founder's Ledger" => "TF").
   def self.initials_for(title)
@@ -227,7 +238,7 @@ class Podcast < ApplicationRecord
   private
 
   def assign_slug
-    self.slug ||= "#{self.class.slug_base(title)}-#{public_id.to_s.first(6)}" if title.present?
+    self.slug ||= self.class.free_podcast_slug(title, author) if title.present?
   end
 
   def assign_title_key
@@ -235,7 +246,7 @@ class Podcast < ApplicationRecord
   end
 
   def rename_slug
-    self.slug = "#{self.class.slug_base(title)}-#{public_id.first(6)}"
+    self.slug = self.class.free_podcast_slug(title, author, except: self)
   end
 
   # The old slug keeps answering (a 301 to the new one); a slug the podcast takes back is no longer a redirect.
