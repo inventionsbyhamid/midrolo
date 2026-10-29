@@ -52,15 +52,10 @@ module MatchingHelper
 
   def match_proven?(match) = proven_sponsor?(match) || match_proof(match).present?
 
-  # Where a podcast's or a brand's public page is (lane L3's /podcasts/:slug and /brands/:slug). The paths are the build
-  # spec's; the route helpers take over once that lane's routes are drawn.
-  def match_podcast_path(podcast)
-    respond_to?(:podcast_path) ? podcast_path(podcast) : "/podcasts/#{ERB::Util.url_encode(podcast.to_param)}"
-  end
+  # Where a podcast's or a brand's public page is (lane L3's /podcasts/:slug and /brands/:slug).
+  def match_podcast_path(podcast) = podcast_path(podcast)
 
-  def match_brand_path(brand)
-    respond_to?(:public_brand_path) ? public_brand_path(brand.slug) : "/brands/#{ERB::Util.url_encode(brand.slug)}"
-  end
+  def match_brand_path(brand) = public_brand_path(brand.slug)
 
   # The podcast's title linked to its page.
   def match_podcast_link(podcast) = link_to(podcast.title, match_podcast_path(podcast), class: "link")

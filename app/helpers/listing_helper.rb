@@ -8,14 +8,10 @@ module ListingHelper
     "op3" => "downloads per episode from OP3"
   }.freeze
 
-  # The podcast's public page (lane L3 routes /podcasts/:slug), built here so these views don't depend on its route
-  # name.
-  def listing_podcast_path(podcast, anchor: nil)
-    path = "/podcasts/#{ERB::Util.url_encode(podcast.to_param)}"
-    anchor ? "#{path}##{anchor}" : path
-  end
+  # The podcast's public page (lane L3's /podcasts/:slug).
+  def listing_podcast_path(podcast, anchor: nil) = podcast_path(podcast, anchor: anchor)
 
-  def listing_podcast_url(podcast, anchor: nil) = "#{request.base_url}#{listing_podcast_path(podcast, anchor:)}"
+  def listing_podcast_url(podcast, anchor: nil) = podcast_url(podcast, anchor: anchor)
 
   # "Nov 2026" for "2026-11".
   def listing_month_label(month)
