@@ -6,7 +6,7 @@
 %>
 <% match = sponsor_match %>
 <% reason = report_text(match_reason_line(match), read_only) %>
-<% chips = evidence_chips(match) %>
+<% chips = match_evidence_chips(match, read_only) %>
 <article id="<%= dom_id(match) %>" class="match-row" aria-labelledby="<%= dom_id(match, :name) %>">
   <div class="match-logo"><%= render "sponsor_matches/logo", sponsor_match: match, size: "size-11 text-sm" %></div>
   <div class="match-head">

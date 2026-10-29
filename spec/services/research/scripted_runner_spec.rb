@@ -23,6 +23,8 @@ RSpec.describe Research::ScriptedRunner do
       expect(report.audience.keys).to match_array(%w[brands podcasts tags])
       expect(report.demographics.keys).to match_array(%w[age gender])
       expect(report.heatmap["points"]).to be_present
+      expect(report.similar_podcasts.size).to eq(10) # build spec L8
+      expect(report.similar_podcasts.pluck("name")).not_to include("The Founder's Ledger")
       expect(report.sponsor_matches.size).to be_between(20, 50)
       expect(report.sponsor_matches.map(&:reason)).to all(be_present)
       reasons = report.sponsor_matches.map(&:reason)
@@ -66,6 +68,8 @@ RSpec.describe Research::ScriptedRunner do
       expect(report.audience["tags"]).to be_present
       expect(report.demographics).to be_nil
       expect(report.heatmap["points"]).to be_present
+      expect(report.similar_podcasts.size).to eq(10) # a Snapshot gets them too (build spec section 9)
+      expect(report.agent_steps.where(tool: "similar_podcasts").pluck(:status)).to eq([ "ok" ])
       expect(report.sponsor_matches.size).to be_between(20, 50)
       expect(report.sponsor_matches.map(&:reason)).to all(be_nil)
       expect(report.sponsor_matches.map(&:brand_description)).to all(be_present)

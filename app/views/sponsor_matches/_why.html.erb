@@ -37,6 +37,15 @@
         </dd>
       </div>
     <% end %>
+    <% if (proof = match_proof(match)) %>
+      <div data-similar-proof>
+        <dt>Sponsors shows like <%= read_only ? "this one" : "yours" %></dt>
+        <dd>
+          <p><%= match_proof_line(proof, read_only) %>, from their own episode notes:
+            <%= pluralize(proof.episodes, "episode") %> of <%= and_list(proof.podcasts.map { |podcast| match_podcast_link(podcast) }) %>.</p>
+        </dd>
+      </div>
+    <% end %>
     <% if match.fit_score %>
       <div>
         <dt><%= APP_NAME %> fit score</dt>

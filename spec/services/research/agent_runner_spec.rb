@@ -61,9 +61,10 @@ RSpec.describe Research::AgentRunner do
 
     expect(report.status).to eq("done")
     tools = report.agent_steps.pluck(:tool).chunk_while { |a, b| a == b }.map(&:first)
-    expect(tools).to eq(%w[read_show_feed find_on_qloo save_taste_seeds taste_profile demographics heatmap
+    expect(tools).to eq(%w[read_show_feed find_on_qloo save_taste_seeds taste_profile demographics heatmap similar_podcasts
                            find_sponsor_candidates proven_sponsor_scan score_candidates explain_matches
                            save_sponsor_matches save_summary])
+    expect(report.similar_podcasts.size).to eq(10) # build_audience_profile also saves them (build spec L8)
     expect(report.sponsor_matches.size).to eq(25)
     expect(report.summary).to eq("Your listeners are founders who love finance tools.")
     expect(report.profile_kind).to eq("direct")

@@ -1,0 +1,71 @@
+<%# locals: (report:, read_only:) -%>
+<%#
+  Shows with a similar audience (build spec L8): the podcasts Qloo links to this show's audience
+  (Research::SimilarPodcasts), each linked to its page once the catalog has it, with the brands their own feeds show
+  sponsoring them, then the brands that already sponsor shows like this one (Matching::SimilarShows). Qloo similar shows
+  are for signed-in people only (build spec section 10), so a public sample asks a visitor to sign in instead.
+%>
+<% similar = match_similar_shows(report) %>
+<% title = "Shows with a similar audience" %>
+<% if !similar.any? %>
+  <% if section_pending?(report) %>
+    <%= render "reports/section", name: "similar", title: title do %>
+      <%= render "components/skeleton", lines: 3, label: "Finding shows with a similar audience", title: false %>
+    <% end %>
+  <% else %>
+    <%= render "reports/section", name: "similar", hidden: true %>
+  <% end %>
+<% elsif !match_similar_visible?(read_only) %>
+  <%= render "reports/section", name: "similar", title: title do %>
+    <p class="report-section-note">Sign in to see the shows whose listeners share this audience's tastes, and the brands that already sponsor them.</p>
+    <%= ui_button "Sign in to see them", new_user_session_path, variant: :secondary, class: "mt-3", rel: "nofollow" %>
+  <% end %>
+<% else %>
+  <%= render "reports/section", name: "similar", title: title,
+        aside: tag.p("Taste data from Qloo", class: "text-sm text-ink-soft") do %>
+    <p class="report-section-note">Podcasts whose listeners share <%= report_listeners(read_only) %>' tastes, the closest first. Sponsors come from each show's own episode notes.</p>
+    <ol class="mt-3 grid gap-2 sm:grid-cols-2" aria-label="<%= title %>">
+      <% similar.items.each do |item| %>
+        <li class="flex items-start gap-3 rounded-lg border border-line p-3" data-similar-show>
+          <% if item.podcast %>
+            <%= podcast_artwork_tag(item.podcast, class: "size-11") %>
+          <% else %>
+            <span class="flex size-11 flex-none items-center justify-center rounded-lg bg-plum-soft text-sm font-bold text-plum" aria-hidden="true"><%= Podcast.initials_for(item.name) %></span>
+          <% end %>
+          <div class="min-w-0">
+            <p class="font-semibold">
+              <% if item.podcast %>
+                <%= link_to item.podcast.title, match_podcast_path(item.podcast), class: "link" %>
+              <% else %>
+                <%= item.name %>
+              <% end %>
+            </p>
+            <% if item.podcast&.author.present? %>
+              <p class="truncate text-xs text-ink-soft"><%= item.podcast.author %></p>
+            <% end %>
+            <% if (sponsors = match_show_sponsors(item)) %>
+              <p class="mt-1 text-sm" data-similar-sponsors><%= sponsors %></p>
+            <% elsif item.podcast&.pending? %>
+              <p class="mt-1 text-xs text-ink-soft">Being added to <%= APP_NAME %></p>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+
+    <% if similar.sponsors.any? %>
+      <section class="mt-6" aria-labelledby="<%= dom_id(report, :similar_sponsors) %>">
+        <h3 id="<%= dom_id(report, :similar_sponsors) %>" class="report-subsection-title">Brands that already sponsor shows like <%= read_only ? "this one" : "yours" %></h3>
+        <p class="report-section-note">Sponsor reads found in these shows' episode notes.</p>
+        <ul class="mt-3 grid gap-2" data-similar-brands>
+          <% similar.sponsors.first(MatchingHelper::TOP_SPONSORS).each do |sponsor| %>
+            <li class="text-[0.9375rem]">
+              <%= link_to sponsor.brand.name, match_brand_path(sponsor.brand), class: "link font-semibold" %>
+              <span class="text-ink-soft">sponsored <%= pluralize(sponsor.episodes, "episode") %> of <%= and_list(sponsor.podcasts.map { |podcast| match_podcast_link(podcast) }) %></span>
+            </li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+  <% end %>
+<% end %>

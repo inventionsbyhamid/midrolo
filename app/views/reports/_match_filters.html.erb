@@ -13,7 +13,7 @@
       <span class="filter-chip-dot filter-chip-dot-<%= tone %>" aria-hidden="true"></span><%= label %>
     </button>
   <% end %>
-  <% if matches.any? { |m| proven_sponsor?(m) } %>
+  <% if matches.any? { |m| match_proven?(m) } %>
     <button type="button" class="filter-chip" aria-pressed="false" aria-controls="<%= controls %>"
             data-filter-target="chip" data-group="proven" data-value="true" data-action="filter#toggle">Proven sponsors</button>
   <% end %>

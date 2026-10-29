@@ -1,1 +1,38 @@
-<%# Podcast page: Audience section (signed-in users only). Lane L8 fills it; lane L3's page renders it with podcast: (from Podcast.for_page). %>
+<%# locals: (podcast:) -%>
+<%#
+  Podcast page Audience (lane L8, plan 4.1), for signed-in people only (build spec section 10): from the show's latest
+  owner or sample report (Podcast#taste_report), so a page view never calls Qloo. What its listeners love (without the
+  brands the show's kit hides), their age and gender leans, where they are, and the brand categories its matches come
+  from, labelled as Qloo's. Renders nothing for a visitor or without a report, and lane L3's section shows its own note.
+%>
+<% report = match_taste_report(podcast) if match_signed_in? %>
+<% groups = report ? match_audience_groups(report) : [] %>
+<% leans = report && match_leans(report) %>
+<% places = report && top_places(heatmap_points(report.heatmap)) %>
+<% categories = report ? match_brand_categories(report) : [] %>
+<% if groups.any? || leans || categories.any? %>
+  <div class="grid gap-5" data-match-audience>
+    <p class="text-sm text-ink-soft">What this show's listeners love more than most people do. Taste data from Qloo.</p>
+    <% if groups.any? %>
+      <%= render "reports/taste_chips", groups: top_tastes(groups.map { |_, label, items| [ label, items.map { |item| item["name"] } ] }) %>
+    <% end %>
+    <% if leans %>
+      <div>
+        <h3 class="report-subsection-title">Age and gender</h3>
+        <%= render "reports/lean_groups", demographics: leans %>
+      </div>
+    <% end %>
+    <% if places %>
+      <p class="text-[0.9375rem]"><span class="font-semibold">Where they are:</span> <%= places %>.</p>
+    <% end %>
+    <% if categories.any? %>
+      <div>
+        <h3 class="report-subsection-title">Brand categories that fit</h3>
+        <ul class="taste-chip-row mt-2" aria-label="Brand categories that fit">
+          <% categories.each do |name| %><li class="taste-chip"><%= name %></li><% end %>
+        </ul>
+      </div>
+    <% end %>
+    <p class="text-xs text-ink-soft"><%= match_report_source(report) %></p>
+  </div>
+<% end %>

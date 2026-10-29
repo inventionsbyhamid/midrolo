@@ -1,6 +1,7 @@
 <%# locals: (report:, read_only:) -%>
 <%#
-  The report in reading order (R99): At a glance, the sponsor matches, the audience with its age and gender leans,
+  The report in reading order (R99): At a glance, the sponsor matches, the shows with a similar audience (and the brands
+  that sponsor them), the audience with its age and gender leans,
   where they live, and How we built this (seeds, steps and method) collapsed at the bottom. While a run is live its
   steps show in a rail beside the sections; once it ends they fold into How we built this. A report that needs input
   leads with its ask (the seeds section and its form). The owner's page and the public sample page (read_only: no
@@ -22,7 +23,7 @@
     <% if report.needs_input? %>
       <%= render "reports/sections/seeds", report: report, read_only: read_only %>
     <% end %>
-    <% %w[summary matches audience leans map].each do |name| %>
+    <% %w[summary matches similar audience leans map].each do |name| %>
       <%= render "reports/sections/#{name}", report: report, read_only: read_only %>
     <% end %>
     <%= render "reports/how_we_built_this", report: report, read_only: read_only %>
