@@ -95,10 +95,10 @@ RSpec.describe "Share images" do
     let(:owner) { User.find_or_create_by!(email: User::SAMPLES_EMAIL) }
     let(:show) { create(:show, user: owner, title: "The Founder's Ledger") }
     let!(:report) do
-      create(:report, show: show, kind: "agent", status: "done", sample_slug: "sample-one", spend_bucket: "sample",
+      create(:report, show: show, kind: "agent", status: "done", sample_slug: first_sample_slug, spend_bucket: "sample",
                       audience: { "tags" => [ { "id" => "t1", "name" => "Personal finance" } ] })
     end
-    let(:path) { "/samples/sample-one/og.png" }
+    let(:path) { "/samples/#{first_sample_slug}/og.png" }
 
     def card_key = ShareImages::SampleCard.new(report.reload).cache_key
 

@@ -13,7 +13,7 @@ RSpec.describe Samples do
     it "reads samples.yml once per process" do
       allow(Rails.application).to receive(:config_for).and_call_original
 
-      2.times { expect(described_class.slugs).to eq(%w[sample-one sample-two sample-three]) }
+      2.times { expect(described_class.slugs).to eq(%w[darknet-diaries gastropod song-exploder]) }
       expect(Rails.application).to have_received(:config_for).with(:samples).once
     end
 

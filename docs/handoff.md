@@ -42,7 +42,7 @@ Production refuses to boot without `QLOO_API_KEY`, `PODCAST_INDEX_KEY`, `PODCAST
 
 ## 2. Before the first deploy, in the repo
 
-- [ ] `config/samples.yml`: each sample's `directory_id` is the field to change. Replace `fake-1`, `fake-2` and
+- [x] `config/samples.yml`: each sample's `directory_id` is the field to change. Replace `fake-1`, `fake-2` and
       `fake-3` with the Podcast Index feed ids of three public shows. A feed id is the number in the show's
       podcastindex.org URL (`https://podcastindex.org/podcast/<id>`), or the `feed.id` that the API's
       `/podcasts/byfeedurl` lookup returns for its RSS URL. The `fake-` ids exist only in the demo catalog, so

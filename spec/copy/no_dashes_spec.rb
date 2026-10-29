@@ -164,8 +164,8 @@ RSpec.describe "Copy has no dashes", type: :request do
       allow(Llm).to receive(:mode).and_return(:fake)
       Taste::Provider.reset!
       Podcasts::Directory.reset!
-      Samples::Generate.call(io: StringIO.new, entries: Samples.entries.first(1))
-      sample = Report.find_by!(sample_slug: "sample-one")
+      Samples::Generate.call(io: StringIO.new, entries: [ demo_sample_entry ])
+      sample = Report.find_by!(sample_slug: first_sample_slug)
 
       public_paths = %W[/ /pricing /about /privacy /terms /samples /samples/#{sample.sample_slug} /users/sign_in]
       rendered = public_paths.index_with { |path| get(path) && [ response.status, response.body ] }

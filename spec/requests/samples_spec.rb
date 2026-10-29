@@ -6,7 +6,7 @@ RSpec.describe "Sample reports" do
   let(:show) { create(:show, user: owner, title: "The Founder's Ledger", author: "Maya Brandt") }
   let(:seeds) { { "entities" => [ { "id" => "q1", "name" => "Index Fund Mornings", "source" => "Similar on Qloo" } ], "tags" => [] } }
   let!(:report) do
-    create(:report, show: show, kind: "agent", status: "done", sample_slug: "sample-one", spend_bucket: "sample",
+    create(:report, show: show, kind: "agent", status: "done", sample_slug: Samples.slugs[0], spend_bucket: "sample",
                     profile_kind: "direct", seeds: seeds, summary: "People with this show's taste plan their money.")
   end
 
@@ -19,7 +19,7 @@ RSpec.describe "Sample reports" do
 
   describe "GET /samples/:slug" do
     it "shows the whole report to a visitor, labelled as a sample, with brand names" do
-      get "/samples/sample-one"
+      get "/samples/#{Samples.slugs[0]}"
 
       expect(response).to have_http_status(:ok)
       main = page.at_css("main").text.squish
@@ -34,7 +34,7 @@ RSpec.describe "Sample reports" do
     it "reads in the same order as the owner's report: At a glance, matches, audience, where they are, How we built this" do
       report.update!(audience: { "tags" => [ { "id" => "t1", "name" => "Personal Finance", "score" => 0.9 } ] },
                      heatmap: { "location" => "US", "points" => [ { "lat" => 40.7, "lng" => -74.0, "affinity" => 0.9, "label" => "New York" } ] })
-      get "/samples/sample-one"
+      get "/samples/#{Samples.slugs[0]}"
 
       ids = page.css(".report-sections > section:not([hidden])").map { |section| section["id"] }
       expect(ids).to eq(%w[report_summary report_matches report_audience report_map report_how])
@@ -45,7 +45,7 @@ RSpec.describe "Sample reports" do
 
     it "hides pitch, pipeline and every owner control, even from a signed-in user" do
       sign_in create(:user, :subscribed)
-      get "/samples/sample-one"
+      get "/samples/#{Samples.slugs[0]}"
 
       body = response.body
       expect(body).not_to include("Write my pitch", "Open pitch", "Pipeline", "Notes &amp; follow up", "Run again",
@@ -59,7 +59,7 @@ RSpec.describe "Sample reports" do
       report.update!(audience: { "brands" => [ { "id" => "b1", "name" => "Fieldnote Coffee", "affinity" => 0.9 } ] },
                      demographics: { "age" => { "25_to_29" => 0.4 }, "gender" => { "female" => 0.2 } },
                      heatmap: { "location" => "US", "points" => [ { "lat" => 40.7, "lng" => -74.0, "affinity" => 0.9, "label" => "New York" } ] })
-      get "/samples/sample-one"
+      get "/samples/#{Samples.slugs[0]}"
 
       titles = page.css(".report-section-title").map { |title| title.text.squish }
       expect(titles).to include("At a glance", "This show's audience", "Where they are")
@@ -81,7 +81,7 @@ RSpec.describe "Sample reports" do
       create(:agent_step, report: report, label: "Mapping where your listeners live…", status: "ok",
                           input_summary: "Your show", output_summary: "Your profile is built from topics")
 
-      get "/samples/sample-one"
+      get "/samples/#{Samples.slugs[0]}"
 
       doc = page
       doc.css(".glance-next").each(&:remove) # the next step speaks to the reader about a show of their own
@@ -95,17 +95,17 @@ RSpec.describe "Sample reports" do
     end
 
     it "has no live stream: a sample never changes while it's open" do
-      get "/samples/sample-one"
+      get "/samples/#{Samples.slugs[0]}"
 
       expect(page.css("turbo-cable-stream-source")).to be_empty
     end
 
     it "gives the sample its own title and share tags, with its own share image" do
-      get "/samples/sample-one"
+      get "/samples/#{Samples.slugs[0]}"
 
       expect(page.at_css("title").text).to eq("The Founder's Ledger sample sponsor report | Midrolo")
-      expect_share_tags(page, url: "http://www.example.com/samples/sample-one",
-                              image: %r{\Ahttp://www\.example\.com/samples/sample-one/og\.png\?v=\h{12}\z})
+      expect_share_tags(page, url: "http://www.example.com/samples/#{Samples.slugs[0]}",
+                              image: %r{\Ahttp://www\.example\.com/samples/#{Samples.slugs[0]}/og\.png\?v=\h{12}\z})
       expect(share_tags(page)["og:image:alt"]).to eq([ "Sample sponsor report for The Founder's Ledger" ])
     end
 
@@ -116,7 +116,7 @@ RSpec.describe "Sample reports" do
 
     it "is a 404 for a sample that isn't done yet" do
       report.update!(status: "running")
-      get "/samples/sample-one"
+      get "/samples/#{Samples.slugs[0]}"
       expect(response).to have_http_status(:not_found)
     end
 
@@ -130,19 +130,19 @@ RSpec.describe "Sample reports" do
   describe "GET /samples" do
     it "lists the done samples, in samples.yml order" do
       other = create(:show, user: owner, title: "Code & Coffee Weekly")
-      create(:report, show: other, kind: "agent", status: "done", sample_slug: "sample-three")
+      create(:report, show: other, kind: "agent", status: "done", sample_slug: Samples.slugs[2])
 
       get "/samples"
 
       expect(response).to have_http_status(:ok)
       links = page.css("main a[href^='/samples/']").map { |a| a["href"] }.uniq
-      expect(links).to eq(%w[/samples/sample-one /samples/sample-three])
+      expect(links).to eq([ "/samples/#{Samples.slugs[0]}", "/samples/#{Samples.slugs[2]}" ])
       expect(page.at_css("main").text).to include("The Founder's Ledger", "Code & Coffee Weekly")
     end
 
     it "counts every sample's matches in one query" do
       other = create(:show, user: owner, title: "Code & Coffee Weekly")
-      create_list(:sponsor_match, 2, report: create(:report, show: other, kind: "agent", status: "done", sample_slug: "sample-three"))
+      create_list(:sponsor_match, 2, report: create(:report, show: other, kind: "agent", status: "done", sample_slug: Samples.slugs[2]))
       queries = []
       counter = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?('FROM "sponsor_matches"') }
 
@@ -163,16 +163,17 @@ RSpec.describe "Sample reports" do
   end
 end
 
-# The controller found "Food Beverage" under HelloFresh on sample-one: a category keeps its "and" (Fake catalog keys
+# The controller found "Food Beverage" under HelloFresh on the first sample: a category keeps its "and" (Fake catalog keys
 # and names follow Qloo's, and the row spells "&" as "and").
 RSpec.describe "Sample report categories" do
-  it "reads Food and Beverage under a food brand on the generated sample-one" do
+  it "reads Food and Beverage under a food brand on the generated #{Samples.slugs[0]}" do
     allow(Llm).to receive(:mode).and_return(:fake)
     Taste::Provider.reset!
     Podcasts::Directory.reset!
-    Samples::Generate.call(io: StringIO.new, entries: Samples.entries.first(1))
+    # The first sample's slug on a show from the demo catalog: its real Podcast Index id is unknown there.
+    Samples::Generate.call(io: StringIO.new, entries: [ Samples.entries.first.merge(directory_id: "fake-1") ])
 
-    get "/samples/sample-one"
+    get "/samples/#{Samples.slugs[0]}"
     page = Nokogiri::HTML(response.body)
     categories = page.css(".match-row").to_h { |row| [ row.at_css(".match-name").text, row.at_css(".match-category")&.text ] }
     expect(categories.values).to include("Food and Beverage")

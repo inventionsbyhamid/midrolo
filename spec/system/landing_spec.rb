@@ -6,7 +6,7 @@ require "rails_helper"
 RSpec.describe "Landing and public pages" do
   let(:widths) { { "375" => [ 375, 812 ], "1440" => [ 1440, 900 ] } }
   let(:pages) do
-    { "home" => "/", "pricing" => "/pricing", "sample" => "/samples/sample-one", "samples" => "/samples",
+    { "home" => "/", "pricing" => "/pricing", "sample" => "/samples/#{first_sample_slug}", "samples" => "/samples",
       "privacy" => "/privacy", "terms" => "/terms", "about" => "/about" }
   end
 
@@ -23,7 +23,7 @@ RSpec.describe "Landing and public pages" do
   def generate_sample
     Taste::Provider.reset!
     Podcasts::Directory.reset!
-    Samples::Generate.call(io: StringIO.new, entries: Samples.entries.first(1))
+    Samples::Generate.call(io: StringIO.new, entries: [ demo_sample_entry ])
   end
 
   def screenshot(name, width)

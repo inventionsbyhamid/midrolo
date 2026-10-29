@@ -20,7 +20,7 @@ RSpec.describe "Readable reports" do
     page.driver.browser.url_blacklist = [ %r{cdn\.jsdelivr\.net} ] # no MapLibre: the frame keeps its CSS height
   end
 
-  def generate_sample = Samples::Generate.call(io: StringIO.new, entries: Samples.entries.first(1))
+  def generate_sample = Samples::Generate.call(io: StringIO.new, entries: [ demo_sample_entry ])
 
   # A finished report of kind on the Fake providers, for a show of user's.
   def run_report(user, kind, directory_id: "fake-2")
@@ -76,7 +76,7 @@ RSpec.describe "Readable reports" do
     snapshot = run_report(create(:user), "snapshot", directory_id: "fake-1")
     create(:media_kit, :published, show: report.show)
 
-    check_layout("sample", "/samples/sample-one")
+    check_layout("sample", "/samples/#{first_sample_slug}")
     login_as(owner, scope: :user)
     check_layout("agent", show_report_path(report.show, report))
     expanded_screenshot("agent-open")
@@ -89,7 +89,7 @@ RSpec.describe "Readable reports" do
   it "keeps the collapsed sample page under 4,000px tall at 1440px, with At a glance and the first match on the first screen" do
     generate_sample
     page.driver.resize(1440, 900)
-    visit "/samples/sample-one"
+    visit "/samples/#{first_sample_slug}"
     expect(page).to have_css("h1")
 
     height = page_height

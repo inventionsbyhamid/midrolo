@@ -112,21 +112,21 @@ RSpec.describe "Public pages" do
       expect(hero).to include("An illustration of a match list", "Coffee roaster", "Notes app", "Budgeting app")
       expect(hero).not_to match(/Fieldnote|Ledgerly|Northwind|Affinity \d/) # no invented brands or numbers (R89)
 
-      create_sample("sample-two", title: "Index Fund Mornings")
-      create_sample("sample-one")
+      create_sample(Samples.slugs[1], title: "Index Fund Mornings")
+      create_sample(Samples.slugs[0])
       get "/"
-      expect(page.at_xpath("//main//a[normalize-space()='See a sample report']")["href"]).to eq("/samples/sample-one")
+      expect(page.at_xpath("//main//a[normalize-space()='See a sample report']")["href"]).to eq("/samples/#{Samples.slugs[0]}")
     end
 
     it "previews the first sample's top matches in the hero" do
-      report = create_sample("sample-one")
+      report = create_sample(Samples.slugs[0])
       create(:sponsor_match, report: report, name: "Fieldnote Coffee", position: 1, fit_score: 91)
       create(:sponsor_match, report: report, name: "Ledgerly", position: 2, fit_score: 84)
       get "/"
 
       hero = page.at_css("#hero")
       expect(hero.text).to include("The Founder's Ledger", "Fieldnote Coffee", "Ledgerly")
-      expect(hero.at_css("a[href='/samples/sample-one']")).to be_present
+      expect(hero.at_css("a[href='/samples/#{Samples.slugs[0]}']")).to be_present
     end
 
     it "labels the podcaster quotes as paraphrased, never as named testimonials (R70)" do
@@ -310,8 +310,8 @@ RSpec.describe "Public pages" do
     def locs = Nokogiri::XML(response.body).remove_namespaces!.xpath("//url/loc").map(&:text)
 
     it "lists the public pages, the done samples and the published kits only" do
-      create_sample("sample-one")
-      unfinished = create_sample("sample-two", title: "Index Fund Mornings")
+      create_sample(Samples.slugs[0])
+      unfinished = create_sample(Samples.slugs[1], title: "Index Fund Mornings")
       unfinished.update!(status: "failed")
       published = create(:show, title: "Published Show")
       create(:media_kit, :published, show: published)
@@ -326,7 +326,7 @@ RSpec.describe "Public pages" do
 
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("application/xml")
-      expect(locs).to eq(%w[/ /pricing /samples /about /privacy /terms /samples/sample-one /k/published-show]
+      expect(locs).to eq((%w[/ /pricing /samples /about /privacy /terms] + [ "/samples/#{Samples.slugs[0]}", "/k/published-show" ])
                            .map { |path| "http://www.example.com#{path}" })
     end
   end

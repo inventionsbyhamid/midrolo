@@ -1,11 +1,12 @@
-# Sample shows for the public sample reports at /samples/:slug (R78). The real Podcast Index ids are filled in later.
+# Sample shows for the public sample reports at /samples/:slug (R78): three independent shows in different niches,
+# by their Podcast Index feed ids.
 # bin/rails samples:generate runs a full agent report for each (spend bucket "sample"); it skips slugs that already
 # have a done report, and FORCE=1 runs them all again. With live keys each report costs real money (about $0.50).
 shared:
   samples:
-    - slug: sample-one
-      directory_id: fake-1
-    - slug: sample-two
-      directory_id: fake-2
-    - slug: sample-three
-      directory_id: fake-3
+    - slug: darknet-diaries # Jack Rhysider: hacking and security stories
+      directory_id: "577105"
+    - slug: gastropod # Cynthia Graber and Nicola Twilley: the science and history of food
+      directory_id: "946737"
+    - slug: song-exploder # Hrishikesh Hirway: musicians take apart one of their songs
+      directory_id: "390830"

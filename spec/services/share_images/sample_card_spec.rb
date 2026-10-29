@@ -7,13 +7,13 @@ RSpec.describe ShareImages::SampleCard do
     [ "Personal finance", "Startups", "startups", "Stoicism", "Index funds" ].map { |name| { "id" => name, "name" => name } }
   end
   let(:report) do
-    create(:report, show: show, kind: "agent", status: "done", sample_slug: "sample-one", spend_bucket: "sample",
+    create(:report, show: show, kind: "agent", status: "done", sample_slug: first_sample_slug, spend_bucket: "sample",
                     audience: { "tags" => tags })
   end
 
   before { create_list(:sponsor_match, 2, report: report) }
 
-  def card = described_class.new(Samples.find!("sample-one"))
+  def card = described_class.new(Samples.find!(first_sample_slug))
 
   # Each <text>'s words; a title's lines (tspans) joined with a space.
   def texts(svg)

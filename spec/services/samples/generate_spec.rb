@@ -3,10 +3,16 @@ require "rails_helper"
 # rake samples:generate's work (R78): one agent report per config/samples.yml entry, under the samples owner.
 RSpec.describe Samples::Generate do
   let(:io) { StringIO.new }
+  # samples.yml names real Podcast Index shows; these runs use the demo catalog's three shows under their own slugs.
+  let(:demo_entries) do
+    [ { slug: "sample-one", directory_id: "fake-1" }, { slug: "sample-two", directory_id: "fake-2" },
+      { slug: "sample-three", directory_id: "fake-3" } ].map(&:freeze)
+  end
 
   before do
     Taste::Provider.reset!
     Podcasts::Directory.reset!
+    allow(Samples).to receive_messages(entries: demo_entries, slugs: demo_entries.map { |entry| entry[:slug] })
   end
 
   def generate(**options) = described_class.call(io: io, **options)
