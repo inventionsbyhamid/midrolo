@@ -7,7 +7,14 @@ module BlogHelper
   FEED_TITLE = "#{APP_NAME} blog".freeze
 
   # The header, the footer and the sitemap link the blog only once a post is published: an empty blog stays unlisted.
-  def blog_listed? = Blog::Post.published.any?
+  # A post that doesn't parse is reported and leaves the blog unlinked rather than breaking every marketing page; the
+  # blog's own pages still fail, and spec/copy/blog_posts_spec.rb catches it before a deploy.
+  def blog_listed?
+    Blog::Post.published.any?
+  rescue Blog::Post::Invalid => e
+    Rails.error.report(e, handled: true)
+    false
+  end
 
   def blog_date(date) = tag.time(Blog::Post.long_date(date), datetime: date.iso8601)
 

@@ -15,6 +15,16 @@ RSpec.describe BlogHelper do
     end
   end
 
+  describe "#blog_listed?" do
+    it "reports a post that doesn't parse and leaves the blog unlinked, so other pages still render" do
+      allow(Blog::Post).to receive(:published).and_raise(Blog::Post::Invalid, "broken.md: no front matter")
+      allow(Rails.error).to receive(:report)
+
+      expect(helper.blog_listed?).to be(false)
+      expect(Rails.error).to have_received(:report).with(an_instance_of(Blog::Post::Invalid), handled: true)
+    end
+  end
+
   describe "#blog_date" do
     it "writes the long date in a <time> with the ISO date, with no padding before a single digit day" do
       expect(helper.blog_date(Date.new(2026, 11, 2))).to eq(%(<time datetime="2026-11-02">November 2, 2026</time>))
