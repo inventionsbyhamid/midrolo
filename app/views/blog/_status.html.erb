@@ -1,0 +1,8 @@
+<%# locals: (post:) -%>
+<%# In development a draft or a future post shows (Blog::Post.preview?), marked so its writer knows visitors can't see
+    it yet. Production never renders one. %>
+<% if post.draft? || post.scheduled? %>
+  <p class="post-status">
+    <%= ui_badge(post.draft? ? "Draft, hidden in production" : "Scheduled, hidden until its date", tone: :warning) %>
+  </p>
+<% end %>

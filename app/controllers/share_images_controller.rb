@@ -1,7 +1,7 @@
-# The share images (og:image) of the sample reports and the public media kits: 1200x630 PNGs drawn by ShareImages and
-# kept in Rails.cache under a key that changes with the kit, show, report or stored artwork. Only what is public has
-# one: an unknown, unfinished or retired sample and a kit that isn't public (Show#public_kit?) are 404s, as their pages
-# are.
+# The share images (og:image) of the sample reports, the public media kits and the blog posts (R148): 1200x630 PNGs
+# drawn by ShareImages and kept in Rails.cache under a key that changes with the kit, show, report, post file or stored
+# artwork. Only what is public has one: an unknown, unfinished or retired sample, a kit that isn't public
+# (Show#public_kit?) and a draft or future post are 404s, as their pages are.
 #
 # A request never touches the network (R98): a kit card draws the artwork ArtworkStore holds and, when there is none
 # yet, asks FetchShareArtworkJob for it. One request at a time draws a card (a lock in the cache); others meanwhile,
@@ -26,6 +26,10 @@ class ShareImagesController < ApplicationController
 
     ShareImages::ArtworkStore.request(show)
     serve ShareImages::KitCard.new(show.media_kit)
+  end
+
+  def blog_post
+    serve ShareImages::BlogCard.new(Blog::Post.find!(params[:slug]))
   end
 
   private

@@ -1,5 +1,6 @@
 <%# locals: (compact: false) -%>
-<%# compact is for pages that belong to the podcaster (kits, print): credits only, no Midrolo branding. %>
+<%# compact is for pages that belong to the podcaster (kits, print): credits only, no Midrolo branding. The blog is
+    linked once a post is published (R148). %>
 <footer class="<%= class_names("mt-auto", compact ? "pt-10" : "pt-20") %>">
   <div class="midroll-rule"></div>
   <div class="wrap flex flex-col gap-6 py-8 text-sm text-ink-soft md:flex-row md:items-start md:justify-between">
@@ -11,6 +12,9 @@
       </div>
       <nav aria-label="Footer" class="flex flex-wrap gap-x-5 gap-y-1">
         <%= link_to "About", about_path, class: "link text-ink-soft" %>
+        <% if blog_listed? %>
+          <%= link_to "Blog", blog_path, class: "link text-ink-soft" %>
+        <% end %>
         <%= link_to "Privacy", privacy_path, class: "link text-ink-soft" %>
         <%= link_to "Terms", terms_path, class: "link text-ink-soft" %>
         <%= contact_mail_to "Contact", class: "link text-ink-soft" %>

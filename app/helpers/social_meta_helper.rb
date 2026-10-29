@@ -9,8 +9,10 @@ module SocialMetaHelper
 
   # title defaults to the page's own (content_for :title), without the site name, which og:site_name carries. image is
   # a 1200x630 picture (a path or URL); the landing page's og.png by default. url is the canonical address: this
-  # request's, without the query string, by default.
-  def social_meta(description:, title: nil, image: nil, image_alt: DEFAULT_IMAGE_ALT, type: "website", url: nil)
+  # request's, without the query string, by default. article is a blog post's { published_time:, modified_time:, tags: }
+  # (R148), for its article:* tags; pass type: "article" with it.
+  def social_meta(description:, title: nil, image: nil, image_alt: DEFAULT_IMAGE_ALT, type: "website", url: nil,
+                  article: nil)
     title ||= content_for?(:title) ? content_for(:title) : DEFAULT_TITLE
     url ||= request.base_url + request.path
     image = URI.join(request.base_url, image || image_path("og.png")).to_s
@@ -18,6 +20,7 @@ module SocialMetaHelper
       tag.meta(name: "description", content: description),
       tag.link(rel: "canonical", href: url),
       *open_graph(title:, description:, url:, type:, image:, image_alt:),
+      *article_tags(**article.to_h),
       *twitter_card(title:, description:, image:, image_alt:)
     ], "\n")
   end
@@ -30,6 +33,13 @@ module SocialMetaHelper
     { "site_name" => APP_NAME, "type" => type, "url" => url, "title" => title, "description" => description,
       "image" => image, "image:width" => SHARE_IMAGE_SIZE[:width], "image:height" => SHARE_IMAGE_SIZE[:height],
       "image:alt" => image_alt, "locale" => LOCALE }.map { |key, value| tag.meta(property: "og:#{key}", content: value) }
+  end
+
+  # Times as ISO 8601; one article:tag per tag.
+  def article_tags(published_time: nil, modified_time: nil, tags: [])
+    pairs = [ [ "published_time", published_time&.iso8601 ], [ "modified_time", modified_time&.iso8601 ],
+              *Array(tags).map { |name| [ "tag", name ] } ]
+    pairs.filter_map { |key, value| tag.meta(property: "article:#{key}", content: value) if value.present? }
   end
 
   def twitter_card(title:, description:, image:, image_alt:)

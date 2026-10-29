@@ -1,0 +1,27 @@
+<% content_for :title, BlogHelper::TITLE %>
+<% content_for :meta, social_meta(description: BlogHelper::DESCRIPTION) %>
+<% content_for :head do %>
+  <%= blog_feed_link %>
+  <%= blog_json_ld(@posts) %>
+  <%= tag.meta(name: "robots", content: "noindex, follow") if @posts.empty? %>
+<% end %>
+<%# The blog's index (R148): every published post, newest first. With none yet it says so and asks search engines not
+    to index it; the blog isn't linked from the header, the footer or the sitemap until a post is published
+    (blog_listed?). %>
+<div class="wrap page-head">
+  <h1 class="type-h1"><%= BlogHelper::TITLE %></h1>
+  <p class="type-lead mt-4 max-w-2xl">
+    Plain guides to finding sponsors for an independent podcast: who fits, what to charge and how to pitch.
+  </p>
+</div>
+<section class="page-section pt-0" aria-label="Posts">
+  <div class="wrap">
+    <% if @posts.any? %>
+      <%= render "blog/list", posts: @posts %>
+    <% else %>
+      <%= render "components/empty_state", title: "Posts are on the way.",
+            body: "Our first guides land here soon. Meanwhile, see what Midrolo finds for a real show.",
+            action_label: "See the sample reports", action_href: samples_path %>
+    <% end %>
+  </div>
+</section>

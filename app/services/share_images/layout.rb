@@ -1,8 +1,8 @@
 module ShareImages
   # A share image's SVG, 1200x630 on the paper colour: a label pill and the Midrolo logo along the top, the title (two
-  # lines at most, as large as fits), a subline, one stat with an optional note, up to three taste tags, and the show's
-  # waveform along the bottom with its mid-roll slot lit. With artwork, a right-hand square either frames the picture
-  # (Renderer lays it on top) or, when it couldn't be fetched, holds the mark.
+  # lines at most unless the card asks for more, as large as fits), a subline, one stat with an optional note, up to
+  # three taste tags, and the show's waveform along the bottom with its mid-roll slot lit. With artwork, a right-hand
+  # square either frames the picture (Renderer lays it on top) or, when it couldn't be fetched, holds the mark.
   #
   # Every string goes through Text: cleaned of what XML forbids, measured to wrap or shorten it with an ellipsis, then
   # XML-escaped, since show titles and authors come from RSS feeds. No string reaches an attribute.
@@ -34,8 +34,8 @@ module ShareImages
     WAVE_SLOT = 56 # the lit slot's place, near two thirds in, where a mid-roll sits
 
     # tags: the first TAG_LIMIT different ones are shown. artwork: nil (no artwork column), :image (a frame for the
-    # picture) or :fallback (the mark).
-    def initialize(label:, title:, seed:, subline: nil, stat: nil, note: nil, tags: [], artwork: nil)
+    # picture) or :fallback (the mark). title_lines: how many lines the title may take (a blog post's takes three).
+    def initialize(label:, title:, seed:, subline: nil, stat: nil, note: nil, tags: [], artwork: nil, title_lines: 2)
       @label = Text.clean(label)
       @title = Text.clean(title)
       @subline = Text.clean(subline)
@@ -44,6 +44,7 @@ module ShareImages
       @tags = Array(tags).map { |tag| Text.clean(tag) }.compact_blank.uniq(&:downcase).first(TAG_LIMIT)
       @seed = seed
       @artwork = artwork
+      @max_title_lines = title_lines
     end
 
     def svg
@@ -121,10 +122,10 @@ module ShareImages
       end
     end
 
-    # [font size, lines]: the largest size that shows the whole title in two lines, else the smallest, shortened.
+    # [font size, lines]: the largest size that shows the whole title in its lines, else the smallest, shortened.
     def title_lines
       TITLE_SIZES.each do |size|
-        lines = Text.wrap(@title, { family: "ArchivoWide", weight: 800, size: size }, column_width, 2)
+        lines = Text.wrap(@title, { family: "ArchivoWide", weight: 800, size: size }, column_width, @max_title_lines)
         return [ size, lines ] if lines.join(" ") == @title || size == TITLE_SIZES.last
       end
     end

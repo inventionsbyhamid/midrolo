@@ -159,15 +159,17 @@ RSpec.describe "Copy has no dashes", type: :request do
       report.reload
     end
 
+    # With the blog's fixture posts (R148), so its index, a post and the header and footer's Blog link are read too.
     it "renders the public and signed-in pages without a dash or an unneeded hyphen, and the reports and kit without jargon",
-       :aggregate_failures do
+       :aggregate_failures, :blog_posts do
       allow(Llm).to receive(:mode).and_return(:fake)
       Taste::Provider.reset!
       Podcasts::Directory.reset!
       Samples::Generate.call(io: StringIO.new, entries: [ demo_sample_entry ])
       sample = Report.find_by!(sample_slug: first_sample_slug)
 
-      public_paths = %W[/ /pricing /about /privacy /terms /samples /samples/#{sample.sample_slug} /users/sign_in]
+      public_paths = %W[/ /pricing /about /privacy /terms /samples /samples/#{sample.sample_slug} /users/sign_in /blog
+                        /blog/finding-your-first-sponsor]
       rendered = public_paths.index_with { |path| get(path) && [ response.status, response.body ] }
 
       sign_in user
