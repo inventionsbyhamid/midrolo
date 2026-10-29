@@ -43,7 +43,8 @@ RSpec.describe "Marketplace stubs" do
     %w[catalog claims stats brands conversations].each do |name|
       expect(Rails.root.join("config/routes/#{name}.rb")).to exist
     end
-    %w[numbers sponsors rates claim request save similar audience].each do |name|
+    # save is lane L6's, filled (spec/requests/brands_spec.rb covers it).
+    %w[numbers sponsors rates claim request similar audience].each do |name|
       expect(ApplicationController.render(partial: "podcasts/#{name}", locals: { podcast: build(:podcast) }).strip).to eq("")
     end
     # The catalog panel is filled (lane L1).

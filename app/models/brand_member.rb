@@ -6,6 +6,9 @@ class BrandMember < ApplicationRecord
   belongs_to :brand
   belongs_to :user
 
+  # The work address a code went to: personal data, compared in Ruby only, so not deterministic.
+  encrypts :code_sent_to
+
   enum :role, ROLES.index_with(&:itself), validate: true
 
   validates :user_id, uniqueness: { scope: :brand_id }

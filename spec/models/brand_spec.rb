@@ -16,7 +16,7 @@ RSpec.describe Brand do
     it "finds by domain, then by name, else creates" do
       notion = described_class.resolve(name: "Notion", domain: "notion.so")
       expect(notion).to have_attributes(name: "Notion", domain: "notion.so", name_key: "notion")
-      expect(notion.slug).to start_with("notion-")
+      expect(notion.slug).to eq("notion")
 
       expect(described_class.resolve(name: "Notion Labs", domain: "https://www.notion.so")).to eq(notion)
       expect(described_class.resolve(name: " notion ")).to eq(notion)

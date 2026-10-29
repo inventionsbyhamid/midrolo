@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# The platform stats helper: verified Spotify and Apple Podcasts numbers for "Invite Midrolo" (Stats::PlatformFetch
+# calls it). One JSON request on stdin, one JSON result on stdout; `--self-test` checks it offline; `--help` documents
+# every key. The code is script/platform_stats.py.
+#
+# Python, in order: $PLATFORM_STATS_PYTHON (development and CI overrides), /opt/stats-venv/bin/python (the Docker
+# image, see the Dockerfile), then python3 on the PATH (which says plainly how to install requirements-stats.txt when
+# the libraries are missing). -I keeps PYTHONPATH, PYTHONHOME and the user's site-packages out.
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+script="$root/script/platform_stats.py"
+
+if [[ -n "${PLATFORM_STATS_PYTHON:-}" ]]; then
+  python="$PLATFORM_STATS_PYTHON"
+elif [[ -x /opt/stats-venv/bin/python ]]; then
+  python=/opt/stats-venv/bin/python
+elif command -v python3 > /dev/null 2>&1; then
+  python="$(command -v python3)"
+else
+  echo '{"ok":false,"error":"failed","message":"No Python found: the stats helper needs Python 3.10 or newer (production uses /opt/stats-venv)."}'
+  exit 3
+fi
+
+exec "$python" -I "$script" "$@"

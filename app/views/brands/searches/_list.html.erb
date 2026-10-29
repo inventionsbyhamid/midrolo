@@ -1,0 +1,15 @@
+<%# locals: (searches:, result_counts:) -%>
+<ul class="flex flex-col divide-y divide-line rounded-[var(--radius-card)] border border-line bg-surface">
+  <% searches.each do |search| %>
+    <li class="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <div class="min-w-0">
+        <%= link_to search.query, brand_search_path(search), class: "font-semibold underline-offset-4 hover:underline" %>
+        <p class="text-sm text-ink-soft">
+          <%= time_ago_in_words(search.created_at) %> ago
+          <% if search.done? %> · <%= pluralize(result_counts.fetch(search.id, 0), "show") %><% end %>
+        </p>
+      </div>
+      <%= brand_search_status_badge(search) %>
+    </li>
+  <% end %>
+</ul>

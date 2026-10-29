@@ -1,0 +1,38 @@
+<% content_for :title, "Saved shows" %>
+<div class="flex flex-col gap-6">
+  <header class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <p class="text-sm font-semibold text-plum"><%= current_brand.name %></p>
+      <h1 class="type-h1">Saved shows</h1>
+    </div>
+    <%= ui_button "Find podcasts", new_brand_search_path, variant: :secondary %>
+  </header>
+  <% if @saved.any? %>
+    <ul class="flex flex-col gap-3">
+      <% @saved.each do |saved| %>
+        <% podcast = saved.podcast %>
+        <li class="card">
+          <div class="card-body flex flex-wrap items-center gap-4">
+            <%= podcast_artwork_tag(podcast, size: :thumb, class: "size-16") %>
+            <div class="min-w-0 flex-1">
+              <%= link_to podcast.title, brand_podcast_href(podcast), class: "type-h3 block truncate underline-offset-4 hover:underline" %>
+              <p class="mt-1 flex flex-wrap gap-x-4 text-sm text-ink-soft">
+                <% if (price = brand_price_text(podcast)) %><span><%= price %></span><% end %>
+                <% if (downloads = brand_downloads_text(podcast)) %><span><%= downloads %></span><% end %>
+                <% if (months = brand_open_months_text(podcast)) %><span><%= months %></span><% end %>
+                <span>Saved <%= time_ago_in_words(saved.created_at) %> ago</span>
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <%= ui_button "Request a spot", brand_podcast_href(podcast, anchor: "request"), size: :sm %>
+              <%= render "podcasts/save", podcast: podcast, saved: true %>
+            </div>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <%= render "components/empty_state", title: "Nothing saved yet", body: "Save shows from your search results to build a shortlist.",
+          action_label: "Find podcasts", action_href: new_brand_search_path %>
+  <% end %>
+</div>

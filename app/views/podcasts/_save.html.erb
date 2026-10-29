@@ -1,1 +1,16 @@
-<%# Podcast page: Save, for signed-in brand members. Lane L6 fills it; lane L3's page renders it with podcast: (from Podcast.for_page). %>
+<%# locals: (podcast:, saved: nil) -%>
+<%#
+  Podcast page and fit results: Save to the brand's shortlist (lane L6). With saved: known (the results page loads
+  them all in one query) the button renders in place; on a podcast page it loads in a lazy frame from
+  Brands::SavedPodcastsController#show, so its state never rides on the page's HTTP cache. Visitors get a link that
+  signs them in and starts a brand.
+%>
+<% if !saved.nil? %>
+  <%= render "brands/saved_podcasts/frame", podcast: podcast, saved: saved %>
+<% elsif user_signed_in? %>
+  <%= turbo_frame_tag dom_id(podcast, :save), src: brand_saved_podcast_path(podcast.public_id), loading: :lazy, class: "contents" do %>
+    <span class="btn btn-secondary btn-sm" aria-disabled="true">Save</span>
+  <% end %>
+<% else %>
+  <%= link_to "Save for your brand", brand_start_path, class: "btn btn-secondary btn-sm" %>
+<% end %>
