@@ -42,6 +42,26 @@ RSpec.describe "Conversations" do
       expect(response.body).not_to include("hasn't claimed")
     end
 
+    it "shows the show's rate card and open months when it has a published listing (review BR-12)" do
+      show = podcast.owner_show
+      create(:media_kit, :published, show: show, open_to_sponsors: true, open_months: [ month ],
+                                     rate_card_overrides: { "preroll" => "120", "midroll" => "180" },
+                                     looking_for: "Brands for people who cook at home.")
+
+      get new_conversation_path(podcast: podcast.slug)
+
+      page = Nokogiri::HTML(response.body)
+      slots = page.css(".spot-slot").to_h { |slot| [ slot.at_css(".spot-slot-name").text, slot.text.squish ] }
+      expect(slots.keys).to eq([ "Preroll", "Midroll", "Postroll", "Any spot" ])
+      expect(slots["Preroll"]).to include("$120", "Set by the show")
+      expect(slots["Postroll"]).to include("Suggested by #{APP_NAME}")
+      expect(page.at_css("input[type=radio][value=midroll]")["data-price"]).to eq("180")
+      open_chip = page.css(".month-chip").find { |chip| chip.at_css("input")["value"] == month }
+      expect(open_chip.text.squish).to end_with("Open")
+      expect(page.css(".month-chip-closed").size).to eq(InboxHelper::MONTHS_OFFERED - 1)
+      expect(response.body).to include("Who The Founder&#39;s Ledger is looking for", "Brands for people who cook at home.")
+    end
+
     it "opens a request on a claimed show, emails its owner and lands on the thread" do
       ask
 

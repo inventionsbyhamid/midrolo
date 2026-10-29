@@ -3,7 +3,7 @@
 <div class="flex flex-col gap-8">
   <header class="flex flex-wrap items-center justify-between gap-4">
     <div class="min-w-0">
-      <p class="text-sm font-semibold text-plum">Brand</p>
+      <p class="text-sm font-semibold text-plum">Your brand</p>
       <h1 class="type-h1 truncate"><%= current_brand.name %></h1>
       <p class="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
         <% if current_brand.domain.present? %><span><%= current_brand.domain %></span><% end %>
@@ -20,11 +20,33 @@
     <% end %>
   <% end %>
 
-  <div class="grid gap-4 sm:grid-cols-3">
-    <%= render "components/stat", value: number_with_delimiter(@searches_count), label: "Searches" %>
-    <%= render "components/stat", value: number_with_delimiter(@saved_count), label: "Saved shows" %>
-    <%= render "components/stat", value: number_with_delimiter(@requests_count), label: "Requests sent" %>
-  </div>
+  <%# Each counter opens its list (review BR-15). %>
+  <ul class="dash-counters" aria-label="Your brand at a glance">
+    <% [ [ @searches_count, "Searches", brand_searches_path ], [ @saved_count, "Saved shows", brand_saved_podcasts_path ],
+         [ @requests_count, "Requests sent", brand_inbox_path ] ].each do |count, label, href| %>
+      <li>
+        <%= link_to href, class: "dash-counter" do %>
+          <span class="stat-value"><%= number_with_delimiter(count) %></span>
+          <span class="stat-label"><%= label %></span>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+
+  <section aria-labelledby="requests-heading" class="flex flex-col gap-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 id="requests-heading" class="type-h2">Requests</h2>
+      <% if @requests.any? %><%= link_to "Open your inbox", brand_inbox_path, class: "link text-sm" %><% end %>
+    </div>
+    <% if @requests.any? %>
+      <ul class="flex flex-col gap-3">
+        <%= render partial: "conversations/conversation", collection: @requests, locals: { side: :brand } %>
+      </ul>
+    <% else %>
+      <%= render "components/empty_state", title: "No requests yet",
+            body: "Ask a show for a spot from your results or its page. Replies land in your inbox, and we email you." %>
+    <% end %>
+  </section>
 
   <section aria-labelledby="searches-heading" class="flex flex-col gap-3">
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -50,12 +72,16 @@
         <% @saved.each do |saved| %>
           <li class="card"><div class="card-body flex items-center gap-3">
             <%= podcast_artwork_tag(saved.podcast, size: :thumb, class: "size-12") %>
-            <%= link_to saved.podcast.title, brand_podcast_href(saved.podcast), class: "min-w-0 flex-1 truncate font-semibold underline-offset-4 hover:underline" %>
+            <span class="min-w-0 flex-1">
+              <%= link_to saved.podcast.title, brand_podcast_href(saved.podcast), class: "block truncate font-semibold underline-offset-4 hover:underline" %>
+              <% if (price = brand_price_text(saved.podcast)) %><span class="block truncate text-sm text-ink-soft"><%= price %></span><% end %>
+            </span>
           </div></li>
         <% end %>
       </ul>
     <% else %>
-      <p class="text-ink-soft">Save shows from your search results to build a shortlist.</p>
+      <%= render "components/empty_state", title: "Nothing saved yet",
+            body: "Save shows from your results to build a shortlist you can come back to." %>
     <% end %>
   </section>
 </div>

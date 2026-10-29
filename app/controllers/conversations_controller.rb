@@ -6,8 +6,9 @@
 #   show    a thread; opening it marks it read for the viewer's side
 class ConversationsController < ApplicationController
   LIST_LIMIT = 100
-  SENT = "Request sent. We emailed the show and will tell you when they reply.".freeze
-  WAITING = "Request saved. It reaches the show when they claim their page. We never email shows that haven't joined.".freeze
+  # Short: the thread's status note says the rest (review BR-14).
+  SENT = "Request sent.".freeze
+  WAITING = "Request saved.".freeze
   ALREADY_ASKED = "You already asked this show. Here's your conversation.".freeze
   NEEDS_BRAND = "Set up your brand first, then send your request.".freeze
 

@@ -1,0 +1,26 @@
+<%# locals: (conversation:) -%>
+<%# A declined request isn't the end for the brand (review BR-13): the next best shows from the user's latest search for
+    this brand, and the way back to those results. %>
+<% others = FitResult.where.not(podcast_id: conversation.podcast_id).select(:fit_search_id) %>
+<% search = FitSearch.where(brand_id: conversation.brand_id, user: current_user, status: "done", id: others).order(created_at: :desc, id: :desc).first %>
+<% results = search ? search.results.where.not(podcast_id: conversation.podcast_id).includes(:podcast).order(:position).limit(3).to_a : [] %>
+<%= render "components/card", title: results.any? ? "Other good fits for #{conversation.brand.name}" : "Find another show" do %>
+  <% if results.any? %>
+    <ul class="flex flex-col divide-y divide-line">
+      <% results.each do |result| %>
+        <li class="flex items-center gap-3 py-3 first:pt-0">
+          <%= podcast_artwork_tag(result.podcast, size: :thumb, class: "size-10 flex-none") %>
+          <span class="min-w-0 flex-1">
+            <%= link_to result.podcast.title, inbox_podcast_path(result.podcast), class: "block truncate font-semibold underline-offset-4 hover:underline" %>
+            <span class="block truncate text-sm text-ink-soft"><%= brand_price_text(result.podcast) || (result.podcast.claimed? ? "No rates yet" : "Hasn't joined #{APP_NAME} yet") %></span>
+          </span>
+          <span class="flex-none text-sm font-semibold text-plum"><%= FitSearch::Scoring.fit_word(result.score) %></span>
+        </li>
+      <% end %>
+    </ul>
+    <%= ui_button "Back to your results", brand_search_path(search), variant: :secondary, class: "mt-4" %>
+  <% else %>
+    <p class="text-ink-soft">Our agent ranks podcasts your customers love, with proof, price and trust.</p>
+    <%= ui_button "Find podcasts", new_brand_search_path, variant: :secondary, class: "mt-4" %>
+  <% end %>
+<% end %>

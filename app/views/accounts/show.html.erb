@@ -8,6 +8,10 @@
     </div>
   </header>
 
+  <%# A brand-only account sees its brand limits, not the podcaster's plan and usage (review BR-2). %>
+  <% brand_only = current_user.brand_member? && !current_user.shows.exists? %>
+  <%= render "accounts/brand", user: current_user if current_user.brand_member? %>
+  <% unless brand_only %>
   <%= render "components/card", title: "Plan", aside: ui_badge(current_plan.name, tone: current_plan.key == :free ? :neutral : :accent) do %>
     <p class="text-ink-soft"><%= plan_summary(current_plan) %></p>
     <% if (renewal = renewal_line(current_plan.subscription)) %>
@@ -43,6 +47,8 @@
       </ul>
       <%= test_payments_note %>
     <% end %>
+  <% end %>
+
   <% end %>
 
   <%= render "components/card", title: "Sign out" do %>

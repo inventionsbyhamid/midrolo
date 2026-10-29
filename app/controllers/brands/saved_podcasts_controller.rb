@@ -13,9 +13,17 @@ module Brands
     # can't claim it saved anything (review L7).
     COLLEAGUE_SAVED = "Someone at your brand already saved this show. Verify your work email to see your brand's list.".freeze
 
+    # Each saved show with its latest fit from the brand's searches and the brand's latest request to it (review
+    # BR-11): two queries for the whole list.
     def index
       @saved = brand_scoped(current_brand.saved_podcasts).includes(podcast: PODCAST_PRELOADS)
                  .order(created_at: :desc, id: :desc).limit(INDEX_LIMIT).to_a
+      ids = @saved.map(&:podcast_id)
+      @fits = FitResult.where(fit_search_id: visible_searches.where(brand_id: current_brand.id).select(:id), podcast_id: ids)
+                       .order(created_at: :desc, id: :desc).to_a.uniq(&:podcast_id).index_by(&:podcast_id)
+      requests = current_brand.conversations.where(podcast_id: ids)
+      requests = requests.where(started_by_id: current_user.id) unless current_brand_member.verified?
+      @requests = requests.order(created_at: :desc, id: :desc).to_a.uniq(&:podcast_id).index_by(&:podcast_id)
     end
 
     def show

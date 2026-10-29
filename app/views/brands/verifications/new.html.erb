@@ -8,13 +8,15 @@
 
   <%= render "components/card", title: "Email a code to your work address" do %>
     <% if current_brand.domain.present? %>
-      <%= form_with url: brand_verification_path, method: :post, class: "flex flex-col gap-3 sm:flex-row sm:items-end" do |f| %>
+      <%= form_with url: brand_verification_path, method: :post, class: "flex flex-col gap-3 sm:flex-row sm:items-start" do |f| %>
         <div class="flex-1">
           <%= f.label :email, "Work email at #{current_brand.domain}", class: "label" %>
           <%= f.email_field :email, value: @email, class: "input", required: true, autocomplete: "email",
-                placeholder: "you@#{current_brand.domain}", spellcheck: false %>
+                placeholder: "you@#{current_brand.domain}", spellcheck: false,
+                aria: { describedby: "work-email-hint", invalid: (true if flash.now[:alert].present?) } %>
+          <p id="work-email-hint" class="<%= class_names("hint", "field-error" => flash.now[:alert].present?) %>">Use an address ending in @<%= current_brand.domain %>.</p>
         </div>
-        <%= f.submit "Email me a code", class: "btn btn-primary btn-md" %>
+        <%= f.submit "Email me a code", class: "btn btn-primary btn-md sm:mt-[1.875rem]" %>
       <% end %>
     <% else %>
       <p class="text-ink-soft">Your brand has no website yet, so we can't tell which addresses are yours. Start again with your website and you can verify right after.</p>
