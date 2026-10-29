@@ -51,14 +51,20 @@ module Catalog
     def store!(feed, fetched)
       new_ids = []
       artwork_was = @podcast.artwork_url
+      feed_was = @podcast.feed_url
+      released = nil
       Podcast.transaction do
         new_ids = upsert_episodes(feed.episodes)
         upsert_people(feed)
         @podcast.assign_attributes(feed_columns(feed, fetched))
+        if @podcast.feed_url != feed_was
+          released = FeedMove.record(@podcast, from: feed_was, to: @podcast.feed_url, via: move_via(fetched))
+        end
         @podcast.status = @podcast.feed_status(@now)
         schedule
         @podcast.save!
       end
+      FeedMove.released(@podcast, released, from: feed_was, to: @podcast.feed_url) if released
       queue_artwork if artwork_was != @podcast.artwork_url || !@podcast.artwork_stored?
       ::Sponsors::ScanJob.perform_later(@podcast.id, new_ids) if new_ids.any?
       outcome(:updated, new_ids)
@@ -92,13 +98,15 @@ module Catalog
     end
 
     # The feed's new home, when it moved for good (permanent redirects, or itunes:new-feed-url) and no other podcast
-    # has that URL.
+    # has that URL. A move releases a claim (Catalog::FeedMove).
     def moved_to(feed, fetched)
       url = Podcast.normalize_feed_url(fetched.moved_to || feed.new_feed_url)
       return nil if url.nil? || url == @podcast.feed_url || Podcasts::SafeUrl.blocked?(url)
 
       url unless Podcast.where(feed_url: url).where.not(id: @podcast.id).exists? || Suppression.podcast?(feed_url: url)
     end
+
+    def move_via(fetched) = fetched.moved_to.present? ? "redirect" : "new_feed_url"
 
     # Upserts the parsed episodes by (podcast, guid) and returns the ids of those that are new.
     def upsert_episodes(episodes)

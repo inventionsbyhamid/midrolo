@@ -31,6 +31,7 @@ class Podcast < ApplicationRecord
   # The owner show's media kit, which holds the listing and the rate card.
   has_one :listing, through: :owner_show, source: :media_kit
   has_many :redirects, class_name: "PodcastRedirect", dependent: :delete_all
+  has_many :feed_moves, class_name: "PodcastFeedMove", dependent: :delete_all
   # Mentions before episodes: they point at episodes.
   has_many :sponsor_mentions, dependent: :delete_all
   has_many :episodes, dependent: :delete_all
