@@ -1,0 +1,47 @@
+<% content_for :title, "Remove the page for #{@podcast.title}" %>
+<% content_for :meta, private_page_meta %>
+<%# "Remove this page": the owner removes it at once; anyone else's request goes to an admin, answered within 7 days. %>
+<div class="wrap max-w-2xl py-10 sm:py-14">
+  <nav aria-label="Breadcrumb">
+    <ol class="crumbs">
+      <li><%= link_to "Podcasts", podcasts_path %></li>
+      <li><%= link_to @podcast.title, podcast_path(@podcast) %></li>
+      <li aria-current="page">Remove</li>
+    </ol>
+  </nav>
+  <h1 class="type-h2 mt-4">Remove the page for <%= @podcast.title %></h1>
+  <% if owner? %>
+    <p class="type-lead mt-3">You own this show on <%= APP_NAME %>, so the page comes down as soon as you confirm.</p>
+  <% else %>
+    <p class="type-lead mt-3">Tell us who you are and why. We review every request and reply within 7 days.</p>
+  <% end %>
+  <ul class="mt-4 flex list-disc flex-col gap-1 pl-5 text-ink-soft">
+    <li>The page leaves search results, the directory and every list on <%= APP_NAME %>.</li>
+    <li>The show's artwork and people's photos are deleted from our storage.</li>
+    <li>The show can't come back through a search or a new import.</li>
+  </ul>
+
+  <%= form_with model: @request_form, url: podcast_removal_path(@podcast), method: :post, class: "mt-8 flex flex-col gap-5" do |f| %>
+    <div>
+      <%= f.label :email, owner? ? "Email for the confirmation (optional)" : "Your email", class: "label" %>
+      <%= f.email_field :email, class: "input", autocomplete: "email", required: !owner?,
+            value: @request_form.email.presence || current_user&.email,
+            aria: { invalid: @request_form.errors[:email].any?, describedby: ("email_error" if @request_form.errors[:email].any?) } %>
+      <% if @request_form.errors[:email].any? %>
+        <p id="email_error" class="field-error"><%= @request_form.errors[:email].first %></p>
+      <% end %>
+      <p class="hint">Only to reply to you. Never shown or shared.</p>
+    </div>
+    <div>
+      <%= f.label :reason, "Why should it come down? (optional)", class: "label" %>
+      <%= f.text_area :reason, rows: 4, class: "input", maxlength: RemovalRequest::REASON_LIMIT %>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <%= f.submit owner? ? "Remove the page now" : "Send the request", class: class_names("btn btn-md", owner? ? "btn-danger" : "btn-primary"), name: nil %>
+      <%= link_to "Keep the page", podcast_path(@podcast), class: "btn btn-ghost btn-md" %>
+    </div>
+  <% end %>
+  <p class="mt-8 text-sm text-ink-soft">
+    More about what we show and why: <%= link_to "Data sources and your rights", data_sources_path, class: "link" %>.
+  </p>
+</div>

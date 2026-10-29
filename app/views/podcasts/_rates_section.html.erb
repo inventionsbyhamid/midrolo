@@ -1,0 +1,20 @@
+<%# locals: (podcast:) -%>
+<%# Rates (plan 4.1): lane L4's podcasts/_rates, the published listing and rate card. Until it renders, a note saying
+    why there are none. %>
+<section id="rates" class="pod-section" aria-labelledby="rates_title">
+  <h2 id="rates_title" class="pod-h2">Rates</h2>
+  <%= pages_slot("podcasts/rates", podcast: podcast) do %>
+    <div class="pod-empty">
+      <% if podcast.min_price_cents %>
+        <p class="pod-empty-title">Spots from <%= pages_money(podcast.min_price_cents) %> per episode.</p>
+        <p class="text-ink-soft">Request a spot and the show will reply with its full rate card.</p>
+      <% elsif podcast.claimed? %>
+        <p class="pod-empty-title">No rate card published yet.</p>
+        <p class="text-ink-soft">The show hasn't published its prices. Ask about a spot and they'll reply with theirs.</p>
+      <% else %>
+        <p class="pod-empty-title">No rate card yet.</p>
+        <p class="text-ink-soft">Rates appear once the show claims this page and publishes them. Host this show? Claiming is free.</p>
+      <% end %>
+    </div>
+  <% end %>
+</section>

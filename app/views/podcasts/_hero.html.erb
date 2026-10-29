@@ -1,0 +1,45 @@
+<%# locals: (podcast:, actions: true, requestable: false) -%>
+<%# The page's header (plan 4.1): the show's own waveform on an ink band with its mid-roll lit, the artwork riding over
+    it, the badges that say where the page stands, title, host, categories and language, how often it publishes, and
+    the actions: Request a spot jumps to lane L7's form (#request, in the sidebar), Save is lane L6's, then Copy link. %>
+<% status_label, status_tone = pages_status(podcast) %>
+<div class="pod-banner"><%= kit_waveform(podcast.public_id) %></div>
+<header class="wrap pod-hero">
+  <%= podcast_artwork_tag(podcast, size: :page, class: "pod-art") %>
+  <div class="pod-hero-text">
+    <% badges = [ ([ status_label, status_tone ] unless podcast.active?),
+                  ([ "Open to sponsors", :success ] if podcast.open_to_sponsors?),
+                  ([ "Stats verified", :accent ] if podcast.downloads_trust == "verified"),
+                  ([ "Claimed by the show", :accent ] if podcast.claimed?) ].compact %>
+    <% if badges.any? %>
+      <p class="pod-badges"><% badges.each do |label, tone| %><%= ui_badge label, tone: tone %><% end %></p>
+    <% end %>
+    <h1 id="podcast_title" class="pod-title"><%= podcast.title %></h1>
+    <% byline = [ (tag.span("By #{podcast.author}") if podcast.author.present?),
+                  (safe_join(podcast.categories.first(3).map { |name| pages_category_link(name) }, ", ") if podcast.categories.any?),
+                  (tag.span(pages_language(podcast.language), class: "pod-byline-soft") if podcast.language.present?) ].compact %>
+    <% if byline.any? %>
+      <p class="pod-byline"><%= safe_join(byline, tag.span(" · ", class: "pod-byline-soft", aria: { hidden: true })) %></p>
+    <% end %>
+    <% if (rhythm = pages_rhythm(podcast)) %>
+      <p class="pod-rhythm"><%= rhythm %></p>
+    <% end %>
+    <% if actions %>
+      <div class="pod-actions">
+        <% if requestable %>
+          <%= ui_button "Request a spot", "#request" %>
+        <% elsif podcast.min_price_cents %>
+          <%= ui_button "See the rate card", "#rates" %>
+        <% end %>
+        <%= render "podcasts/save", podcast: podcast %>
+        <div data-controller="clipboard">
+          <input type="hidden" value="<%= podcast_url(podcast) %>" data-clipboard-target="source">
+          <button type="button" class="btn btn-secondary btn-md" data-action="clipboard#copy">
+            <svg viewBox="0 0 20 20" class="size-4" aria-hidden="true"><path d="M8.5 11.5a3 3 0 0 0 4.2 0l2.6-2.6a3 3 0 0 0-4.2-4.2l-.9.9M11.5 8.5a3 3 0 0 0-4.2 0l-2.6 2.6a3 3 0 0 0 4.2 4.2l.9-.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <span data-clipboard-target="label" aria-live="polite">Copy link</span>
+          </button>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</header>

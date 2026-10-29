@@ -1,0 +1,10 @@
+<% content_for :title, "Page removed" %>
+<% content_for :meta, private_page_meta %>
+<div class="wrap page-head max-w-2xl">
+  <h1 class="type-h1">This page was removed.</h1>
+  <p class="type-lead mt-4">At the request of the show or someone it names. It won't come back, even if the show is searched for again.</p>
+  <p class="mt-6 flex flex-wrap gap-3">
+    <%= ui_button "Find other podcasts", podcasts_path %>
+    <%= ui_button "Data sources and your rights", data_sources_path, variant: :secondary %>
+  </p>
+</div>

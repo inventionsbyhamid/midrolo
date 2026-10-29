@@ -1,0 +1,38 @@
+<%# locals: (podcast:, sponsors: 0, heading: :h3) -%>
+<%# A podcast in a list (the directory, a category, a brand's shows): artwork, title, host, and the facts a buyer scans
+    first, each named for what it is. The whole card links to the podcast's page. %>
+<li class="dir-card">
+  <%= podcast_artwork_tag(podcast, size: :card, class: "dir-card-art") %>
+  <div class="dir-card-body">
+    <%= content_tag heading, class: "dir-card-title" do %>
+      <%= link_to podcast.title, podcast_path(podcast), class: "dir-card-link" %>
+    <% end %>
+    <% if podcast.author.present? %>
+      <p class="dir-card-by">By <%= podcast.author %></p>
+    <% end %>
+    <p class="dir-card-facts">
+      <% if podcast.downloads_per_episode && podcast.downloads_trust.in?(%w[verified provided]) %>
+        <span><strong><%= number_with_delimiter(podcast.downloads_per_episode) %></strong> per episode</span>
+      <% end %>
+      <% if podcast.min_price_cents %>
+        <span>From <strong><%= pages_money(podcast.min_price_cents) %></strong></span>
+      <% end %>
+      <% if sponsors.positive? %>
+        <span><strong><%= sponsors %></strong> <%= "sponsor".pluralize(sponsors) %> found</span>
+      <% end %>
+      <% if podcast.last_published_at %>
+        <span>Latest <%= pages_ago(podcast.last_published_at) %></span>
+      <% elsif podcast.categories.first %>
+        <span><%= podcast.categories.first %></span>
+      <% end %>
+    </p>
+    <% badges = [ ([ "Open to sponsors", :success ] if podcast.open_to_sponsors?),
+                  ([ "Stats verified", :accent ] if podcast.downloads_trust == "verified"),
+                  ([ "Claimed", :neutral ] if podcast.claimed?) ].compact %>
+    <% if badges.any? %>
+      <p class="dir-card-badges">
+        <% badges.each do |label, tone| %><%= ui_badge label, tone: tone %><% end %>
+      </p>
+    <% end %>
+  </div>
+</li>

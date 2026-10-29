@@ -1,0 +1,54 @@
+<% podcast = @podcast %>
+<% content_for :title, pages_title(podcast) %>
+<% content_for :meta, pages_meta(description: pages_description(podcast, sponsors: @sponsors_90_days.to_i), url: podcast_url(podcast)) %>
+<% unless podcast.pending? %>
+  <% content_for :head, pages_podcast_json_ld(podcast, sponsors: @sponsors_90_days.to_i) %>
+<% end %>
+<%#
+  The podcast page (spec L3, plan 4.1): one URL per show, claimed or not. The hero, the key numbers, tabs that jump to
+  each section, then the main column (About, Episodes, Sponsors, Audience, Rates, People) beside the sidebar. Other
+  lanes fill their parts through podcasts/_numbers, _sponsors, _audience, _rates, _claim, _request, _save and _similar;
+  each has a fallback here until it renders something. A podcast still being read shows what it has and polls.
+%>
+<% request_form = pages_slot("podcasts/request", podcast: podcast) unless podcast.pending? %>
+<article class="pb-10" aria-labelledby="podcast_title">
+  <%= render "podcasts/hero", podcast: podcast, actions: !podcast.pending?, requestable: request_form.present? %>
+
+  <% if podcast.pending? %>
+    <div class="wrap pod-layout">
+      <div class="pod-main pod-section"><%= render "podcasts/pending", podcast: podcast, poll: 1 %></div>
+    </div>
+  <% else %>
+    <%= render "podcasts/facts", podcast: podcast, sponsors: @sponsors_90_days.to_i %>
+
+    <% tabs = [ [ "About", "about" ], [ "Episodes", "episodes", (number_with_delimiter(podcast.episode_count) if podcast.episode_count.to_i.positive?) ],
+                [ "Sponsors", "sponsors" ], [ "Audience", "audience" ], [ "Rates", "rates" ],
+                ([ "People", "people", podcast.people.size ] if podcast.people.any?) ].compact %>
+    <nav class="pod-tabs" aria-label="On this page">
+      <div class="wrap">
+        <ul class="pod-tabs-list">
+          <% tabs.each do |label, anchor, count| %>
+            <li><a class="pod-tab" href="#<%= anchor %>"><%= label %><% if count %> <span class="pod-tab-count"><%= count %></span><% end %></a></li>
+          <% end %>
+        </ul>
+      </div>
+    </nav>
+
+    <div class="wrap pod-layout">
+      <div class="pod-main">
+        <% if podcast.failed? %>
+          <p class="lamp-note mt-6" role="note">We couldn't read this show's feed on our last try, so what's here may be out of date.</p>
+        <% end %>
+        <%= render "podcasts/about", podcast: podcast %>
+        <% cache [ podcast, "episodes" ] do %>
+          <%= render "podcasts/episodes", podcast: podcast, episodes: page_episodes %>
+        <% end %>
+        <%= render "podcasts/sponsors_section", podcast: podcast %>
+        <%= render "podcasts/audience_section", podcast: podcast %>
+        <%= render "podcasts/rates_section", podcast: podcast %>
+        <%= render "podcasts/people", podcast: podcast %>
+      </div>
+      <%= render "podcasts/sidebar", podcast: podcast, similar: @similar, request_form: request_form %>
+    </div>
+  <% end %>
+</article>

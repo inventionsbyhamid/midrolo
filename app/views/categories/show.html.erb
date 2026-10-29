@@ -1,0 +1,52 @@
+<% category_url = podcast_category_url(Podcast.category_slug(@category)) %>
+<% content_for :title, "#{@category} podcasts to sponsor: rates, sponsors and audience" %>
+<% content_for :meta, pages_meta(description: "#{@category} podcasts open to sponsors, with the sponsors each has run, rate cards and numbers with their source. Filter by size, price and verified stats.",
+                                  url: category_url) %>
+<% content_for :head, pages_list_json_ld(name: "#{@category} podcasts", url: category_url, podcasts: @podcasts,
+                                          trail: [ [ "Podcasts", podcasts_url ], [ @category, category_url ] ]) %>
+<%# A category page (plan 4.2): the directory narrowed to one category, with the same filters. %>
+<div class="wrap dir-head">
+  <nav aria-label="Breadcrumb">
+    <ol class="crumbs">
+      <li><%= link_to "Podcasts", podcasts_path %></li>
+      <li aria-current="page"><%= @category %></li>
+    </ol>
+  </nav>
+  <h1 class="type-h1 mt-3"><%= @category %> podcasts to sponsor</h1>
+  <p class="type-lead mt-3 max-w-2xl">
+    <%= pluralize(number_with_delimiter(@total), "show") %> in <%= @category %>, each with the sponsors it has run and,
+    once its owner claims it, rates and open months.
+  </p>
+  <% others = Podcast.category_counts.reject { |name, _| name == @category }.first(10) %>
+  <% if others.any? %>
+    <nav class="dir-categories" aria-label="Other categories">
+      <%= link_to podcast_category_path(Podcast.category_slug(@category)), class: "dir-category", aria: { current: "page" } do %>
+        <%= @category %> <span class="dir-category-count"><%= number_with_delimiter(@total) %></span>
+      <% end %>
+      <% others.each do |name, count| %>
+        <%= link_to podcast_category_path(Podcast.category_slug(name)), class: "dir-category" do %>
+          <%= name %> <span class="dir-category-count"><%= number_with_delimiter(count) %></span>
+        <% end %>
+      <% end %>
+    </nav>
+  <% end %>
+</div>
+
+<div class="wrap pb-6">
+  <%= render "podcasts/filters", directory: @directory, url: podcast_category_path(Podcast.category_slug(@category)) %>
+  <% if @podcasts.any? %>
+    <ul class="dir-grid mt-6" aria-label="<%= @category %> podcasts">
+      <% @podcasts.each do |podcast| %>
+        <%= render "podcasts/card", podcast: podcast, sponsors: @sponsor_counts.fetch(podcast.id, 0), heading: :h2 %>
+      <% end %>
+    </ul>
+    <%= render "podcasts/pager", directory: @directory,
+          path: ->(params) { podcast_category_path(Podcast.category_slug(@category), params) } %>
+  <% else %>
+    <div class="mt-6">
+      <%= render "components/empty_state", title: "No #{@category} podcasts match these filters.",
+            body: "Fewer filters will widen the list.", action_label: "Clear filters",
+            action_href: podcast_category_path(Podcast.category_slug(@category)) %>
+    </div>
+  <% end %>
+</div>

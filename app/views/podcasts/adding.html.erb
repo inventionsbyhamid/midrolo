@@ -1,0 +1,5 @@
+<% content_for :title, "Adding podcasts" %>
+<% content_for :meta, private_page_meta %>
+<div class="wrap py-8">
+  <%= render "podcasts/adding", podcasts: @adding, poll: @poll, sponsor_counts: @sponsor_counts %>
+</div>

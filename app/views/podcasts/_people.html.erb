@@ -1,0 +1,28 @@
+<%# locals: (podcast:) -%>
+<%# People (plan 4.1): only those the show's feed names (podcast:person, itunes:author), hosts first; a photo only
+    when the feed publishes one. %>
+<% people = podcast.people.sort_by { |person| [ person.host? ? 0 : 1, -person.episodes_count.to_i, person.name ] }.first(24) %>
+<% if people.any? %>
+  <section id="people" class="pod-section" aria-labelledby="people_title">
+    <h2 id="people_title" class="pod-h2">People</h2>
+    <p class="pod-note">As the show's feed names them.</p>
+    <ul class="people">
+      <% people.each do |person| %>
+        <li class="person">
+          <% photo = person.image&.visible? && person.image.file.attached? ? rails_storage_proxy_path(person.image.file.variant(:thumb)) : (Show.http_url(person.img_url) unless person.image&.suppressed_at) %>
+          <% if photo %>
+            <img src="<%= photo %>" alt="" class="person-photo" width="44" height="44" loading="lazy" referrerpolicy="no-referrer">
+          <% else %>
+            <span class="person-photo" aria-hidden="true"><%= Podcast.initials_for(person.name) %></span>
+          <% end %>
+          <div class="min-w-0">
+            <p class="person-name">
+              <% if (href = Show.http_url(person.href)) %><%= link_to person.name, href, class: "link text-ink", rel: "nofollow noopener", target: "_blank" %><% else %><%= person.name %><% end %>
+            </p>
+            <p class="person-role"><%= person.role.humanize %><% if person.episodes_count.to_i > 1 %>, in <%= pluralize(person.episodes_count, "episode") %><% end %></p>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+<% end %>

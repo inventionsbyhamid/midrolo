@@ -1,0 +1,73 @@
+<% search = @directory.search? %>
+<% content_for :title, search ? "Podcasts matching \"#{@directory.query}\"" : "Find podcasts to sponsor" %>
+<% content_for :meta, pages_meta(description: "Independent podcasts with their sponsors, rates and numbers, each with its source. Search by name or browse by category, size and price.",
+                                  url: podcasts_url) %>
+<% categories = Podcast.category_counts %>
+<div class="wrap dir-head">
+  <p class="eyebrow">The <%= APP_NAME %> catalog</p>
+  <h1 class="type-h1 mt-2">Find podcasts to sponsor</h1>
+  <p class="type-lead mt-3 max-w-2xl">
+    Every show's own feed, the sponsors it has run, and numbers that say where they came from.
+  </p>
+  <%= form_with url: podcasts_path, method: :get, role: "search", class: "dir-search" do |f| %>
+    <div class="dir-search-field">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.75" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <%= f.label :q, "Search podcasts", class: "sr-only" %>
+      <%= f.search_field :q, value: @directory.query, class: "input", placeholder: "Show, host or topic",
+            autocomplete: "off", maxlength: PodcastDirectory::QUERY_LIMIT %>
+    </div>
+    <%= f.submit "Search", class: "btn btn-primary btn-lg", name: nil %>
+  <% end %>
+  <% if categories.any? %>
+    <nav class="dir-categories" aria-label="Categories">
+      <% categories.first(14).each do |name, count| %>
+        <%= link_to podcast_category_path(Podcast.category_slug(name)), class: "dir-category" do %>
+          <%= name %> <span class="dir-category-count"><%= number_with_delimiter(count) %></span>
+        <% end %>
+      <% end %>
+    </nav>
+  <% end %>
+</div>
+
+<div class="wrap pb-6">
+  <%= render "podcasts/filters", directory: @directory, url: podcasts_path, category_names: categories.map(&:first) %>
+
+  <div class="dir-results-head">
+    <h2 class="type-h3">
+      <% if search %>
+        Results for "<%= @directory.query %>"
+      <% elsif @directory.filtered? %>
+        Matching podcasts
+      <% else %>
+        Recently active podcasts
+      <% end %>
+    </h2>
+    <% if @directory.page > 1 %><p class="text-sm text-ink-soft">Page <%= @directory.page %></p><% end %>
+  </div>
+
+  <% if @podcasts.any? %>
+    <ul class="dir-grid" aria-label="Podcasts">
+      <% @podcasts.each do |podcast| %>
+        <%= render "podcasts/card", podcast: podcast, sponsors: @sponsor_counts.fetch(podcast.id, 0) %>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <% if @adding.any? %>
+    <%= render "podcasts/adding", podcasts: @adding, poll: 1, sponsor_counts: @sponsor_counts %>
+  <% end %>
+
+  <% if @podcasts.any? %>
+    <%= render "podcasts/pager", directory: @directory, path: ->(params) { podcasts_path(params) } %>
+  <% elsif @adding.none? %>
+    <div class="mt-4">
+      <% if search %>
+        <%= render "components/empty_state", title: "No podcasts match \"#{@directory.query}\" yet.",
+              body: "Try the show's exact name, or fewer words. Shows we don't have yet are added from the podcast directory when you search for them." %>
+      <% else %>
+        <%= render "components/empty_state", title: "No podcasts match these filters.",
+              body: "Fewer filters will widen the list.", action_label: "Clear filters", action_href: podcasts_path %>
+      <% end %>
+    </div>
+  <% end %>
+</div>
