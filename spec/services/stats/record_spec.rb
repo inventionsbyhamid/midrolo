@@ -80,7 +80,7 @@ RSpec.describe Stats::Record do
 
     reading = podcast.stat_readings.find_by(metric: "downloads_per_episode", source: "platforms")
     expect(reading).to have_attributes(value: 3_150, trust: "verified", period_days: 30) # (2,400 + 3,900) / 2
-    expect(reading.evidence).to include("sources" => %w[apple spotify], "plays" => 6_300, "episodes" => 2)
+    expect(reading.evidence).to include("sources" => %w[spotify apple], "plays" => 6_300, "episodes" => 2)
     expect(podcast.reload).to have_attributes(downloads_per_episode: 3_150, downloads_trust: "verified")
   end
 end

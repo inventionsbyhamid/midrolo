@@ -42,7 +42,8 @@ module Podcast::Stats
     reading.update!(value: (plays.to_f / episodes_in_window).round, trust: "verified",
                     period_days: ::Stats::PlatformFetch::WINDOW_DAYS, captured_at: inputs.map(&:captured_at).max,
                     expires_at: inputs.map(&:expires_at).compact.min,
-                    evidence: { "sources" => inputs.map(&:source).sort, "plays" => plays, "episodes" => episodes_in_window,
+                    evidence: { "sources" => inputs.map(&:source).sort_by { |source| PLAY_METRICS.keys.index(source) },
+                                "plays" => plays, "episodes" => episodes_in_window,
                                 "period_start" => (window_end - (::Stats::PlatformFetch::WINDOW_DAYS - 1)).iso8601,
                                 "period_end" => window_end.iso8601 })
     reading

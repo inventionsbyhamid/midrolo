@@ -37,9 +37,9 @@ RSpec.describe StatsHelper do
     expect(helper.stats_metric_label(build(:stat_reading, metric: "plays_30d", source: "apple"))).to eq("Apple plays, 30 days")
     expect(helper.stats_metric_label(build(:stat_reading, metric: "streams_all_time", source: "spotify"))).to eq("Spotify streams, all time")
     expect(helper.stats_metric_label(build(:stat_reading, metric: "followers", source: "apple"))).to eq("Apple followers")
-    derived = build(:stat_reading, source: "platforms", trust: "verified", evidence: { "sources" => %w[apple spotify] })
-    expect(helper.stats_metric_label(derived)).to eq("Apple and Spotify plays per episode, 30 days")
-    expect(helper.stats_source_name(derived)).to eq("Apple Podcasts Connect and Spotify for Creators")
+    derived = build(:stat_reading, source: "platforms", trust: "verified", evidence: { "sources" => %w[spotify apple] })
+    expect(helper.stats_metric_label(derived)).to eq("Spotify and Apple plays per episode, 30 days")
+    expect(helper.stats_source_name(derived)).to eq("Spotify for Creators and Apple Podcasts Connect")
     expect(helper.stats_metric_label(build(:stat_reading, source: "provided"))).to eq("Downloads per episode")
   end
 
