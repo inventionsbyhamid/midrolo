@@ -101,6 +101,7 @@
     box-shadow: var(--shadow-edge);
   }
 
+  /* On a phone the chips scroll sideways; the right edge fades so the row reads as more to come (D-4). */
   .dir-categories {
     display: flex;
     gap: 0.5rem;
@@ -108,12 +109,14 @@
     padding: 0 1rem 0.25rem;
     overflow-x: auto;
     scrollbar-width: none;
+    mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
 
     @media (width >= 40rem) {
       flex-wrap: wrap;
       margin-inline: 0;
       padding-inline: 0;
       overflow: visible;
+      mask-image: none;
     }
   }
 

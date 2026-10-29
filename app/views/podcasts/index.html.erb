@@ -41,7 +41,7 @@
       <% elsif @directory.filtered? %>
         Matching podcasts
       <% else %>
-        Recently active podcasts
+        All podcasts, newest episode first
       <% end %>
     </h2>
     <% if @directory.page > 1 %><p class="text-sm text-ink-soft">Page <%= @directory.page %></p><% end %>
