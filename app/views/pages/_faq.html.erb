@@ -1,5 +1,6 @@
+<%# locals: (marketplace_only: false) -%>
 <%# The questions podcasters, brands (and judges) ask, answered plainly. Native <details>, so it works without
-    JavaScript. %>
+    JavaScript. marketplace_only: leaves out the report and plan questions (the landing; /pricing has them all). %>
 <div class="faq">
   <h2 id="faq-title" class="type-h2">Questions</h2>
   <div class="faq-list">
@@ -70,6 +71,7 @@
       </div>
     </details>
 
+    <% unless marketplace_only %>
     <details class="faq-item">
       <summary class="faq-question">What's a proxy profile?</summary>
       <div class="faq-answer">
@@ -80,7 +82,9 @@
         </p>
       </div>
     </details>
+    <% end %>
 
+    <% unless marketplace_only %>
     <details class="faq-item">
       <summary class="faq-question">What doesn't a report prove?</summary>
       <div class="faq-answer">
@@ -91,7 +95,9 @@
         </p>
       </div>
     </details>
+    <% end %>
 
+    <% unless marketplace_only %>
     <details class="faq-item">
       <summary class="faq-question">Do you email brands for me?</summary>
       <div class="faq-answer">
@@ -101,7 +107,9 @@
         </p>
       </div>
     </details>
+    <% end %>
 
+    <% unless marketplace_only %>
     <details class="faq-item">
       <summary class="faq-question">Who are the sample reports about?</summary>
       <div class="faq-answer">
@@ -111,6 +119,7 @@
         </p>
       </div>
     </details>
+    <% end %>
 
     <details class="faq-item">
       <summary class="faq-question">Can I remove my show's page?</summary>
@@ -123,6 +132,7 @@
       </div>
     </details>
 
+    <% unless marketplace_only %>
     <details class="faq-item">
       <summary class="faq-question">Can I cancel?</summary>
       <div class="faq-answer">
@@ -132,6 +142,7 @@
         </p>
       </div>
     </details>
+    <% end %>
 
     <details class="faq-item">
       <summary class="faq-question">What happens to my data?</summary>

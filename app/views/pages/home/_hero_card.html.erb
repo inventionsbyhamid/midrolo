@@ -48,7 +48,7 @@
            [ "Notes app", 84, "realistic", "Shares your listeners' taste tags" ],
            [ "Budgeting app", 78, "easy_yes", "Your listeners love it more than most" ] ].each do |name, fit, tier, chip| %>
         <li class="hero-match">
-          <span class="avatar size-10" aria-hidden="true"><span class="size-3 rounded-full bg-plum/30"></span></span>
+          <span class="flex size-10 flex-none items-center justify-center rounded-lg bg-plum-soft text-sm font-bold text-plum" aria-hidden="true"><%= Podcast.initials_for(name) %></span>
           <div class="min-w-0 flex-1">
             <div class="flex items-start justify-between gap-2">
               <p class="hero-match-name"><%= name %></p>

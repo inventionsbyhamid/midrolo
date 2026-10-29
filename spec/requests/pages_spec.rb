@@ -259,14 +259,18 @@ RSpec.describe "Public pages" do
         .to eq([ "Finding shows", "Trusting the numbers", "Proving fit", "Pricing a spot", "Booking" ])
       faq = page.at_css("#faq").text.squish
       expect(faq).to include("Is listing my show free?", "How do verified numbers work?", "Can brands contact me directly?")
-      expect(faq).to include("Where does the data come from?", "Is this my real audience?", "What's a proxy profile?")
+      expect(faq).to include("Where does the data come from?", "Is this my real audience?", "Can I remove my show's page?")
       expect(faq).to include("modeled from Qloo taste data, not measured", "Analytics access only", "Analyst role")
+      # UX review L-1: the report and plan questions stay on /pricing.
+      expect(faq).not_to include("What's a proxy profile?", "Can I cancel?")
+      get "/pricing"
+      expect(page.at_css("#faq").text.squish).to include("What's a proxy profile?", "Can I cancel?", "Is listing my show free?")
     end
 
     it "shows what each side pays above the podcaster plans, from the limits the code enforces" do
-      get "/"
+      get "/pricing"
 
-      sides = page.at_css("#pricing .sides")
+      sides = page.at_css(".sides")
       expect(sides.css(".plan-name").map { |name| name.text.squish }).to eq([ "Listing your show", "For brands" ])
       brands = sides.css(".sides-card").last.text.squish
       expect(brands).to include("Free during the trial",
@@ -292,7 +296,7 @@ RSpec.describe "Public pages" do
       page.css("#creator-lab li").each { |point| expect(words.(point)).to be <= 8, point.text.squish }
       expect(page.css("#samples p.section-lead")).to be_empty
       page.css("#pricing .plan-features").each { |list| expect(list.css("li").size).to be <= 5 }
-      expect(page.css("#faq details").size).to be >= 8
+      expect(page.css("#faq details").size).to be >= 6
       expect(page.css("#faq details[open]")).to be_empty
       closing = page.at_css(".closing")
       expect(closing.css("p")).to be_empty
@@ -315,11 +319,13 @@ RSpec.describe "Public pages" do
       expect(page.at_xpath("//main//a[normalize-space()='Get my free Snapshot']")).to be_present
     end
 
-    it "reuses the same plan buttons on the landing page" do
+    # UX review L-1: the landing says pricing in one line and links the full page, where the plan buttons are.
+    it "says pricing in one line on the landing page, with the plans on /pricing" do
       get "/"
 
-      expect(page.at_css("#pricing")).to be_present
-      expect(waitlist_forms.size).to eq(Billing.prices.size)
+      expect(page.at_css("#pricing").text.squish).to include("Free to list your show. Free for brands during the trial.")
+      expect(page.at_css("#pricing a[href='/pricing']").text.squish).to eq("See pricing")
+      expect(waitlist_forms).to be_empty
     end
 
     it "asks a visitor to sign in to subscribe in test mode" do

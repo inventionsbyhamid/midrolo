@@ -7,20 +7,20 @@
 <%= render "pages/home/old_way" %>
 <%= render "pages/home/creator_lab" %>
 <%= render "pages/home/explore", samples: @samples, demo: @demo %>
-<%= render "pages/home/samples", samples: @samples, match_counts: @match_counts %>
+<%# Pricing in one line (UX review L-1): the full plans live on /pricing, the sample reports on /samples (See it for
+    yourself links both), and the landing keeps the marketplace questions. %>
 <section id="pricing" class="page-section" aria-labelledby="pricing-title">
-  <div class="wrap">
-    <h2 id="pricing-title" class="type-h2">Pricing</h2>
-    <p class="section-lead">Listing is free. Brands search free during the trial. No commission on any deal.</p>
-    <%= render "pages/sides" %>
-    <h3 class="type-h3 mt-14">Sponsor reports and pitches, for podcasters</h3>
-    <p class="mt-2 text-ink-soft">An AI agent finds the brands that fit your listeners and writes the pitch.</p>
-    <%= render "pages/plans", heading: :h4 %>
+  <div class="wrap landing-pricing">
+    <div>
+      <h2 id="pricing-title" class="type-h2">Pricing</h2>
+      <p class="section-lead">Free to list your show. Free for brands during the trial. No commission on any deal.</p>
+    </div>
+    <%= ui_button "See pricing", pricing_path, variant: :secondary, size: :lg %>
   </div>
 </section>
 <section id="faq" class="page-section" aria-labelledby="faq-title">
   <div class="wrap">
-    <%= render "pages/faq" %>
+    <%= render "pages/faq", marketplace_only: true %>
   </div>
 </section>
 <%= render "pages/home/closing" %>

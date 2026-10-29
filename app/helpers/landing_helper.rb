@@ -14,7 +14,7 @@ module LandingHelper
     searches = User::Brands::DAILY_SEARCHES
     requests = User::Brands::DAILY_REQUESTS
     [ "#{searches[:unverified]} fit searches a day, #{searches[:verified]} with a verified work email",
-      "#{requests[:unverified]} requests a day, #{requests[:verified]} verified",
+      "#{requests[:unverified]} requests a day, or #{requests[:verified]} once your work email is verified",
       "Save shows and message podcasters directly",
       "No commission on any deal" ]
   end

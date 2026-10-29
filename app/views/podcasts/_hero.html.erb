@@ -9,7 +9,19 @@
 <% offer = pages_deal(podcast) %>
 <div class="pod-banner"><%= kit_waveform(podcast.public_id) %></div>
 <header class="wrap pod-hero">
-  <%= podcast_artwork_tag(podcast, size: :page, class: "pod-art") %>
+  <% if podcast.demo? && !podcast.artwork_variant(:page) %>
+    <%# The demo show's own cover (PP-11): the kit's waveform on plum with its midroll lit, never an initials tile. %>
+    <span class="pod-art pod-art-demo" aria-hidden="true">
+      <svg viewBox="0 0 72 36" class="pod-art-demo-wave">
+        <% [ 10, 18, 26, 14, 30, 22, 36, 16, 24, 12, 20 ].each_with_index do |height, index| %>
+          <rect x="<%= index * 6.6 + 1 %>" y="<%= (36 - height) / 2.0 %>" width="3.4" height="<%= height %>" rx="1.7" class="<%= index == 6 ? 'fill-tally' : 'fill-white/55' %>"/>
+        <% end %>
+      </svg>
+      <span>Demo show</span>
+    </span>
+  <% else %>
+    <%= podcast_artwork_tag(podcast, size: :page, class: "pod-art") %>
+  <% end %>
   <div class="pod-hero-text">
     <% badges = [ ([ "Demo show", :warning ] if podcast.demo?),
                   ([ status_label, status_tone ] unless podcast.active?),

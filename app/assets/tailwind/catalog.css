@@ -465,6 +465,24 @@
     }
   }
 
+  .pod-art-demo {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: var(--color-plum);
+    color: #fff;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .pod-art-demo-wave {
+    width: 72%;
+  }
+
   .pod-hero-text {
     flex: 1 1 20rem;
     min-width: 0;
@@ -1140,6 +1158,15 @@
     padding: 0 0.25rem;
     font-size: 0.8125rem;
     color: var(--color-ink-soft);
+  }
+
+  /* The data sources page: each source's chip sits on the line with its name. */
+  .source-list .badge {
+    vertical-align: 0.0625rem;
+  }
+
+  .source-list > li > span {
+    margin-inline-end: 0.25rem;
   }
 
   /* ---------- Teasers and empty sections ---------- */
