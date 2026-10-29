@@ -26,6 +26,7 @@
 
   <%# The next action first: on a phone the run card would otherwise sit below the fold. %>
   <%= render "shows/report_actions", show: @show %>
+  <%= render "conversations/workspace", show: @show %>
 
   <%= render "components/card", title: "Details", aside: link_to("Edit", edit_show_path(@show), class: "link") do %>
     <dl class="grid gap-x-6 gap-y-3 sm:grid-cols-2">

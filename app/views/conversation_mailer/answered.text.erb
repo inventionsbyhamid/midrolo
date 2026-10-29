@@ -1,0 +1,11 @@
+<% if @conversation.accepted? -%>
+<%= @title %> accepted your request. Agree the dates, the read and the price in the conversation.
+<% else -%>
+<%= @title %> declined your request.
+
+Their reason: <%= @conversation.decline_reason %>
+<% end -%>
+
+Open the conversation: <%= conversation_url(@conversation) %>
+
+We email when a show answers a request you sent.

@@ -23,6 +23,11 @@ module Brands
       member = join(Brand.resolve(name: @name, domain: @website.presence))
       session[:brand_member_id] = member.id
       current_user.working_as_brand!
+      # Back to where the brand was going (a Request a spot form stores itself before sending them here), else search.
+      if (back = stored_location_for(:user))
+        return redirect_to(back, status: :see_other, notice: "Welcome to #{APP_NAME} for brands.")
+      end
+
       redirect_to new_brand_search_path, status: :see_other,
                                          notice: "Welcome to #{APP_NAME} for brands. Run your first search below."
     rescue ActiveRecord::RecordInvalid => e

@@ -1,1 +1,35 @@
-<%# Podcast page: Request a spot. Lane L7 fills it; lane L3's page renders it with podcast: (from Podcast.for_page). %>
+<%# locals: (podcast:) -%>
+<%# Podcast page: Request a spot (lane L7). Rendered by lane L3's page with podcast: from Podcast.for_page, which is
+    strict_loading, so everything here reads the podcast's columns or one query object (Conversations::PageFacts).
+    Signed out (or with no brand yet), the button opens conversations/new, which signs in and sets up the brand and
+    then comes back. A brand member gets the form in a dialog. The page's ETag changes with the podcast, and every
+    request, answer and block touches it. %>
+<% facts = Conversations::PageFacts.new(podcast, user: current_user, membership_id: session[:brand_member_id]) %>
+<% viewer = facts.viewer %>
+<div id="request" class="flex flex-col items-start gap-2">
+  <% case viewer.state %>
+  <% when :signed_out, :no_brand %>
+    <%= ui_button "Request a spot", new_conversation_path(podcast: podcast.to_param), rel: "nofollow" %>
+  <% when :ready %>
+    <div data-controller="dialog">
+      <%= ui_button "Request a spot", type: "button", data: { action: "dialog#open" }, aria: { haspopup: "dialog" } %>
+      <%= render "components/dialog", title: "Request a spot on #{podcast.title}", id: "request-spot", sheet: :mobile do %>
+        <%= render "conversations/form", podcast: podcast, form: Conversations::RequestForm.new, facts: facts %>
+      <% end %>
+    </div>
+  <% when :ongoing %>
+    <%= ui_button "Open your request", conversation_path(viewer.conversation), variant: :secondary %>
+    <p class="text-sm text-ink-soft">You asked on <%= viewer.conversation.created_at.strftime("%b %-d") %>.</p>
+  <% when :owner %>
+    <%= ui_button "Requests to your show", inbox_path, variant: :secondary %>
+  <% when :blocked %>
+    <p class="text-sm text-ink-soft"><%= Conversations::Start::BLOCKED %></p>
+  <% end %>
+
+  <% if (reply_time = facts.reply_time) %>
+    <p class="text-sm text-ink-soft"><%= reply_time %></p>
+  <% end %>
+  <% if facts.waiting_count.positive? %>
+    <p class="text-sm"><%= pluralize(facts.waiting_count, "brand") %> asked about sponsoring this show</p>
+  <% end %>
+</div>

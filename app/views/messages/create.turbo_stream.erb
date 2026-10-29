@@ -1,0 +1,9 @@
+<% if @error %>
+  <%= turbo_stream.replace dom_id(@conversation, :reply), partial: "messages/form",
+        locals: { conversation: @conversation, side: @side, message: @message, error: @error } %>
+<% else %>
+  <%= turbo_stream.append dom_id(@conversation, :messages), partial: "messages/message",
+        locals: { message: @message, conversation: @conversation, brand_user_ids: @brand_user_ids, viewer: current_user } %>
+  <%= turbo_stream.replace dom_id(@conversation, :reply), partial: "messages/form",
+        locals: { conversation: @conversation, side: @side, message: Message.new } %>
+<% end %>

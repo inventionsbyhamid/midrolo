@@ -1,0 +1,9 @@
+<% if @from_brand -%>
+<%= @brand_name %> sent you a new message about <%= @title %>.
+<% else -%>
+<%= @title %> replied to your request.
+<% end -%>
+
+Read it: <%= conversation_url(@conversation) %>
+
+We email once when a conversation has something new for you, not for every message.

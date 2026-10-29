@@ -1,0 +1,71 @@
+require "rails_helper"
+
+# Request a spot in a real browser (build spec L7): a brand asks a claimed show for a midroll, the owner finds it in
+# the inbox, accepts and replies (the reply lands through a Turbo Stream), and the brand reads the answer. Mail jobs
+# run inline, so both emails go out on the way.
+RSpec.describe "Request a spot" do
+  include Warden::Test::Helpers
+
+  around do |example|
+    adapter = ActiveJob::Base.queue_adapter
+    ActiveJob::Base.queue_adapter = :inline
+    Capybara.using_wait_time(10) { example.run }
+  ensure
+    ActiveJob::Base.queue_adapter = adapter
+  end
+
+  let(:owner) { create(:user, name: "Maya Brandt", email: "maya@example.com") }
+  let!(:podcast) { claimed_podcast(owner: owner, title: "The Founder's Ledger") }
+  let(:asker) { create(:user, name: "Sam Rivera", email: "sam@fieldnote.example") }
+  let!(:membership) do
+    brand_member_for(asker, brand: create(:brand, name: "Fieldnote Coffee", domain: "fieldnote.example"), verified: true)
+  end
+
+  before { ActionMailer::Base.deliveries.clear }
+  after { Warden.test_reset! }
+
+  def sign_in_as(user)
+    logout(:user)
+    login_as(user, scope: :user)
+  end
+
+  it "goes from a brand's request to the podcaster's reply and back" do
+    month = Date.current.next_month
+    sign_in_as(asker)
+    visit new_conversation_path(podcast: podcast.slug)
+
+    select "Midroll", from: "Spot"
+    check month.strftime("%b %Y")
+    fill_in "Budget in US dollars", with: "600"
+    fill_in "Message", with: "We roast coffee for people who work from home. A midroll next month?"
+    click_button "Send request"
+
+    expect(page).to have_text("Request sent.")
+    expect(page).to have_css("h1", text: "The Founder's Ledger")
+    expect(page).to have_text("We roast coffee for people who work from home.")
+    expect(ActionMailer::Base.deliveries.map(&:to)).to eq([ [ "maya@example.com" ] ])
+
+    sign_in_as(owner)
+    visit inbox_path
+    click_link "Fieldnote Coffee"
+
+    expect(page).to have_text("New request.")
+    expect(page).to have_text("Midroll")
+    expect(page).to have_text("$600")
+    expect(page).not_to have_text("Unverified brand")
+    click_button "Accept"
+    expect(page).to have_text("You accepted this request.")
+
+    fill_in "Reply", with: "Happy to. Our listeners love good coffee."
+    click_button "Send"
+    within("ol[aria-label='Messages']") { expect(page).to have_text("Happy to. Our listeners love good coffee.") }
+    expect(page).to have_field("Reply", with: "")
+
+    sign_in_as(asker)
+    visit brand_inbox_path
+    click_link "The Founder's Ledger"
+    expect(page).to have_text("Accepted.")
+    expect(page).to have_text("Maya, The Founder's Ledger")
+    expect(page).to have_text("Happy to. Our listeners love good coffee.")
+  end
+end

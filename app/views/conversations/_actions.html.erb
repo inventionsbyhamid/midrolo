@@ -1,0 +1,39 @@
+<%# locals: (conversation:, side:, blocked: false) -%>
+<%# The podcaster answers an open request (accept, or decline with a reason the brand sees); either side closes a
+    running one (the brand withdraws); both can report; the podcaster blocks or unblocks the brand. %>
+<% brand = conversation.brand %>
+<%= render "components/card", title: "Actions" do %>
+  <div class="flex flex-col gap-3">
+    <% if side == :podcaster && conversation.open? %>
+      <%= button_to "Accept", accept_conversation_path(conversation), method: :patch, class: "btn btn-primary btn-md w-full" %>
+      <details class="rounded-xl border border-line p-3">
+        <summary class="cursor-pointer font-semibold">Decline</summary>
+        <%= form_with url: decline_conversation_path(conversation), method: :patch, class: "mt-3 flex flex-col gap-2" do |f| %>
+          <%= f.label :decline_reason, "Reason (the brand sees it)", class: "label" %>
+          <%= f.text_area :decline_reason, rows: 3, class: "input", required: true, maxlength: Conversation::DECLINE_REASON_LIMIT,
+                placeholder: "For example: we're booked through December, or it isn't a fit for our listeners." %>
+          <%= f.submit "Decline request", class: "btn btn-secondary btn-md" %>
+        <% end %>
+      </details>
+    <% end %>
+
+    <% if conversation.writable? && !(side == :podcaster && conversation.open?) %>
+      <% label = side == :brand && conversation.status.in?(Conversation::ONGOING) ? "Withdraw request" : "Close conversation" %>
+      <%= button_to label, close_conversation_path(conversation), method: :patch, class: "btn btn-secondary btn-md w-full",
+            form: { data: { turbo_confirm: "#{label}? Neither side can write in it afterwards." } } %>
+    <% end %>
+
+    <% if side == :podcaster %>
+      <% if blocked %>
+        <p class="text-sm text-ink-soft">You blocked <%= brand.name %>. They can't send this show requests.</p>
+        <%= button_to "Unblock #{brand.name}", block_conversation_path(conversation), method: :delete, class: "btn btn-ghost btn-md w-full" %>
+      <% else %>
+        <%= button_to "Block #{brand.name}", block_conversation_path(conversation), method: :post, class: "btn btn-ghost btn-md w-full",
+              form: { data: { turbo_confirm: "Block #{brand.name}? Their conversations with this show close and they can't send new requests." } } %>
+      <% end %>
+    <% end %>
+
+    <%= button_to "Report this conversation", report_conversation_path(conversation), method: :post, class: "btn btn-ghost btn-md w-full",
+          form: { data: { turbo_confirm: "Report this conversation to #{APP_NAME}? We'll review it." } } %>
+  </div>
+<% end %>

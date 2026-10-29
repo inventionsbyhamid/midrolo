@@ -1,0 +1,7 @@
+<p style="margin:0 0 16px;"><strong><%= @brand_name %></strong> would like to sponsor <strong><%= @title %></strong>.</p>
+<% unless @conversation.from_verified_brand? %>
+  <p style="margin:0 0 16px;padding:10px 14px;border-radius:10px;background:#fcebc8;color:#7e4a00;font-size:14px;">Unverified brand: nobody has confirmed a work email at this company's domain yet.</p>
+<% end %>
+<p style="margin:0;">They asked for: <%= inbox_request_summary(@conversation) %>.</p>
+<%= mail_button "Read and reply", conversation_url(@conversation) %>
+<%= mail_footnote "You get this because you claimed #{@title} on #{APP_NAME}. Brands can only write to shows that claimed their page." %>

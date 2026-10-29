@@ -1,0 +1,4 @@
+<p style="margin:0 0 16px;">You claimed <strong><%= @title %></strong>. Before you did, <%= @count == 1 ? "a brand" : "#{@count} brands" %> asked about sponsoring it.</p>
+<p style="margin:0;">Their <%= @count == 1 ? "request is" : "requests are" %> waiting in your inbox. Accept, decline or reply to each one.</p>
+<%= mail_button "Open your inbox", show_inbox_url(@show) %>
+<%= mail_footnote "We held these requests until the show was claimed. Nothing was sent to the address in your feed." %>

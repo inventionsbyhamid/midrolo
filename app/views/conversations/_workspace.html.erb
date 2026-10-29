@@ -1,0 +1,22 @@
+<%# locals: (show:) -%>
+<%# A workspace's requests card (shows/show): what's new for a verified show, or how many brands are waiting for an
+    unverified one to be verified. Nothing for an unverified show nobody asked about. %>
+<% counts = inbox_workspace_counts(show) %>
+<% if show.verified? %>
+  <%= render "components/card", title: "Requests from brands", aside: link_to("Open inbox", show_inbox_path(show), class: "link") do %>
+    <p>
+      <% if counts[:unread].positive? %>
+        <strong><%= pluralize(counts[:unread], "conversation") %></strong> with something new.
+      <% elsif counts[:open].positive? %>
+        <%= pluralize(counts[:open], "open request") %> to answer.
+      <% else %>
+        No new requests. Brands find you through your listing.
+      <% end %>
+    </p>
+  <% end %>
+<% elsif counts[:waiting].positive? %>
+  <%= render "components/card", title: "Requests from brands" do %>
+    <p><strong><%= pluralize(counts[:waiting], "brand") %></strong> asked about sponsoring this show. Verify that it's yours to read their requests.</p>
+    <%= ui_button "Verify ownership", new_show_verification_path(show), class: "mt-4" %>
+  <% end %>
+<% end %>
