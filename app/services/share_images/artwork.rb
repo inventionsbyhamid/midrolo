@@ -34,12 +34,22 @@ module ShareImages
       nil
     end
 
-    def download(url, deadline)
+    # The picture's bytes as served, not decoded, or nil: the same vetted, pinned and capped fetch, with the caller's
+    # cap and deadline (Catalog::ArtworkJob stores artwork up to 15 MB). The caller checks what the bytes are.
+    def fetch_bytes(url, max_bytes:, timeout:)
+      deadline = now + timeout
+      Timeout.timeout(timeout, TooSlow) { download(url.to_s.strip, deadline, max_bytes: max_bytes) }
+    rescue StandardError => e
+      Rails.logger.info("[ShareImages::Artwork] no artwork: #{e.class}: #{e.message}")
+      nil
+    end
+
+    def download(url, deadline, max_bytes: MAX_BYTES)
       return if url.empty?
 
       (MAX_REDIRECTS + 1).times do
         target = Podcasts::SafeUrl.resolve!(url)
-        response, body = get(target, deadline)
+        response, body = get(target, deadline, max_bytes)
         return body if response.status == 200
         return unless REDIRECTS.include?(response.status)
 
@@ -50,14 +60,14 @@ module ShareImages
 
     # One hop, with timeouts from what's left of the deadline. The body is checked against the cap and the deadline
     # as it streams.
-    def get(target, deadline)
+    def get(target, deadline, max_bytes = MAX_BYTES)
       left = deadline - now
       raise TooSlow, "over #{TOTAL_TIMEOUT}s" unless left.positive?
 
       body = +"".b
       response = connection(left, target).get(target.uri.to_s) do |request|
         request.options.on_data = proc do |chunk, received|
-          raise TooLarge, "over #{MAX_BYTES} bytes" if received > MAX_BYTES
+          raise TooLarge, "over #{max_bytes} bytes" if received > max_bytes
           raise TooSlow, "over #{TOTAL_TIMEOUT}s" if now > deadline
 
           body << chunk
