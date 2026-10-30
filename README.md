@@ -69,7 +69,8 @@ No Qloo response data is committed to this repo: the specs use small synthetic f
 - Puma behind Thruster, in Docker
 - RSpec with Cuprite (headless Chrome) for tests
 
-Every outside service sits behind an adapter with a Fake twin, so the app runs with no keys at all:
+Qloo, the LLM, Podcast Index and billing each sit behind an adapter with a Fake twin, so the app runs with no keys.
+The one exception is verified stats: reading Spotify or Apple numbers needs real platform access.
 
 ```mermaid
 flowchart LR

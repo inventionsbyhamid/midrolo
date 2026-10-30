@@ -122,7 +122,8 @@ and listings, verified Spotify and Apple numbers, the brand agent, request a spo
 - **Safety.** No contact details on any page, no email to unclaimed shows, daily request limits until a brand
   verifies a work email at its own domain, block and report on every thread, and "Remove this page" everywhere.
 - **Everything swappable.** Qloo, Podcast Index, the LLM and billing each sit behind an interface with a Fake twin.
-  With no keys the app runs end to end in demo mode, and the tests never touch a live API.
+  With no keys the app runs in demo mode, every flow but verified stats (those need real Spotify or Apple access),
+  and the tests never touch a live API.
 - **The stack.** Rails 8.1, PostgreSQL, Hotwire, Solid Queue, Google sign in, Dodo billing with signed webhooks, an
   admin page, and Cloudflare in front of our own server.
 
@@ -151,7 +152,8 @@ and listings, verified Spotify and Apple numbers, the brand agent, request a spo
 - Honest by default: modeled taste is labelled modeled, every number names its source and date, and plays are never
   called downloads.
 - Free for podcasters, for good. No commission on either side.
-- Anyone can clone the repo and run the whole flow with no keys.
+- Anyone can clone the repo and run it in demo mode with no keys: search, reports, pages, claiming and the inbox.
+  Only verified Spotify and Apple numbers need real platform access.
 
 ## What we learned
 
@@ -221,7 +223,7 @@ and listings, verified Spotify and Apple numbers, the brand agent, request a spo
 | Qloo workflows and endpoints, and why | Why it needs Qloo, above, and `docs/how-we-use-qloo.md` |
 | A redacted request to result walkthrough, with entity and tag choices | `docs/how-we-use-qloo.md`, Walkthrough |
 | Screenshots with no credentials or personal data | The image gallery |
-| Setup from a clean environment | `README.md`, Local setup (no keys needed) |
+| Setup from a clean environment | `README.md`, Local setup (no keys needed for demo mode) |
 | Known limitations, and what a result does not establish | Known limitations, above, and `docs/how-we-use-qloo.md` |
 
 | Judging consideration | What to look at |
@@ -232,4 +234,4 @@ and listings, verified Spotify and Apple numbers, the brand agent, request a spo
 | Quality of idea | Taste from Qloo, joined with sponsor proof from feeds and numbers verified at the source |
 | Provenance and user clarity | Agent traces, sources and dates on every number, evidence quotes, "Taste data from Qloo" labels |
 | Responsible data handling | No Qloo data in the repo, a private cache, no passwords, no contact details on pages, encrypted owner emails and sessions |
-| Reproducibility | Demo mode with no keys, synthetic fixtures, a live smoke test with a fixed call budget |
+| Reproducibility | Demo mode with no keys (all but verified stats), synthetic fixtures, a live smoke test with a fixed call budget |
