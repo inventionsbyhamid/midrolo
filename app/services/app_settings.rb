@@ -3,7 +3,7 @@ class AppSettings
   KEYS = %i[promo_budget_usd judge_reserve_usd llm_daily_budget_usd llm_catalog_daily_usd runs_paused runs_paused_reason
             promo_pro_until qloo_daily_call_limit qloo_cost_per_call_usd qloo_free_share
             stats_min_gap_seconds stats_gap_jitter_seconds stats_runs_per_hour stats_runs_per_day
-            catalog_search_adds_per_day sponsors_ai_window_days sponsors_max_per_podcast].freeze
+            catalog_search_adds_per_day sponsors_ai_window_days sponsors_max_per_podcast explainer_video_id].freeze
   # Qloo 401s in a row (counted in Rails.cache) before new runs pause themselves (Review Focus #4). A 403 never counts
   # (R87).
   TASTE_AUTH_FAILURE_LIMIT = 3

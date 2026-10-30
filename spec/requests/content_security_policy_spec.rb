@@ -2,8 +2,9 @@ require "rails_helper"
 
 # The Content Security Policy (R10, R116, config/initializers/content_security_policy.rb), enforced: scripts and
 # styles from this site, the pinned MapLibre folder on jsDelivr and Google Fonts only, inline ones only with the page's
-# nonce, and the map's style and tiles from OpenFreeMap. The test environment alone also lets the map fetch a data:
-# style (config/environments/test.rb). spec/system/content_security_policy_spec.rb loads the pages in a browser, and
+# nonce, the map's style and tiles from OpenFreeMap, and frames from this site and YouTube's privacy-enhanced player
+# (the home page's video). The test environment alone also lets the map fetch a data: style
+# (config/environments/test.rb). spec/system/content_security_policy_spec.rb loads the pages in a browser, and
 # spec/requests/production_config_spec.rb reads production's header.
 RSpec.describe "Content Security Policy" do
   let(:browser) { "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15" }
@@ -30,12 +31,25 @@ RSpec.describe "Content Security Policy" do
       "default-src" => [ "'self'" ], "base-uri" => [ "'self'" ], "object-src" => [ "'none'" ],
       "frame-ancestors" => [ "'self'" ], "font-src" => [ "'self'", "https://fonts.gstatic.com" ],
       "img-src" => [ "'self'", "https:", "data:", "blob:" ], "worker-src" => [ "'self'", "blob:", maplibre ],
+      "frame-src" => [ "'self'", "https://www.youtube-nocookie.com" ],
       "connect-src" => [ "'self'", "https://tiles.openfreemap.org", "data:" ] # data: in the test environment only
     )
     expect(policy["script-src"]).to eq([ "'self'", maplibre, "'nonce-#{nonce}'" ])
     expect(policy["style-src"]).to eq([ "'self'", "https://fonts.googleapis.com", maplibre, "'nonce-#{nonce}'" ])
     expect(response.headers["Content-Security-Policy"]).not_to include("unsafe")
     expect(policy.values.flatten).not_to include("https://cdn.jsdelivr.net") # never all of jsDelivr
+  end
+
+  # default-src covered frames before frame-src named YouTube's player, so 'self' stays: frames from this site still
+  # load, and YouTube's own player (youtube.com, which sets cookies) never does.
+  it "frames this site and YouTube's privacy-enhanced player only, where the home page's video plays" do
+    AppSettings.set(:explainer_video_id, "-UXzujILAoI")
+    get "/"
+
+    expect(policy["frame-src"]).to eq([ "'self'", "https://www.youtube-nocookie.com" ])
+    expect(policy.values.flatten.grep(/youtube\.com|ytimg/)).to be_empty
+    player = Nokogiri::HTML(response.body).at_css("[data-youtube-src-value]")["data-youtube-src-value"]
+    expect(policy["frame-src"]).to include(URI.parse(player).origin)
   end
 
   it "follows the maplibre-gl pin, so bumping it in config/importmap.rb moves the policy with it" do

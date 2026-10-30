@@ -291,6 +291,18 @@ RSpec.describe "Admin" do
         expect(Billing::Margins.cost_per_call).to eq(BigDecimal("0.003"))
       end
 
+      it "saves the home page's video from a YouTube link, which the home page then shows" do
+        patch "/admin/settings", params: { settings: valid.merge(explainer_video_id: "https://www.youtube.com/watch?v=-UXzujILAoI") },
+                                 headers: basic_auth
+
+        expect(response).to redirect_to("/admin")
+        expect(AppSettings.get(:explainer_video_id)).to eq("-UXzujILAoI")
+        get "/admin", headers: basic_auth
+        expect(section("Settings").at_css("input[name='settings[explainer_video_id]']")["value"]).to eq("-UXzujILAoI")
+        get "/"
+        expect(page.at_css("#how-it-works a[href='https://www.youtube.com/watch?v=-UXzujILAoI']")).to be_present
+      end
+
       it "re-renders with every error and saves nothing when a value is invalid" do
         patch "/admin/settings", headers: basic_auth,
                                  params: { settings: valid.merge(promo_budget_usd: "-1", llm_daily_budget_usd: "lots",

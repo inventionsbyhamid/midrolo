@@ -1,8 +1,10 @@
-# The admin page's budget, promo and Qloo settings (R68, R92, R94), kept as typed so a refused form shows what was
-# entered.
+# The admin page's budget, promo and Qloo settings (R68, R92, R94) and the home page's video, kept as typed so a refused
+# form shows what was entered.
 # Saving validates every value, then writes through AppSettings, in one transaction, only the ones that changed,
-# normalized; changed_settings says what changed from what, for the log. Llm::Budget, Entitlements, Taste::CallGuard
-# and Billing::Margins read the values back. The Qloo cost per call may be blank: unset until Qloo quotes a price.
+# normalized; changed_settings says what changed from what, for the log. Llm::Budget, Entitlements, Taste::CallGuard,
+# Billing::Margins and YoutubeVideo.explainer read the values back. The Qloo cost per call may be blank: unset until
+# Qloo quotes a price. So may the video: blank leaves the home page's "How Midrolo works" section out, and a YouTube
+# link is saved as the id in it.
 module Admin
   class SettingsForm
     include ActiveModel::Model
@@ -13,7 +15,7 @@ module Admin
                llm_daily_budget_usd: "Daily LLM budget", llm_catalog_daily_usd: "Daily catalog LLM budget",
                promo_pro_until: "Promo Pro until",
                qloo_daily_call_limit: "Qloo calls a day", qloo_cost_per_call_usd: "Qloo cost per call",
-               qloo_free_share: "Free and promo share of Qloo calls" }.freeze
+               qloo_free_share: "Free and promo share of Qloo calls", explainer_video_id: "Home page video" }.freeze
     # Whole dollars or dollars and cents, never negative: "10", "0.5", ".5".
     DOLLARS = /\A(?:\d+(?:\.\d+)?|\.\d+)\z/
     WHOLE_NUMBER = /\A\d+\z/
@@ -23,9 +25,10 @@ module Admin
     attribute :qloo_daily_call_limit, :string
     attribute :qloo_cost_per_call_usd, :string
     attribute :qloo_free_share, :string
+    attribute :explainer_video_id, :string
 
     validate :budgets_are_dollars, :reserve_fits_budget, :promo_date_is_a_date, :call_limit_is_a_whole_number,
-             :cost_per_call_is_dollars_or_blank, :free_share_is_a_share
+             :cost_per_call_is_dollars_or_blank, :free_share_is_a_share, :explainer_video_is_a_video_or_blank
 
     # The values in force now.
     def self.current
@@ -33,7 +36,8 @@ module Admin
           promo_pro_until: Entitlements.promo_until&.iso8601,
           qloo_daily_call_limit: Taste::CallGuard.daily_limit.to_s,
           qloo_cost_per_call_usd: Billing::Margins.cost_per_call&.to_s("F").to_s,
-          qloo_free_share: Taste::CallGuard.free_share.to_s("F"))
+          qloo_free_share: Taste::CallGuard.free_share.to_s("F"),
+          explainer_video_id: YoutubeVideo.explainer&.id.to_s)
     end
 
     def self.human_attribute_name(attribute, options = {}) = LABELS.fetch(attribute.to_sym) { super }
@@ -62,7 +66,8 @@ module Admin
     def normalized
       BUDGET_KEYS.index_with { |key| dollars(key).to_s("F") }
                  .merge(promo_pro_until: promo_date.iso8601, qloo_daily_call_limit: call_limit.to_s,
-                        qloo_cost_per_call_usd: cost_per_call&.to_s("F"), qloo_free_share: free_share.to_s("F"))
+                        qloo_cost_per_call_usd: cost_per_call&.to_s("F"), qloo_free_share: free_share.to_s("F"),
+                        explainer_video_id: explainer_video&.id)
     end
 
     def dollars(key)
@@ -94,6 +99,9 @@ module Admin
       BigDecimal(value) if DOLLARS.match?(value)
     end
 
+    # nil when blank (no video) or not a YouTube id or link.
+    def explainer_video = YoutubeVideo.parse(explainer_video_id)
+
     def budgets_are_dollars
       BUDGET_KEYS.each { |key| errors.add(key, "must be a dollar amount, 0 or more.") unless dollars(key) }
     end
@@ -121,6 +129,12 @@ module Admin
       return if qloo_cost_per_call_usd.blank? || cost_per_call
 
       errors.add(:qloo_cost_per_call_usd, "must be a dollar amount, 0 or more, or blank.")
+    end
+
+    def explainer_video_is_a_video_or_blank
+      return if explainer_video_id.blank? || explainer_video
+
+      errors.add(:explainer_video_id, "must be a YouTube video id or link, or blank.")
     end
   end
 end

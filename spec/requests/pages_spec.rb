@@ -148,6 +148,41 @@ RSpec.describe "Public pages" do
       expect(page.at_css("#hero a.hero-news").text.squish).to start_with("Audacy Creator Lab (formerly Podcorn) closed November 1.")
     end
 
+    it "leaves How Midrolo works out while its video isn't set, and names nothing from YouTube" do
+      get "/"
+
+      expect(page.at_css("#how-it-works")).to be_nil
+      expect(response.body).not_to match(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com})
+    end
+
+    # The real video's id starts with a dash.
+    it "shows How Midrolo works right after the hero once its video is set: a poster and play link, no player yet" do
+      AppSettings.set(:explainer_video_id, "-UXzujILAoI")
+      get "/"
+
+      section = page.at_css("#hero + section#how-it-works")
+      expect(section.at_css("h2").text.squish).to eq("How Midrolo works")
+      expect(section.at_css(".section-lead").text.squish).to eq("A 2 minute tour for brands and podcasters.")
+      video = section.at_css(".video[data-controller='youtube']")
+      expect(video["data-youtube-src-value"]).to eq("https://www.youtube-nocookie.com/embed/-UXzujILAoI?autoplay=1&rel=0&playsinline=1")
+      expect(video["data-youtube-title-value"]).to eq("How Midrolo works")
+      expect(video["data-youtube-label-value"]).to eq("Watch how it works, 2 min video") # the play button's, once made
+
+      # The link to YouTube for a visitor without JavaScript, which youtube_controller makes the play button.
+      play = video.at_css("a.video-play[data-youtube-target='play']")
+      expect(play["href"]).to eq("https://www.youtube.com/watch?v=-UXzujILAoI")
+      expect(play["aria-label"]).to eq("Watch how it works on YouTube, 2 min video")
+      poster = play.at_css("img.video-poster") # the video's own title card, served from here
+      expect(poster["src"]).to match(%r{\A/assets/explainer/poster-\h+\.jpg\z})
+      expect(poster.to_h.slice("alt", "width", "height")).to eq("alt" => "", "width" => "1280", "height" => "720")
+      expect(play.at_css(".video-caption").text.squish).to eq("Watch how it works 2 min")
+
+      expect(section.at_css("iframe")).to be_nil
+      loads = page.css("[src], link[href]").map { |node| node["src"] || node["href"] }
+      expect(loads.grep(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com})).to be_empty
+      expect(response.body).not_to include("ytimg.com") # not even YouTube's thumbnail
+    end
+
     it "shows the proof strip with the product's own badges, and the catalog's counts once there's a directory" do
       get "/"
 
@@ -208,17 +243,41 @@ RSpec.describe "Public pages" do
       expect(page.at_css("#explore a[href='/podcasts/#{demo.slug}']").text.squish).to include("Open the demo show", "Demo")
     end
 
-    it "links to the directory and a sample report to look around, and the blog only once a post is out" do
+    it "links to the directory to look around, and the blog only once a post is out, leaving the samples to theirs" do
+      create_sample(Samples.slugs[0])
       get "/"
 
       explore = page.at_css("#explore")
       expect(explore.at_css("a[href='/podcasts']").text.squish).to start_with("Browse podcasts")
-      expect(explore.at_css("a[href='/samples']").text.squish).to start_with("Read a sample report")
       expect(explore.at_css("a[href='/blog']")).to be_nil
+      expect(explore.css("a[href^='/samples']")).to be_empty
+    end
 
-      create_sample(Samples.slugs[0])
+    it "lists the sample reports after the podcaster side, each opening its report, with a free Snapshot for anyone" do
       get "/"
-      expect(page.at_css("#explore a[href='/samples/#{Samples.slugs[0]}']")).to be_present
+
+      section = page.at_css("#for-podcasters + section#samples")
+      expect(section.at_css("h2").text.squish).to eq("Sample reports")
+      expect(section.css(".sample-item")).to be_empty # until samples:generate has run; the calls to action stay
+      actions = section.css(".hero-actions a").to_h { |link| [ link.text.squish, link["href"] ] }
+      expect(actions).to eq("Get a free Snapshot of your show" => "/start", "See all sample reports" => "/samples")
+      expect(section.at_css(".hero-actions a.btn-primary").text.squish).to eq("Get a free Snapshot of your show")
+      expect(section.next_element["id"]).to eq("quotes")
+
+      ledger = create_sample(Samples.slugs[0], title: "The Founder's Ledger")
+      create_list(:sponsor_match, 2, report: ledger)
+      create_sample(Samples.slugs[1], title: "Cold Case Cafe")
+      get "/"
+
+      cards = page.css("#samples .sample-item")
+      expect(cards.map { |card| card.at_css("h3 a").then { |link| [ link.text.squish, link["href"] ] } })
+        .to eq([ [ "The Founder's Ledger", "/samples/#{Samples.slugs[0]}" ], [ "Cold Case Cafe", "/samples/#{Samples.slugs[1]}" ] ])
+      expect(cards.map { |card| card.at_css(".chip").text.squish }).to eq([ "2 brand matches", "0 brand matches" ])
+
+      sign_in create(:user) # a signed-in podcaster goes straight to adding a show
+      get "/"
+      expect(page.at_xpath("//section[@id='samples']//a[normalize-space()='Get a free Snapshot of your show']")["href"])
+        .to eq("/shows/new")
     end
 
     it "keeps the hero's match card an illustration until a sample is done, never inventing brands or numbers" do
@@ -411,6 +470,14 @@ RSpec.describe "Public pages" do
       expect(text).to include("only ones that don't store or train on what we send")
       expect(text).to include("We don't sell your data")
       expect(text).to include("the map library from jsDelivr", "Cloudflare provides our DNS")
+    end
+
+    it "says the home page video loads YouTube only when played" do
+      get "/privacy"
+
+      expect(page.at_css("main").text.squish).to include("The home page video loads YouTube's privacy-enhanced player " \
+                                                         "only when you press play, and YouTube's privacy policy applies " \
+                                                         "from then on.")
     end
 
     it "names the plans as plans.yml does" do

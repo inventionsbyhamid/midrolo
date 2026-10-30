@@ -33,6 +33,12 @@ RSpec.describe Admin::SettingsForm do
       expect(described_class.current.qloo_free_share).to eq("0.25")
     end
 
+    it "shows the home page's video id, blank until it is set" do
+      expect(described_class.current.explainer_video_id).to eq("")
+      AppSettings.set(:explainer_video_id, "-UXzujILAoI")
+      expect(described_class.current.explainer_video_id).to eq("-UXzujILAoI")
+    end
+
     it "shows what is set" do
       AppSettings.set(:promo_budget_usd, 12)
       AppSettings.set(:llm_daily_budget_usd, "2.5")
@@ -89,6 +95,17 @@ RSpec.describe Admin::SettingsForm do
       end
     end
 
+    it "takes the home page's video as a YouTube id or link, or blank for none" do
+      [ "", " ", "-UXzujILAoI", "https://youtu.be/-UXzujILAoI", "https://www.youtube.com/watch?v=-UXzujILAoI" ].each do |value|
+        expect(form(explainer_video_id: value)).to be_valid, "expected #{value.inspect}"
+      end
+      [ "M1drolo", "https://vimeo.com/123456789", "https://www.youtube.com/@midrolo" ].each do |value|
+        record = form(explainer_video_id: value)
+        expect(record).not_to be_valid, "expected #{value.inspect} to be refused"
+        expect(record.errors.full_messages).to eq([ "Home page video must be a YouTube video id or link, or blank." ])
+      end
+    end
+
     it "needs a real date for the promo" do
       [ "", "2026-13-40", "next week" ].each do |value|
         record = form(promo_pro_until: value)
@@ -130,6 +147,19 @@ RSpec.describe Admin::SettingsForm do
       expect(record.save).to be(true)
       expect(record.changed_settings).to eq([ "qloo_cost_per_call_usd from 0.002 to unset" ])
       expect(Billing::Margins.cost_per_call).to be_nil
+    end
+
+    it "saves the home page's video as the id in the link, and clears it again when blanked" do
+      AppSettings.set(:promo_pro_until, "2026-11-06")
+      record = form(explainer_video_id: " https://youtu.be/-UXzujILAoI?si=x1 ")
+      expect(record.save).to be(true)
+      expect(record.changed_settings).to eq([ "explainer_video_id from unset to -UXzujILAoI" ])
+      expect(YoutubeVideo.explainer.id).to eq("-UXzujILAoI")
+
+      record = form(explainer_video_id: "")
+      expect(record.save).to be(true)
+      expect(record.changed_settings).to eq([ "explainer_video_id from -UXzujILAoI to unset" ])
+      expect(YoutubeVideo.explainer).to be_nil
     end
 
     it "saves the free share the call guard reads (R95)" do

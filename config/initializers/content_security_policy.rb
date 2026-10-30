@@ -13,6 +13,8 @@
 #   another. Action Cable's wss:// to this host counts as 'self'. (The test environment alone adds data:, for the
 #   inline map style some system specs use: config/environments/test.rb.)
 # - workers: MapLibre starts its worker from its pinned folder (and, in some builds, from a blob: URL).
+# - frames: YouTube's privacy-enhanced player, which the home page's video loads only once the visitor presses play
+#   (components/_youtube), and this site's own pages, as default-src allowed frames before.
 # No form-action: sign in and checkout post to this site and redirect on to Google and Dodo, which form-action would
 # also have to list. The static pages in public/ go without the policy (ApplicationController#render_static_page).
 module ContentSecurity
@@ -58,6 +60,7 @@ Rails.application.configure do
     policy.img_src :self, :https, :data, :blob
     policy.connect_src :self, -> { ContentSecurity.map_hosts + ContentSecurity.upload_hosts }
     policy.worker_src :self, :blob, -> { ContentSecurity.maplibre_folder }
+    policy.frame_src :self, "https://www.youtube-nocookie.com"
   end
 
   # One nonce per session, as Rails generates it: Turbo Drive keeps the first page's policy while it swaps pages in,

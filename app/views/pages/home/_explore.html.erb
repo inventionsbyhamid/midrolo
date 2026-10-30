@@ -1,6 +1,6 @@
-<%# locals: (samples:, demo:) -%>
-<%# Somewhere to look before signing in: the directory, a sample report, the demo show (once demo:setup has made it)
-    and the blog (once a post is published, R148). Each link says what's behind it. %>
+<%# locals: (demo:) -%>
+<%# Somewhere to look before signing in: the directory, the demo show (once demo:setup has made it) and the blog (once
+    a post is published, R148). Each link says what's behind it. The sample reports have their own section. %>
 <section id="explore" class="page-section" aria-labelledby="explore-title">
   <div class="wrap">
     <h2 id="explore-title" class="type-h2">See it for yourself</h2>
@@ -9,12 +9,6 @@
         <%= link_to podcasts_path, class: "explore-link" do %>
           <span class="explore-name">Browse podcasts</span>
           <span class="explore-text">Sponsors, rates and numbers, each with its source.</span>
-        <% end %>
-      </li>
-      <li>
-        <%= link_to sample_start_path(samples), class: "explore-link" do %>
-          <span class="explore-name">Read a sample report</span>
-          <span class="explore-text">The brands that fit a real show, and why.</span>
         <% end %>
       </li>
       <% if demo %>

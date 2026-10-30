@@ -759,4 +759,116 @@
   @keyframes sheet-in {
     from { transform: translateY(-1rem); opacity: 0; }
   }
+
+  /* A YouTube video before it's played (components/_youtube, youtube_controller): a 16:9 box with the page's own poster,
+     nothing fetched from YouTube, and one play button over the whole box. The player takes the same box once pressed.
+     A poster whose middle is busy moves the button with --video-play-x. */
+  .video {
+    --video-play: 3rem; /* the icon: the whole box is the button */
+    --video-play-x: 50%;
+    position: relative;
+    isolation: isolate;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    background: var(--color-ink);
+    box-shadow: var(--shadow-dialog);
+    color: #fff;
+
+    @media (width >= 48rem) {
+      --video-play: 5.5rem;
+    }
+  }
+
+  .video-play {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  /* Inside the box, which clips anything outside it: the amber ring alone, on the dark poster. */
+  .video-play:focus-visible {
+    outline-offset: -6px;
+    box-shadow: none;
+  }
+
+  /* Under the play button's focus ring, which it would otherwise paint over. */
+  .video-poster {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .video-play-icon {
+    position: absolute;
+    top: 50%;
+    left: var(--video-play-x);
+    display: grid;
+    place-items: center;
+    width: var(--video-play);
+    height: var(--video-play);
+    border-radius: 999px;
+    background: var(--color-tally);
+    color: var(--color-ink);
+    box-shadow: 0 0 0 0.5rem rgb(243 167 18 / 0.2), 0 12px 32px -8px rgb(0 0 0 / 0.6);
+    translate: -50% -50%;
+    transition: scale 150ms ease-out;
+  }
+
+  .video-play-icon svg {
+    width: 46%;
+    height: 46%;
+  }
+
+  .video-play:hover .video-play-icon {
+    scale: 1.06;
+  }
+
+  .video-caption {
+    position: absolute;
+    bottom: 1rem;
+    left: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.625rem;
+    font-weight: 700;
+    line-height: 1.3;
+
+    @media (width >= 48rem) {
+      bottom: 1.5rem;
+      left: 1.5rem;
+      font-size: 1.125rem;
+    }
+  }
+
+  .video-duration {
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-control);
+    background: rgb(255 255 255 / 0.14);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .video-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
 }

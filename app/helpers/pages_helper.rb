@@ -11,9 +11,6 @@ module PagesHelper
   # them to /shows/new (skipping the "podcaster or brand" choice).
   def snapshot_start_path = user_signed_in? ? new_show_path : start_path
 
-  # "See a sample report": the first done sample, or the samples page until there is one.
-  def sample_start_path(samples) = samples.first ? sample_path(samples.first.sample_slug) : samples_path
-
   def contact_mail_to(label = CONTACT_EMAIL, **options) = mail_to(CONTACT_EMAIL, label, **options)
 
   # An episode's waveform with the mid-roll slot lit: the same bars every render (a fixed pattern, no randomness), so

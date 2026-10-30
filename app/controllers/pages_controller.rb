@@ -15,12 +15,14 @@ class PagesController < ApplicationController
 
   def home
     @samples = Samples.reports
+    @match_counts = Samples.match_counts(@samples)
     @hero_sample = @samples.first
     @hero_matches = @hero_sample ? @hero_sample.sponsor_matches.first(3) : []
     @showcase = showcase
     @showcase_sponsors = SponsorMention.where(podcast_id: @showcase.map(&:id)).group(:podcast_id).distinct.count(:brand_id)
     @demo = Podcast.for_page.demo.where(status: Podcast::LISTED_STATUSES).first
     @catalog_facts = catalog_facts
+    @explainer = YoutubeVideo.explainer
   end
 
   def pricing; end
