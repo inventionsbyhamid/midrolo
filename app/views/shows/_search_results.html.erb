@@ -16,12 +16,18 @@
               <p class="type-h3 truncate"><%= info.title %></p>
               <p class="text-ink-soft"><%= info.author %></p>
               <p class="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+                <% if info.is_a?(Podcast) %><%= ui_badge "On Midrolo", tone: :neutral %><% end %>
                 <% if info.categories.present? %><%= ui_badge info.categories.first(3).join(", "), tone: :accent %><% end %>
                 <% if info.episode_count %><span><%= pluralize(info.episode_count, "episode") %></span><% end %>
               </p>
             </div>
-            <%= button_to "This is my show", shows_path, params: { directory_id: info.directory_id },
-                  class: "btn btn-primary btn-md", form: { data: { turbo_frame: "_top" } } %>
+            <% if info.is_a?(Podcast) %>
+              <%= link_to "This is my show", new_podcast_claim_path(info), class: "btn btn-primary btn-md",
+                    data: { turbo_frame: "_top" } %>
+            <% else %>
+              <%= button_to "This is my show", shows_path, params: { directory_id: info.directory_id },
+                    class: "btn btn-primary btn-md", form: { data: { turbo_frame: "_top" } } %>
+            <% end %>
           </div>
         </li>
       <% end %>

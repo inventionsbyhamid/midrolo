@@ -486,4 +486,80 @@ RSpec.describe "Show search" do
     expect(response).to have_http_status(:ok)
     expect(response.body).to include("Search is unavailable right now. Try again in a minute, or paste your RSS feed URL.")
   end
+
+  describe "Midrolo's own catalog" do
+    it "finds a catalog podcast the directory doesn't know and links its button to the claim page" do
+      podcast = create(:podcast, :active, title: "AiGM by AiHunt", author: "AiHunt")
+      get "/shows/search", params: { q: "aigm" }
+
+      expect(response.body).to include("AiGM by AiHunt", "AiHunt", "On Midrolo", "This is my show",
+                                       %(href="/podcasts/#{podcast.slug}/claim"))
+      expect(response.body).not_to include("No shows found")
+    end
+
+    it "drops a directory result with the same directory_id as a catalog hit" do
+      create(:podcast, :active, title: "Founder Notes", podcast_index_id: 123)
+      same = Podcasts::ShowInfo.new(directory_id: "123", title: "Founder Notes Dir", author: "A", description: "", artwork_url: nil,
+                                    feed_url: "https://other.example.com/feed", categories: [], episode_count: 1, itunes_id: nil, language: "en")
+      allow(Podcasts::Directory.current).to receive(:search).and_return([ same ])
+      get "/shows/search", params: { q: "founder" }
+
+      expect(response.body.scan("This is my show").size).to eq(1)
+      expect(response.body).not_to include("Founder Notes Dir")
+    end
+
+    it "puts catalog hits ahead of directory hits" do
+      create(:podcast, :active, title: "Zeta Founder Show")
+      get "/shows/search", params: { q: "founder" }
+
+      expect(response.body.index("Zeta Founder Show")).to be < response.body.index("The Founder&#39;s Ledger")
+    end
+
+    it "drops a directory result whose feed URL matches a catalog hit after normalization" do
+      create(:podcast, :active, title: "Ledger Club", feed_url: "FAKE://fake-1/")
+      get "/shows/search", params: { q: "ledger" }
+
+      expect(response.body).to include("Ledger Club")
+      expect(response.body).not_to include("The Founder&#39;s Ledger")
+    end
+
+    it "skips removed podcasts and the demo show, and finds a dormant one" do
+      create(:podcast, title: "Gone Pod", status: "removed")
+      create(:podcast, :active, title: "Demo Pod", podcast_guid: Podcast::Listing::DEMO_GUID)
+      create(:podcast, title: "Sleepy Pod", status: "dormant")
+      get "/shows/search", params: { q: "pod" }
+
+      expect(response.body).to include("Sleepy Pod")
+      expect(response.body).not_to include("Gone Pod", "Demo Pod")
+    end
+
+    it "shows the catalog hits with no alert when the directory is down" do
+      create(:podcast, :active, title: "AiGM by AiHunt")
+      allow(Podcasts::Directory.current).to receive(:search).and_raise(Podcasts::Directory::Unavailable)
+      get "/shows/search", params: { q: "aigm" }
+
+      expect(response.body).to include("AiGM by AiHunt")
+      expect(response.body).not_to include("Search is unavailable")
+    end
+
+    it "shows the alert when the directory is down and nothing matches" do
+      allow(Podcasts::Directory.current).to receive(:search).and_raise(Podcasts::Directory::Unavailable)
+      get "/shows/search", params: { q: "aigm" }
+
+      expect(response.body).to include("Search is unavailable right now")
+    end
+
+    it "shows at most 10 results in total" do
+      create_list(:podcast, 7, :active, title: "Money Talk")
+      infos = Array.new(10) do |i|
+        Podcasts::ShowInfo.new(directory_id: "d#{i}", title: "Money Dir #{i}", author: "A", description: "", artwork_url: nil,
+                               feed_url: "https://d#{i}.example.com/feed", categories: [], episode_count: 1, itunes_id: nil, language: "en")
+      end
+      allow(Podcasts::Directory.current).to receive(:search).and_return(infos)
+      get "/shows/search", params: { q: "money" }
+
+      expect(response.body.scan("This is my show").size).to eq(10)
+      expect(response.body.scan("Money Talk").size).to eq(5)
+    end
+  end
 end
