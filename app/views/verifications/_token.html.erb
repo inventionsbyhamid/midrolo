@@ -18,6 +18,8 @@
   <% else %>
     <% if flash[:verify_note].present? %>
       <div class="stats-alert stats-alert-warning mt-5" role="status"><p><%= flash[:verify_note] %></p></div>
+    <% elsif verification.watching? %>
+      <p class="mt-5" role="status">We're checking your feed every few minutes and will email you at <span class="font-semibold break-all"><%= show.user.email %></span> when you're verified.</p>
     <% end %>
     <%= button_to (flash[:verify_note].present? ? "Check again" : "Check my feed"), show_verification_path(show), method: :patch, class: "btn btn-primary btn-lg mt-5" %>
     <p class="hint">We read your feed at <%= display_host(show.feed_url) %>. The line can sit anywhere in the description, and you can remove it once you're verified. It works for 7 days.</p>

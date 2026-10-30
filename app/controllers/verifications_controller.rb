@@ -53,8 +53,11 @@ class VerificationsController < ApplicationController
 
     if verification.email? ? verification.check_code(params[:code]) : verification.check_feed_token!
       @show.reload.sync_listing!
-      redirect_to edit_show_media_kit_path(@show), notice: VERIFIED, status: :see_other
+      redirect_to edit_show_media_kit_path(@show), notice: verified_message(verification), status: :see_other
     else
+      # Hosts can be slow to serve the new description, so a feed that didn't have the token yet is checked again in
+      # the background (Verifications::WatchFeedJob), which emails the result.
+      verification.watch!
       # A wrong code or a token not in the feed yet is said in the card, next to what to do (review PO-4, PO-5).
       if verification.failure.in?(%i[wrong_code not_found])
         flash[:verify_note] = failure_message(verification)
@@ -91,13 +94,24 @@ class VerificationsController < ApplicationController
     end
   end
 
+  # The line in the feed has done its job once the show is verified.
+  def verified_message(verification)
+    return VERIFIED if verification.email?
+
+    "#{@show.title} is verified. You can remove the midrolo-verify line from your show description now."
+  end
+
+  # A feed that didn't have the token, or couldn't be read, is being watched (ShowVerification#watch!).
   def failure_message(verification)
     case verification.failure
     when :wrong_code then "That code didn't match. You have #{helpers.pluralize(verification.attempts_left, 'try')} left."
     when :locked then ShowVerification::LOCKED_MESSAGE
     when :not_found
-      "Not in your feed yet. Your host may not have updated it, so give it a few minutes and check again."
-    when :unreadable then "We couldn't read your feed just now. Check that it's online, then try again in a few minutes."
+      "Not in your feed yet. Podcast hosts can take a few minutes to update it. We'll keep checking for the next " \
+        "30 minutes and email you at #{current_user.email} when you're verified. You can close this page."
+    when :unreadable
+      "We couldn't read your feed just now. Check that it's online. We'll keep trying for the next 30 minutes and " \
+        "email you at #{current_user.email} when you're verified."
     when :feed_moved then Show::FeedMoved::MESSAGE
     else verification.email? ? ShowVerification::EXPIRED_CODE_MESSAGE : "That token has expired. Get a new one below."
     end
