@@ -168,7 +168,7 @@ and listings, verified Spotify and Apple numbers, the brand agent, request a spo
 
 - **A commercial Qloo agreement,** then billing opens. Podcasters list free forever. The paid toolkit is plan based
   (Creator at $19 a month, Pro at $49, a one time $49 Sprint), brands get a plan later, and there's no commission.
-- **Profitable from day 1.** Billing runs as a founding member waitlist until an admin enters Qloo's cost per call and
+- **Profitable from day 1.** Billing runs as a waitlist until an admin enters Qloo's cost per call and
   every paid plan keeps at least a 60% margin with every cap used.
 - **Deals:** agreed terms, an air window, and proof that the read aired, spotted in the feed.
 - **More verified sources:** plays and downloads across every app for shows hosted on Spotify for Creators, hosting
@@ -195,7 +195,7 @@ and listings, verified Spotify and Apple numbers, the brand agent, request a spo
 - **Free trial, no code or card:** every new account gets Pro features through Nov 6: up to 3 shows, each with a
   Snapshot and a full agent report, plus 60 pitches. Brands get 5 searches a day (20 after verifying a work email).
 - **Sample media kit:** open any sample report and press See the sample media kit.
-- **Billing** shows the founding member waitlist. Nothing can be bought during judging.
+- **Billing** shows a waitlist for the paid plans: nothing can be bought yet, and every account already has free Pro through Nov 6.
 
 ## Known limitations
 
