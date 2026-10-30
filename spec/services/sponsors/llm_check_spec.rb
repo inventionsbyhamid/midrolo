@@ -98,6 +98,21 @@ RSpec.describe Sponsors::LlmCheck do
     expect(found).to be_empty
   end
 
+  it "reads an episode ref however the model writes it: e1, E1, 1, ep1, episode 1, Episode-1" do
+    notes = "Planes and saws today. This episode is brought to you by Hollow Tools."
+    entries = Array.new(6) do
+      episode = create(:episode, podcast: podcast, description: notes)
+      [ episode, Sponsors::Notes.new(notes, context) ]
+    end
+    refs = [ "e1", " E2 ", 3, "ep4", "episode 5", "Episode-6" ]
+    RubyLLM::Test.stub_response({ mentions: refs.map { |ref| mention("Hollow Tools").merge(episode_ref: ref) } })
+
+    found = described_class.call(podcast, entries, context)
+
+    expect(found.keys).to match_array(entries.map { |episode, _| episode.id })
+    expect(found.values.flatten.map(&:name).uniq).to eq([ "Hollow Tools" ])
+  end
+
   it "takes the model's quote only when it says something: 20 characters, or the brand with more around it (review L3)" do
     notes = "Planes and saws today. This episode is brought to you by AG1. Go to drinkag1.com/bench for a free year of vitamin D."
 

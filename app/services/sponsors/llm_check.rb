@@ -162,7 +162,12 @@ module Sponsors
       items
     end
 
-    def ref_of(item) = item["episode_ref"].to_s.strip.downcase
+    # The item's episode ref as the prompt writes it: "e1", "E1", "1", "ep1", "episode 1" and "Episode-1" are all e1.
+    def ref_of(item)
+      ref = item["episode_ref"].to_s.strip.downcase
+      number = ref[/\A(?:e|ep|episode)?[\s._#-]*(\d+)\z/, 1]
+      number ? "e#{number.to_i}" : ref
+    end
 
     def prompt
       show = [ @podcast.title, (" by #{@podcast.author}" if @podcast.author.present?) ].join

@@ -270,6 +270,15 @@ RSpec.describe Sponsors::Scan do
         expect(result).to have_attributes(stage2: :failed, checked_episode_ids: [], settled_episode_ids: [])
       end
 
+      it "splits a batch whose reply names none of its episodes, as for a cut-off reply" do
+        RubyLLM::Test.stub_responses({ mentions: [ mention("x1", "Hollow Tools") ] }, confirm(5), confirm(5))
+
+        result = described_class.call(podcast, episodes)
+
+        expect(RubyLLM::Test.requests.size).to eq(3)
+        expect(result).to have_attributes(stage2: :done, checked_episode_ids: match_array(episodes.map(&:id)))
+      end
+
       it "doesn't split on a provider error" do
         allow(Sponsors::LlmCheck).to receive(:call).and_raise(Faraday::TimeoutError)
 
