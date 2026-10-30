@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_30_161500) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -157,6 +157,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_161500) do
     t.datetime "sponsor_scanned_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "sponsor_ai_checked_at"
+    t.index ["podcast_id", "published_at"], name: "index_episodes_ai_unchecked_on_podcast_id_and_published_at", order: { published_at: :desc }, where: "(sponsor_ai_checked_at IS NULL)"
     t.index ["podcast_id", "guid"], name: "index_episodes_on_podcast_id_and_guid", unique: true
     t.index ["podcast_id", "published_at"], name: "index_episodes_on_podcast_id_and_published_at", order: { published_at: :desc }
     t.index ["podcast_id", "slug"], name: "index_episodes_on_podcast_id_and_slug", unique: true
