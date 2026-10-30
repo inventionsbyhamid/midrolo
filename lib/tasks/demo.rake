@@ -10,4 +10,19 @@ namespace :demo do
   rescue Claims::DemoSetup::NoOwner => e
     abort("demo:setup: #{e.message}")
   end
+
+  desc "bin/setup's demo data, in development without Qloo or Podcast Index keys only: the demo catalog " \
+       "(catalog:seed[16]), the admin account demo-admin@midrolo.test for the Dev sign in card, and the demo show " \
+       "(demo:setup). Safe to run again."
+  task seed: :environment do
+    if (reason = DemoSeed.skip_reason)
+      puts "demo:seed: skipped: #{reason}"
+      next
+    end
+
+    Rake::Task["catalog:seed"].invoke(DemoSeed::CATALOG_SIZE.to_s)
+    admin = DemoSeed.admin!
+    puts "demo:seed: #{admin.email} is an admin"
+    Rake::Task["demo:setup"].invoke
+  end
 end

@@ -15,6 +15,10 @@
           <div>
             <h2 class="font-semibold">Dev sign in</h2>
             <p class="text-sm text-ink-soft">Development only, with no Google keys set. Any name and email will do.</p>
+            <%# bin/setup's demo data (DemoSeed) makes this account an admin. %>
+            <% if DemoSeed.admin_ready? %>
+              <p class="text-sm text-ink-soft" data-dev-admin>Use <strong><%= DemoSeed::ADMIN_EMAIL %></strong> to be an admin.</p>
+            <% end %>
           </div>
           <%= form_with url: ApplicationHelper::DEV_SIGN_IN_PATH, method: :post, local: true, data: { turbo: false },
                         class: "flex flex-col gap-3" do %>

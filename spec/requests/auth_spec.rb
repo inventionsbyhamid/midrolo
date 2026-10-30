@@ -40,6 +40,17 @@ RSpec.describe "Authentication" do
       ActionController::Base.allow_forgery_protection = false
     end
 
+    it "names the demo admin account once bin/setup's demo data has made it" do
+      allow(AuthConfig).to receive(:developer_strategy?).and_return(true)
+
+      get "/users/sign_in"
+      expect(page.at_css("[data-dev-admin]")).to be_nil
+
+      DemoSeed.admin!
+      get "/users/sign_in"
+      expect(page.at_css("[data-dev-sign-in] [data-dev-admin]").text.squish).to eq("Use demo-admin@midrolo.test to be an admin.")
+    end
+
     it "isn't there without the dev strategy: in production, with Google keys, and in test" do
       expect(AuthConfig.developer_strategy?(env: "production", client_id: nil)).to be(false)
       expect(AuthConfig.developer_strategy?(env: "development", client_id: "google-client-id")).to be(false)
