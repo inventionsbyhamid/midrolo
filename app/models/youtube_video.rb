@@ -1,6 +1,8 @@
 # A YouTube video, by its id, and the two places it lives: its page on YouTube and YouTube's privacy-enhanced player
 # (youtube-nocookie.com), which components/_youtube loads only when the visitor presses play. The home page's "How
 # Midrolo works" video is the one in AppSettings explainer_video_id, set in /admin (Admin::SettingsForm).
+# Only a well-formed id makes a YoutubeVideo, so the URLs below never carry anything else. An id may start with a dash
+# (-UXzujILAoI), which is safe in a URL path and query.
 class YoutubeVideo
   # YouTube's video ids: 11 letters, digits, - and _.
   ID = /\A[A-Za-z0-9_-]{11}\z/
@@ -22,11 +24,15 @@ class YoutubeVideo
   def self.explainer = parse(AppSettings.get(:explainer_video_id))
 
   def initialize(id)
+    raise ArgumentError, "not a YouTube video id: #{id.inspect}" unless ID.match?(id.to_s)
+
     @id = id
   end
 
   def watch_url = "https://www.youtube.com/watch?v=#{id}"
 
-  # Plays as it loads (the visitor pressed play), and suggests only this channel's videos at the end.
-  def embed_url = "https://www.youtube-nocookie.com/embed/#{id}?autoplay=1&rel=0&modestbranding=1"
+  # Plays as it loads (the visitor pressed play), in the page rather than full screen on an iPhone, and suggests only
+  # this channel's videos at the end. YouTube no longer honours modestbranding or showinfo: the poster is what keeps
+  # its branding off the page until play.
+  def embed_url = "https://www.youtube-nocookie.com/embed/#{id}?autoplay=1&rel=0&playsinline=1"
 end

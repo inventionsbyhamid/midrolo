@@ -155,28 +155,32 @@ RSpec.describe "Public pages" do
       expect(response.body).not_to match(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com})
     end
 
+    # The real video's id starts with a dash.
     it "shows How Midrolo works right after the hero once its video is set: a poster and play link, no player yet" do
-      AppSettings.set(:explainer_video_id, "M1droloTour")
+      AppSettings.set(:explainer_video_id, "-UXzujILAoI")
       get "/"
 
       section = page.at_css("#hero + section#how-it-works")
       expect(section.at_css("h2").text.squish).to eq("How Midrolo works")
       expect(section.at_css(".section-lead").text.squish).to eq("A 2 minute tour for brands and podcasters.")
       video = section.at_css(".video[data-controller='youtube']")
-      expect(video["data-youtube-src-value"]).to eq("https://www.youtube-nocookie.com/embed/M1droloTour?autoplay=1&rel=0&modestbranding=1")
+      expect(video["data-youtube-src-value"]).to eq("https://www.youtube-nocookie.com/embed/-UXzujILAoI?autoplay=1&rel=0&playsinline=1")
       expect(video["data-youtube-title-value"]).to eq("How Midrolo works")
       expect(video["data-youtube-label-value"]).to eq("Watch how it works, 2 min video") # the play button's, once made
 
       # The link to YouTube for a visitor without JavaScript, which youtube_controller makes the play button.
       play = video.at_css("a.video-play[data-youtube-target='play']")
-      expect(play["href"]).to eq("https://www.youtube.com/watch?v=M1droloTour")
+      expect(play["href"]).to eq("https://www.youtube.com/watch?v=-UXzujILAoI")
       expect(play["aria-label"]).to eq("Watch how it works on YouTube, 2 min video")
-      expect(play.at_css(".video-poster[aria-hidden='true'] svg.waveform")).to be_present
+      poster = play.at_css("img.video-poster") # the video's own title card, served from here
+      expect(poster["src"]).to match(%r{\A/assets/explainer/poster-\h+\.jpg\z})
+      expect(poster.to_h.slice("alt", "width", "height")).to eq("alt" => "", "width" => "1280", "height" => "720")
       expect(play.at_css(".video-caption").text.squish).to eq("Watch how it works 2 min")
 
       expect(section.at_css("iframe")).to be_nil
       loads = page.css("[src], link[href]").map { |node| node["src"] || node["href"] }
       expect(loads.grep(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com})).to be_empty
+      expect(response.body).not_to include("ytimg.com") # not even YouTube's thumbnail
     end
 
     it "shows the proof strip with the product's own badges, and the catalog's counts once there's a directory" do

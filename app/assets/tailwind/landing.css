@@ -18,6 +18,21 @@
     }
   }
 
+  /* The poster is the video's title card: the logo, "How Midrolo works" and a rule down its left 73%, the right clear.
+     The play button sits in the middle of that clear strip, the caption under it at the bottom right. */
+  .explainer .video {
+    --video-play-x: 86%;
+  }
+
+  .explainer .video-caption {
+    right: 1rem;
+    left: auto;
+
+    @media (width >= 48rem) {
+      right: 1.5rem;
+    }
+  }
+
   /* ---------- What podcasters say: the page's one dark band ---------- */
 
   .quotes {

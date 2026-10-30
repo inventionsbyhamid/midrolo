@@ -35,8 +35,8 @@ RSpec.describe Admin::SettingsForm do
 
     it "shows the home page's video id, blank until it is set" do
       expect(described_class.current.explainer_video_id).to eq("")
-      AppSettings.set(:explainer_video_id, "M1droloTour")
-      expect(described_class.current.explainer_video_id).to eq("M1droloTour")
+      AppSettings.set(:explainer_video_id, "-UXzujILAoI")
+      expect(described_class.current.explainer_video_id).to eq("-UXzujILAoI")
     end
 
     it "shows what is set" do
@@ -96,7 +96,7 @@ RSpec.describe Admin::SettingsForm do
     end
 
     it "takes the home page's video as a YouTube id or link, or blank for none" do
-      [ "", " ", "M1droloTour", "https://youtu.be/M1droloTour", "https://www.youtube.com/watch?v=M1droloTour" ].each do |value|
+      [ "", " ", "-UXzujILAoI", "https://youtu.be/-UXzujILAoI", "https://www.youtube.com/watch?v=-UXzujILAoI" ].each do |value|
         expect(form(explainer_video_id: value)).to be_valid, "expected #{value.inspect}"
       end
       [ "M1drolo", "https://vimeo.com/123456789", "https://www.youtube.com/@midrolo" ].each do |value|
@@ -151,14 +151,14 @@ RSpec.describe Admin::SettingsForm do
 
     it "saves the home page's video as the id in the link, and clears it again when blanked" do
       AppSettings.set(:promo_pro_until, "2026-11-06")
-      record = form(explainer_video_id: " https://youtu.be/M1droloTour?si=x1 ")
+      record = form(explainer_video_id: " https://youtu.be/-UXzujILAoI?si=x1 ")
       expect(record.save).to be(true)
-      expect(record.changed_settings).to eq([ "explainer_video_id from unset to M1droloTour" ])
-      expect(YoutubeVideo.explainer.id).to eq("M1droloTour")
+      expect(record.changed_settings).to eq([ "explainer_video_id from unset to -UXzujILAoI" ])
+      expect(YoutubeVideo.explainer.id).to eq("-UXzujILAoI")
 
       record = form(explainer_video_id: "")
       expect(record.save).to be(true)
-      expect(record.changed_settings).to eq([ "explainer_video_id from M1droloTour to unset" ])
+      expect(record.changed_settings).to eq([ "explainer_video_id from -UXzujILAoI to unset" ])
       expect(YoutubeVideo.explainer).to be_nil
     end
 

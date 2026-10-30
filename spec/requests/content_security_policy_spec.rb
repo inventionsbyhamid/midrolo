@@ -43,7 +43,7 @@ RSpec.describe "Content Security Policy" do
   # default-src covered frames before frame-src named YouTube's player, so 'self' stays: frames from this site still
   # load, and YouTube's own player (youtube.com, which sets cookies) never does.
   it "frames this site and YouTube's privacy-enhanced player only, where the home page's video plays" do
-    AppSettings.set(:explainer_video_id, "M1droloTour")
+    AppSettings.set(:explainer_video_id, "-UXzujILAoI")
     get "/"
 
     expect(policy["frame-src"]).to eq([ "'self'", "https://www.youtube-nocookie.com" ])

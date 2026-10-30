@@ -37,7 +37,7 @@ RSpec.describe "Landing and public pages" do
   # What the landing page shows once there's something real to show: the How Midrolo works video, the demo show's
   # listing and shows from the directory, so the layout checks cover them too.
   def fill_the_marketplace
-    AppSettings.set(:explainer_video_id, "M1droloTour")
+    AppSettings.set(:explainer_video_id, "-UXzujILAoI")
     create(:user, admin: true)
     Claims::DemoSetup.call
     [ "Index Fund Mornings", "The Founder's Ledger", "Cold Case Cafe" ].each_with_index do |title, i|
@@ -103,18 +103,19 @@ RSpec.describe "Landing and public pages" do
   # Nothing comes from YouTube until play is pressed; then the privacy-enhanced player takes the poster's place, with
   # focus. The player's own page isn't needed here, so the browser doesn't fetch it.
   it "plays How Midrolo works from youtube-nocookie.com only once its play button is pressed" do
-    AppSettings.set(:explainer_video_id, "M1droloTour")
+    AppSettings.set(:explainer_video_id, "-UXzujILAoI")
     page.driver.browser.url_blacklist = [ %r{cdn\.jsdelivr\.net}, %r{\Ahttps://www\.youtube-nocookie\.com/} ]
     visit "/"
 
     play = find("#how-it-works button.video-play[aria-label='Watch how it works, 2 min video']") # the link, made a button
     expect(page).to have_no_css("#how-it-works a.video-play")
     expect(page).to have_no_css("#how-it-works iframe")
+    expect(find("#how-it-works img.video-poster")[:src]).to match(%r{/assets/explainer/poster-\h+\.jpg\z}) # not YouTube's
     expect(page.driver.network_traffic.map(&:url).grep(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com})).to be_empty
 
     play.click
     frame = find("#how-it-works iframe.video-frame")
-    expect(frame[:src]).to eq("https://www.youtube-nocookie.com/embed/M1droloTour?autoplay=1&rel=0&modestbranding=1")
+    expect(frame[:src]).to eq("https://www.youtube-nocookie.com/embed/-UXzujILAoI?autoplay=1&rel=0&playsinline=1")
     expect(frame[:title]).to eq("How Midrolo works")
     expect(frame[:allow]).to eq("autoplay; encrypted-media; picture-in-picture")
     expect(evaluate_script("document.querySelector('#how-it-works iframe').allowFullscreen")).to be(true)
