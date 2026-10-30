@@ -1,0 +1,11 @@
+{
+ "resultCount": 1,
+ "results": [
+  {
+   "wrapperType": "track", "kind": "podcast", "collectionId": 1500000003, "trackId": 1500000003,
+   "artistName": "Marina Reyes", "collectionName": "The Tidepool Hour", "trackName": "The Tidepool Hour",
+   "feedUrl": "https://feeds.example.com/tidepool.xml", "primaryGenreName": "Science",
+   "collectionViewUrl": "https://podcasts.apple.com/us/podcast/the-tidepool-hour/id1500000003?uo=4"
+  }
+ ]
+}
