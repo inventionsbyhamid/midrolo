@@ -198,6 +198,15 @@ deploy needs these steps once, in order. Commands run in the **worker's** Termin
    stopped (also after Qloo's daily cap stopped it: raise the cap first). Watch the Paced seed block in `/admin`'s
    Catalog panel (Running, the next page, pages read, linked so far) and the catalog and artwork queues in
    `/admin/jobs`. The one shot `catalog:seed[1000]` still exists for development; production uses the paced seed.
+
+   **Popular shows** (no Qloo calls): `bin/rails "catalog:seed_charts[us,200]"` adds the shows on Apple's Top
+   Podcasts chart that the catalog doesn't have yet, so the directory has names people know beside the mid-size
+   shows above. Arguments: store country (default `us`), how many (1 to 200, default 200), and an Apple genre id for
+   one genre's chart (default all, for example `catalog:seed_charts[us,100,1318]` for Technology). Each show is looked
+   up by its Apple id in the directory, else through Apple's lookup for its feed URL, about one lookup a second (a
+   full chart takes 4 to 10 minutes); new shows are read at the seed's low priority. It prints one line: charted,
+   added, already in the catalog, skipped (removed or suppressed) and failed, and names each failure. Safe to run
+   again: shows already in the catalog cost nothing.
 6. **Sponsor detection.** New episodes are scanned as they're read. For the backfill, raise `llm_catalog_daily_usd`
    in `/admin` (about $5 to $10 covers 1,000 shows), then `bin/rails sponsors:scan` (200 podcasts a run), again if
    episodes are still waiting. Strong pattern reads are saved even when the budget runs out. After that the daily
