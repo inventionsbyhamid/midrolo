@@ -44,6 +44,12 @@ RSpec.describe Llm do
     end
   end
 
+  it "detects sponsors on GLM 5.3 Flash unless LLM_SPONSORS_MODEL picks another, and prices both" do
+    with_env("LLM_SPONSORS_MODEL" => nil) { expect(described_class.sponsors_model).to eq("z-ai/glm-5.3-flash") }
+    with_env("LLM_SPONSORS_MODEL" => "z-ai/glm-5.3") { expect(described_class.sponsors_model).to eq("z-ai/glm-5.3") }
+    expect(%w[z-ai/glm-5.3-flash z-ai/glm-5.3]).to all(satisfy { |model| Llm::Pricing.known?(model) })
+  end
+
   it "prices both default models" do
     expect(Llm::Pricing.known?(described_class.agent_model)).to be(true)
     expect(Llm::Pricing.known?(described_class.pitch_model)).to be(true)

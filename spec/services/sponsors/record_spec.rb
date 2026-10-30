@@ -9,8 +9,9 @@ RSpec.describe Sponsors::Record do
                                       evidence: "Brought to you by #{name}.", detected_by: by, confidence: 0.9 }.merge(fields))
   end
 
-  def result(detections, checked: [], scanned: [ episode.id ])
-    Sponsors::Scan::Result.new(detections: detections, checked_episode_ids: checked, scanned_episode_ids: scanned, stage2: :done)
+  def result(detections, checked: [], scanned: [ episode.id ], settled: [])
+    Sponsors::Scan::Result.new(detections: detections, checked_episode_ids: checked, settled_episode_ids: settled,
+                               scanned_episode_ids: scanned, stage2: :done)
   end
 
   it "resolves each brand, saves one mention per episode and brand with the episode's date, and marks the episode" do
@@ -26,6 +27,39 @@ RSpec.describe Sponsors::Record do
                                                                       published_at: episode.published_at, confidence: 0.9)
     expect([ notion.reload.sponsor_mentions_count, mercury.reload.sponsor_mentions_count ]).to eq([ 1, 1 ])
     expect(episode.reload.sponsor_scanned_at).to be_present
+  end
+
+  it "marks the episodes the AI-first scan settled as checked, and the others only as read" do
+    short = create(:episode, podcast: podcast)
+    read = create(:episode, podcast: podcast)
+
+    described_class.call(podcast, result([], checked: [ episode.id ], settled: [ episode.id, short.id ],
+                                             scanned: [ episode.id, short.id, read.id ]))
+
+    expect([ episode, short ].map(&:reload)).to all(have_attributes(sponsor_ai_checked_at: be_present, sponsor_scanned_at: be_present))
+    expect(read.reload).to have_attributes(sponsor_ai_checked_at: nil, sponsor_scanned_at: be_present)
+  end
+
+  it "replaces an episode's pattern reads with the model's answer, one row per brand" do
+    notion = create(:brand, name: "Notion", domain: "notion.so")
+    create(:sponsor_mention, episode: episode, podcast: podcast, brand: notion, detected_by: "pattern")
+    create(:sponsor_mention, episode: episode, podcast: podcast, brand: create(:brand, name: "Mercury"), detected_by: "pattern")
+
+    described_class.call(podcast, result([ detection("Notion", domain: "notion.so", by: "llm") ], checked: [ episode.id ],
+                                         settled: [ episode.id ]))
+
+    expect(SponsorMention.where(episode: episode).pluck(:brand_id, :detected_by)).to eq([ [ notion.id, "llm" ] ])
+    expect(notion.reload.sponsor_mentions_count).to eq(1)
+  end
+
+  it "gives a new brand the model's proper name and never renames an existing one" do
+    create(:brand, name: "Notion Labs", domain: "notion.so")
+
+    described_class.call(podcast, result([ detection("Cellercise", domain: "cellercise.com", by: "llm"),
+                                           detection("Notion", domain: "notion.so", by: "llm") ], checked: [ episode.id ]))
+
+    expect(Brand.find_by!(domain: "cellercise.com").name).to eq("Cellercise")
+    expect(Brand.find_by!(domain: "notion.so").name).to eq("Notion Labs")
   end
 
   it "names a brand after its domain until a real name comes" do

@@ -113,12 +113,29 @@ RSpec.describe Sponsors::Notes do
     end
   end
 
-  it "gives the model only the sentences around its candidates" do
-    fixture = sponsor_fixture("sponsor_block")
-    notes = described_class.new(fixture.notes, sponsor_context(fixture))
+  describe "#for_model" do
+    it "gives the model all of the notes, line by line, when they fit, without ad choices notices" do
+      fixture = sponsor_fixture("sponsor_block")
+      notes = described_class.new("#{fixture.notes}\nLearn more about your ad choices. Visit megaphone.fm/adchoices", sponsor_context(fixture))
 
-    expect(notes.excerpt).to include("SPONSORS:", "Encord: AI tooling", "drinkag1.com/sam")
-    expect(notes.excerpt).not_to include("Why we sleep", "danawu")
-    expect(notes.excerpt.length).to be <= described_class::EXCERPT_LIMIT
+      lines = notes.for_model
+      expect(lines).to include("SPONSORS:", "Encord: AI tooling for annotation and data management.", "Go to https://drinkag1.com/sam",
+                               "(08:12) Why we sleep", "Dana's X: https://x.com/danawu")
+      expect(lines.join("\n")).not_to include("adchoices")
+    end
+
+    it "keeps the sentences likeliest to hold a read when the notes are too long, in order, marking what it left out" do
+      context = Sponsors::Context.new(title: "Quiet Hours", author: "Ivy Chen")
+      filler = Array.new(30) { |i| "Chapter #{i} covers the long history of quiet rooms and why they matter so much." }
+      text = [ filler.first(15), "Thanks to our friends at Fernway for supporting the show, visit fernway.co/quiet.", filler.last(15),
+               "Find Ivy at ivychen.net." ].flatten.join("\n")
+      notes = described_class.new(text, context)
+
+      lines = notes.for_model(600)
+      expect(lines.join("\n").length).to be <= 600 + lines.size
+      expect(lines).to include("Thanks to our friends at Fernway for supporting the show, visit fernway.co/quiet.", "Find Ivy at ivychen.net.", "...")
+      expect(lines.index { |line| line.include?("Fernway") }).to be < lines.index { |line| line.include?("ivychen") }
+      expect(lines.first).to eq("Chapter 0 covers the long history of quiet rooms and why they matter so much.")
+    end
   end
 end

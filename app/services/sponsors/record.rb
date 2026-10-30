@@ -1,10 +1,13 @@
 module Sponsors
-  # Saves a Sponsors::Scan result: each detection's brand (Brand.resolve: by domain, then by name), one SponsorMention
-  # per episode and brand with the episode's published_at, the episodes marked sponsor_scanned_at, the touched brands'
-  # sponsor_mentions_count recounted, and the podcast touched so its page's cache moves.
+  # Saves a Sponsors::Scan result: each detection's brand (Brand.resolve: by domain, then by name; a new brand takes
+  # the model's proper name, an existing one is never renamed), one SponsorMention per episode and brand with the
+  # episode's published_at, the episodes marked sponsor_scanned_at (and sponsor_ai_checked_at when the AI-first scan
+  # settled them), the touched brands' sponsor_mentions_count recounted, and the podcast touched so its page's cache
+  # moves.
   #
-  # An episode the model checked has its mentions replaced by this scan's; an episode only the patterns read keeps what
-  # it had and gains new ones (a pattern-only rescan never undoes a model's answer). Returns the mentions written.
+  # An episode the model checked has its mentions replaced by this scan's, pattern reads from an older scan included
+  # (the unique index on episode and brand keeps one row each); an episode only the patterns read (fake mode) keeps what
+  # it had and gains new ones, so a pattern-only run never undoes a model's answer. Returns the mentions written.
   class Record
     def self.call(podcast, result) = new(podcast, result).call
 
@@ -27,7 +30,9 @@ module Sponsors
           touched.merge(inserted.rows.flatten)
           written = inserted.rows.size
         end
-        Episode.where(id: @result.scanned_episode_ids).update_all(sponsor_scanned_at: Time.current)
+        now = Time.current
+        Episode.where(id: @result.settled_episode_ids).update_all(sponsor_scanned_at: now, sponsor_ai_checked_at: now)
+        Episode.where(id: @result.scanned_episode_ids - @result.settled_episode_ids).update_all(sponsor_scanned_at: now)
         @changed = removed.positive? || written.positive?
       end
       recount(touched)
