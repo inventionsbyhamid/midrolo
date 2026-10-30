@@ -1,0 +1,4 @@
+<p style="margin:0 0 16px;">We kept checking the feed of <strong><%= @title %></strong> for 30 minutes after your last check.</p>
+<p style="margin:0 0 16px;">We couldn't find the line in your feed yet. Make sure you saved the description in your podcast host, then press Check my feed again.</p>
+<%= mail_button "Open the verification page", show_verification_url(@show) %>
+<%= mail_footnote "We send this when we stop checking your feed for the line." %>

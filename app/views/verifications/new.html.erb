@@ -6,6 +6,9 @@
   <% if @show.verified? %>
     <%= render "components/card", title: "Verified" do %>
       <p>You've verified that you own this show, so you can publish its listing.</p>
+      <% if @current&.feed_token? && @current.verified? %>
+        <p class="mt-2">You can remove the midrolo-verify line from your show description now.</p>
+      <% end %>
       <%= ui_button "Open your listing", edit_show_media_kit_path(@show), class: "mt-4" %>
     <% end %>
   <% else %>

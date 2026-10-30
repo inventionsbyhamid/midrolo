@@ -45,4 +45,57 @@ RSpec.describe VerificationMailer do
 
     expect(described_class.with(verification: verification).code[:from].value).to eq("Kits <kits@example.com>")
   end
+
+  # Verifications::WatchFeedJob's two results: the line turned up in the feed, or the watch ran out without it.
+  describe "the feed watch" do
+    let(:owner) { create(:user, email: "host@example.com") }
+    let(:show) { create(:show, user: owner, title: "The Founder's Ledger", feed_url: "https://host.example.com/feed.xml") }
+    let(:token) { ShowVerification.start_feed_token!(show) }
+
+    def parts(mail) = [ mail.subject, mail.text_part.body.to_s, mail.html_part.body.to_s ]
+
+    it "tells the owner the show is verified, that the line can go, and links the stats page" do
+      mail = described_class.with(verification: token).verified
+      subject, text, html = parts(mail)
+
+      expect(mail.to).to eq([ "host@example.com" ])
+      expect(subject).to eq("The Founder's Ledger is verified on Midrolo")
+      [ text, html ].each do |body|
+        expect(body).to include("You can remove the midrolo-verify line from your show description now.")
+      end
+      expect(text).to include("http://example.com/shows/#{show.to_param}/stats")
+      link = Nokogiri::HTML(html).at_css("a[data-mail-button]")
+      expect(link["href"]).to eq("http://example.com/shows/#{show.to_param}/stats")
+      parts(mail).each { |part| expect(part).not_to match(/[\u2013\u2014]/) }
+    end
+
+    it "tells the owner the line wasn't found and links the verification page" do
+      mail = described_class.with(verification: token).not_found
+      subject, text, html = parts(mail)
+
+      expect(mail.to).to eq([ "host@example.com" ])
+      expect(subject).to eq("We couldn't verify The Founder's Ledger yet")
+      copy = "We couldn't find the line in your feed yet. Make sure you saved the description in your podcast host, " \
+             "then press Check my feed again."
+      [ text, html ].each { |body| expect(body.squish).to include(copy) }
+      expect(text).to include("http://example.com/shows/#{show.to_param}/verification")
+      link = Nokogiri::HTML(html).at_css("a[data-mail-button]")
+      expect(link["href"]).to eq("http://example.com/shows/#{show.to_param}/verification")
+      parts(mail).each { |part| expect(part).not_to match(/[\u2013\u2014]/) }
+    end
+
+    it "cuts a long feed title in the subject" do
+      show.podcast.update!(title: "A" * 50 + " and an attacker's very long sales pitch goes here")
+
+      expect(described_class.with(verification: token).verified.subject).to eq("#{show.title.truncate(60)} is verified on Midrolo")
+    end
+
+    it "sends nothing to an account with no email" do
+      owner.update_columns(email: "")
+
+      %i[verified not_found].each do |email|
+        expect(described_class.with(verification: token).public_send(email).message).to be_a(ActionMailer::Base::NullMail)
+      end
+    end
+  end
 end

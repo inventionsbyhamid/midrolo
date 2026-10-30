@@ -190,6 +190,79 @@ RSpec.describe "Verifications" do
         expect(Nokogiri::HTML(response.body).at_css(".stats-alert").text).to include("Not in your feed yet")
         expect(response.body).to include("Check again")
       end
+
+      it "keeps checking after a failed check, says so with the user's email, and enqueues one watch" do
+        freeze_time
+        post show_verification_path(show), params: { kind: "feed_token" }
+        token = ShowVerification.last
+        stub_request(:get, show.feed_url).to_return(status: 200, body: feed_with("About us."))
+
+        expect { patch show_verification_path(show) }
+          .to have_enqueued_job(Verifications::WatchFeedJob).with(token.id, 1).at(15.seconds.from_now).exactly(:once)
+        expect(token.reload.watch_until).to eq(30.minutes.from_now)
+        expect(flash[:verify_note]).to eq(
+          "Not in your feed yet. Podcast hosts can take a few minutes to update it. We'll keep checking for the next " \
+          "30 minutes and email you at #{user.email} when you're verified. You can close this page."
+        )
+        follow_redirect!
+        expect(Nokogiri::HTML(response.body).at_css(".stats-alert").text).to include("We'll keep checking", user.email)
+        get show_verification_path(show) # the note is gone; the page still says the feed is being checked
+        expect(response.body).to include("We're checking your feed every few minutes and will email you at")
+      end
+
+      it "extends the watch on a second failed press, without a second chain" do
+        freeze_time
+        post show_verification_path(show), params: { kind: "feed_token" }
+        token = ShowVerification.last
+        stub_request(:get, show.feed_url).to_return(status: 200, body: feed_with("About us."))
+        patch show_verification_path(show)
+        travel 4.minutes
+
+        expect { patch show_verification_path(show) }.not_to have_enqueued_job(Verifications::WatchFeedJob)
+        expect(token.reload.watch_until).to eq(30.minutes.from_now)
+      end
+
+      it "keeps checking a feed it couldn't read, and says so" do
+        post show_verification_path(show), params: { kind: "feed_token" }
+        stub_request(:get, show.feed_url).to_return(status: 500)
+
+        expect { patch show_verification_path(show) }.to have_enqueued_job(Verifications::WatchFeedJob).exactly(:once)
+        expect(flash[:alert]).to include("We couldn't read your feed just now", "for the next 30 minutes", user.email)
+      end
+
+      it "tells the user they can remove the line after a manual success, and sends no email" do
+        post show_verification_path(show), params: { kind: "feed_token" }
+        stub_request(:get, show.feed_url).to_return(status: 200, body: feed_with("About us. midrolo-verify=#{ShowVerification.last.token}"))
+
+        expect { patch show_verification_path(show) }.not_to have_enqueued_mail
+        expect(Verifications::WatchFeedJob).not_to have_been_enqueued
+        expect(response).to redirect_to(edit_show_media_kit_path(show))
+        expect(flash[:notice]).to eq(
+          "The Founder's Ledger is verified. You can remove the midrolo-verify line from your show description now."
+        )
+        get new_show_verification_path(show)
+        expect(response.body).to include("You can remove the midrolo-verify line from your show description now.")
+      end
+
+      it "subscribes the open page to the show's verification stream, so a background check can refresh it" do
+        post show_verification_path(show), params: { kind: "feed_token" }
+        get show_verification_path(show)
+
+        page = Nokogiri::HTML(response.body)
+        source = page.at_css("turbo-cable-stream-source")
+        expect(Turbo::StreamsChannel.verified_stream_name(source["signed-stream-name"])).to eq(ShowVerification.stream_name(show))
+        expect(page.at_css("meta[name='turbo-refresh-method']")["content"]).to eq("morph")
+      end
+    end
+
+    it "starts no watch for an emailed code" do
+      request_code
+      code = last_code
+      wrong = code == "000000" ? "111111" : "000000"
+
+      expect { patch show_verification_path(show), params: { code: wrong } }.not_to have_enqueued_job(Verifications::WatchFeedJob)
+      expect(flash[:verify_note]).to eq("That code didn't match. You have 4 tries left.")
+      expect(ShowVerification.last.watch_until).to be_nil
     end
 
     it "says so, and verifies nothing, when another account already owns the podcast" do

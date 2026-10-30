@@ -1,4 +1,10 @@
 <% content_for :title, "Verify #{@show.title}" %>
+<%# A feed token is checked again in the background after a miss (Verifications::WatchFeedJob), which refreshes this
+    page when it verifies the show; the refresh lands on the verified page. %>
+<% unless @verification.email? %>
+  <% content_for :head, turbo_refreshes_with(method: :morph, scroll: :preserve) %>
+  <%= turbo_stream_from ShowVerification.stream_name(@show) %>
+<% end %>
 <div class="mx-auto flex max-w-2xl flex-col gap-6">
   <%= render "verifications/header", show: @show %>
   <%= render(@verification.email? ? "verifications/code" : "verifications/token", show: @show, verification: @verification) %>
