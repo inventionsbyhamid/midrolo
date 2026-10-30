@@ -10,6 +10,10 @@
 #
 # Sends are capped twice: per show, and per recipient address across every show and account (R65), so neither many
 # accounts adding one feed nor an attacker's feed naming someone else's address can flood an inbox.
+#
+# Hosts update their feeds late (a CDN can serve the old copy for a while), so a feed check that doesn't find the token
+# starts a watch (#watch!): Verifications::WatchFeedJob reads the feed again until watch_until and emails the owner how
+# it ended.
 class ShowVerification < ApplicationRecord
   CODE_TTL = 30.minutes
   TOKEN_TTL = 7.days
@@ -22,6 +26,9 @@ class ShowVerification < ApplicationRecord
   DIGEST_SALT = "show_verification/code".freeze
   # The first key of the two-key advisory lock taken while checking a recipient address's allowance.
   ADDRESS_LOCK_NAMESPACE = 15_015
+  # How long a watch reads the feed after the latest failed check, and the failures that start one.
+  WATCH_WINDOW = 30.minutes
+  WATCHED_FAILURES = %i[not_found unreadable].freeze
 
   # Shown on the verification page and in the flash after a failed check.
   LOCKED_MESSAGE = "Too many tries. Request a new code to try again.".freeze
@@ -96,6 +103,10 @@ class ShowVerification < ApplicationRecord
 
   def self.normalize_address(email) = email.to_s.strip.downcase.presence
 
+  # The Turbo stream an open verification page listens on, named by the show's public id (R147), as
+  # Conversations::Broadcast names its streams.
+  def self.stream_name(show) = "verification:#{show.public_id}"
+
   # At least RESEND_AFTER between sends, and at most SENDS_PER_DAY in any 24 hours, among the given sends.
   def self.throttle!(sends, scope:)
     sent = sends.where(created_at: 1.day.ago..)
@@ -159,6 +170,25 @@ class ShowVerification < ApplicationRecord
     end
   end
 
+  # After a feed check that didn't find the token (or couldn't read the feed), keeps checking until WATCH_WINDOW from
+  # now. A watch that is running is only extended: the row lock lets one of two parallel presses start the chain.
+  # True when this call started one.
+  def watch!
+    return false unless feed_token? && failure.in?(WATCHED_FAILURES)
+
+    started = with_lock do
+      running = watching?
+      update!(watch_until: WATCH_WINDOW.from_now)
+      !running
+    end
+    Verifications::WatchFeedJob.check_later(id, 1) if started
+    started
+  end
+
+  # Only this column: a claim refused mid-check (Show::AlreadyClaimed) leaves its rolled-back verified_at in memory.
+  def stop_watching! = update_columns(watch_until: nil)
+
+  def watching? = watch_until.present? && watch_until > Time.current
   def token_line = "#{TOKEN_PREFIX}#{token}"
   def masked_sent_to = Shows::OwnerEmail.mask(sent_to)
   def verified? = verified_at.present?

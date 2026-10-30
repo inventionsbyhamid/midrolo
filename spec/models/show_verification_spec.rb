@@ -289,5 +289,63 @@ RSpec.describe ShowVerification do
       expect(verification.failure).to eq(:expired)
       expect(described_class.start_feed_token!(show)).not_to eq(verification)
     end
+
+    describe "#watch!" do
+      include ActiveJob::TestHelper
+
+      before { freeze_time }
+
+      def failed_check(status: 200)
+        verification = described_class.start_feed_token!(show)
+        stub_request(:get, feed_url).to_return(status: status, body: feed_xml)
+        verification.check_feed_token!
+        verification
+      end
+
+      it "after a check that didn't find the line, watches for 30 minutes from the first check in 15 seconds" do
+        verification = failed_check
+
+        expect { expect(verification.watch!).to be(true) }
+          .to have_enqueued_job(Verifications::WatchFeedJob).with(verification.id, 1).at(15.seconds.from_now).exactly(:once)
+        expect(verification.reload.watch_until).to eq(30.minutes.from_now)
+        expect(verification).to be_watching
+      end
+
+      it "watches a feed it couldn't read too" do
+        expect { failed_check(status: 500).watch! }.to have_enqueued_job(Verifications::WatchFeedJob).exactly(:once)
+      end
+
+      it "only extends a watch that is running, so parallel presses start one chain" do
+        verification = failed_check
+        verification.watch!
+        travel 10.minutes
+        verification.check_feed_token!
+
+        expect { expect(verification.watch!).to be(false) }.not_to have_enqueued_job(Verifications::WatchFeedJob)
+        expect(verification.reload.watch_until).to eq(30.minutes.from_now)
+      end
+
+      it "starts a new chain once the last watch ran out" do
+        verification = failed_check
+        verification.watch!
+        travel 31.minutes
+        verification.check_feed_token!
+
+        expect { verification.watch! }.to have_enqueued_job(Verifications::WatchFeedJob).with(verification.id, 1)
+      end
+
+      it "doesn't watch after a success, an expired token or an emailed code" do
+        found = described_class.start_feed_token!(show)
+        stub_request(:get, feed_url).to_return(status: 200, body: feed_xml(txt: found.token_line))
+        found.check_feed_token!
+        expired = failed_check
+        travel 8.days
+        expired.check_feed_token!
+        code = described_class.new(show: show, kind: "email", expires_at: 30.minutes.from_now)
+
+        [ found, expired, code ].each { |verification| expect(verification.watch!).to be(false) }
+        expect(Verifications::WatchFeedJob).not_to have_been_enqueued
+      end
+    end
   end
 end
