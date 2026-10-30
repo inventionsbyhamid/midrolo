@@ -8,7 +8,7 @@ through Cuprite. It needs Postgres 16 and, for the system specs, a Chrome or Chr
 ```sh
 bin/rails db:test:prepare
 bundle exec rspec spec/models/show_spec.rb   # one file
-bundle exec rspec                            # everything: about 12 minutes on a laptop
+bundle exec rspec                            # everything (about 2,900 examples)
 ```
 
 - `SKIP_NETWORK=1` leaves out the `:network` specs (the MapLibre CDN) when you are offline.
@@ -17,7 +17,7 @@ bundle exec rspec                            # everything: about 12 minutes on a
 ## On a test server: `bin/remote-rspec`
 
 For operators with a bigger machine to hand. `bin/remote-rspec` runs the suite on a server over ssh, in throwaway
-containers, and streams the output back (about 3 minutes for the whole suite). It takes the same arguments as
+containers, and streams the output back (about 7 minutes for the whole suite). It takes the same arguments as
 `rspec`, and with none it runs the whole suite. Set `MIDROLO_CI_HOST` to the server's ssh host first (a name from
 `~/.ssh/config`, or `user@host`); without it the script stops before connecting. The server needs Docker and
 rsync.
