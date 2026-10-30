@@ -28,6 +28,31 @@ RSpec.describe ShowLookup do
     end
   end
 
+  describe "a feed URL the directory refuses (Podcast Index answers 400 for some feeds)" do
+    let(:url) { "https://anchor.fm/s/12d45dac/podcast/rss" }
+    let(:directory) { instance_double(Podcasts::Directories::Fake) }
+    let(:feed) do
+      Podcasts::Feed.new(title: "AiGM by AiHunt", description: "About AI", owner_email: nil, owner_name: "AiHunt",
+                         episodes: [], cadence_days: nil, warnings: [])
+    end
+
+    before do
+      allow(Podcasts::Directory).to receive(:current).and_return(directory)
+      allow(directory).to receive(:find_by_feed_url).and_raise(Podcasts::Directory::Unavailable, "HTTP 400")
+      allow(Podcasts::FeedReader).to receive(:new).and_return(instance_double(Podcasts::FeedReader, read: feed))
+    end
+
+    it "reads the feed itself instead of failing" do
+      result = described_class.call(feed_url: url)
+      expect(result).to be_ok
+      expect(result.attributes).to include(feed_url: url, title: "AiGM by AiHunt", author: "AiHunt")
+    end
+
+    it "still says the directory is down when it may not read feeds" do
+      expect { described_class.call(feed_url: url, read_feed: false) }.to raise_error(Podcasts::Directory::Unavailable)
+    end
+  end
+
   it "finds the show through the fake directory" do
     result = described_class.call(feed_url: "https://podcasts.apple.com/us/podcast/x/id#{itunes_id}?i=1")
     expect(result.attributes[:directory_id]).to eq("fake-4")

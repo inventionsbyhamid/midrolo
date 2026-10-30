@@ -28,12 +28,22 @@ class ShowLookup
       return from_directory(directory.find_by_itunes_id(apple[1]), APPLE_NOT_FOUND)
     end
 
-    from_directory(directory.find_by_feed_url(@feed_url), nil) || (@read_feed ? from_feed : failure(NOT_FOUND))
+    from_directory(directory_by_feed_url, nil) || (@read_feed ? from_feed : failure(NOT_FOUND))
   end
 
   private
 
   def directory = Podcasts::Directory.current
+
+  # The directory's record for a pasted feed URL. Podcast Index refuses some feeds outright (HTTP 400, raised as
+  # Unavailable); when we may read feeds, the feed itself answers instead of the error.
+  def directory_by_feed_url
+    directory.find_by_feed_url(@feed_url)
+  rescue Podcasts::Directory::Unavailable
+    raise unless @read_feed
+
+    nil
+  end
 
   def normalize_url(raw)
     url = raw.to_s.strip
