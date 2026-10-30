@@ -18,6 +18,8 @@ RSpec.describe "Demo show feed" do
     doc = Nokogiri::XML(response.body).tap(&:remove_namespaces!)
     expect(doc.at_xpath("//channel/title").text).to eq("Midrolo Demo Show")
     expect(doc.at_xpath("//channel/guid").text).to eq(Podcast::DEMO_GUID)
+    expect(doc.at_xpath("//channel/image[@href]")["href"]).to match(%r{\Ahttp://www\.example\.com/assets/demo/artwork-[^/]+\.png\z})
+    expect(doc.at_xpath("//channel/image/url").text).to eq(doc.at_xpath("//channel/image[@href]")["href"])
     expect(doc.xpath("//item").size).to eq(6)
     expect(doc.at_xpath("//item/title").text).to eq("Pricing your first midroll")
     expect(Shows::OwnerEmail.for(doc)).to be_nil

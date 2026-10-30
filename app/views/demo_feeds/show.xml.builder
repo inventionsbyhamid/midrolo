@@ -11,6 +11,13 @@ xml.rss version: "2.0", "xmlns:itunes" => "http://www.itunes.com/dtds/podcast-1.
     xml.tag! "itunes:author", @podcast.author
     xml.tag! "itunes:explicit", "false"
     xml.tag! "itunes:type", "episodic"
+    # The show's cover (app/assets/images/demo/artwork.png), read by ingest like any feed's artwork.
+    xml.tag! "itunes:image", href: image_url("demo/artwork.png")
+    xml.image do
+      xml.url image_url("demo/artwork.png")
+      xml.title @podcast.title
+      xml.link root_url
+    end
     @podcast.categories.each { |category| xml.tag! "itunes:category", text: category }
     xml.tag! "podcast:guid", @podcast.podcast_guid
     xml.tag! "podcast:locked", "yes"
