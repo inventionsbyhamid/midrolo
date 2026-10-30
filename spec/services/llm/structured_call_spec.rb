@@ -30,6 +30,16 @@ RSpec.describe Llm::StructuredCall do
       expect(RubyLLM::Test.last_request.kwargs.to_s).to include('data_collection: "deny"')
     end
 
+    it "caps the reply at max_tokens when given, and sends no cap otherwise" do
+      RubyLLM::Test.stub_responses({ subject: "Hi" }, { subject: "Hi" })
+      described_class.call(model: "deepseek/deepseek-v4.1-flash", schema: schema, instructions: "x", prompt: "y", user: user,
+                           max_tokens: 4_000)
+      expect(RubyLLM::Test.last_request[:max_output_tokens]).to eq(4_000)
+
+      call
+      expect(RubyLLM::Test.last_request[:max_output_tokens]).to be_nil
+    end
+
     it "asks OpenRouter for hosts that honor every parameter, the JSON schema included (sponsors-llm review M1)" do
       RubyLLM::Test.stub_response({ subject: "Hi" })
       call

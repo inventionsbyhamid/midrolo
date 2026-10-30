@@ -34,6 +34,7 @@ RSpec.describe Sponsors::LlmCheck do
     allow(Llm::Budget).to receive(:allow?).and_call_original
     verdicts("Dovetails by hand, and why hide glue still wins. This episode is brought to you by Hollow Tools.")
     expect(Llm::Budget).to have_received(:allow?).with(:catalog, estimate_usd: BigDecimal("0.0027"))
+    expect(RubyLLM::Test.last_request[:max_output_tokens]).to eq(4_000)
     expect(SpendEntry.last.model).to eq("z-ai/glm-5.3-flash")
   end
 
@@ -95,6 +96,21 @@ RSpec.describe Sponsors::LlmCheck do
                      mention("Gmail", domain: "gmail.com"), mention("Hollow Tools"))
 
     expect(found).to be_empty
+  end
+
+  it "reads an episode ref however the model writes it: e1, E1, 1, ep1, episode 1, Episode-1" do
+    notes = "Planes and saws today. This episode is brought to you by Hollow Tools."
+    entries = Array.new(6) do
+      episode = create(:episode, podcast: podcast, description: notes)
+      [ episode, Sponsors::Notes.new(notes, context) ]
+    end
+    refs = [ "e1", " E2 ", 3, "ep4", "episode 5", "Episode-6" ]
+    RubyLLM::Test.stub_response({ mentions: refs.map { |ref| mention("Hollow Tools").merge(episode_ref: ref) } })
+
+    found = described_class.call(podcast, entries, context)
+
+    expect(found.keys).to match_array(entries.map { |episode, _| episode.id })
+    expect(found.values.flatten.map(&:name).uniq).to eq([ "Hollow Tools" ])
   end
 
   it "takes the model's quote only when it says something: 20 characters, or the brand with more around it (review L3)" do

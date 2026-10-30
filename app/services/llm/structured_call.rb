@@ -4,12 +4,13 @@ module Llm
   #
   # The spend goes to the user's plan's bucket, or to bucket: when given (the catalog's work has no user: bucket:
   # :catalog), and is linked to the report, pitch or fit search it was for. estimate_usd is what the budget check
-  # assumes the call costs (a small batch on the cheap model costs far less than a report's).
+  # assumes the call costs (a small batch on the cheap model costs far less than a report's). max_tokens caps the
+  # reply (output and reasoning); without it some OpenRouter hosts use a small default and cut long replies off.
   class StructuredCall
     def self.call(**) = new(**).call
 
     def initialize(model:, schema:, instructions:, prompt:, user: nil, report: nil, pitch: nil, fit_search: nil,
-                   bucket: nil, estimate_usd: 0.5)
+                   bucket: nil, estimate_usd: 0.5, max_tokens: nil)
       @model = model
       @schema = schema
       @instructions = instructions
@@ -20,6 +21,7 @@ module Llm
       @fit_search = fit_search
       @bucket = bucket
       @estimate_usd = estimate_usd
+      @max_tokens = max_tokens
     end
 
     def call
@@ -38,11 +40,12 @@ module Llm
     private
 
     def chat
-      RubyLLM.chat(model: @model, provider: Llm.provider)
-             .with_instructions(@instructions)
-             .with_schema(@schema)
-             .with_thinking(effort: Llm.pitch_effort)
-             .with_provider_options(provider_options)
+      chat = RubyLLM.chat(model: @model, provider: Llm.provider)
+                    .with_instructions(@instructions)
+                    .with_schema(@schema)
+                    .with_thinking(effort: Llm.pitch_effort)
+                    .with_provider_options(provider_options)
+      @max_tokens ? chat.with_max_output_tokens(@max_tokens) : chat
     end
 
     # On OpenRouter, only hosts that honor every parameter sent, the JSON schema included, so a reply always has the
