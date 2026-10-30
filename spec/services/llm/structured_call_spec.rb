@@ -30,6 +30,12 @@ RSpec.describe Llm::StructuredCall do
       expect(RubyLLM::Test.last_request.kwargs.to_s).to include('data_collection: "deny"')
     end
 
+    it "asks OpenRouter for hosts that honor every parameter, the JSON schema included (sponsors-llm review M1)" do
+      RubyLLM::Test.stub_response({ subject: "Hi" })
+      call
+      expect(RubyLLM::Test.last_request.kwargs.to_s).to include("require_parameters: true", 'data_collection: "deny"', "max_price")
+    end
+
     it "thinks at low effort" do
       RubyLLM::Test.stub_response({ subject: "Hi" })
       chat = RubyLLM.chat(model: "deepseek/deepseek-v4.1-flash", provider: :openrouter)

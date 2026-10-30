@@ -11,10 +11,12 @@ RSpec.describe "Admin sponsor detection panel" do
   end
 
   it "shows what sponsor detection found and what waits for a scan" do
-    mention = create(:sponsor_mention, brand: create(:brand, name: "Helix Sleep"), detected_by: "llm", confidence: 0.92,
-                                       evidence: "Go to helixsleep.com/tim and use code TIM.")
-    mention.podcast.update!(title: "The Tinkerer Hour")
-    create(:episode)
+    podcast = create(:podcast, :active, title: "The Tinkerer Hour")
+    mention = create(:sponsor_mention, episode: create(:episode, podcast: podcast), brand: create(:brand, name: "Helix Sleep"),
+                                       detected_by: "llm", confidence: 0.92, evidence: "Go to helixsleep.com/tim and use code TIM.")
+    create(:episode, podcast: podcast)
+    create(:episode, podcast: podcast, published_at: 60.days.ago) # older than the window: left alone, not waiting
+    create(:episode, podcast: create(:podcast, status: "dormant"))
     sign_in create(:user, admin: true)
 
     get "/admin"
@@ -26,5 +28,6 @@ RSpec.describe "Admin sponsor detection panel" do
     expect(text).to include("1 Sponsor reads", "1 checked by the model", "1 Brands", "1 Shows with sponsors")
     expect(text).to include("2 Episodes waiting for a scan", "Today, catalog")
     expect(text).to include("Helix Sleep", "The Tinkerer Hour", "Model 92%", "Go to helixsleep.com/tim and use code TIM.")
+    expect(mention.podcast).to eq(podcast)
   end
 end

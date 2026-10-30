@@ -1,25 +1,29 @@
 module Sponsors
-  # Finds the sponsor reads in a podcast's episodes (build spec L2). Precision first: a wrong sponsor is worse than a
-  # missed one.
+  # Finds the sponsor reads in a podcast's episodes. AI-first since 2026-10-30 (the user's call, after production
+  # showed the pattern stage finding 73 reads on its own and the model 2,531). Precision first: a wrong sponsor is worse
+  # than a missed one.
   #
-  #   1. Patterns (Sponsors::Notes) per episode: lead-ins, "Sponsors" blocks, promo codes, vanity paths, offers.
-  #   2. Recurrence across the podcast's recent episodes: a strong read that recurs (3+ episodes over 30+ days) gains
-  #      confidence; a code or vanity link in nearly every episode's footer is more likely the show's own plug, so only
-  #      the model may confirm it.
-  #   3. The model (Sponsors::LlmCheck), for episodes with any candidate, in batches of 10, on the catalog budget.
-  #      Skipped in fake LLM mode, and once the catalog's daily budget is spent or the provider fails.
+  #   1. Every episode whose notes (ad choices and privacy notices dropped) have at least MIN_NOTES characters goes to
+  #      the model (Sponsors::LlmCheck), ten a call, on the catalog budget. Shorter notes are settled with no call. The
+  #      pattern scan (Sponsors::Notes) never decides which episodes go: its candidates are hints in the prompt, and the
+  #      link, code and evidence it read fill in what the model confirms.
+  #   2. The model's answer is final for the episodes it checked: the reads it confirmed (is_sponsor, confidence 0.7 or
+  #      more) that the notes back up. A confirmed read the pattern scan also found keeps the higher confidence, plus a
+  #      little for a domain that recurs over a month of episodes.
+  #   3. When the catalog budget is spent or the provider fails, the episodes it didn't check are left as they were,
+  #      with nothing saved, for a later run (the daily sweep).
+  #   4. Without a model (fake LLM mode: development and tests) the strong pattern reads stand in.
   #
-  # An episode the model checked gets exactly what it confirmed, plus strong pattern reads it didn't reject. Any other
-  # episode gets its strong pattern reads only; weak hints are never saved without the model.
+  # Which episodes come here is Sponsors::Due's call (recent ones never checked, a few per podcast a run).
   #
-  # Returns a Result: the detections; checked_episode_ids (the model's answer is complete for these, so their mentions
-  # are replaced); scanned_episode_ids (done: no candidates, checked, or fake mode; an episode whose check was skipped
-  # for budget or an error stays unscanned so a later scan can check it); stage2 (:done, :not_needed, :fake, :budget,
-  # :failed).
+  # Returns a Result: the detections; checked_episode_ids (the model answered, so their mentions are replaced);
+  # settled_episode_ids (the AI-first scan is done with them: checked, or notes too short; they get
+  # sponsor_ai_checked_at); scanned_episode_ids (they get sponsor_scanned_at); stage2 (:done, :not_needed, :fake,
+  # :budget, :failed).
   class Scan
     BATCH = LlmCheck::MAX_EPISODES
-    # What one batch is assumed to cost when checking the catalog budget (about $0.003 on the cheap model).
-    BATCH_ESTIMATE_USD = 0.02
+    # Notes shorter than this, in characters, are settled without a call.
+    MIN_NOTES = 80
     MIN_LLM_CONFIDENCE = 0.7
     PATTERN_CONFIDENCE = { lead_in: 0.9, section: 0.9, code: 0.8, vanity: 0.75 }.freeze
     RECURRENCE_BONUS = 0.05
@@ -33,7 +37,7 @@ module Sponsors
     PROVIDER_ERRORS = [ Llm::Error, RubyLLM::Error, Faraday::Error, JSON::ParserError ].freeze
 
     Detection = Data.define(:episode, :name, :domain, :url, :promo_code, :offer, :evidence, :detected_by, :confidence)
-    Result = Data.define(:detections, :checked_episode_ids, :scanned_episode_ids, :stage2)
+    Result = Data.define(:detections, :checked_episode_ids, :settled_episode_ids, :scanned_episode_ids, :stage2)
 
     def self.call(podcast, episodes) = new(podcast, episodes).call
 
@@ -48,17 +52,19 @@ module Sponsors
       @notes = @episodes.to_h { |episode| [ episode.id, Notes.new(episode.description, @context) ] }
       weigh_recurrence(recent)
 
-      pending = @episodes.select { |episode| @notes[episode.id].candidates.any? }
+      short, pending = @episodes.partition { |episode| @notes[episode.id].text.length < MIN_NOTES }
       verdicts, stage2 = check(pending)
-      detections = @episodes.flat_map { |episode| detections_for(episode, verdicts[episode.id]) }
-      unchecked = %i[budget failed].include?(stage2) ? pending.map(&:id) - verdicts.keys : []
-      Result.new(detections: detections, checked_episode_ids: verdicts.keys,
-                 scanned_episode_ids: @episodes.map(&:id) - unchecked, stage2: stage2)
+      fake = stage2 == :fake
+      detections = pending.flat_map { |episode| detections_for(episode, verdicts[episode.id], fake: fake) }
+      # Without a model nothing is settled for the AI-first scan; every episode is still marked as read.
+      settled = fake ? [] : verdicts.keys + short.map(&:id)
+      Result.new(detections: detections, checked_episode_ids: verdicts.keys, settled_episode_ids: settled,
+                 scanned_episode_ids: fake ? @episodes.map(&:id) : settled, stage2: stage2)
     end
 
     private
 
-    # ---- 2. recurrence ----
+    # ---- recurrence ----
 
     def weigh_recurrence(recent)
       episodes = (recent + @episodes).uniq(&:id)
@@ -84,16 +90,16 @@ module Sponsors
       dates.size >= RECURRING_EPISODES && dates.max - dates.min >= RECURRING_SPAN
     end
 
-    # ---- 3. the model ----
+    # ---- the model ----
 
     # [{ episode_id => [Verdict] } for the episodes it checked, stage2].
     def check(pending)
-      return [ {}, :not_needed ] if pending.empty?
       return [ {}, :fake ] if Llm.fake?
+      return [ {}, :not_needed ] if pending.empty?
 
       verdicts = {}
       pending.each_slice(BATCH) do |batch|
-        return [ verdicts, :budget ] unless Llm::Budget.allow?(:catalog, estimate_usd: BATCH_ESTIMATE_USD)
+        return [ verdicts, :budget ] unless Llm::Budget.allow?(:catalog, estimate_usd: LlmCheck.batch_estimate_usd)
 
         found = LlmCheck.call(@podcast, batch.map { |episode| [ episode, @notes[episode.id] ] }, @context)
         batch.each { |episode| verdicts[episode.id] = found.fetch(episode.id, []) }
@@ -108,21 +114,16 @@ module Sponsors
 
     # ---- the answer per episode ----
 
-    def detections_for(episode, verdicts)
+    # The model's confirmed reads for an episode it checked; the strong pattern reads in fake mode; nothing for an
+    # episode it didn't check.
+    def detections_for(episode, verdicts, fake:)
       candidates = @notes[episode.id].candidates
-      return candidates.select(&:strong?).map { |c| from_pattern(episode, c) } if verdicts.nil?
+      return candidates.select(&:strong?).map { |c| from_pattern(episode, c) } if fake
+      return [] if verdicts.nil?
 
-      confirmed = verdicts.select { |v| v.sponsor && v.confidence >= MIN_LLM_CONFIDENCE }
-      rejected = verdicts.reject(&:sponsor)
-      found = confirmed.map do |verdict|
+      found = verdicts.select { |v| v.sponsor && v.confidence >= MIN_LLM_CONFIDENCE }.map do |verdict|
         candidate = candidates.find { |c| c.same_brand?(as_candidate(verdict)) }
         from_verdict(episode, verdict, candidate)
-      end
-      candidates.select(&:strong?).each do |candidate|
-        next if rejected.any? { |v| candidate.same_brand?(as_candidate(v)) }
-        next if found.any? { |d| candidate.same_brand?(as_candidate(d)) }
-
-        found << from_pattern(episode, candidate)
       end
       found.uniq { |d| d.domain || Research::ProvenSponsorScan.key_for(d.name) }
     end
@@ -133,12 +134,12 @@ module Sponsors
                     detected_by: "pattern", confidence: pattern_confidence(candidate))
     end
 
-    # The model's verdict, with what the notes themselves showed for the brand preferred: the name as written, the
-    # link, the code and the evidence sentence.
+    # The model's verdict: its proper name for the brand (the notes' own name when the model's didn't hold up and the
+    # brand went by its domain), with the link, code and evidence sentence the pattern scan read for it preferred.
     def from_verdict(episode, verdict, candidate)
-      name = candidate && !candidate.domain_named? ? candidate.name : verdict.name
+      name = Brand.domain_like?(verdict.name) && candidate && !candidate.domain_named? ? candidate.name : verdict.name
       confidence = [ verdict.confidence, (pattern_confidence(candidate) if candidate&.strong?) ].compact.max
-      Detection.new(episode: episode, name: name, domain: candidate&.domain || verdict.domain, url: candidate&.url || verdict.url,
+      Detection.new(episode: episode, name: name, domain: verdict.domain || candidate&.domain, url: candidate&.url || verdict.url,
                     promo_code: candidate&.promo_code || verdict.promo_code, offer: verdict.offer || candidate&.offer,
                     evidence: candidate&.evidence || verdict.evidence, detected_by: "llm", confidence: confidence.round(2))
     end

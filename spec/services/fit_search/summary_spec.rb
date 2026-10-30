@@ -36,7 +36,38 @@ RSpec.describe FitSearch::Summary do
     expect(bullets).to eq([ "One, two.", "Three.", "Four." ])
     expect(Llm::StructuredCall).to have_received(:call)
       .with(hash_including(model: Llm.cheap_model, bucket: :catalog, fit_search: search, user: search.user,
+                           estimate_usd: described_class::ESTIMATE_USD,
                            prompt: a_string_including("<untrusted_feed>Fieldnote Coffee</untrusted_feed>")))
+  end
+
+  it "still writes the brief when the sponsor scan has spent most of the day's catalog budget" do
+    allow(Llm).to receive(:mode).and_return(:live)
+    old_key = RubyLLM.config.openrouter_api_key
+    RubyLLM.config.openrouter_api_key = "test-key"
+    AppSettings.set(:llm_catalog_daily_usd, 1.5)
+    SpendEntry.create!(bucket: "catalog", kind: "llm", cost_usd: 1.2)
+    RubyLLM::Test.stub_response({ bullets: [ "One.", "Two.", "Three." ] })
+
+    bullets, how = described_class.call(search, facts)
+
+    expect(how).to eq(:llm)
+    expect(bullets).to eq([ "One.", "Two.", "Three." ])
+  ensure
+    RubyLLM.config.openrouter_api_key = old_key
+  end
+
+  it "falls back to the template cleanly when the catalog budget is 0: no call, no spend, no error report" do
+    allow(Llm).to receive(:mode).and_return(:live)
+    AppSettings.set(:llm_catalog_daily_usd, 0)
+    allow(Rails.error).to receive(:report)
+
+    bullets, how = nil
+    expect { bullets, how = described_class.call(search, facts) }.not_to change(SpendEntry, :count)
+
+    expect(how).to eq(:template)
+    expect(bullets.first).to eq("Best fits for Fieldnote Coffee's audience on Qloo: Ledger, Mornings and Daily.")
+    expect(RubyLLM::Test.requests).to be_empty
+    expect(Rails.error).not_to have_received(:report)
   end
 
   it "falls back to the template when the budget is spent or the model fails" do

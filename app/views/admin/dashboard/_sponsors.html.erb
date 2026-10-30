@@ -15,8 +15,9 @@
       <%= admin_budget_meter("Today, catalog", stats.budgets[:catalog]) %>
     </div>
     <p class="mt-3 text-sm text-ink-soft">
-      Patterns find explicit reads for free. The model checks episodes with any hint, ten at a time, until the catalog
-      budget is spent; their episodes wait and <code>bin/rails sponsors:scan</code> picks them up later.
+      The model reads each episode's notes once, ten at a time: episodes from the last
+      <%= pluralize(Sponsors::Due.window_days, "day") %> on active shows, until the catalog budget is spent. The rest
+      wait for the daily sweep. Older episodes are left alone. <code>bin/rails sponsors:estimate</code> prices a run.
     </p>
     <% if overview.latest.any? %>
       <div class="relative mt-4 overflow-x-auto">

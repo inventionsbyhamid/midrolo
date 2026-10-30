@@ -19,7 +19,10 @@ module Sponsors
     READ_SPAN = 2
     # A "Sponsors" block ends at the next heading or after this many lines.
     SECTION_LINES = 16
-    EXCERPT_LIMIT = 1500
+    # The most of one episode's notes the model reads (Sponsors::LlmCheck), in characters.
+    MODEL_TEXT_LIMIT = 2000
+    # A sentence too long for the room left is cut to fit when at least this much room is left.
+    MODEL_PIECE_MIN = 200
 
     # A brand name as show notes write it: capitalised words ("Athletic Greens", "Hims & Hers"), a lowercase-led
     # capital ("iHeart", "eBay"), a digit-led one ("1Password", "23andMe").
@@ -76,6 +79,11 @@ module Sponsors
     # choices. Visit megaphone.fm/adchoices", "Hosted on Acast. See acast.com/privacy").
     BOILERPLATE = %r{ad ?choices|privacy (?:information|policy|notice|& opt-out|and opt-out)|omnystudio\.com/listener|acast\.com/privacy|podcastchoices\.com|advertising inquiries|advertise (?:on|with) (?:this|our|the|us)|interested in (?:advertising|sponsoring)|become a sponsor|sponsor (?:this|the|our) (?:show|podcast)|hosted (?:on|by) (?:acast|simplecast|libsyn|anchor|buzzsprout|transistor|megaphone|art19|podbean|spreaker|captivate|redcircle|audioboom)}i
     SENTENCE_SPLIT = /(?<=[.!?])\s+(?=["“(\[]?[\p{Lu}\d])/
+    # A word brands put before their name in a domain ("drinkag1.com", "getquip.com", "trybasis.com").
+    DOMAIN_PREFIX = /\A(?:drink|get|try|join|go|use|shop|buy|with|hello|meet|the)(?=.{3})/
+    # A sentence that may be part of a read, so it reaches the model first when the notes are long.
+    READ_SIGNAL = Regexp.union(AD_WORDS, CODE, OFFER, SPONSORED_BY, *STRONG_LEADS, *WEAK_LEADS,
+                               /\bbrought to you\b|\bour (?:friends|partners) at\b|\bpromo\b|\bsponsor/i)
 
     Unit = Data.define(:index, :text, :line)
     Link = Data.define(:domain, :url, :slug, :position)
@@ -129,7 +137,7 @@ module Sponsors
       label = domain.split(".").first.to_s.delete("-")
       return false if key.length < 2 || label.length < 2
 
-      bare = label.sub(/\A(?:drink|get|try|join|go|use|shop|buy|with|hello|meet|the)(?=.{3})/, "")
+      bare = label.sub(DOMAIN_PREFIX, "")
       [ label, bare ].uniq.any? { |l| l == key || (key.length >= 3 && l.include?(key)) || (l.length >= 4 && key.include?(l)) }
     end
 
@@ -152,10 +160,24 @@ module Sponsors
       @candidates ||= merge(read_sections + read_lead_ins + read_links)
     end
 
-    # The sentences that hold this episode's candidates (and the "Sponsors" headings over them), for the model, capped.
-    def excerpt
-      indexes = (candidates.flat_map(&:units) + @headers.to_a).uniq.sort
-      indexes.map { |i| @units[i].text }.join(" ... ").truncate(EXCERPT_LIMIT, separator: " ")
+    # The notes the model reads, one line each (blank lines and ad choices notices dropped): all of them when they fit
+    # the limit. Longer notes keep the sentences most likely to hold a read first (the candidates', "Sponsors" headings,
+    # ones with ad words, a code, an offer or a lead-in), then ones with a link, then the rest as room allows, in the
+    # notes' order, with "..." where text was left out.
+    def for_model(limit = MODEL_TEXT_LIMIT)
+      return model_lines(@units.map(&:index)) if text.length <= limit
+
+      chosen = {}
+      room = limit
+      model_priority.each do |i|
+        piece = @units[i].text
+        piece = piece.truncate(room - 1, separator: " ") if piece.length >= room && room > MODEL_PIECE_MIN
+        next if piece.length >= room
+
+        chosen[i] = piece
+        room -= piece.length + 1
+      end
+      model_lines(chosen.keys.sort, chosen)
     end
 
     # The notes as scanned (ad choices and privacy notices dropped), one sentence a line. What the model quotes must
@@ -173,7 +195,41 @@ module Sponsors
       self.class.snippet(unit.text, terms) if unit
     end
 
+    # Whether two terms (a brand's name and a domain) are in one sentence, or at most span sentences apart.
+    def near?(first, second, span: 0)
+      at = ->(term) { @units.select { |u| u.text.downcase.include?(term.downcase) }.map(&:index) }
+      at.call(first).product(at.call(second)).any? { |i, j| (i - j).abs <= span }
+    end
+
     private
+
+    # ---- what the model reads ----
+
+    # Unit indexes, the likeliest to hold a sponsor read first.
+    def model_priority
+      reads = (candidates.flat_map(&:units) + @headers.to_a + @units.select { |u| u.text.match?(READ_SIGNAL) }.map(&:index)).uniq
+      links = @units.select { |u| u.text.match?(DOMAIN) }.map(&:index) - reads
+      reads.sort + links + (@units.map(&:index) - reads - links)
+    end
+
+    # The chosen units as lines (pieces: a unit's text cut to fit): units of one line of the notes stay on one line;
+    # "..." marks text left out.
+    def model_lines(indexes, pieces = {})
+      lines = []
+      previous = nil
+      indexes.each do |i|
+        piece = pieces[i] || @units[i].text
+        if previous && i == previous + 1 && @units[previous].line == @units[i].line
+          lines[-1] = "#{lines[-1]} #{piece}"
+        else
+          lines << "..." if (previous.nil? && i.positive?) || (previous && i != previous + 1)
+          lines << piece
+        end
+        previous = i
+      end
+      lines << "..." if previous && previous < @units.size - 1
+      lines
+    end
 
     # ---- units: sentences, line by line ----
 

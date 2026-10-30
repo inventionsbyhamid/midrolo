@@ -3,10 +3,11 @@
 module Podcast::Sponsors
   extend ActiveSupport::Concern
 
-  # Queues Sponsors::ScanJob for episode_ids, or for every episode not scanned yet (the newest first, up to the job's
-  # cap). rescan: true scans them again. Returns the job, or nil when there is nothing to scan.
+  # Queues Sponsors::ScanJob for episode_ids, or for this run's share of the episodes due (Sponsors::Due: recent, never
+  # checked by the model, the newest first). rescan: true scans the given episodes again. Returns the job, or nil when
+  # there is nothing to scan.
   def scan_sponsors_later(episode_ids = nil, rescan: false)
-    ids = episode_ids || episodes.where(sponsor_scanned_at: nil).newest_first.limit(::Sponsors::ScanJob::MAX_EPISODES).pluck(:id)
+    ids = episode_ids || ::Sponsors::Due.for_run(episodes).pluck(:id)
     ::Sponsors::ScanJob.perform_later(id, ids.to_a, rescan: rescan) if ids.present? && !removed?
   end
 

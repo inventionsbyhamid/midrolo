@@ -42,7 +42,14 @@ module Llm
              .with_instructions(@instructions)
              .with_schema(@schema)
              .with_thinking(effort: Llm.pitch_effort)
-             .with_provider_options(Llm.provider_options(@model))
+             .with_provider_options(provider_options)
+    end
+
+    # On OpenRouter, only hosts that honor every parameter sent, the JSON schema included, so a reply always has the
+    # schema's shape (sponsors-llm review M1).
+    def provider_options
+      options = Llm.provider_options(@model)
+      Llm.provider == :openrouter ? options.deep_merge(provider: { require_parameters: true }) : options
     end
 
     def token_counts(tokens)

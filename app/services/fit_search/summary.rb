@@ -6,6 +6,9 @@ class FitSearch
   class Summary
     BULLETS = 3
     BULLET_LIMIT = 220
+    # What the budget check holds back for one brief (a cheap-model call costs a fraction of a cent). The catalog
+    # bucket's default estimate ($0.50) would template every brief once the sponsor scan has spent most of the day's cap.
+    ESTIMATE_USD = BigDecimal("0.01")
     INSTRUCTIONS = <<~TEXT.freeze
       You write a three-bullet brief for a brand choosing podcasts to sponsor. Use only the facts given. Each bullet is
       one plain sentence under 30 words: who fits best and why, what proof exists (brands like this one sponsoring),
@@ -52,7 +55,7 @@ class FitSearch
 
     def llm
       Llm::StructuredCall.call(model: Llm.cheap_model, schema: SCHEMA, instructions: INSTRUCTIONS, prompt: prompt,
-                               user: @search.user, fit_search: @search, bucket: :catalog)
+                               user: @search.user, fit_search: @search, bucket: :catalog, estimate_usd: ESTIMATE_USD)
     end
 
     def prompt

@@ -72,7 +72,7 @@ apps hold the same values; the worker adds `MIDROLO_PROCESS=jobs` and `RAILS_MAX
 - The rest are the service keys: Qloo, Podcast Index, OpenRouter, Resend, Google OAuth, Cloudflare R2 (uploads),
   the admin login and `PROMO_PRO_UNTIL` (the hackathon trial's last day).
 - Optional for the marketplace: `MIDROLO_SPOTIFY_EMAIL` and `MIDROLO_APPLE_EMAIL` (the stats address podcasters
-  invite; unset means stats@midrolo.com), `LLM_CHEAP_MODEL` (sponsor checks and brand briefs) and
+  invite; unset means stats@midrolo.com), `LLM_SPONSORS_MODEL` (sponsor detection), `LLM_CHEAP_MODEL` (brand briefs) and
   `LLM_CATALOG_DAILY_USD` (their own daily cap; `/admin` overrides it).
 
 Production stops at boot, naming the variable, when a required one is blank (`lib/required_env.rb`). After changing a
@@ -207,11 +207,10 @@ deploy needs these steps once, in order. Commands run in the **worker's** Termin
    full chart takes 4 to 10 minutes); new shows are read at the seed's low priority. It prints one line: charted,
    added, already in the catalog, skipped (removed or suppressed) and failed, and names each failure. Safe to run
    again: shows already in the catalog cost nothing.
-6. **Sponsor detection.** New episodes are scanned as they're read. For the backfill, raise `llm_catalog_daily_usd`
-   in `/admin` (about $5 to $10 covers 1,000 shows), then `bin/rails sponsors:scan` (200 podcasts a run), again if
-   episodes are still waiting. Strong pattern reads are saved even when the budget runs out. After that the daily
-   sponsors sweep (`sweep_sponsors` in `config/recurring.yml`, every day at 4:10am, up to 100 podcasts) picks up
-   episodes that waited for the budget; nothing to set up.
+6. **Sponsor detection** (AI-first, see "Sponsor detection" below). Deploy with `llm_catalog_daily_usd` at 0 in
+   `/admin`, so nothing is spent. Then price the backfill with `bin/rails sponsors:estimate` (no AI calls). With the
+   user's OK, set the window and the cap (for example `sponsors_ai_window_days` 30 and `llm_catalog_daily_usd` 1.5)
+   and run `bin/rails sponsors:scan_unscanned`. The daily sweep picks up whatever the cap left.
 7. **Similar shows for the samples:** `bin/rails matching:similar_backfill` (one Qloo call per sample report).
 8. **The demo show:** `bin/rails demo:setup`. `DEMO_OWNER_EMAIL` picks the owner account; unset means the first admin.
    It prints the page's address.
@@ -222,6 +221,37 @@ deploy needs these steps once, in order. Commands run in the **worker's** Termin
     held for review (Service sessions, above): **Approve** or **Reject** each.
 11. **Check `/admin`:** catalog counts and feed errors, sponsor detection, stats connections, Qloo calls and LLM
     spend.
+
+## Sponsor detection
+
+The model reads each recent episode's notes once and finds the sponsor reads (`Sponsors::Scan`). The pattern scan only
+gives it hints. Everything it returns is checked against the notes: the brand's name or its domain must be in them, and
+the quote must be the show's own words.
+
+- **Model:** `z-ai/glm-5.3-flash`, ten episodes a call, about $0.0003 an episode (`LLM_SPONSORS_MODEL=z-ai/glm-5.3`
+  for the larger model, at about three times the price).
+- **What it reads:** episodes of active shows published in the last `sponsors_ai_window_days` days (default 30; 0
+  turns detection off) that the model hasn't checked yet, at most `sponsors_max_per_podcast` (default 10) of one show's
+  a run, the newest first. Notes shorter than 80 characters are marked done with no call. Older episodes are left
+  alone and stay unchecked, so widening the window later reaches them.
+- **Never twice:** a checked episode (`episodes.sponsor_ai_checked_at`) is never sent again. The model's answer
+  replaces the episode's earlier pattern reads.
+- **Spending:** only from the catalog bucket, within `llm_catalog_daily_usd`. When it runs out, nothing more is sent
+  that day and nothing is marked; the daily sweep (4:10am, 100 shows) and new episodes pick up the rest.
+- **Settings:** set in a Rails console (`AppSettings.set(:sponsors_ai_window_days, 90)`) or as the environment
+  variables `SPONSORS_AI_WINDOW_DAYS` and `SPONSORS_MAX_PER_PODCAST`; the cap is in `/admin`.
+
+Commands (in the worker's Terminal):
+
+- `bin/rails sponsors:estimate`: a dry run, with no AI calls. It prints the episodes due, the calls and the cost for the
+  current window and model, and what new episodes cost a day. Compare others with
+  `bin/rails "sponsors:estimate[90,z-ai/glm-5.3]"`.
+- `bin/rails sponsors:scan_unscanned`: queues a scan for every active show with episodes due, the newest shows first.
+  It never clears or redoes a checked episode. It queues nothing, and says so, while the cap can't pay for a call.
+- `bin/rails sponsors:scan[200]`: what the daily sweep runs, by hand (the oldest shows first).
+- `bin/rails "sponsors:rescan[<slug>]"`: admin only, on purpose. Scans one show's newest 100 episodes again,
+  checked ones too, and replaces what the model said before.
+- `bin/rails sponsors:recount`: puts brands' sponsor read counts right after deletions.
 
 ## After every deploy: checks
 
