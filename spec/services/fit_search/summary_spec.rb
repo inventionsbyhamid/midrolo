@@ -39,6 +39,20 @@ RSpec.describe FitSearch::Summary do
                            prompt: a_string_including("<untrusted_feed>Fieldnote Coffee</untrusted_feed>")))
   end
 
+  it "falls back to the template cleanly when the catalog budget is 0: no call, no spend, no error report" do
+    allow(Llm).to receive(:mode).and_return(:live)
+    AppSettings.set(:llm_catalog_daily_usd, 0)
+    allow(Rails.error).to receive(:report)
+
+    bullets, how = nil
+    expect { bullets, how = described_class.call(search, facts) }.not_to change(SpendEntry, :count)
+
+    expect(how).to eq(:template)
+    expect(bullets.first).to eq("Best fits for Fieldnote Coffee's audience on Qloo: Ledger, Mornings and Daily.")
+    expect(RubyLLM::Test.requests).to be_empty
+    expect(Rails.error).not_to have_received(:report)
+  end
+
   it "falls back to the template when the budget is spent or the model fails" do
     allow(Llm).to receive(:fake?).and_return(false)
     allow(Llm::StructuredCall).to receive(:call).and_raise(Llm::BudgetExceeded)
