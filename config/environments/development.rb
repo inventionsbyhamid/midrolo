@@ -45,6 +45,14 @@ Rails.application.configure do
   # else PORT, 3100 by default (lib/dev_url_options.rb).
   config.action_mailer.default_url_options = DevUrlOptions.call
 
+  # Reached through a proxy, such as GitHub Codespaces (.devcontainer/): RAILS_DEVELOPMENT_HOSTS names its hosts, and
+  # Rails allows them (config.hosts). Action Cable takes connections from pages on them too, and form posts skip the
+  # Origin check, which fails when the proxy forwards to localhost; the authenticity token is still checked.
+  if (proxy_origins = DevUrlOptions.proxy_origins).any?
+    config.action_cable.allowed_request_origins = [ %r{\Ahttps?://localhost:\d+\z}, *proxy_origins ]
+    config.action_controller.forgery_protection_origin_check = false
+  end
+
   # letter_opener_web styles and scripts its pages inline, which the Content Security Policy blocks
   # (config/initializers/content_security_policy.rb): /letter_opener showed unstyled, with a sliver of each letter. Its
   # controllers, here in development only, go without the policy.

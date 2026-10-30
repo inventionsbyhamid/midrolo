@@ -21,4 +21,14 @@ module DevUrlOptions
     uri = URI.parse(url)
     { host: uri.host, port: (uri.port unless uri.port == uri.default_port), protocol: uri.scheme }.compact
   end
+
+  # The origins of pages served through a proxy, such as GitHub Codespaces' https://<codespace>-3100.app.github.dev, as
+  # Regexps: one per host in RAILS_DEVELOPMENT_HOSTS, which Rails adds to config.hosts too (.devcontainer/ sets it). A
+  # leading dot takes the domain and every subdomain, as config.hosts does.
+  def proxy_origins(env = ENV)
+    env["RAILS_DEVELOPMENT_HOSTS"].to_s.split(",").map(&:strip).reject(&:empty?).map do |host|
+      subdomains = "(?:[a-z0-9-]+\\.)*" if host.start_with?(".")
+      %r{\Ahttps?://#{subdomains}#{Regexp.escape(host.delete_prefix("."))}(?::\d+)?\z}i
+    end
+  end
 end

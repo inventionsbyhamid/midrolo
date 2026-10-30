@@ -1,0 +1,42 @@
+# The dev container's services (devcontainer.json): app, the container you work in, and Postgres 16. Development
+# only; production is compose.yml at the root.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sleep infinity
+    init: true
+    volumes:
+      - ..:/workspaces/midrolo:cached
+      - bundle:/bundle
+    environment:
+      # config/database.yml names the databases and leaves the server to libpq, which reads these. They cover
+      # development's four databases (primary, cache, queue, cable) and the test database alike.
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      # GitHub Codespaces serves port 3100 at https://<codespace>-3100.app.github.dev: Rails allows these hosts in
+      # development, and config/environments/development.rb lets Action Cable and forms work through them.
+      RAILS_DEVELOPMENT_HOSTS: .app.github.dev,.preview.app.github.dev
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  bundle:
+  postgres-data:

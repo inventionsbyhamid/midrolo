@@ -1,0 +1,59 @@
+# The one command demo: `docker compose -f compose.demo.yml up`, then open http://localhost:3100.
+#
+# Midrolo in development demo mode (no API keys, so the Fake adapters: no Qloo, Podcast Index or AI calls) with
+# Postgres 16, from the dev container's image (.devcontainer/Dockerfile). The first start installs the gems into a
+# volume and seeds the demo data (bin/setup); later starts reuse both. Ctrl-C stops it; `docker compose -f
+# compose.demo.yml down -v` removes it, data included. Not for production: that's compose.yml (docs/self-hosting.md).
+name: midrolo-demo
+
+services:
+  app:
+    build:
+      context: .devcontainer
+      dockerfile: Dockerfile
+    command: ["bash", "-c", "bin/setup --skip-server && rm -f tmp/pids/server.pid && exec bin/dev"]
+    init: true
+    working_dir: /app
+    volumes:
+      - .:/app
+      - bundle:/bundle
+      # What the app writes stays in volumes, out of your checkout: logs, caches, uploads and the built CSS.
+      - log:/app/log
+      - tmp:/app/tmp
+      - storage:/app/storage
+      - builds:/app/app/assets/builds
+    environment:
+      # config/database.yml leaves the server to libpq, which reads these.
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      BUNDLE_FROZEN: "true"
+      # Listen beyond the container's own localhost, so the published port reaches the server.
+      BINDING: 0.0.0.0
+      PORT: "3100"
+    ports:
+      - "127.0.0.1:3100:3100"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  bundle:
+  db:
+  log:
+  tmp:
+  storage:
+  builds:

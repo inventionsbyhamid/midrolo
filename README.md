@@ -144,31 +144,60 @@ sequenceDiagram
 ## Local setup
 
 With no API keys set, Midrolo runs in **demo mode**: the Fake adapters serve a made up podcast catalog, synthetic
-taste data and templated text. It makes no Qloo, Podcast Index or AI calls, and costs nothing.
+taste data and templated text. It makes no Qloo, Podcast Index or AI calls, and costs nothing. All three ways below
+start in demo mode with the demo data loaded.
+
+### 1. One click: GitHub Codespaces
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/inventionsbyhamid/midrolo?quickstart=1)
+
+Nothing to install. The first start takes a few minutes: it builds the dev container (Ruby 3.4.12, PostgreSQL 16 and
+libvips), installs the gems and loads the demo data. Then Midrolo starts by itself on port 3100: open it from the
+notification or the Ports tab. Its log is `log/bin-dev.log`.
+
+The same `.devcontainer/` runs locally in VS Code with the Dev Containers extension: "Reopen in Container".
+
+### 2. Docker: one command
+
+```sh
+git clone https://github.com/inventionsbyhamid/midrolo.git
+cd midrolo
+docker compose -f compose.demo.yml up
+```
+
+Open http://localhost:3100 once the log says Puma is listening. The first start installs the gems and loads the demo
+data, so it takes a few minutes; later starts take seconds. `docker compose -f compose.demo.yml down -v` removes it all.
+
+### 3. On your machine
 
 You need Ruby 3.4.12, PostgreSQL 16 running locally (your user must be able to create databases) and libvips.
 
 ```sh
 git clone https://github.com/inventionsbyhamid/midrolo.git
 cd midrolo
-bin/setup --skip-server   # bundle install, then bin/rails db:prepare
+bin/setup --skip-server   # gems, the database and the demo data
 bin/dev                   # the web server, the Tailwind watcher and the job worker (Procfile.dev)
 ```
 
-Plain `bin/setup` does both steps. Then open http://localhost:3100 (`PORT=3200 bin/dev` picks another port).
+Plain `bin/setup` does both steps, and `bin/setup --reset` starts the database over. Then open http://localhost:3100
+(`PORT=3200 bin/dev` picks another port).
 
-- **Sign in.** With `GOOGLE_CLIENT_ID` unset, the sign in page shows a **Dev sign in** card. Any name and email will
-  do. It exists only in development.
-- **A catalog.** `bin/rails "catalog:seed[16]"` fills the directory from the demo data.
-  `bin/rails "catalog:add[Cold Case Cafe]"` adds one show by name, feed URL or Apple link.
-- **Admin.** `bin/rails runner 'User.find_by!(email: "you@example.com").update!(admin: true)'`, then open `/admin`.
-- **The demo show.** Once you're an admin, `bin/rails demo:setup` makes a fictional show to request a spot on.
-- **Try it.** Press "Find podcasts your customers love" and name a brand. Or add a show from the demo catalog (try
-  "Index Fund Mornings") and run a free Snapshot.
-- **Mail** opens at http://localhost:3100/letter_opener.
+### Sign in and try it
+
+- **Sign in** with the **Dev sign in** card. Any name and email will do; as `demo-admin@midrolo.test` you're an admin,
+  with `/admin`. The card shows only in development, while `GOOGLE_CLIENT_ID` is unset.
+- **Try it.** Press "Find podcasts your customers love" and name a brand. Or open a show from the demo catalog (try
+  "Index Fund Mornings") and run a free Snapshot. Or request a spot on the Midrolo Demo Show at
+  `/podcasts/midrolo-demo-show`, which the admin owns.
+- **Mail** opens at `/letter_opener`.
+
+The demo data is 16 shows (`catalog:seed[16]`), the admin and the demo show (`demo:setup`). `bin/setup` loads it with
+`bin/rails demo:seed`, which is safe to run again. `bin/rails "catalog:add[Cold Case Cafe]"` adds one show by name, feed
+URL or Apple link.
 
 The app reads keys from the environment (there is no dotenv). Each key you set swaps one Fake for the real service.
-[.env.example](.env.example) lists every variable and what it does.
+[.env.example](.env.example) lists every variable and what it does. With a Qloo or Podcast Index key set, `bin/setup`
+leaves the demo data out.
 
 ## Tests
 
