@@ -1,7 +1,6 @@
 # Midrolo — Podcast Sponsor Matcher: Design
 
-**Status:** draft for approval · **Date:** 2026-10-24 · **Hackathon:** Qloo Agentic Hackathon. Deadline **Oct 30, 11:45 PM EDT** (Oct 31, 09:15 IST).
-**Research:** `../research/hackathon.md`, `../research/qloo-api.md`, `../research/market-pricing.md`
+**Status:** draft for approval · **Date:** 2026-10-24 · **Hackathon:** Qloo Agentic Hackathon. Deadline **Oct 30, 11:45 PM EDT** (Oct 31, 03:45 UTC).
 
 **Name: Midrolo**, the user's pick 2026-10-24, from "mid-roll", the best-paid podcast ad slot. midrolo.com and midrolo.fm were both unregistered on 2026-10-24. Where this doc says "the app", it means Midrolo. Code uses the constant `APP_NAME`, so renaming it is one line.
 
@@ -44,7 +43,7 @@ The user's call is to build it **production-ready, not as a demo**: Google login
 3. One-click **pitch pack** per brand: a short email, 3 ad-read angles, a suggested offer and a follow-up email.
 4. A public **media kit** page per show, with a suggested rate card and print-to-PDF.
 5. A simple **pipeline** per match (saved → pitched → replied → won/lost), with notes.
-6. A production-grade app: Google sign-in, landing page, pricing, working subscriptions, background jobs, R2 storage, deployed on ioflood behind Cloudflare.
+6. A production-grade app: Google sign-in, landing page, pricing, working subscriptions, background jobs, R2 storage, deployed on our own server behind Cloudflare.
 7. A hackathon submission that passes Stage 1 easily and scores well on all four criteria (see §13).
 
 **Non-goals (v1)**
@@ -59,20 +58,20 @@ The user's call is to build it **production-ready, not as a demo**: Google login
 - **Claims we can't back.** We never say "your listeners are 25–34." We say "people with your show's taste lean 25–34 (modeled from Qloo taste data)." Every brand shown must come from a tool result in that run.
 - **Spam.** No bulk sending. We don't encourage blasting 50 brands.
 - **Judges hitting a paywall** or a broken flow during judging.
-- **Anything that risks the production apps on ioflood.**
+- **Anything that risks the other production apps on our server.**
 - **Negative unit economics.** No plan may cost more to serve than it earns, even at maximum use.
 
 ## 4. Constraints
 
-- **Time:** OpenCV is due Oct 27 at 12:15 IST and GitLab Oct 27 at 18:30 IST. Qloo work gets full attention from Oct 27 evening, but foundation work can start as soon as this doc is approved (§14).
-- **Qloo key:** requested through a form and issued by hand, which can take days. Until it arrives we build against **synthetic fixtures** modeled on the docs (`research/qloo-api.md`), then switch to live.
+- **Time:** other deadlines run until Oct 27. Qloo work gets full attention from Oct 27 evening, but foundation work can start as soon as this doc is approved (§14).
+- **Qloo key:** requested through a form and issued by hand, which can take days. Until it arrives we build against **synthetic fixtures** modeled on Qloo's API docs, then switch to live.
 - **Qloo after the hackathon:** hackathon keys are switched off after the event, and commercial pricing isn't published. Selling the product needs a commercial agreement with Qloo. This is the biggest business risk (§15).
 - **Hackathon rules:**
   - A live hosted demo.
   - A **public repo with an OSI license** shown in the GitHub About section.
   - Judges get free, unrestricted access until Nov 5.
   - **Qloo response data must not be committed to the public repo.**
-- **Shared server:** ioflood also runs production apps, so we use an isolated stack with resource caps.
+- **Shared server:** our server also runs other production apps, so we use an isolated stack with resource caps.
 
 ## 5. The product: screens and flows
 
@@ -227,7 +226,7 @@ Computed in Ruby so it's explainable and stable:
 
 ## 8. Data sources and accounts
 
-- **Qloo API:** the hackathon environment, `X-Api-Key`. Request shapes are in `research/qloo-api.md`. The client sits behind a small adapter (`Taste::Provider`, with `Taste::Providers::Qloo` and a Fake) so it can be swapped for the `qloo api` command-line tool if Qloo requires it. *Action: confirm in Discord #api-help.*
+- **Qloo API:** the hackathon environment, `X-Api-Key`. Request shapes follow Qloo's API docs. The client sits behind a small adapter (`Taste::Provider`, with `Taste::Providers::Qloo` and a Fake) so it can be swapped for the `qloo api` command-line tool if Qloo requires it. *Action: confirm in Discord #api-help.*
 - **Podcast Index API:** primary source for podcast search and metadata. Free key, attribution required in the footer and on the about page.
 - **RSS feeds:** episodes and show notes, read with a feed parser.
 - **Apple iTunes Search/Lookup:** fallback only (artwork, Apple ID, URL pasting), cached and rate-limited to under 20 calls a minute.
@@ -251,12 +250,12 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 | File storage | **Active Storage → Cloudflare R2** (S3-compatible, `aws-sdk-s3`): kit images, host photos, cached artwork. A separate R2 bucket holds DB backups. |
 | AI | **RubyLLM 2.x** (`ruby_llm`, `ruby_llm-schema`; `ruby_llm-test` for specs, as in dinnerbell), with `RubyLLM::Agent` and `RubyLLM::Tool`. Provider-agnostic; the default is Anthropic `claude-opus-5-5`, set from env. *(The user's call.)* |
 | HTTP / RSS | Faraday with retries that honor `Retry-After` · Feedjira for RSS *(builder may swap)* |
-| Payments | **Dodo Payments** for now (`dodopayments` gem, as in `reelmoney`). Merchant of record, so global tax is handled; hosted checkout, webhooks, customer portal. It sits **behind a provider interface** (§9a), so Polar.sh or another provider can be swapped in later. |
-| Email | **Resend** (as in `reelmoney`): welcome, report ready, payment issues |
+| Payments | **Dodo Payments** for now (`dodopayments` gem). Merchant of record, so global tax is handled; hosted checkout, webhooks, customer portal. It sits **behind a provider interface** (§9a), so Polar.sh or another provider can be swapped in later. |
+| Email | **Resend**: welcome, report ready, payment issues |
 | Rate limiting / security | Rails 8 `rate_limit`, CSP, Brakeman, bundler-audit |
 | Pagination | pagy |
 | Tests | RSpec, FactoryBot, shoulda-matchers, WebMock. **Synthetic** fixtures go in the repo; fixtures recorded from Qloo stay private (gitignored). |
-| Deploy | Rails 8 Dockerfile + Thruster → **Docker Compose on ioflood** behind Coolify's **Traefik** proxy, with Cloudflare DNS in front (R37, R79; no tunnel, no host ports) |
+| Deploy | Rails 8 Dockerfile + Thruster → **Docker Compose on our own server** behind Coolify's **Traefik** proxy, with Cloudflare DNS in front (R37, R79; no tunnel, no host ports) |
 | License | **AGPL-3.0** *(Claude's call, see §16)* |
 
 ## 9a. Engineering practices (the user's call: "modular so we can switch, follow best practices")
@@ -360,9 +359,9 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 **The user's requirement:** profitable from day 1. Here that means three things:
 1. Every paid plan stays profitable at its **maximum** allowed usage.
 2. Free users cost us **no Claude spend**.
-3. Fixed costs are close to zero, because everything is hosted on our own ioflood server.
+3. Fixed costs are close to zero, because everything is hosted on our own server.
 
-**Market grounding** (`research/market-pricing.md`): half of podcasters spend $25 a month or less on all their tools, commission marketplaces for small shows keep failing, and the adjacent tools start at $99. **No commission.**
+**Market grounding** (our market research): half of podcasters spend $25 a month or less on all their tools, commission marketplaces for small shows keep failing, and the adjacent tools start at $99. **No commission.**
 
 **Billing launch** (the user's call, 2026-10-24): **Dodo test mode plus a waitlist.**
 - **What's built:** billing in full (checkout, webhooks, portal, plan limits), tested end to end in **Dodo test mode**.
@@ -397,7 +396,7 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 | Creator yearly $190 (per month) | ≈ $14.85 | $3.60 | **76%** | ~94% |
 
 **Fixed costs**
-- **Hosting:** $0 extra. The app, database, job worker and backups all run on our existing ioflood server.
+- **Hosting:** $0 extra. The app, database, job worker and backups all run on our existing server.
 - **Cloudflare R2:** free tier, which covers 10 GB storage and 1M writes a month.
 - **Resend:** free tier, 3k emails a month.
 - **Podcast Index:** free.
@@ -440,7 +439,7 @@ protections, as built (R92, R93, R105, R108 to R110; these replace R31's numbers
 - **Sample reports** are generated once before submission. They cost about $1.50 in total and come out of the development budget; viewing them costs nothing.
 - Anyone can still browse the samples, take a free Snapshot and preview a kit, all at $0 in Claude cost. This keeps us within the rule that judges get free, unrestricted access.
 
-## 12. Hosting and operations (ioflood)
+## 12. Hosting and operations
 
 As first built (R37, R79, R115, R117), and kept for self-hosting in `docs/self-hosting.md`. Since 2026-10-29
 midrolo.com runs as a Coolify project instead (web app, worker and Postgres, hourly backups to R2; `docs/deploy.md`).
@@ -463,7 +462,7 @@ midrolo.com runs as a Coolify project instead (web app, worker and Postgres, hou
 - **Secrets** live in `.env` on the server only. `.env.example` in the repo lists every variable. Production refuses to
   boot without the required set (`lib/required_env.rb`), including `QLOO_API_KEY`, `PODCAST_INDEX_KEY`,
   `PODCAST_INDEX_SECRET` and an absolute http(s) `APP_URL`.
-- **Deploying:** rsync the code from the Mac (of the `.env*` files, only `.env.example`), then `docker compose up -d
+- **Deploying:** rsync the code from a laptop (of the `.env*` files, only `.env.example`), then `docker compose up -d
   --build` on the server, building there. Other stacks' containers, networks and volumes, and Traefik's and Coolify's
   own configuration, are never touched.
 - **Logs:** Docker logs. Errors go to the Rails error reporter, logged plus an email to the admin through Resend. A
@@ -501,15 +500,15 @@ midrolo.com runs as a Coolify project instead (web app, worker and Postgres, hou
 - An optional 2-minute video, since judges may judge from images and text alone.
 - A **live-pitch prep** doc for Nov 5: a 3-minute pitch, a demo script, and answers to likely questions on business model, Qloo dependency and accuracy.
 
-## 14. Schedule (IST)
+## 14. Schedule (India time)
 
 | When | What |
 |---|---|
 | **Sat Oct 24** | Approve this doc (name chosen: Midrolo). User registers midrolo.com and creates accounts and keys (§17). Qloo key requested. |
-| **Sun Oct 25 – Tue Oct 27 midday** | The user is on OpenCV and GitLab, so **Claude builds the foundation** with short check-ins: Rails app, auth, landing page, show search (Podcast Index), Qloo client against synthetic fixtures, agent and tools, report UI, media kit, pitch pack, billing in test mode, compose files. |
+| **Sun Oct 25 – Tue Oct 27 midday** | The user is on other deadlines, so **Claude builds the foundation** with short check-ins: Rails app, auth, landing page, show search (Podcast Index), Qloo client against synthetic fixtures, agent and tools, report UI, media kit, pitch pack, billing in test mode, compose files. |
 | **Tue Oct 27 evening – Wed Oct 28** | Switch to live Qloo (if the key is in). Tune seeds, scoring and prompts on 8–10 real shows. Proven-sponsor scan on real feeds. |
-| **Thu Oct 29** | Deploy to ioflood. Verify Dodo **test-mode** checkout, webhooks and portal end to end; turn on the waitlist. Generate sample reports. Design polish. Fixes. |
-| **Fri Oct 30** | Hardening. README and "How we use Qloo". Devpost write-up and screenshots. Optional video. **Submit by Fri Oct 30, 11 PM IST**, about 10 hours before the deadline. |
+| **Thu Oct 29** | Deploy to the server. Verify Dodo **test-mode** checkout, webhooks and portal end to end; turn on the waitlist. Generate sample reports. Design polish. Fixes. |
+| **Fri Oct 30** | Hardening. README and "How we use Qloo". Devpost write-up and screenshots. Optional video. **Submit by Fri Oct 30, 17:30 UTC**, about 10 hours before the deadline. |
 | **Nov 2–5** | Keep it up and watched during judging. Prepare the live pitch in case we're a finalist. |
 
 **If the Qloo key hasn't arrived by Wed Oct 28 morning:** escalate in Discord and keep building on fixtures. The demo can't be honest without live data, so this is the critical path.
@@ -527,7 +526,7 @@ midrolo.com runs as a Coolify project instead (web app, worker and Postgres, hou
 | Claude cost overrun or abuse | Spend | Plan limits, global daily cap, kill switch, cost logged per report |
 | Hallucinated brands or numbers | Trust and credibility | Server-side provenance check, structured outputs, "modeled" labels |
 | Too much scope for ~4 days | Unfinished product | Order of cuts if late: CSV export → Pro multi-show → pipeline notes → Sprint plan. The core flow and media kit stay. |
-| ioflood production safety | Outage of other apps | Isolated compose stack, resource caps, never touch other containers |
+| Shared server safety | Outage of other apps | Isolated compose stack, resource caps, never touch other containers |
 | Apple iTunes terms | Legal grey area | Podcast Index is the primary source; Apple is only a cached helper |
 | Charging customers on a hackathon-only Qloo key | Possible breach of the API terms, which would put the entry at risk. Refunds if the key dies. | **Resolved:** billing stays in test mode with a waitlist until a commercial Qloo agreement exists (§11) |
 | Fake kits for shows the user doesn't own | Impersonation, fake ad sales | RSS-owner verification before publishing (§5.6) |
@@ -539,7 +538,7 @@ midrolo.com runs as a Coolify project instead (web app, worker and Postgres, hou
 **Made by the user**
 - Podcast-only product for podcasters, including the map. Production-ready, intended for sale.
 - Google login, landing page, background jobs, Cloudflare R2, PostgreSQL.
-- Host the **entire app on ioflood**, the database included, like storyquest.
+- Host the **entire app on our own server**, the database included.
 - **Profitable from day 1** (§11).
 - **Dodo Payments for now**, with billing **modular so the provider can be switched** (Polar.sh is a candidate). Follow software-engineering best practices (§9a).
 - **Billing launch:** test mode plus a founding-member waitlist until there's a commercial Qloo agreement (§11).
@@ -552,14 +551,14 @@ midrolo.com runs as a Coolify project instead (web app, worker and Postgres, hou
 1. *(Replaced: the user chose RubyLLM.)*
 2. **Default model: Claude Opus 5.5** for the agent and the pitches (about $0.40–0.50 per report and $0.04 per pitch with coarse tools). That's already profitable at the caps. With RubyLLM it's one env change to Sonnet 5.5 (about half the cost) or to another provider. Check the eval set first.
 2a. **Free tier is an AI-free Snapshot.** The full agent report is paid, so free users cost nothing in Claude spend.
-3. **Resend** for email, as in `reelmoney`. *(Dodo Payments for now is the user's call, behind a swappable billing interface.)*
+3. **Resend** for email. *(Dodo Payments for now is the user's call, behind a swappable billing interface.)*
 4. **Docker Compose**, not Kamal. kamal-proxy would clash with the existing setup. (The Cloudflare tunnel planned here was replaced by Coolify's Traefik proxy: R37, R79, §12.)
 5. **AGPL-3.0.** The rules require an OSI license. AGPL stops someone hosting a closed clone, while MIT would allow it.
 6. **Podcast Index** as the primary podcast data source, with Apple as a fallback.
 7. **Pricing:** Free Snapshot / Creator $19 / Pro $49 / Sprint $49, no commission. The caps are in §11.
 8. **Rate rule** and **fit score weights** as in §5.7 and §7.2.
 9. **Print-to-PDF** for media kits in v1, with a server-rendered PDF later.
-10. **Domain** `midrolo.com` on Cloudflare (fallback `midrolo.dijmo.com`).
+10. **Domain** `midrolo.com` on Cloudflare.
 11. **Proving show ownership** before a kit goes public (an RSS owner-email code, or a token in the feed). Everyone, judges included, gets a private preview (§5.6).
 12. **Paused mode** for when the Qloo key goes off or the budget runs out. Existing work stays available (§6).
 13. **Judge access code** with its own $5 reserve. Public promo gets 1 agent report per account from the other $5 (§11).

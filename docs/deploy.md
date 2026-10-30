@@ -1,18 +1,18 @@
 # Deploying Midrolo
 
-midrolo.com runs on ioflood as a Coolify project, `midrolo`, set up like the server's other apps: a web app, a worker
+midrolo.com runs on our own server as a Coolify project, `midrolo`, set up like the server's other apps: a web app, a worker
 and a Postgres database, built from this repo's `main` branch. This page covers that setup, deploys, the checks after
 one, backups and taking it down. To run Midrolo without Coolify, as one Docker Compose stack, see
 [self-hosting.md](self-hosting.md).
 
-## Read this first: ioflood is a shared production server
+## Read this first: the server is shared
 
 Coolify runs many other apps and databases there. Everything below keeps to these rules:
 
-- **Reach it with `ssh ioflood`** (port 1022, set up in `~/.ssh/config`), through the WireGuard VPN.
+- **Reach it with `ssh <server>`** (its ssh host, from `~/.ssh/config`).
 - **Touch only the `midrolo` project.** Never change another project's resources, Coolify's own settings or Traefik's
   configuration, and never run `docker system prune` or any other prune on the server.
-- **Build on ioflood, never on the Mac.** Coolify builds the image from GitHub.
+- **Build on the server, not on a laptop.** Coolify builds the image from GitHub.
 
 ## What runs
 
@@ -168,7 +168,7 @@ they have.
 
 ## Running commands
 
-Use the app's **Terminal** tab in Coolify, or on ioflood:
+Use the app's **Terminal** tab in Coolify, or on the server:
 
 ```bash
 docker exec -it "$(docker ps -q --filter label=coolify.projectName=midrolo --filter label=coolify.resourceName=midrolo)" bin/rails console

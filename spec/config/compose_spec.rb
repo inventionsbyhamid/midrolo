@@ -1,10 +1,11 @@
 require "rails_helper"
 
 # compose.yml, the self-hosting stack (R37, R79, R115; docs/self-hosting.md; production runs on Coolify instead), read
-# as YAML: Docker isn't on the Mac, and nothing here may build or start the stack. ioflood is a shared production server, so the stack publishes no
-# host port, keeps every name under midrolo-, and only midrolo-web joins Coolify's network, where Traefik routes
-# midrolo.com to it. Compose makes each service's key a DNS alias on every network the service joins, so the keys are
-# midrolo- names too: a bare "web" on the shared coolify network could answer another app's lookups.
+# as YAML: Docker may not be where the specs run, and nothing here may build or start the stack. The server is shared,
+# so the stack publishes no host port, keeps every name under midrolo-, and only midrolo-web joins Coolify's network,
+# where Traefik routes midrolo.com to it. Compose makes each service's key a DNS alias on every network the service
+# joins, so the keys are midrolo- names too: a bare "web" on the shared coolify network could answer another app's
+# lookups.
 RSpec.describe "The compose stack" do
   let(:compose) { YAML.load_file(Rails.root.join("compose.yml")) } # no anchors: plain YAML, as the brief checks it
   let(:services) { compose.fetch("services") }

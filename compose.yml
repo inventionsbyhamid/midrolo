@@ -1,7 +1,8 @@
-# Midrolo's production stack on ioflood (docs/deploy.md). Build and run it there, never on the Mac.
+# Midrolo's self-hosted stack (docs/self-hosting.md). Build and run it on the server, not on a laptop.
 #
-# ioflood is a shared production server: everything here is named midrolo-* (project, service keys, containers,
-# images, network, volumes, Traefik routers, services and middlewares), so nothing can collide with another stack.
+# The server may be shared with other production apps: everything here is named midrolo-* (project, service keys,
+# containers, images, network, volumes, Traefik routers, services and middlewares), so nothing can collide with
+# another stack.
 # That includes DNS: compose makes each service key an alias on every network the service joins, and midrolo-web
 # joins the shared coolify network, where a bare "web" could answer another app's lookups (R115). No port is
 # published on the host: Coolify's Traefik reaches midrolo-web over the external coolify network and routes

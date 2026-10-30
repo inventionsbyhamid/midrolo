@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 # check=error=true
 
-# The production image (midrolo-app), for the web and jobs containers of compose.yml. Built and run on ioflood with
-# `docker compose up -d --build` (docs/deploy.md), never on the Mac.
+# The production image (midrolo-app), for the web and jobs containers of compose.yml. Built and run on the server with
+# `docker compose up -d --build` (docs/self-hosting.md); Coolify builds the same file (docs/deploy.md).
 
 # Make sure RUBY_VERSION matches the Ruby version in .ruby-version
 ARG RUBY_VERSION=3.4.12

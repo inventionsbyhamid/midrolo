@@ -3,7 +3,7 @@
 
 # The compose stack's backup container (midrolo-backup in compose.yml): bin/backup with pg_dump and psql from the
 # same PostgreSQL 16 as the database (the app image's client is Debian's 15, which can't dump a 16 server), and
-# aws-cli for Cloudflare R2. Built on ioflood with the rest of the stack.
+# aws-cli for Cloudflare R2. Built on the server with the rest of the stack.
 FROM docker.io/library/postgres:16
 
 RUN apt-get update -qq && \

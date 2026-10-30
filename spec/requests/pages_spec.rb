@@ -430,11 +430,11 @@ RSpec.describe "Public pages" do
     end
 
     it "names the sitemap on whichever host served it, never a hard-coded domain" do
-      host! "midrolo.dijmo.com"
+      host! "midrolo.example.net"
       https!
       get "/robots.txt"
 
-      expect(response.body).to match(%r{^Sitemap: https://midrolo\.dijmo\.com/sitemap\.xml$})
+      expect(response.body).to match(%r{^Sitemap: https://midrolo\.example\.net/sitemap\.xml$})
       expect(response.body).not_to include("midrolo.com/")
     end
 
