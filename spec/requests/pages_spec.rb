@@ -243,17 +243,41 @@ RSpec.describe "Public pages" do
       expect(page.at_css("#explore a[href='/podcasts/#{demo.slug}']").text.squish).to include("Open the demo show", "Demo")
     end
 
-    it "links to the directory and a sample report to look around, and the blog only once a post is out" do
+    it "links to the directory to look around, and the blog only once a post is out, leaving the samples to theirs" do
+      create_sample(Samples.slugs[0])
       get "/"
 
       explore = page.at_css("#explore")
       expect(explore.at_css("a[href='/podcasts']").text.squish).to start_with("Browse podcasts")
-      expect(explore.at_css("a[href='/samples']").text.squish).to start_with("Read a sample report")
       expect(explore.at_css("a[href='/blog']")).to be_nil
+      expect(explore.css("a[href^='/samples']")).to be_empty
+    end
 
-      create_sample(Samples.slugs[0])
+    it "lists the sample reports after the podcaster side, each opening its report, with a free Snapshot for anyone" do
       get "/"
-      expect(page.at_css("#explore a[href='/samples/#{Samples.slugs[0]}']")).to be_present
+
+      section = page.at_css("#for-podcasters + section#samples")
+      expect(section.at_css("h2").text.squish).to eq("Sample reports")
+      expect(section.css(".sample-item")).to be_empty # until samples:generate has run; the calls to action stay
+      actions = section.css(".hero-actions a").to_h { |link| [ link.text.squish, link["href"] ] }
+      expect(actions).to eq("Get a free Snapshot of your show" => "/start", "See all sample reports" => "/samples")
+      expect(section.at_css(".hero-actions a.btn-primary").text.squish).to eq("Get a free Snapshot of your show")
+      expect(section.next_element["id"]).to eq("quotes")
+
+      ledger = create_sample(Samples.slugs[0], title: "The Founder's Ledger")
+      create_list(:sponsor_match, 2, report: ledger)
+      create_sample(Samples.slugs[1], title: "Cold Case Cafe")
+      get "/"
+
+      cards = page.css("#samples .sample-item")
+      expect(cards.map { |card| card.at_css("h3 a").then { |link| [ link.text.squish, link["href"] ] } })
+        .to eq([ [ "The Founder's Ledger", "/samples/#{Samples.slugs[0]}" ], [ "Cold Case Cafe", "/samples/#{Samples.slugs[1]}" ] ])
+      expect(cards.map { |card| card.at_css(".chip").text.squish }).to eq([ "2 brand matches", "0 brand matches" ])
+
+      sign_in create(:user) # a signed-in podcaster goes straight to adding a show
+      get "/"
+      expect(page.at_xpath("//section[@id='samples']//a[normalize-space()='Get a free Snapshot of your show']")["href"])
+        .to eq("/shows/new")
     end
 
     it "keeps the hero's match card an illustration until a sample is done, never inventing brands or numbers" do

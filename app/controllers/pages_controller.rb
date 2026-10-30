@@ -15,6 +15,7 @@ class PagesController < ApplicationController
 
   def home
     @samples = Samples.reports
+    @match_counts = Samples.match_counts(@samples)
     @hero_sample = @samples.first
     @hero_matches = @hero_sample ? @hero_sample.sponsor_matches.first(3) : []
     @showcase = showcase

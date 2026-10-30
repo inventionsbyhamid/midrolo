@@ -5,10 +5,11 @@
 <%= render "pages/home/proof", facts: @catalog_facts %>
 <%= render "pages/home/for_brands", showcase: @showcase, sponsors: @showcase_sponsors %>
 <%= render "pages/home/for_podcasters", demo: @demo %>
+<%= render "pages/home/samples", samples: @samples, match_counts: @match_counts %>
 <%= render "pages/home/quotes" %>
 <%= render "pages/home/old_way" %>
 <%= render "pages/home/creator_lab" %>
-<%= render "pages/home/explore", samples: @samples, demo: @demo %>
+<%= render "pages/home/explore", demo: @demo %>
 <%# Pricing in one line (UX review L-1): the full plans live on /pricing, the sample reports on /samples (See it for
     yourself links both), and the landing keeps the marketplace questions. %>
 <section id="pricing" class="page-section" aria-labelledby="pricing-title">
