@@ -1,0 +1,5 @@
+<p style="margin:0 0 16px;">We found the line in your feed, so <strong><%= @title %></strong> is verified on <%= APP_NAME %>.</p>
+<p style="margin:0 0 16px;">You can remove the midrolo-verify line from your show description now.</p>
+<p style="margin:0;">Next, connect your stats, so brands see numbers they can trust.</p>
+<%= mail_button "Connect your stats", show_stats_url(@show) %>
+<%= mail_footnote "We send this when a later check of your feed verifies your show." %>
