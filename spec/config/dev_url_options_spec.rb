@@ -38,4 +38,26 @@ RSpec.describe DevUrlOptions do
     expect(config).to include("config.action_mailer.default_url_options = DevUrlOptions.call")
     expect(config).not_to match(/port: 3000/)
   end
+
+  # GitHub Codespaces serves the app at https://<codespace>-3100.app.github.dev; the dev container sets
+  # RAILS_DEVELOPMENT_HOSTS so Rails allows that host, and these let Action Cable take connections from its pages.
+  describe ".proxy_origins" do
+    it "matches pages on each RAILS_DEVELOPMENT_HOSTS host, a leading dot taking every subdomain" do
+      origins = described_class.proxy_origins("RAILS_DEVELOPMENT_HOSTS" => ".app.github.dev, dev.midrolo.test")
+
+      expect(origins.size).to eq(2)
+      match = ->(origin) { origins.any? { |pattern| pattern.match?(origin) } }
+      expect(match.("https://fuzzy-robot-5x7-3100.app.github.dev")).to be(true)
+      expect(match.("https://app.github.dev")).to be(true)
+      expect(match.("http://dev.midrolo.test:3100")).to be(true)
+      expect(match.("https://evil.dev.midrolo.test")).to be(false)
+      expect(match.("https://app.github.dev.evil.example")).to be(false)
+      expect(match.("https://xapp.github.dev")).to be(false)
+    end
+
+    it "is empty without RAILS_DEVELOPMENT_HOSTS, so development keeps Rails' own checks" do
+      expect(described_class.proxy_origins({})).to eq([])
+      expect(described_class.proxy_origins("RAILS_DEVELOPMENT_HOSTS" => " , ")).to eq([])
+    end
+  end
 end
