@@ -41,6 +41,9 @@ module PricingHelper
     end
   end
 
+  # The plan's first three features: a compact upgrade tile on the account page (accounts/_upgrade).
+  def plan_highlights(plan) = plan_features(plan).first(3)
+
   private
 
   def free_features(limits)

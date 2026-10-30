@@ -1,0 +1,43 @@
+<%# locals: (plan:, user:) -%>
+<%# The podcaster's plan: its badge and summary, when it renews or ends, this period's usage as one bar per kind
+    (PlansHelper#plan_usage, the numbers the upgrade prompt counts), and the way on: See plans on Free, Manage billing
+    for a subscriber with a customer id (R73). A kind the plan leaves out, or doesn't limit, gets words, not a bar. %>
+<% portal = Billing.portal_subscription(user) %>
+<%= render "components/card", title: "Your plan", class: "plan-summary",
+                              aside: ui_badge(plan.name, tone: plan.key == :free ? :neutral : :accent) do %>
+  <p class="text-ink-soft"><%= plan_summary(plan) %></p>
+  <% if (renewal = renewal_line(plan.subscription)) %>
+    <p class="mt-2 text-ink-soft"><%= renewal %></p>
+  <% end %>
+
+  <div class="usage">
+    <h3 id="usage_heading" class="text-sm font-semibold">Usage</h3>
+    <ul class="usage-list" aria-labelledby="usage_heading">
+      <% %i[agent snapshot pitch].each do |kind| %>
+        <% usage = plan_usage(plan, kind) %>
+        <li class="<%= class_names("usage-item", "usage-item-off" => !usage.included?) %>" data-kind="<%= kind %>">
+          <span class="usage-label"><%= usage.label %></span>
+          <span class="usage-count"><%= usage_count(usage) %></span>
+          <% if usage.metered? %>
+            <span class="usage-bar" aria-hidden="true">
+              <% usage_segments(usage).each do |state| %><span class="usage-seg usage-seg-<%= state %>"></span><% end %>
+            </span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+
+  <% if plan.key == :free || portal || plan.subscription %>
+    <div class="plan-summary-actions">
+      <% if plan.key == :free %>
+        <%= ui_button "See plans", pricing_path, variant: :secondary %>
+      <% end %>
+      <% if portal %>
+        <%= button_to "Manage billing", billing_portal_path, class: "btn btn-secondary btn-md", form: { data: { turbo: false } } %>
+      <% elsif plan.subscription %>
+        <p class="text-sm text-ink-soft">Your plan is active. Billing management opens with paid plans.</p>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

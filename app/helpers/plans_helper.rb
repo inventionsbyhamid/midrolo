@@ -1,14 +1,24 @@
 # Plan copy: the upgrade prompt (shared/_upgrade_prompt), which says why Entitlements refused and what to do next
-# (R63, R63a), and the plan and usage lines on the account page. Both count done work, and name work in progress
+# (R63, R63a), and the plan line and usage bars on the account page. Both count done work, and name work in progress
 # apart from it, so they never contradict each other.
 module PlansHelper
   UpgradePrompt = Data.define(:message, :detail, :action)
+  # One kind's usage on the account page (accounts/_plan): done and in-flight work against the limit, and the period
+  # they count in (nil when the plan counts in total). limit is Float::INFINITY when unlimited, 0 when the plan
+  # doesn't include the kind; neither counts anything.
+  Usage = Data.define(:kind, :label, :plan_name, :used, :in_flight, :limit, :period) do
+    def included? = limit.positive?
+    def unlimited? = limit == Float::INFINITY
+    def metered? = included? && !unlimited?
+  end
 
   REASONS = %i[limit budget paused plan busy].freeze
   # Each kind's noun in a sentence, and its label on the account page.
   KINDS = { agent: { noun: "report", label: "Full reports" },
             snapshot: { noun: "Snapshot", label: "Snapshots" },
             pitch: { noun: "pitch", label: "Pitches" } }.freeze
+  # The most segments a usage bar has: a smaller limit gets one segment per report, Snapshot or pitch.
+  USAGE_SEGMENTS = 20
   PAUSED_MESSAGE = "New reports are paused for a little while. Please try again later.".freeze
   SNAPSHOT_ACTION = "Get my free Snapshot".freeze
   PITCH_PACK = "Each one is an email ready to send, three ad read angles, an offer priced from your rate card and " \
@@ -88,16 +98,32 @@ module PlansHelper
     end
   end
 
-  # "Full reports: 1 of 4 used this billing period, 1 in progress", "Unlimited pitches", "Pitches: not on the Free plan".
-  def usage_line(plan, kind)
-    label = KINDS.fetch(kind).fetch(:label)
+  # The plan's usage of one kind, counted only when the plan has a limit for it.
+  def plan_usage(plan, kind)
     limit = plan.limit(kind)
-    return "Unlimited pitches" if kind == :pitch && limit.infinite?
-    return "#{label}: not on the #{plan.name} plan" unless limit.positive?
+    metered = limit.positive? && limit.finite?
+    Usage.new(kind: kind, label: KINDS.fetch(kind).fetch(:label), plan_name: plan.name, limit: limit,
+              used: metered ? plan.used(kind) : 0, in_flight: metered ? plan.in_flight(kind) : 0,
+              period: (plan.period_name unless plan.counted_in_total?(kind)))
+  end
 
-    in_flight = plan.in_flight(kind)
-    period = plan.counted_in_total?(kind) ? nil : plan.period_name
-    "#{label}: #{plan.used(kind)} of #{limit} used#{" this #{period}" if period}#{", #{in_flight} in progress" if in_flight.positive?}"
+  # "<strong>1 of 4</strong> used this billing period, 1 in progress", "<strong>Unlimited</strong>", "Not on the Free
+  # plan": a usage bar's words, the numbers bold.
+  def usage_count(usage)
+    return tag.strong("Unlimited") if usage.unlimited?
+    return "Not on the #{usage.plan_name} plan" unless usage.included?
+
+    safe_join([ tag.strong("#{usage.used} of #{usage.limit}"), " used", (" this #{usage.period}" if usage.period),
+                (", #{usage.in_flight} in progress" if usage.in_flight.positive?) ].compact)
+  end
+
+  # A usage bar's segments in order: :on for done work, :busy for work in progress, :off for what's left. One segment
+  # per unit up to USAGE_SEGMENTS; past that the bar scales, and any work lights at least one segment.
+  def usage_segments(usage)
+    count = [ usage.limit, USAGE_SEGMENTS ].min
+    on = usage_lit(usage.used, usage.limit, count)
+    busy = usage_lit(usage.used + usage.in_flight, usage.limit, count) - on
+    Array.new(count) { |index| index < on ? :on : (index < on + busy ? :busy : :off) }
   end
 
   # "Free Pro through Nov 6": what every account gets while the promo runs, in words a user (not a judge) reads.
@@ -112,6 +138,18 @@ module PlansHelper
   end
 
   private
+
+  # How many of count segments value of limit lights: exact when each unit has its own segment; scaled otherwise, but
+  # never none for some work or all of them short of the limit.
+  def usage_lit(value, limit, count)
+    return value.clamp(0, count) if limit <= count
+
+    lit = (value * count / limit.to_f).round.clamp(0, count)
+    return 1 if value.positive? && lit.zero?
+    return count - 1 if value < limit && lit == count
+
+    lit
+  end
 
   # "You've used 3 of 4 reports this billing period, and 1 more is in progress": the noun follows the limit.
   def limit_message(prompt)

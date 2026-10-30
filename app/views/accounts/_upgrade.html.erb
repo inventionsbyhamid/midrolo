@@ -1,0 +1,57 @@
+<%# locals: () -%>
+<%#
+  The plans on sale, for an account without a subscription (R66): one compact tile per plan, its price for the chosen
+  interval (the Sprint's is once), three highlights and billing/_plan_button for that price key, so the waitlist, a
+  judge's or admin's test checkout and live checkout work as they do on /pricing. The monthly/yearly switch is the one
+  /pricing has (pages/_plans): two radios and CSS (:has), no JavaScript, so both intervals' prices and buttons are in
+  the page.
+%>
+<% featured = PricingHelper::PAID_PLANS.first %>
+<%= render "components/card", title: "Upgrade", class: "upgrade",
+                              aside: link_to("Compare all plans", pricing_path, class: "link text-sm") do %>
+  <div class="upgrade-bar">
+    <fieldset class="interval-switch">
+      <legend class="sr-only">Billing period</legend>
+      <label class="interval-option">
+        <input type="radio" name="upgrade_interval" id="upgrade_interval_monthly" value="monthly" class="interval-input" checked>
+        Monthly
+      </label>
+      <label class="interval-option">
+        <input type="radio" name="upgrade_interval" id="upgrade_interval_yearly" value="yearly" class="interval-input">
+        Yearly<% if (saving = yearly_saving(featured)) %> <span class="interval-saving"><%= saving %></span><% end %>
+      </label>
+    </fieldset>
+    <% if (note = pricing_mode_note) %>
+      <p class="upgrade-note"><%= note %></p>
+    <% end %>
+  </div>
+
+  <div class="upgrade-tiles">
+    <% Billing.prices.group_by { |price| price.plan.to_sym }.each do |plan, prices| %>
+      <% name = Entitlements.limits(plan)[:name] %>
+      <article class="<%= class_names("upgrade-tile", "upgrade-tile-featured" => plan == featured) %>" data-plan="<%= plan %>"
+               aria-labelledby="upgrade_<%= plan %>_name">
+        <h3 id="upgrade_<%= plan %>_name" class="upgrade-tile-name"><%= name %></h3>
+        <% prices.each do |price| %>
+          <p class="upgrade-tile-price" data-interval="<%= price.interval %>">
+            <span class="upgrade-tile-amount">$<%= price.usd %></span><span class="plan-per"><%= BillingHelper::INTERVALS.fetch(price.interval) %></span>
+          </p>
+        <% end %>
+        <ul class="upgrade-tile-facts" aria-label="<%= name %> includes">
+          <% plan_highlights(plan).each do |fact| %>
+            <li><%= fact %></li>
+          <% end %>
+        </ul>
+        <% prices.each do |price| %>
+          <div class="plan-action upgrade-tile-action" data-interval="<%= price.interval %>">
+            <%= render "billing/plan_button", price_key: price.key, label: "Choose #{name}", note: false, quiet: true %>
+          </div>
+        <% end %>
+      </article>
+    <% end %>
+  </div>
+
+  <% if (test_note = test_payments_note) %>
+    <div class="mt-4"><%= test_note %></div>
+  <% end %>
+<% end %>
