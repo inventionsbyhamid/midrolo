@@ -72,16 +72,73 @@ No Qloo response data is committed to this repo: the specs use small synthetic f
 Qloo, the LLM, Podcast Index and billing each sit behind an adapter with a Fake twin, so the app runs with no keys.
 The one exception is verified stats: reading Spotify or Apple numbers needs real platform access.
 
+## Architecture
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/architecture-dark.svg">
+  <img alt="Midrolo's architecture. Browsers reach one Rails 8.1 app through Cloudflare and Traefik. The web process serves Hotwire pages. A Solid Queue worker runs the brand fit search, the sponsor report agent, catalog ingest, sponsor detection and verified stats, which call Qloo, OpenRouter, Podcast Index, Apple, the shows' RSS feeds, Spotify for Creators and Apple Podcasts Connect, each behind a guardrail. Data lives in PostgreSQL (the app, Solid Queue, Solid Cache and Solid Cable) and Cloudflare R2." src="docs/architecture.svg">
+</picture>
+
+The four numbered flows:
+
+- **① Brand search.** FitSearchJob asks Qloo for the brand and the podcasts its customers love, adds sponsor history,
+  rates and verified numbers from the database, ranks the shows, and an LLM writes the brief. Each step streams live.
+- **② Podcaster report.** GenerateReportJob runs the agent's tool loop over Qloo (taste profile, brands,
+  similar shows) and the show's feed, then saves the matches and builds the report.
+- **③ Catalog.** Podcast Index, Apple's charts and the Qloo seed find shows, the feed reader saves their episodes, and
+  an LLM finds the sponsor reads that fill the public pages.
+- **④ Verified stats.** The owner invites Midrolo's account, the stats sync job runs the Python helper against Spotify
+  or Apple, and the readings are marked Verified.
+
+The amber badges are guardrails: a call guard (per run and daily caps) and a shared cache in front of Qloo, daily LLM
+budgets, an SSRF guard on every feed and artwork URL, and secrets passed to the stats helper on stdin.
+
+The brand search, step by step (`app/services/fit_search/run.rb`):
+
 ```mermaid
-flowchart LR
-  web["Rails web<br/>Hotwire"] --> jobs["Solid Queue jobs"]
-  web & jobs --> db[("PostgreSQL")]
-  jobs --> taste["Taste::Provider<br/>Qloo or Fake"]
-  jobs --> llm["Llm<br/>RubyLLM or Fake"]
-  jobs --> dir["Podcasts::Directory<br/>Podcast Index or Fake"]
-  jobs --> feeds["RSS feeds<br/>with an SSRF guard"]
-  jobs --> stats["bin/platform-stats<br/>Spotify, Apple"]
-  web --> billing["Billing::Provider<br/>Dodo or Fake"]
+sequenceDiagram
+  actor B as Brand member
+  participant W as midrolo-web
+  participant J as FitSearchJob
+  participant Q as Qloo API
+  participant D as PostgreSQL
+  participant L as OpenRouter
+  B->>W: Brand name, website, categories, budget
+  W->>W: FitSearch::Start checks pauses and daily limits
+  W->>J: Enqueue on the reports queue
+  J->>Q: 1. Find the brand (/search)
+  J->>Q: 2. Podcasts its customers love (/v2/insights)
+  J->>Q: 3. Taste scores for catalog shows in its categories
+  J->>D: 4 and 5. Sponsor proof, rates, verified numbers
+  J->>J: 6. Rank: taste 50, proof 25, price 15, trust 10
+  J->>L: 7. A three bullet brief (cheap model)
+  J-->>B: Every step shows up live over Turbo Streams
+```
+
+The podcaster's sponsor report (`app/services/research/agent_runner.rb`):
+
+```mermaid
+sequenceDiagram
+  actor P as Podcaster
+  participant W as midrolo-web
+  participant J as GenerateReportJob
+  participant M as OpenRouter (agent model)
+  participant T as Ruby tools
+  participant F as Show's RSS feed
+  participant Q as Qloo API
+  P->>W: Start a full report
+  W->>J: Enqueue on the reports queue
+  J->>J: Check the LLM budget
+  loop Until matches and a summary are saved (40 tool calls, 6 minutes at most)
+    J->>M: The conversation so far
+    M-->>J: The next tool call
+    J->>T: Run the tool
+    T->>F: read_show_feed, through the SSRF guard
+    T->>Q: Search, tags and insights (40 Qloo calls at most)
+    T-->>J: A short summary for the model
+  end
+  Note over J,T: save_sponsor_matches keeps only brands Qloo returned in this run
+  J-->>P: Sections stream live, and an email unless they already opened it
 ```
 
 ## Local setup
