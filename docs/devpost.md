@@ -38,7 +38,8 @@ podcaster, and an AI agent on each side that uses Qloo's taste graph to match br
 **Every show has a page,** built from its own RSS feed: episodes, the people it names, and its **sponsor history
 with evidence**. Midrolo reads each episode's notes for sponsor reads, promo codes and offers, and every brand it
 finds links to the episode and quotes the show's own sentence. Brand pages turn that around: "Podcasts Notion
-sponsors". Search for a show we don't have and it's added from the directory while you watch.
+sponsors". Search for a show we don't have and it's added from the directory while you watch. In production today:
+1,378 podcasts, more than 60,000 episodes, and sponsor reads from 1,920 brands across 469 shows.
 
 **For brands: "Find podcasts your customers love."** Name your brand and the brand side agent runs seven steps you
 watch live:
@@ -108,9 +109,11 @@ and listings, verified Spotify and Apple numbers, the brand agent, request a spo
 - **The catalog.** A feed reader with conditional GET, adaptive polling (claimed shows hourly, quiet shows weekly),
   leases with `FOR UPDATE SKIP LOCKED`, per host pacing, and an SSRF guard on every fetch. Artwork is stored once
   per image hash.
-- **Sponsor detection.** Patterns first (lead ins, sponsor blocks, promo codes, vanity links), then a cheap model
-  confirms candidates. Nothing the model says is trusted: a brand counts only if its name or domain is in the notes,
-  and the evidence is always the show's own sentence.
+- **Sponsor detection, AI first.** A cheap model (GLM 5.3 Flash through OpenRouter) reads each recent episode's notes,
+  ten episodes a call, with pattern matches (lead ins, promo codes, vanity links) passed in as hints only. Nothing the
+  model says is trusted: a brand counts only if its name or domain is in the notes, and the evidence is always the
+  show's own sentence. Each episode is checked once, ever, a reply off the schema changes nothing, and a daily budget
+  caps the spend: about $0.0003 an episode.
 - **Verified stats.** A small Python helper runs Open Podcast's MIT licensed Spotify and Apple connectors, pinned with
   hashes. Rails hands it Midrolo's own session on stdin only, never in arguments, logs or job data. A reading counts
   only when the podcast is claimed by the person who invited Midrolo and the platform's show matches it.
@@ -143,7 +146,8 @@ and listings, verified Spotify and Apple numbers, the brand agent, request a spo
 - A complete two sided product, not a demo: public pages, claiming, listings, verified numbers, two agents, requests
   and an inbox, billing and admin.
 - Verified Spotify and Apple numbers that never ask a podcaster for a password.
-- Sponsor history with a quote and an episode behind every brand.
+- Sponsor history with a quote and an episode behind every brand, found by AI across the whole catalog for about
+  $0.0003 an episode.
 - Honest by default: modeled taste is labelled modeled, every number names its source and date, and plays are never
   called downloads.
 - Free for podcasters, for good. No commission on either side.
@@ -167,7 +171,8 @@ and listings, verified Spotify and Apple numbers, the brand agent, request a spo
 - **Profitable from day 1.** Billing runs as a founding member waitlist until an admin enters Qloo's cost per call and
   every paid plan keeps at least a 60% margin with every cap used.
 - **Deals:** agreed terms, an air window, and proof that the read aired, spotted in the feed.
-- **More verified sources:** hosting providers' own analytics, and YouTube.
+- **More verified sources:** plays and downloads across every app for shows hosted on Spotify for Creators, hosting
+  providers' own analytics, and YouTube.
 - **A guide for Creator Lab podcasters** whose feeds may still carry its analytics prefix.
 
 ## Testing instructions
@@ -201,6 +206,8 @@ and listings, verified Spotify and Apple numbers, the brand agent, request a spo
   slip in. Each one shows its evidence so you can judge.
 - **Apple Podcasts verification** uses the same invite and connector as Spotify, but we have only checked Spotify
   live.
+- **Spotify numbers are Spotify's own:** streams, listeners and followers in the Spotify app, not downloads across
+  every app.
 - **Data gaps** in the hackathon data: some brands and shows aren't on Qloo, and some seeds return few results.
 - **What a result does not establish:** that a brand will say yes or what it will pay, that any listener buys from a
   brand, or a show's real age or gender mix. A fit score ranks results within one search or report; it is not a
