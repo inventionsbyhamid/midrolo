@@ -1,0 +1,463 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 1462" width="1220" height="1462" role="img" aria-labelledby="title desc">
+<title id="title">Midrolo architecture</title>
+<desc id="desc">Midrolo's high level design: browsers reach a Rails 8.1 app through Cloudflare and Traefik. The web process serves pages; a Solid Queue worker runs the brand fit search, the sponsor report agent, catalog ingest, sponsor detection and verified stats jobs, which call Qloo, OpenRouter, Podcast Index, Apple, podcast feeds, Spotify and Apple Podcasts Connect. Data lives in PostgreSQL and Cloudflare R2.</desc>
+<defs>
+<style>
+    .bg{fill:#f6f2f4}
+    text{font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif;fill:#22132b}
+    .mono{font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace}
+    .t2{fill:#5a4a63} .t3{fill:#7d6c86}
+    .h1{font-size:26px;font-weight:700;letter-spacing:-0.2px}
+    .sub{font-size:14.5px;fill:#5a4a63}
+    .lane{font-size:11.5px;font-weight:700;letter-spacing:1.4px;fill:#7d6c86}
+    .title{font-size:15px;font-weight:700}
+    .title-sm{font-size:14px;font-weight:700}
+    .cls{font-size:12.5px;fill:#4a2266}
+    .desc{font-size:12.5px;fill:#5a4a63}
+    .small{font-size:11.5px;fill:#5a4a63}
+    .job{font-size:12px;fill:#22132b}
+    .q{font-size:10.5px;fill:#4a2266}
+    .qbg{fill:#eee5f3}
+    .card{fill:#ffffff;stroke:#dccfe3;stroke-width:1}
+    .app{fill:#fbf9fb;stroke:#4a2266;stroke-width:1.5}
+    .web{fill:#4a2266}
+    .webt{fill:#ffffff} .webs{fill:#e6d6f1}
+    .webchip{fill:#5d3479} .webchipt{fill:#f3e9fa;font-size:12px}
+    .band{fill:#eee5f3;stroke:#d9c6e6;stroke-width:1}
+    .ext{fill:#ffffff;stroke:#8d7b97;stroke-width:1.2;stroke-dasharray:5 4}
+    .qloo{fill:#ffffff;stroke:#22132b;stroke-width:2}
+    .client{fill:#ffffff;stroke:#5a4a63;stroke-width:1.2}
+    .gfill{fill:#fdf1d6;stroke:#e3a21a;stroke-width:1}
+    .gtext{font-size:11px;font-weight:600;fill:#6a4300}
+    .gicon{fill:#c98800}
+    .badge{fill:#f3a712}
+    .badget{font-size:11.5px;font-weight:800;fill:#22132b}
+    .arrow{stroke:#6d5c77;stroke-width:1.5;fill:none}
+    .arrow-soft{stroke:#6d5c77;stroke-width:1.3;fill:none;stroke-dasharray:4 4}
+    .ah{fill:#6d5c77}
+    .alabel{font-size:11.5px;fill:#5a4a63}
+    .clock{stroke:#5a4a63;stroke-width:1.2;fill:none}
+    .db{fill:#ffffff;stroke:#4a2266;stroke-width:1.5}
+    .dbchip{fill:#f6f2f4;stroke:#dccfe3;stroke-width:1}
+  </style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="ah"/></marker>
+<marker id="ahs" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="ah"/></marker>
+</defs>
+<rect width="1220" height="1462" rx="16" class="bg"/>
+<text x="24" y="46" class="h1" >Midrolo architecture</text>
+<text x="24" y="72" class="sub" >One Rails 8.1 app in one Docker image, run as two processes: midrolo-web serves the site, midrolo-jobs runs Solid Queue. Everything lives in PostgreSQL.</text>
+<text x="24" y="103" class="lane" >CLIENTS</text>
+<g data-box="browser">
+<rect x="24" y="112" width="164" height="64" rx="10" class="client"/>
+<text x="36" y="134" class="title" >Browser</text>
+<text x="36" y="152" class="desc" >Hotwire: Turbo, Stimulus</text>
+<text x="36" y="168" class="desc" >MapLibre maps</text>
+</g>
+<text x="1002" y="103" class="lane" >EXTERNAL SERVICES</text>
+<g data-box="youtube">
+<rect x="1002" y="112" width="194" height="64" rx="10" class="ext"/>
+<text x="1014" y="134" class="title-sm" >YouTube, OpenFreeMap</text>
+<text x="1014" y="152" class="desc" >Home video, after a click</text>
+<text x="1014" y="168" class="desc" >Map tiles</text>
+</g>
+<path d="M188 144 H1000" class="arrow-soft" marker-end="url(#ah)"/>
+<text x="595" y="137" class="alabel" text-anchor="middle">loaded by the browser itself, never through Midrolo</text>
+<path d="M64 176 V194" class="arrow" marker-end="url(#ah)"/>
+<text x="72" y="190" class="small" >HTTPS, WebSocket</text>
+<g data-box="cloudflare">
+<rect x="24" y="196" width="164" height="48" rx="10" class="client"/>
+<text x="36" y="216" class="title-sm" >Cloudflare</text>
+<text x="36" y="233" class="small" >Proxy, artwork edge cache</text>
+</g>
+<path d="M64 244 V262" class="arrow" marker-end="url(#ah)"/>
+<g data-box="traefik">
+<rect x="24" y="264" width="164" height="54" rx="10" class="client"/>
+<text x="36" y="285" class="title-sm" >Traefik</text>
+<text x="36" y="302" class="small" >Coolify proxy, TLS</text>
+</g>
+<path d="M188 291 H232" class="arrow" marker-end="url(#ah)"/>
+<rect x="220" y="206" width="676" height="1076" rx="14" class="app"/>
+<text x="234" y="230" class="lane" >MIDROLO · RAILS 8.1</text>
+<text x="882" y="230" class="small" text-anchor="end">one Docker image, two processes</text>
+<g data-box="web">
+<rect x="234" y="242" width="648" height="84" rx="10" class="web"/>
+<text x="250" y="274" class="title webt" style="font-size:17px">midrolo-web</text>
+<text x="250" y="294" class="desc webs" >Thruster, then Puma</text>
+<text x="250" y="312" class="desc webs" >Hotwire pages and forms</text>
+<rect x="454" y="256" width="205" height="24" rx="12" class="webchip"/>
+<text x="556.5" y="272" class="webchipt" text-anchor="middle">Turbo Streams over Solid Cable</text>
+<rect x="669" y="256" width="205" height="24" rx="12" class="webchip"/>
+<text x="771.5" y="272" class="webchipt" text-anchor="middle">Devise, Google sign in</text>
+<rect x="454" y="286" width="205" height="24" rx="12" class="webchip"/>
+<text x="556.5" y="302" class="webchipt" text-anchor="middle">rate_limit per IP and per form</text>
+<rect x="669" y="286" width="205" height="24" rx="12" class="webchip"/>
+<text x="771.5" y="302" class="webchipt" text-anchor="middle">Billing checkout and webhooks</text>
+</g>
+<path d="M882 291 H1000" class="arrow" marker-end="url(#ah)"/>
+<text x="949" y="284" class="alabel" text-anchor="middle">OAuth</text>
+<g data-box="google">
+<rect x="1002" y="264" width="194" height="54" rx="10" class="ext"/>
+<text x="1014" y="285" class="title-sm" >Google</text>
+<text x="1014" y="302" class="small" >Sign in (OmniAuth)</text>
+</g>
+<path d="M294 326 V354" class="arrow" marker-end="url(#ah)"/>
+<text x="302" y="343" class="alabel" >calls</text>
+<path d="M646 326 V350" class="arrow" marker-end="url(#ah)"/>
+<text x="654" y="343" class="alabel" >enqueues jobs</text>
+<rect x="586" y="352" width="296" height="916" rx="10" class="band"/>
+<text x="598" y="374" class="title-sm" >midrolo-jobs</text>
+<text x="690" y="374" class="small" >Solid Queue worker</text>
+<text x="598" y="392" class="small" >6 queues, 11 threads (config/queue.yml)</text>
+<text x="234" y="374" class="lane" >MODULES</text>
+<text x="306" y="374" class="small mono" >app/services</text>
+<text x="234" y="392" class="small" >The same code runs in both processes</text>
+<g data-box="mod0">
+<rect x="234" y="404" width="340" height="100" rx="10" class="card"/>
+<g><circle cx="257" cy="421" r="9" class="badge"/><text x="257" y="425" text-anchor="middle" class="badget">1</text></g>
+<text x="274" y="426" class="title" >Brand fit search</text>
+<text x="248" y="445" class="cls mono" >FitSearch::Run</text>
+<text x="248" y="464" class="desc" >7 steps, streamed live: the brand and the shows</text>
+<text x="248" y="480.5" class="desc" >its customers love on Qloo, catalog scores,</text>
+<text x="248" y="497" class="desc" >sponsor proof, price and trust, rank, a brief</text>
+<g data-guard="1">
+<rect x="456" y="412" width="108" height="20" rx="10" class="gfill"/>
+<path d="M467 416.5 L471.5 418.4 V422.4 C471.5 425.2 469.4 426.9 467 427.8 C464.6 426.9 462.5 425.2 462.5 422.4 V418.4 Z" class="gicon"/>
+<text x="476" y="426" class="gtext" >10 Qloo calls</text>
+</g>
+</g>
+<g data-box="job0">
+<rect x="594" y="404" width="280" height="100" rx="10" class="card"/>
+<text x="606" y="426" class="job mono" >FitSearchJob</text>
+<rect x="806" y="414" width="58" height="16" rx="8" class="qbg"/>
+<text x="835" y="426" class="q mono" text-anchor="middle">reports</text>
+</g>
+<g data-box="mod1">
+<rect x="234" y="514" width="340" height="104" rx="10" class="card"/>
+<g><circle cx="257" cy="531" r="9" class="badge"/><text x="257" y="535" text-anchor="middle" class="badget">2</text></g>
+<text x="274" y="536" class="title" >Sponsor report agent</text>
+<text x="248" y="555" class="cls mono" >Research::AgentRunner</text>
+<text x="248" y="578" class="desc" >An LLM tool loop over 8 Ruby tools: read the feed,</text>
+<text x="248" y="594.5" class="desc" >find on Qloo, build the audience, find, explain</text>
+<text x="248" y="611" class="desc" >and save matches. Snapshot: same tools, no LLM</text>
+<g data-guard="1">
+<rect x="456" y="520" width="108" height="20" rx="10" class="gfill"/>
+<path d="M467 524.5 L471.5 526.4 V530.4 C471.5 533.2 469.4 534.9 467 535.8 C464.6 534.9 462.5 533.2 462.5 530.4 V526.4 Z" class="gicon"/>
+<text x="476" y="534" class="gtext" >40 Qloo calls</text>
+</g>
+<g data-guard="1">
+<rect x="415" y="544" width="149" height="20" rx="10" class="gfill"/>
+<path d="M426 548.5 L430.5 550.4 V554.4 C430.5 557.2 428.4 558.9 426 559.8 C423.6 558.9 421.5 557.2 421.5 554.4 V550.4 Z" class="gicon"/>
+<text x="435" y="558" class="gtext" >40 tool calls, 6 min</text>
+</g>
+</g>
+<g data-box="job1">
+<rect x="594" y="514" width="280" height="104" rx="10" class="card"/>
+<text x="606" y="536" class="job mono" >GenerateReportJob</text>
+<rect x="806" y="524" width="58" height="16" rx="8" class="qbg"/>
+<text x="835" y="536" class="q mono" text-anchor="middle">reports</text>
+<text x="606" y="555" class="job mono" >BuildSnapshotJob</text>
+<rect x="806" y="543" width="58" height="16" rx="8" class="qbg"/>
+<text x="835" y="555" class="q mono" text-anchor="middle">reports</text>
+<text x="606" y="574" class="job mono" >ReportMailJob</text>
+<rect x="806" y="562" width="58" height="16" rx="8" class="qbg"/>
+<text x="835" y="574" class="q mono" text-anchor="middle">default</text>
+</g>
+<g data-box="mod2">
+<rect x="234" y="628" width="340" height="100" rx="10" class="card"/>
+<g><circle cx="257" cy="645" r="9" class="badge"/><text x="257" y="649" text-anchor="middle" class="badget">3</text></g>
+<text x="274" y="650" class="title" >Catalog</text>
+<text x="248" y="669" class="cls mono" >Catalog::Ingest, FeedFetcher</text>
+<text x="248" y="688" class="desc" >Shows come from Podcast Index, Apple charts and</text>
+<text x="248" y="704.5" class="desc" >the paced Qloo seed. Each feed is read and its</text>
+<text x="248" y="721" class="desc" >new episodes saved and queued for a sponsor scan</text>
+<g data-guard="1">
+<rect x="469" y="636" width="95" height="20" rx="10" class="gfill"/>
+<path d="M480 640.5 L484.5 642.4 V646.4 C484.5 649.2 482.4 650.9 480 651.8 C477.6 650.9 475.5 649.2 475.5 646.4 V642.4 Z" class="gicon"/>
+<text x="489" y="650" class="gtext" >SSRF guard</text>
+</g>
+</g>
+<g data-box="job2">
+<rect x="594" y="628" width="280" height="100" rx="10" class="card"/>
+<g><circle cx="611" cy="646" r="4.6" class="clock"/><path d="M611 643.4 V646 H613.2" class="clock"/></g>
+<text x="621" y="650" class="job mono" >Catalog::RefreshDueJob</text>
+<rect x="806" y="638" width="58" height="16" rx="8" class="qbg"/>
+<text x="835" y="650" class="q mono" text-anchor="middle">catalog</text>
+<text x="606" y="669" class="job mono" >Catalog::IngestPodcastJob</text>
+<rect x="806" y="657" width="58" height="16" rx="8" class="qbg"/>
+<text x="835" y="669" class="q mono" text-anchor="middle">catalog</text>
+<text x="606" y="688" class="job mono" >Catalog::SeedStepJob</text>
+<rect x="806" y="676" width="58" height="16" rx="8" class="qbg"/>
+<text x="835" y="688" class="q mono" text-anchor="middle">catalog</text>
+<text x="606" y="707" class="job mono" >Catalog::ArtworkJob</text>
+<rect x="806" y="695" width="58" height="16" rx="8" class="qbg"/>
+<text x="835" y="707" class="q mono" text-anchor="middle">artwork</text>
+</g>
+<g data-box="mod3">
+<rect x="234" y="738" width="340" height="84" rx="10" class="card"/>
+<g><circle cx="257" cy="755" r="9" class="badge"/><text x="257" y="759" text-anchor="middle" class="badget">3</text></g>
+<text x="274" y="760" class="title" >Sponsor detection</text>
+<text x="248" y="779" class="cls mono" >Sponsors::Scan, LlmCheck</text>
+<text x="248" y="798" class="desc" >An LLM reads new episodes’ notes, 10 a call; a</text>
+<text x="248" y="814.5" class="desc" >sponsor counts only when the notes name it</text>
+<g data-guard="1">
+<rect x="434" y="746" width="130" height="20" rx="10" class="gfill"/>
+<path d="M445 750.5 L449.5 752.4 V756.4 C449.5 759.2 447.4 760.9 445 761.8 C442.6 760.9 440.5 759.2 440.5 756.4 V752.4 Z" class="gicon"/>
+<text x="454" y="760" class="gtext" >LLM daily budget</text>
+</g>
+</g>
+<g data-box="job3">
+<rect x="594" y="738" width="280" height="84" rx="10" class="card"/>
+<text x="606" y="760" class="job mono" >Sponsors::ScanJob</text>
+<rect x="800" y="748" width="64" height="16" rx="8" class="qbg"/>
+<text x="832" y="760" class="q mono" text-anchor="middle">sponsors</text>
+<g><circle cx="611" cy="775" r="4.6" class="clock"/><path d="M611 772.4 V775 H613.2" class="clock"/></g>
+<text x="621" y="779" class="job mono" >Sponsors::SweepJob</text>
+<rect x="800" y="767" width="64" height="16" rx="8" class="qbg"/>
+<text x="832" y="779" class="q mono" text-anchor="middle">sponsors</text>
+</g>
+<g data-box="mod4">
+<rect x="234" y="832" width="340" height="124" rx="10" class="card"/>
+<g><circle cx="257" cy="849" r="9" class="badge"/><text x="257" y="853" text-anchor="middle" class="badget">4</text></g>
+<text x="274" y="854" class="title" >Verified stats</text>
+<text x="248" y="873" class="cls mono" >Stats::PlatformFetch</text>
+<text x="248" y="892" class="desc" >Runs the Python helper with Midrolo’s own</text>
+<text x="248" y="908.5" class="desc" >session, checks the show is the owner’s, then</text>
+<text x="248" y="925" class="desc" >saves readings marked Verified</text>
+<g data-guard="1">
+<rect x="439" y="840" width="125" height="20" rx="10" class="gfill"/>
+<path d="M450 844.5 L454.5 846.4 V850.4 C454.5 853.2 452.4 854.9 450 855.8 C447.6 854.9 445.5 853.2 445.5 850.4 V846.4 Z" class="gicon"/>
+<text x="459" y="854" class="gtext" >secrets on stdin</text>
+</g>
+</g>
+<g data-box="job4">
+<rect x="594" y="832" width="280" height="124" rx="10" class="card"/>
+<g><circle cx="611" cy="850" r="4.6" class="clock"/><path d="M611 847.4 V850 H613.2" class="clock"/></g>
+<text x="621" y="854" class="job mono" >Stats::SyncDueJob</text>
+<rect x="819" y="842" width="45" height="16" rx="8" class="qbg"/>
+<text x="841.5" y="854" class="q mono" text-anchor="middle">stats</text>
+<text x="606" y="873" class="job mono" >Stats::SyncJob, AudienceJob</text>
+<rect x="819" y="861" width="45" height="16" rx="8" class="qbg"/>
+<text x="841.5" y="873" class="q mono" text-anchor="middle">stats</text>
+<g><circle cx="611" cy="888" r="4.6" class="clock"/><path d="M611 885.4 V888 H613.2" class="clock"/></g>
+<text x="621" y="892" class="job mono" >Stats::ExpireReadingsJob</text>
+<rect x="819" y="880" width="45" height="16" rx="8" class="qbg"/>
+<text x="841.5" y="892" class="q mono" text-anchor="middle">stats</text>
+<rect x="604" y="906" width="260" height="40" rx="8" class="band"/>
+<text x="614" y="923" class="job mono" style="font-weight:700">bin/platform-stats</text>
+<text x="614" y="939" class="small" >Python 3.11, Open Podcast connectors</text>
+</g>
+<g data-box="mod5">
+<rect x="234" y="966" width="340" height="68" rx="10" class="card"/>
+<text x="248" y="988" class="title" >Claims and verification</text>
+<text x="248" y="1007" class="cls mono" >Claims::Start, ShowVerification</text>
+<text x="248" y="1026" class="desc" >Google email, an emailed code, or a feed token</text>
+</g>
+<g data-box="job5">
+<rect x="594" y="966" width="280" height="68" rx="10" class="card"/>
+<text x="606" y="988" class="job mono" >Verifications::WatchFeedJob</text>
+<rect x="806" y="976" width="58" height="16" rx="8" class="qbg"/>
+<text x="835" y="988" class="q mono" text-anchor="middle">default</text>
+</g>
+<g data-box="mod6">
+<rect x="234" y="1044" width="340" height="68" rx="10" class="card"/>
+<text x="248" y="1066" class="title" >Inbox</text>
+<text x="248" y="1085" class="cls mono" >Conversations</text>
+<text x="248" y="1104" class="desc" >Request a spot; accept, decline, block, report</text>
+</g>
+<g data-box="job6">
+<rect x="594" y="1044" width="280" height="68" rx="10" class="card"/>
+<text x="606" y="1066" class="job mono" >ActionMailer deliveries</text>
+<rect x="806" y="1054" width="58" height="16" rx="8" class="qbg"/>
+<text x="835" y="1066" class="q mono" text-anchor="middle">default</text>
+</g>
+<g data-box="mod7">
+<rect x="234" y="1122" width="340" height="68" rx="10" class="card"/>
+<text x="248" y="1144" class="title" >Billing</text>
+<text x="248" y="1163" class="cls mono" >Billing::Provider, Dodo adapter</text>
+<text x="248" y="1182" class="desc" >Waitlist mode until live; a Fake twin for dev</text>
+</g>
+<g data-box="job7">
+<rect x="594" y="1122" width="280" height="68" rx="10" class="card"/>
+<text x="606" y="1144" class="job mono" >ProcessBillingEventJob</text>
+<rect x="806" y="1132" width="58" height="16" rx="8" class="qbg"/>
+<text x="835" y="1144" class="q mono" text-anchor="middle">default</text>
+</g>
+<g data-box="mod8">
+<rect x="234" y="1200" width="340" height="68" rx="10" class="card"/>
+<text x="248" y="1222" class="title" >Admin</text>
+<text x="248" y="1241" class="cls mono" >/admin</text>
+<text x="248" y="1260" class="desc" >Caps and settings, run pauses, stats sessions</text>
+</g>
+<g data-box="job8">
+<rect x="594" y="1200" width="280" height="68" rx="10" class="card"/>
+<text x="606" y="1222" class="small t3" >Its caps and pauses gate the jobs above</text>
+</g>
+<g data-box="qloo">
+<rect x="1002" y="410" width="194" height="202" rx="10" class="qloo"/>
+<text x="1014" y="432" class="title" style="font-size:17px">Qloo API</text>
+<text x="1014" y="451" class="desc" >The taste graph</text>
+<text x="1014" y="467.5" class="cls mono" >/search</text>
+<text x="1014" y="484" class="cls mono" >/v2/tags</text>
+<text x="1014" y="500.5" class="cls mono" >/v2/insights</text>
+<text x="1014" y="517" class="small" >brands, podcasts, tags,</text>
+<text x="1014" y="533.5" class="small" >demographics, heatmap</text>
+<text x="1014" y="550" class="small t3" >Never called on a page view</text>
+</g>
+<path d="M896 511 H1000" class="arrow" marker-end="url(#ah)"/>
+<g><circle cx="928" cy="497" r="9" class="badge"/><text x="928" y="501" text-anchor="middle" class="badget">1</text></g>
+<g><circle cx="949" cy="497" r="9" class="badge"/><text x="949" y="501" text-anchor="middle" class="badget">2</text></g>
+<g><circle cx="970" cy="497" r="9" class="badge"/><text x="970" y="501" text-anchor="middle" class="badget">3</text></g>
+<g data-guard="1">
+<rect x="905" y="517" width="88" height="20" rx="10" class="gfill"/>
+<path d="M916 521.5 L920.5 523.4 V527.4 C920.5 530.2 918.4 531.9 916 532.8 C913.6 531.9 911.5 530.2 911.5 527.4 V523.4 Z" class="gicon"/>
+<text x="925" y="531" class="gtext" >call guard</text>
+</g>
+<g data-box="podcastindex">
+<rect x="1002" y="626" width="194" height="68" rx="10" class="ext"/>
+<text x="1014" y="648" class="title-sm" >Podcast Index, Apple</text>
+<text x="1014" y="667" class="small" >Directory search, lookup</text>
+<text x="1014" y="683.5" class="small" >Apple Top Podcasts chart</text>
+</g>
+<path d="M896 660 H1000" class="arrow" marker-end="url(#ah)"/>
+<g><circle cx="949" cy="646" r="9" class="badge"/><text x="949" y="650" text-anchor="middle" class="badget">3</text></g>
+<g data-box="rss">
+<rect x="1002" y="702" width="194" height="56" rx="10" class="ext"/>
+<text x="1014" y="724" class="title-sm" >Podcast RSS feeds</text>
+<text x="1014" y="743" class="small" >Each show’s own feed</text>
+</g>
+<path d="M896 730 H1000" class="arrow" marker-end="url(#ah)"/>
+<g><circle cx="938.5" cy="716" r="9" class="badge"/><text x="938.5" y="720" text-anchor="middle" class="badget">2</text></g>
+<g><circle cx="959.5" cy="716" r="9" class="badge"/><text x="959.5" y="720" text-anchor="middle" class="badget">3</text></g>
+<g data-guard="1">
+<rect x="901.5" y="736" width="95" height="20" rx="10" class="gfill"/>
+<path d="M912.5 740.5 L917 742.4 V746.4 C917 749.2 914.9 750.9 912.5 751.8 C910.1 750.9 908 749.2 908 746.4 V742.4 Z" class="gicon"/>
+<text x="921.5" y="750" class="gtext" >SSRF guard</text>
+</g>
+<g data-box="openrouter">
+<rect x="1002" y="768" width="194" height="104" rx="10" class="ext"/>
+<text x="1014" y="790" class="title-sm" >OpenRouter</text>
+<text x="1014" y="809" class="small" >LLMs through RubyLLM</text>
+<text x="1014" y="825.5" class="small" >Agent: GLM 5.3</text>
+<text x="1014" y="842" class="small" >Sponsors: GLM 5.3 Flash</text>
+<text x="1014" y="858.5" class="small" >Briefs: DeepSeek V4.1 Flash</text>
+</g>
+<path d="M896 820 H1000" class="arrow" marker-end="url(#ah)"/>
+<g><circle cx="928" cy="806" r="9" class="badge"/><text x="928" y="810" text-anchor="middle" class="badget">1</text></g>
+<g><circle cx="949" cy="806" r="9" class="badge"/><text x="949" y="810" text-anchor="middle" class="badget">2</text></g>
+<g><circle cx="970" cy="806" r="9" class="badge"/><text x="970" y="810" text-anchor="middle" class="badget">3</text></g>
+<g data-guard="1">
+<rect x="899" y="826" width="100" height="20" rx="10" class="gfill"/>
+<path d="M910 830.5 L914.5 832.4 V836.4 C914.5 839.2 912.4 840.9 910 841.8 C907.6 840.9 905.5 839.2 905.5 836.4 V832.4 Z" class="gicon"/>
+<text x="919" y="840" class="gtext" >daily budget</text>
+</g>
+<g data-box="platforms">
+<rect x="1002" y="886" width="194" height="80" rx="10" class="ext"/>
+<text x="1014" y="908" class="title-sm" >Spotify for Creators</text>
+<text x="1014" y="927" class="title-sm" >Apple Podcasts Connect</text>
+<text x="1014" y="943.5" class="small" >Our accounts, invited by shows</text>
+</g>
+<path d="M896 926 H1000" class="arrow" marker-end="url(#ah)"/>
+<g><circle cx="949" cy="912" r="9" class="badge"/><text x="949" y="916" text-anchor="middle" class="badget">4</text></g>
+<g data-guard="1">
+<rect x="911.5" y="932" width="75" height="20" rx="10" class="gfill"/>
+<path d="M922.5 936.5 L927 938.4 V942.4 C927 945.2 924.9 946.9 922.5 947.8 C920.1 946.9 918 945.2 918 942.4 V938.4 Z" class="gicon"/>
+<text x="931.5" y="946" class="gtext" >throttle</text>
+</g>
+<g data-box="dodo">
+<rect x="1002" y="1128" width="194" height="56" rx="10" class="ext"/>
+<text x="1014" y="1150" class="title-sm" >Dodo Payments</text>
+<text x="1014" y="1169" class="small" >Checkout, webhooks</text>
+</g>
+<path d="M898 1156 H1000" class="arrow" marker-end="url(#ah)" marker-start="url(#ahs)"/>
+<text x="24" y="997" class="lane" >MAIL</text>
+<g data-box="resend">
+<rect x="24" y="1009" width="164" height="60" rx="10" class="ext"/>
+<text x="36" y="1031" class="title-sm" >Resend</text>
+<text x="36" y="1048" class="small" >Codes, requests,</text>
+<text x="36" y="1063" class="small" >report mail</text>
+</g>
+<path d="M220 1039 H190" class="arrow" marker-end="url(#ah)"/>
+<path d="M64 1069 V1091" class="arrow" marker-end="url(#ah)"/>
+<g data-box="email">
+<rect x="24" y="1093" width="164" height="46" rx="10" class="client"/>
+<text x="36" y="1114" class="title-sm" >Email inbox</text>
+<text x="36" y="1130" class="small" >Owners and brands</text>
+</g>
+<text x="24" y="372" class="lane" >FLOWS</text>
+<g><circle cx="33" cy="390" r="9" class="badge"/><text x="33" y="394" text-anchor="middle" class="badget">1</text></g>
+<text x="50" y="394" class="title-sm" style="font-size:13px">Brand search</text>
+<text x="50" y="411" class="small" >A brand in, shows its</text>
+<text x="50" y="426" class="small" >customers love out</text>
+<g><circle cx="33" cy="454" r="9" class="badge"/><text x="33" y="458" text-anchor="middle" class="badget">2</text></g>
+<text x="50" y="458" class="title-sm" style="font-size:13px">Sponsor report</text>
+<text x="50" y="475" class="small" >A show in, brands</text>
+<text x="50" y="490" class="small" >ranked by fit out</text>
+<g><circle cx="33" cy="518" r="9" class="badge"/><text x="33" y="522" text-anchor="middle" class="badget">3</text></g>
+<text x="50" y="522" class="title-sm" style="font-size:13px">Catalog</text>
+<text x="50" y="539" class="small" >Feeds in, sponsor</text>
+<text x="50" y="554" class="small" >history out</text>
+<g><circle cx="33" cy="582" r="9" class="badge"/><text x="33" y="586" text-anchor="middle" class="badget">4</text></g>
+<text x="50" y="586" class="title-sm" style="font-size:13px">Verified stats</text>
+<text x="50" y="603" class="small" >Spotify and Apple</text>
+<text x="50" y="618" class="small" >numbers, read daily</text>
+<text x="24" y="658" class="lane" >KEY</text>
+<path d="M24 676 H54" class="arrow" marker-end="url(#ah)"/>
+<text x="64" y="680" class="small" >call or request</text>
+<rect x="24" y="691" width="30" height="18" rx="5" class="ext"/>
+<text x="64" y="704" class="small" >outside service</text>
+<g data-guard="1">
+<rect x="24" y="715" width="30" height="18" rx="9" class="gfill"/>
+<path d="M39 718.5 L43.5 720.4 V724.4 C43.5 727.2 41.4 728.9 39 729.8 C36.6 728.9 34.5 727.2 34.5 724.4 V720.4 Z" class="gicon"/>
+</g>
+<text x="64" y="728" class="small" >guardrail</text>
+<g><circle cx="39" cy="748" r="4.6" class="clock"/><path d="M39 745.4 V748 H41.2" class="clock"/></g>
+<text x="64" y="752" class="small" >recurring job</text>
+<text x="64" y="767" class="small mono" style="font-size:10.5px">config/recurring.yml</text>
+<text x="24" y="1344" class="lane" >DATA</text>
+<path d="M384 1282 V1320" class="arrow" marker-end="url(#ah)"/>
+<text x="392" y="1306" class="alabel" >Active Record</text>
+<g data-box="postgres">
+<rect x="220" y="1322" width="484" height="112" rx="12" class="db"/>
+<text x="234" y="1346" class="title" >PostgreSQL</text>
+<text x="324" y="1346" class="small" >midrolo-db, four databases</text>
+<g data-guard="1">
+<rect x="510" y="1331" width="182" height="20" rx="10" class="gfill"/>
+<path d="M521 1335.5 L525.5 1337.4 V1341.4 C525.5 1344.2 523.4 1345.9 521 1346.8 C518.6 1345.9 516.5 1344.2 516.5 1341.4 V1337.4 Z" class="gicon"/>
+<text x="530" y="1345" class="gtext" >shared Qloo cache, 7 days</text>
+</g>
+<g data-box="db-app">
+<rect x="234" y="1360" width="108" height="62" rx="8" class="dbchip"/>
+<text x="244" y="1378" class="title-sm mono" style="font-size:12.5px">app</text>
+<text x="244" y="1394" class="small" >catalog, reports</text>
+<text x="244" y="1408.5" class="small" >sponsors, stats</text>
+</g>
+<g data-box="db-queue">
+<rect x="350" y="1360" width="108" height="62" rx="8" class="dbchip"/>
+<text x="360" y="1378" class="title-sm mono" style="font-size:12.5px">queue</text>
+<text x="360" y="1394" class="small" >Solid Queue:</text>
+<text x="360" y="1408.5" class="small" >jobs, schedules</text>
+</g>
+<g data-box="db-cache">
+<rect x="466" y="1360" width="108" height="62" rx="8" class="dbchip"/>
+<text x="476" y="1378" class="title-sm mono" style="font-size:12.5px">cache</text>
+<text x="476" y="1394" class="small" >Solid Cache:</text>
+<text x="476" y="1408.5" class="small" >Qloo answers</text>
+</g>
+<g data-box="db-cable">
+<rect x="582" y="1360" width="108" height="62" rx="8" class="dbchip"/>
+<text x="592" y="1378" class="title-sm mono" style="font-size:12.5px">cable</text>
+<text x="592" y="1394" class="small" >Solid Cable:</text>
+<text x="592" y="1408.5" class="small" >Turbo Streams</text>
+</g>
+</g>
+<path d="M808 1282 V1320" class="arrow" marker-end="url(#ah)"/>
+<text x="816" y="1306" class="alabel" >Active Storage</text>
+<g data-box="r2">
+<rect x="718" y="1322" width="178" height="112" rx="12" class="db"/>
+<text x="732" y="1346" class="title" >Cloudflare R2</text>
+<text x="732" y="1366" class="small" >Uploads bucket: artwork,</text>
+<text x="732" y="1381" class="small" >kit photos, stats evidence</text>
+<text x="732" y="1402" class="small" >Backups bucket:</text>
+<text x="732" y="1417" class="small" >database dumps</text>
+</g>
+</svg>
