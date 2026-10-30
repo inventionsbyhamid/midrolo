@@ -401,7 +401,7 @@ RSpec.describe "Public pages" do
   end
 
   describe "footer" do
-    it "credits Podcast Index and links Privacy, Terms and Contact" do
+    it "credits Podcast Index and links Privacy, Terms, Contact and the source code" do
       get "/"
 
       footer = page.at_css("footer")
@@ -409,6 +409,7 @@ RSpec.describe "Public pages" do
       expect(footer.at_xpath(".//a[normalize-space()='Privacy']")["href"]).to eq("/privacy")
       expect(footer.at_xpath(".//a[normalize-space()='Terms']")["href"]).to eq("/terms")
       expect(footer.at_xpath(".//a[normalize-space()='Contact']")["href"]).to eq("mailto:hello@midrolo.com")
+      expect(footer.at_xpath(".//a[normalize-space()='Source code']")["href"]).to eq("https://github.com/inventionsbyhamid/midrolo")
       expect(footer.text).to include("Built for the Qloo Agentic Hackathon", "Where independent podcasts get sponsored.")
       links = footer.css("nav[aria-label='Footer'] a").to_h { |link| [ link.text.squish, link["href"] ] }
       expect(links).to include("Podcasts" => "/podcasts", "For brands" => "/#for-brands", "Sample reports" => "/samples",
