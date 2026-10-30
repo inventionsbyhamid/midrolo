@@ -1,0 +1,50 @@
+{
+  "feed": {
+    "author": { "name": { "label": "iTunes Store" }, "uri": { "label": "http://www.apple.com/itunes/" } },
+    "entry": [
+      {
+        "im:name": { "label": "Already Here Weekly" },
+        "im:image": [ { "label": "https://img.example.com/already-here/170x170bb.png", "attributes": { "height": "170" } } ],
+        "summary": { "label": "Hand-written fixture (charts lane): a show the catalog holds already. Not real data." },
+        "im:price": { "label": "Get", "attributes": { "amount": "0", "currency": "USD" } },
+        "im:contentType": { "attributes": { "term": "Podcast", "label": "Podcast" } },
+        "title": { "label": "Already Here Weekly - Pat Example" },
+        "link": { "attributes": { "rel": "alternate", "type": "text/html", "href": "https://podcasts.apple.com/us/podcast/already-here-weekly/id1500000001?uo=2" } },
+        "id": { "label": "https://podcasts.apple.com/us/podcast/already-here-weekly/id1500000001?uo=2", "attributes": { "im:id": "1500000001" } },
+        "im:artist": { "label": "Pat Example" },
+        "category": { "attributes": { "im:id": "1321", "term": "Business", "label": "Business" } },
+        "im:releaseDate": { "label": "2026-10-28T03:00:00-07:00", "attributes": { "label": "October 28, 2026" } }
+      },
+      {
+        "im:name": { "label": "Bootstrapped Brains" },
+        "im:image": [ { "label": "https://img.example.com/bootstrapped/170x170bb.png", "attributes": { "height": "170" } } ],
+        "summary": { "label": "Hand-written fixture (charts lane): a show the directory knows by its Apple id." },
+        "im:price": { "label": "Get", "attributes": { "amount": "0", "currency": "USD" } },
+        "im:contentType": { "attributes": { "term": "Podcast", "label": "Podcast" } },
+        "title": { "label": "Bootstrapped Brains - Lena Fischer" },
+        "link": { "attributes": { "rel": "alternate", "type": "text/html", "href": "https://podcasts.apple.com/us/podcast/bootstrapped-brains/id1000000005?uo=2" } },
+        "id": { "label": "https://podcasts.apple.com/us/podcast/bootstrapped-brains/id1000000005?uo=2", "attributes": { "im:id": "1000000005" } },
+        "im:artist": { "label": "Lena Fischer" },
+        "category": { "attributes": { "im:id": "1321", "term": "Business", "label": "Business" } },
+        "im:releaseDate": { "label": "2026-10-27T03:00:00-07:00", "attributes": { "label": "October 27, 2026" } }
+      },
+      {
+        "im:name": { "label": "The Tidepool Hour" },
+        "im:image": [ { "label": "https://img.example.com/tidepool/170x170bb.png", "attributes": { "height": "170" } } ],
+        "summary": { "label": "Hand-written fixture (charts lane): a show only Apple's lookup knows." },
+        "im:price": { "label": "Get", "attributes": { "amount": "0", "currency": "USD" } },
+        "im:contentType": { "attributes": { "term": "Podcast", "label": "Podcast" } },
+        "title": { "label": "The Tidepool Hour - Marina Reyes" },
+        "link": { "attributes": { "rel": "alternate", "type": "text/html", "href": "https://podcasts.apple.com/us/podcast/the-tidepool-hour/id1500000003?uo=2" } },
+        "id": { "label": "https://podcasts.apple.com/us/podcast/the-tidepool-hour/id1500000003?uo=2", "attributes": { "im:id": "1500000003" } },
+        "im:artist": { "label": "Marina Reyes" },
+        "category": { "attributes": { "im:id": "1533", "term": "Science", "label": "Science" } },
+        "im:releaseDate": { "label": "2026-10-26T03:00:00-07:00", "attributes": { "label": "October 26, 2026" } }
+      }
+    ],
+    "updated": { "label": "2026-10-30T06:00:00-07:00" },
+    "rights": { "label": "Hand-written fixture" },
+    "title": { "label": "iTunes Store: Top Podcasts" },
+    "id": { "label": "https://itunes.apple.com/us/rss/toppodcasts/limit=3/json" }
+  }
+}

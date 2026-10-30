@@ -41,6 +41,21 @@ namespace :catalog do
     puts(Catalog::SeedProgress.stop! ? "catalog:seed_stop: stopped" : "catalog:seed_stop: no paced seed is running")
   end
 
+  desc "Add popular shows from Apple's Top Podcasts chart (no Qloo calls): catalog:seed_charts[us,200,genre_id]"
+  task :seed_charts, [ :country, :limit, :genre ] => :environment do |_task, args|
+    country = (args[:country].presence || Catalog::SeedFromCharts::DEFAULT_COUNTRY).downcase
+    limit = Integer((args[:limit].presence || Catalog::SeedFromCharts::DEFAULT_LIMIT).to_s, 10, exception: false)
+    genre = args[:genre].presence unless args[:genre].to_s.casecmp?("all")
+
+    result = Catalog::SeedFromCharts.call(country: country, limit: limit, genre: genre,
+                                          log: ->(line) { puts "catalog:seed_charts: #{line}" })
+    puts "catalog:seed_charts: #{country} top #{limit} (#{genre ? "genre #{genre}" : 'all genres'}): " \
+         "#{result.charted} charted, #{result.added} added, #{result.existing} already in the catalog, " \
+         "#{result.skipped} skipped (removed or suppressed), #{result.failed} failed"
+  rescue ArgumentError, Catalog::AppleChart::Unavailable => e
+    abort "catalog:seed_charts: #{e.message}"
+  end
+
   desc "Queue feed reads: every podcast never read yet (low priority), then those due (as the 10 minute loop does)"
   task refresh: :environment do
     never = Podcast.where(next_fetch_at: nil).where.not(status: "removed")
