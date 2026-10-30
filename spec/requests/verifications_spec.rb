@@ -238,7 +238,8 @@ RSpec.describe "Verifications" do
         expect(Verifications::WatchFeedJob).not_to have_been_enqueued
         expect(response).to redirect_to(edit_show_media_kit_path(show))
         expect(flash[:notice]).to eq(
-          "The Founder's Ledger is verified. You can remove the midrolo-verify line from your show description now."
+          "The Founder's Ledger is verified. You can remove the midrolo-verify line from your show description now. " \
+          "Set up your listing and publish it when it's ready."
         )
         get new_show_verification_path(show)
         expect(response.body).to include("You can remove the midrolo-verify line from your show description now.")

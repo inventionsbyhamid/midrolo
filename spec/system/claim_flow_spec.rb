@@ -36,7 +36,7 @@ RSpec.describe "Claiming a show" do
     stub_claim_feed(podcast.feed_url, description: "A show about money. #{token}")
     click_button "Check my feed"
 
-    expect(page).to have_text("The Founder's Ledger is verified. You can remove the midrolo-verify line from your show description now.")
+    expect(page).to have_text("The Founder's Ledger is verified. You can remove the midrolo-verify line from your show description now. Set up your listing and publish it when it's ready.")
     expect(page).to have_css("h1", text: "Your listing")
     check "Open to sponsors"
     month = Podcast.listing_months.second

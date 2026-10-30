@@ -98,7 +98,8 @@ class VerificationsController < ApplicationController
   def verified_message(verification)
     return VERIFIED if verification.email?
 
-    "#{@show.title} is verified. You can remove the midrolo-verify line from your show description now."
+    "#{@show.title} is verified. You can remove the midrolo-verify line from your show description now. " \
+      "Set up your listing and publish it when it's ready."
   end
 
   # A feed that didn't have the token, or couldn't be read, is being watched (ShowVerification#watch!).
