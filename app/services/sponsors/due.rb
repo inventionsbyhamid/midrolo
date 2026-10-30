@@ -17,9 +17,13 @@ module Sponsors
 
     module_function
 
-    # The episodes in scope (every episode by default) that are due: not checked yet and inside the window (days).
+    # The episodes in scope (every episode by default) that are due: not checked yet and published inside the window
+    # (days), never after now (a scheduled episode waits until it is out; review L1). A window of 0 holds none.
     def episodes(scope = Episode.all, days: window_days)
-      scope = scope.where(published_at: days.days.ago..)
+      return scope.none unless days.to_i.positive?
+
+      now = Time.current
+      scope = scope.where(published_at: (now - days.to_i.days)..now)
       Llm.fake? ? scope.where(sponsor_scanned_at: nil) : scope.where(sponsor_ai_checked_at: nil)
     end
 

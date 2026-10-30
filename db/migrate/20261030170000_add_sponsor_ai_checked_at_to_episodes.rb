@@ -13,6 +13,8 @@ class AddSponsorAiCheckedAtToEpisodes < ActiveRecord::Migration[8.1]
   SQL
 
   def up
+    # Give up rather than queue every episode read behind a long-held lock (review L4); deploy again if it times out.
+    execute "SET LOCAL lock_timeout = '5s'"
     add_column :episodes, :sponsor_ai_checked_at, :datetime
     execute BACKFILL
     add_index :episodes, %i[podcast_id published_at], order: { published_at: :desc }, where: "sponsor_ai_checked_at IS NULL",

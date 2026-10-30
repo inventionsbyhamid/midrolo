@@ -23,23 +23,25 @@ RSpec.describe "rake sponsors" do
   end
 
   describe "sponsors:scan_unscanned" do
-    it "queues every active podcast with episodes due, the newest first, and never clears a scanned episode" do
+    it "queues every active podcast with episodes the model never checked, the newest first, and never a checked one" do
+      allow(Llm).to receive(:mode).and_return(:live)
       older = active_episode.podcast
       newer = active_episode.podcast
-      scanned = active_episode(sponsor_scanned_at: 1.day.ago)
+      checked = active_episode(sponsor_scanned_at: 1.day.ago, sponsor_ai_checked_at: 1.day.ago)
       outside = active_episode(published_at: 60.days.ago)
       dormant = create(:episode, podcast: create(:podcast, status: "dormant")).podcast
       failed = create(:episode, podcast: create(:podcast, status: "failed")).podcast
+      patterned = active_episode(sponsor_scanned_at: 1.day.ago)
 
       already = ActiveJob::Base.queue_adapter.enqueued_jobs.size
       expect { Rake::Task["sponsors:scan_unscanned"].invoke }
-        .to output(/Queued sponsor scans for 2 podcasts \(episodes from the last 30 days, at most 10 per podcast a run\)\n/).to_stdout
+        .to output(/Queued sponsor scans for 3 podcasts \(episodes from the last 30 days, at most 10 per podcast a run\)\n/).to_stdout
 
       queued = ActiveJob::Base.queue_adapter.enqueued_jobs.drop(already).select { |job| job["job_class"] == "Sponsors::ScanJob" }
-      expect(queued.map { |job| job["arguments"].first }).to eq([ newer.id, older.id ])
-      expect(queued.map { |job| job["arguments"].first }).not_to include(scanned.podcast_id, outside.podcast_id, dormant.id, failed.id)
-      expect(scanned.reload.sponsor_scanned_at).to be_present
-      expect(outside.reload.sponsor_scanned_at).to be_nil
+      expect(queued.map { |job| job["arguments"].first }).to eq([ patterned.podcast_id, newer.id, older.id ])
+      expect(queued.first["arguments"].second).to eq([ patterned.id ])
+      expect(queued.map { |job| job["arguments"].first }).not_to include(checked.podcast_id, outside.podcast_id, dormant.id, failed.id)
+      expect(checked.reload.sponsor_ai_checked_at).to be_present
     end
 
     it "says why nothing was queued while the catalog budget can't pay for a call" do

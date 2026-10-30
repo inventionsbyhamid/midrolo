@@ -26,7 +26,8 @@ RSpec.describe AddSponsorAiCheckedAtToEpisodes do
 
     expect(checked.reload.sponsor_ai_checked_at).to be_within(1.second).of(checked.sponsor_scanned_at)
     expect([ patterned, plain, waiting ].map { |episode| episode.reload.sponsor_ai_checked_at }).to all(be_nil)
-    expect(ActiveRecord::Base.connection.index_exists?(:episodes, %i[podcast_id published_at],
-                                                       name: "index_episodes_ai_unchecked_on_podcast_id_and_published_at")).to be(true)
+    index = ActiveRecord::Base.connection.indexes(:episodes).find { |i| i.name == "index_episodes_ai_unchecked_on_podcast_id_and_published_at" }
+    expect(index).to have_attributes(columns: %w[podcast_id published_at], where: "(sponsor_ai_checked_at IS NULL)",
+                                     orders: { "published_at" => :desc })
   end
 end
