@@ -1,0 +1,14 @@
+<%# locals: (video:) -%>
+<%# How Midrolo works: the narrated tour, right after the hero, once an admin sets its YouTube video (AppSettings
+    explainer_video_id; the page leaves this out while it's blank). Nothing loads from YouTube until the visitor
+    presses play (components/_youtube). %>
+<section id="how-it-works" class="page-section" aria-labelledby="how-it-works-title">
+  <div class="wrap explainer">
+    <div>
+      <h2 id="how-it-works-title" class="type-h2">How Midrolo works</h2>
+      <p class="section-lead">A 2 minute tour for brands and podcasters.</p>
+    </div>
+    <%= render "components/youtube", video: video, title: "How Midrolo works", label: "Watch how it works",
+                                     duration: "2 min" %>
+  </div>
+</section>

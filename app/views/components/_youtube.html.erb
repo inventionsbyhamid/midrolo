@@ -1,0 +1,25 @@
+<%# locals: (video:, title:, label:, duration:) -%>
+<%#
+  The markup contract for youtube_controller: a YouTube video (YoutubeVideo) in a 16:9 box that loads nothing from
+  YouTube until it's played. The poster is drawn here, so not even a thumbnail comes from YouTube, on a link to the
+  video's page on YouTube, which is what a visitor without JavaScript gets. The controller turns the link into a play
+  button; pressing it swaps in YouTube's privacy-enhanced player (youtube-nocookie.com, which the policy's frame-src
+  allows), playing, under title. label and duration are the poster's caption ("Watch how it works", "2 min").
+%>
+<%= tag.div class: "video", data: { controller: "youtube", youtube_src_value: video.embed_url, youtube_title_value: title,
+                                    youtube_label_value: "#{label}, #{duration} video" } do %>
+  <%= link_to video.watch_url, class: "video-play", aria: { label: "#{label} on YouTube, #{duration} video" },
+                               data: { youtube_target: "play" } do %>
+    <span class="video-poster" aria-hidden="true">
+      <%= image_tag "brand/logo-dark.svg", alt: "", class: "video-poster-logo" %>
+      <%= episode_waveform %>
+    </span>
+    <span class="video-play-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M8.5 5.6v12.8a.8.8 0 0 0 1.2.7l10.1-6.4a.8.8 0 0 0 0-1.4L9.7 4.9a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
+    </span>
+    <span class="video-caption">
+      <span class="video-label"><%= label %></span>
+      <span class="video-duration"><%= duration %></span>
+    </span>
+  <% end %>
+<% end %>

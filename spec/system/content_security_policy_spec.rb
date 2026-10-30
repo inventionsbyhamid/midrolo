@@ -46,6 +46,8 @@ RSpec.describe "Content Security Policy", :network do
     page.document.synchronize { @blocked.any? { |text| text.include?(src) } || raise(Capybara::ExpectationNotMet, "#{src} not blocked") }
   end
 
+  def add_frame(src) = execute_script(%(document.body.append(Object.assign(document.createElement("iframe"), { src: #{src.to_json} }))))
+
   # The policy refuses these before any request goes out.
   it "notices a blocked script, so a quiet console means something, and blocks jsDelivr outside MapLibre's folder" do
     visit "/"
@@ -53,6 +55,20 @@ RSpec.describe "Content Security Policy", :network do
     expect_blocked("https://example.com/x.js")
     add_script("https://cdn.jsdelivr.net/npm/left-pad@1.3.0/index.js")
     expect_blocked("https://cdn.jsdelivr.net/npm/left-pad@1.3.0/index.js")
+  end
+
+  # The home page's video plays in YouTube's privacy-enhanced player, which frame-src names. Chrome words a refused
+  # frame "Refused to frame '<url>'" or, lately, "Framing '<url>' violates"; a frame from elsewhere shows it's heard.
+  it "lets the home page's video play from youtube-nocookie.com, and refuses a frame from anywhere else" do
+    AppSettings.set(:explainer_video_id, "M1droloTour")
+    visit "/"
+    add_frame("https://example.com/")
+    expect_blocked("https://example.com/")
+
+    find("#how-it-works button.video-play").click
+    expect(page).to have_css("#how-it-works iframe[src^='https://www.youtube-nocookie.com/embed/M1droloTour']")
+    sleep 2 # the player's page loads
+    expect(@blocked.grep(%r{(?:Refused to frame|Framing) 'https://www\.youtube-nocookie\.com})).to be_empty, @blocked.join("\n")
   end
 
   # The page's menu button works: Stimulus has connected its dialog controller.

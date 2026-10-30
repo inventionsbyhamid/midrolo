@@ -34,9 +34,10 @@ RSpec.describe "Landing and public pages" do
     page.save_screenshot(dir.join("#{name}-#{width}.png").to_s, full: true)
   end
 
-  # What the landing page shows once there's something real to show: the demo show's listing and shows from the
-  # directory, so the layout checks cover them too.
+  # What the landing page shows once there's something real to show: the How Midrolo works video, the demo show's
+  # listing and shows from the directory, so the layout checks cover them too.
   def fill_the_marketplace
+    AppSettings.set(:explainer_video_id, "M1droloTour")
     create(:user, admin: true)
     Claims::DemoSetup.call
     [ "Index Fund Mornings", "The Founder's Ledger", "Cold Case Cafe" ].each_with_index do |title, i|
@@ -97,6 +98,28 @@ RSpec.describe "Landing and public pages" do
     end
     expect(page).to have_current_path(%r{\A/podcasts\?q=Cold})
     expect(page).to have_css(".dir-card", text: "Cold Case Cafe")
+  end
+
+  # Nothing comes from YouTube until play is pressed; then the privacy-enhanced player takes the poster's place, with
+  # focus. The player's own page isn't needed here, so the browser doesn't fetch it.
+  it "plays How Midrolo works from youtube-nocookie.com only once its play button is pressed" do
+    AppSettings.set(:explainer_video_id, "M1droloTour")
+    page.driver.browser.url_blacklist = [ %r{cdn\.jsdelivr\.net}, %r{\Ahttps://www\.youtube-nocookie\.com/} ]
+    visit "/"
+
+    play = find("#how-it-works button.video-play[aria-label='Watch how it works, 2 min video']") # the link, made a button
+    expect(page).to have_no_css("#how-it-works a.video-play")
+    expect(page).to have_no_css("#how-it-works iframe")
+    expect(page.driver.network_traffic.map(&:url).grep(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com})).to be_empty
+
+    play.click
+    frame = find("#how-it-works iframe.video-frame")
+    expect(frame[:src]).to eq("https://www.youtube-nocookie.com/embed/M1droloTour?autoplay=1&rel=0&modestbranding=1")
+    expect(frame[:title]).to eq("How Midrolo works")
+    expect(frame[:allow]).to eq("autoplay; encrypted-media; picture-in-picture")
+    expect(evaluate_script("document.querySelector('#how-it-works iframe').allowFullscreen")).to be(true)
+    expect(evaluate_script("document.activeElement.tagName")).to eq("IFRAME")
+    expect(page).to have_no_css("#how-it-works .video-play") # hidden under the player
   end
 
   it "has checks that catch what they look for" do

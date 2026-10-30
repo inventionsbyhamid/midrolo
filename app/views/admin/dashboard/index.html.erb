@@ -189,6 +189,12 @@
           <%= f.number_field :qloo_cost_per_call_usd, class: "input", min: 0, step: "any",
                 aria: { invalid: @settings.errors.include?(:qloo_cost_per_call_usd) } %>
         </div>
+        <div class="flex flex-col gap-1">
+          <%= f.label :explainer_video_id, "#{Admin::SettingsForm.human_attribute_name(:explainer_video_id)} (YouTube id or link, blank for none)",
+                class: "label" %>
+          <%= f.text_field :explainer_video_id, class: "input", spellcheck: false, autocomplete: "off",
+                aria: { invalid: @settings.errors.include?(:explainer_video_id) } %>
+        </div>
       </div>
       <%= f.submit "Save settings", class: "btn btn-primary btn-md self-start" %>
     <% end %>

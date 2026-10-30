@@ -1,9 +1,23 @@
 /*
- * The landing page's sections below the hero (app/views/pages/home), imported from application.css: the proof strip,
- * each side of the marketplace (brands, podcasters), the podcaster quotes, Creator Lab, the explore links and the
- * closing call to action (a headline and the two buttons). The hero is in hero.css; the pricing cards in pricing.css.
+ * The landing page's sections below the hero (app/views/pages/home), imported from application.css: How Midrolo works,
+ * the proof strip, each side of the marketplace (brands, podcasters), the podcaster quotes, Creator Lab, the explore
+ * links and the closing call to action (a headline and the two buttons). The hero is in hero.css; the pricing cards in
+ * pricing.css; the video's box is the components/_youtube styles in application.css.
  */
 @layer components {
+  /* ---------- How Midrolo works: the tour video, under its heading on a phone and beside it on a desktop ---------- */
+
+  .explainer {
+    display: grid;
+    gap: 1.5rem;
+
+    @media (width >= 64rem) {
+      grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+      gap: 3rem;
+      align-items: center;
+    }
+  }
+
   /* ---------- What podcasters say: the page's one dark band ---------- */
 
   .quotes {

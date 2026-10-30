@@ -21,6 +21,7 @@ class PagesController < ApplicationController
     @showcase_sponsors = SponsorMention.where(podcast_id: @showcase.map(&:id)).group(:podcast_id).distinct.count(:brand_id)
     @demo = Podcast.for_page.demo.where(status: Podcast::LISTED_STATUSES).first
     @catalog_facts = catalog_facts
+    @explainer = YoutubeVideo.explainer
   end
 
   def pricing; end

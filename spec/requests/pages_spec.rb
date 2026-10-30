@@ -148,6 +148,37 @@ RSpec.describe "Public pages" do
       expect(page.at_css("#hero a.hero-news").text.squish).to start_with("Audacy Creator Lab (formerly Podcorn) closed November 1.")
     end
 
+    it "leaves How Midrolo works out while its video isn't set, and names nothing from YouTube" do
+      get "/"
+
+      expect(page.at_css("#how-it-works")).to be_nil
+      expect(response.body).not_to match(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com})
+    end
+
+    it "shows How Midrolo works right after the hero once its video is set: a poster and play link, no player yet" do
+      AppSettings.set(:explainer_video_id, "M1droloTour")
+      get "/"
+
+      section = page.at_css("#hero + section#how-it-works")
+      expect(section.at_css("h2").text.squish).to eq("How Midrolo works")
+      expect(section.at_css(".section-lead").text.squish).to eq("A 2 minute tour for brands and podcasters.")
+      video = section.at_css(".video[data-controller='youtube']")
+      expect(video["data-youtube-src-value"]).to eq("https://www.youtube-nocookie.com/embed/M1droloTour?autoplay=1&rel=0&modestbranding=1")
+      expect(video["data-youtube-title-value"]).to eq("How Midrolo works")
+      expect(video["data-youtube-label-value"]).to eq("Watch how it works, 2 min video") # the play button's, once made
+
+      # The link to YouTube for a visitor without JavaScript, which youtube_controller makes the play button.
+      play = video.at_css("a.video-play[data-youtube-target='play']")
+      expect(play["href"]).to eq("https://www.youtube.com/watch?v=M1droloTour")
+      expect(play["aria-label"]).to eq("Watch how it works on YouTube, 2 min video")
+      expect(play.at_css(".video-poster[aria-hidden='true'] svg.waveform")).to be_present
+      expect(play.at_css(".video-caption").text.squish).to eq("Watch how it works 2 min")
+
+      expect(section.at_css("iframe")).to be_nil
+      loads = page.css("[src], link[href]").map { |node| node["src"] || node["href"] }
+      expect(loads.grep(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com})).to be_empty
+    end
+
     it "shows the proof strip with the product's own badges, and the catalog's counts once there's a directory" do
       get "/"
 
@@ -411,6 +442,14 @@ RSpec.describe "Public pages" do
       expect(text).to include("only ones that don't store or train on what we send")
       expect(text).to include("We don't sell your data")
       expect(text).to include("the map library from jsDelivr", "Cloudflare provides our DNS")
+    end
+
+    it "says the home page video loads YouTube only when played" do
+      get "/privacy"
+
+      expect(page.at_css("main").text.squish).to include("The home page video loads YouTube's privacy-enhanced player " \
+                                                         "only when you press play, and YouTube's privacy policy applies " \
+                                                         "from then on.")
     end
 
     it "names the plans as plans.yml does" do

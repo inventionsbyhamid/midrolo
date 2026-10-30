@@ -1,6 +1,7 @@
 <% content_for :meta, social_meta(description: "Midrolo is where independent podcasts get sponsored. Brands find shows their customers love with Qloo taste data, verified Spotify and Apple numbers and real sponsor history. Listing is free.") %>
 <% content_for :head, landing_json_ld %>
 <%= render "pages/home/hero", sample: @hero_sample, matches: @hero_matches %>
+<%= render "pages/home/explainer", video: @explainer if @explainer %>
 <%= render "pages/home/proof", facts: @catalog_facts %>
 <%= render "pages/home/for_brands", showcase: @showcase, sponsors: @showcase_sponsors %>
 <%= render "pages/home/for_podcasters", demo: @demo %>
