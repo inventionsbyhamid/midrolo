@@ -59,14 +59,22 @@ RSpec.describe "Content Security Policy", :network do
 
   # The home page's video plays in YouTube's privacy-enhanced player, which frame-src names. Chrome words a refused
   # frame "Refused to frame '<url>'" or, lately, "Framing '<url>' violates"; a frame from elsewhere shows it's heard.
+  # Pointing at the play button first adds preconnect hints for YouTube's hosts, which the policy leaves alone.
   it "lets the home page's video play from youtube-nocookie.com, and refuses a frame from anywhere else" do
     AppSettings.set(:explainer_video_id, "-UXzujILAoI")
     visit "/"
     add_frame("https://example.com/")
     expect_blocked("https://example.com/")
 
-    find("#how-it-works button.video-play").click
-    expect(page).to have_css("#how-it-works iframe[src^='https://www.youtube-nocookie.com/embed/-UXzujILAoI']")
+    play = find("#how-it-works button.video-play")
+    play.hover
+    expect(page).to have_css("link[rel='preconnect'][href='https://www.youtube-nocookie.com']", visible: :all)
+    sleep 1 # the connections open
+    hosts = %r{'https://(?:www\.youtube-nocookie\.com|www\.google\.com|i\.ytimg\.com|\w+\.(?:g\.)?doubleclick\.net)} # as Chrome quotes a refused URL
+    expect(@blocked.grep(hosts)).to be_empty, @blocked.join("\n")
+
+    play.click
+    expect(page).to have_css("dialog.video-dialog[open] iframe[src^='https://www.youtube-nocookie.com/embed/-UXzujILAoI']")
     sleep 2 # the player's page loads
     expect(@blocked.grep(%r{(?:Refused to frame|Framing) 'https://www\.youtube-nocookie\.com})).to be_empty, @blocked.join("\n")
   end

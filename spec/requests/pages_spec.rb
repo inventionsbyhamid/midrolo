@@ -156,14 +156,14 @@ RSpec.describe "Public pages" do
     end
 
     # The real video's id starts with a dash.
-    it "shows How Midrolo works right after the hero once its video is set: a poster and play link, no player yet" do
+    it "shows How Midrolo works right after the hero once its video is set: a poster, a play link and an empty dialog" do
       AppSettings.set(:explainer_video_id, "-UXzujILAoI")
       get "/"
 
       section = page.at_css("#hero + section#how-it-works")
       expect(section.at_css("h2").text.squish).to eq("How Midrolo works")
       expect(section.at_css(".section-lead").text.squish).to eq("A 2 minute tour for brands and podcasters.")
-      video = section.at_css(".video[data-controller='youtube']")
+      video = section.at_css(".video[data-controller='youtube dialog']")
       expect(video["data-youtube-src-value"]).to eq("https://www.youtube-nocookie.com/embed/-UXzujILAoI?autoplay=1&rel=0&playsinline=1")
       expect(video["data-youtube-title-value"]).to eq("How Midrolo works")
       expect(video["data-youtube-label-value"]).to eq("Watch how it works, 2 min video") # the play button's, once made
@@ -172,15 +172,33 @@ RSpec.describe "Public pages" do
       play = video.at_css("a.video-play[data-youtube-target='play']")
       expect(play["href"]).to eq("https://www.youtube.com/watch?v=-UXzujILAoI")
       expect(play["aria-label"]).to eq("Watch how it works on YouTube, 2 min video")
-      poster = play.at_css("img.video-poster") # the video's own title card, served from here
-      expect(poster["src"]).to match(%r{\A/assets/explainer/poster-\h+\.jpg\z})
-      expect(poster.to_h.slice("alt", "width", "height")).to eq("alt" => "", "width" => "1280", "height" => "720")
       expect(play.at_css(".video-caption").text.squish).to eq("Watch how it works 2 min")
 
-      expect(section.at_css("iframe")).to be_nil
-      loads = page.css("[src], link[href]").map { |node| node["src"] || node["href"] }
-      expect(loads.grep(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com})).to be_empty
+      # The video's own title card, served from here: WebP at 1x and 2x, and the same in JPG for browsers without it.
+      sizes = "(min-width: 64rem) min(44rem, 66vw), calc(100vw - 2rem)"
+      webp = play.at_css("picture > source[type='image/webp']")
+      expect(webp["srcset"]).to match(%r{\A/assets/explainer/poster-1280-\h+\.webp 1280w, /assets/explainer/poster-2560-\h+\.webp 2560w\z})
+      expect(webp["sizes"]).to eq(sizes)
+      poster = play.at_css("picture img.video-poster") # Nokogiri's HTML4 parser puts it inside the <source>
+      expect(poster["src"]).to match(%r{\A/assets/explainer/poster-1280-\h+\.jpg\z})
+      expect(poster["srcset"]).to match(%r{\A/assets/explainer/poster-1280-\h+\.jpg 1280w, /assets/explainer/poster-2560-\h+\.jpg 2560w\z})
+      expect(poster.to_h.slice("alt", "width", "height", "sizes", "loading", "decoding"))
+        .to eq("alt" => "", "width" => "1280", "height" => "720", "sizes" => sizes, "loading" => "lazy", "decoding" => "async")
+
+      # The dialog the player plays in: closed, named, with a close button, and no player until play is pressed.
+      dialog = video.at_css("dialog.video-dialog[data-dialog-target='dialog'][data-action='close->youtube#stop']")
+      expect(dialog["open"]).to be_nil
+      expect(dialog["aria-label"]).to eq("How Midrolo works")
+      expect(dialog.at_css("button[type='button'][data-action='dialog#close']")["aria-label"]).to eq("Close video")
+      expect(dialog.at_css(".video-dialog-frame[data-youtube-target='frame']").children).to be_empty
+
+      expect(page.at_css("iframe")).to be_nil
+      loads = page.css("[src], [srcset], link[href]").map { |node| node["src"] || node["srcset"] || node["href"] }
+      expect(loads.grep(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com|www\.google\.com|doubleclick\.net})).to be_empty
       expect(response.body).not_to include("ytimg.com") # not even YouTube's thumbnail
+      # No early connections either: youtube_controller adds them when the visitor points at the play button.
+      expect(page.css("link[rel='preconnect'], link[rel='dns-prefetch']").map { |link| link["href"] })
+        .to eq([ "https://fonts.googleapis.com", "https://fonts.gstatic.com" ])
     end
 
     it "shows the proof strip with the product's own badges, and the catalog's counts once there's a directory" do
@@ -472,12 +490,14 @@ RSpec.describe "Public pages" do
       expect(text).to include("the map library from jsDelivr", "Cloudflare provides our DNS")
     end
 
-    it "says the home page video loads YouTube only when played" do
+    it "says the home page video loads YouTube only when played, and that the play button may connect early" do
       get "/privacy"
 
       expect(page.at_css("main").text.squish).to include("The home page video loads YouTube's privacy-enhanced player " \
                                                          "only when you press play, and YouTube's privacy policy applies " \
-                                                         "from then on.")
+                                                         "from then on. Hovering over, touching or tabbing to the play " \
+                                                         "button may let your browser connect to YouTube and Google in " \
+                                                         "advance, so the video starts faster.")
     end
 
     it "names the plans as plans.yml does" do

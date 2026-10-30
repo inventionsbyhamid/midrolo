@@ -760,9 +760,9 @@
     from { transform: translateY(-1rem); opacity: 0; }
   }
 
-  /* A YouTube video before it's played (components/_youtube, youtube_controller): a 16:9 box with the page's own poster,
-     nothing fetched from YouTube, and one play button over the whole box. The player takes the same box once pressed.
-     A poster whose middle is busy moves the button with --video-play-x. */
+  /* A YouTube video (components/_youtube, youtube_controller): a 16:9 box with the page's own poster, nothing fetched
+     from YouTube, and one play button over the whole box, which opens the player in .video-dialog. A poster whose middle
+     is busy moves the button with --video-play-x. */
   .video {
     --video-play: 3rem; /* the icon: the whole box is the button */
     --video-play-x: 50%;
@@ -862,6 +862,77 @@
     font-size: 0.8125rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+  }
+
+  /* The player's dialog: 16:9 at 90% of the window's width, at most 1280px, and narrower when the window is too short
+     to fit it; the full width on a phone. It's centered on a dark backdrop, with its close button above it, outside the
+     box, so a click anywhere but the player closes it (dialog_controller). */
+  .video-dialog {
+    --video-dialog-room: 8.5rem; /* above and below the player: the close button's row and a margin, twice */
+    width: min(90vw, 80rem, (100dvh - var(--video-dialog-room)) * 16 / 9);
+    max-width: none;
+    max-height: none;
+    margin: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    overflow: visible;
+
+    @media (width < 40rem) {
+      width: min(100vw, (100dvh - var(--video-dialog-room)) * 16 / 9);
+    }
+  }
+
+  .video-dialog[open] {
+    animation: dialog-in 160ms ease-out;
+  }
+
+  .video-dialog::backdrop {
+    background: rgb(17 9 22 / 0.92);
+  }
+
+  .video-dialog-close {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 0.75rem);
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.14);
+    color: #fff;
+    cursor: pointer;
+    transition: background-color 150ms ease-out;
+
+    @media (width < 40rem) {
+      right: 0.75rem;
+    }
+  }
+
+  .video-dialog-close:hover {
+    background: rgb(255 255 255 / 0.26);
+  }
+
+  .video-dialog-close svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .video-dialog-frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    background: #000;
+    box-shadow: 0 40px 80px -24px rgb(0 0 0 / 0.7);
+
+    @media (width < 40rem) {
+      border-radius: 0;
+    }
   }
 
   .video-frame {

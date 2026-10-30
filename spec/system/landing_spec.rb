@@ -100,27 +100,75 @@ RSpec.describe "Landing and public pages" do
     expect(page).to have_css(".dir-card", text: "Cold Case Cafe")
   end
 
-  # Nothing comes from YouTube until play is pressed; then the privacy-enhanced player takes the poster's place, with
-  # focus. The player's own page isn't needed here, so the browser doesn't fetch it.
-  it "plays How Midrolo works from youtube-nocookie.com only once its play button is pressed" do
+  # The connections lite-youtube-embed warms for YouTube's player, which youtube_controller adds on intent.
+  def youtube_hosts = [ "https://www.youtube-nocookie.com", "https://www.google.com", "https://i.ytimg.com",
+                         "https://googleads.g.doubleclick.net", "https://static.doubleclick.net" ]
+
+  def preconnects = evaluate_script("[...document.querySelectorAll('link[rel=preconnect]')].map((link) => link.getAttribute('href'))")
+  def video_dialog_box = evaluate_script("(({ width, height }) => [ width, height ])(document.querySelector('dialog.video-dialog').getBoundingClientRect())")
+  def focused_label = evaluate_script("document.activeElement.getAttribute('aria-label')")
+
+  # Nothing comes from YouTube until play is pressed. Pointing at the play button only warms connections to YouTube's
+  # hosts, once; pressing it opens a large dialog with the privacy-enhanced player, playing. Escape, the close button
+  # and the backdrop each close it, which removes the player and gives focus back. The player's own page isn't needed
+  # here, so the browser doesn't fetch it.
+  it "plays How Midrolo works in a dialog from youtube-nocookie.com only once its play button is pressed" do
     AppSettings.set(:explainer_video_id, "-UXzujILAoI")
     page.driver.browser.url_blacklist = [ %r{cdn\.jsdelivr\.net}, %r{\Ahttps://www\.youtube-nocookie\.com/} ]
+    page.driver.resize(1440, 900)
     visit "/"
 
-    play = find("#how-it-works button.video-play[aria-label='Watch how it works, 2 min video']") # the link, made a button
+    play = find("#how-it-works button.video-play[aria-label='Watch how it works, 2 min video'][aria-haspopup='dialog']") # the link, made a button
     expect(page).to have_no_css("#how-it-works a.video-play")
-    expect(page).to have_no_css("#how-it-works iframe")
-    expect(find("#how-it-works img.video-poster")[:src]).to match(%r{/assets/explainer/poster-\h+\.jpg\z}) # not YouTube's
-    expect(page.driver.network_traffic.map(&:url).grep(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com})).to be_empty
+    expect(page).to have_no_css("iframe")
+    expect(preconnects & youtube_hosts).to be_empty # not on page view
+
+    # The 2x poster, as WebP, from here rather than YouTube: a 1x window picks the 1280px one for the ~700px box.
+    scroll_to(play, align: :center)
+    page.document.synchronize do
+      evaluate_script("document.querySelector('#how-it-works img.video-poster').complete") || raise(Capybara::ExpectationNotMet, "no poster yet")
+    end
+    expect(evaluate_script("document.querySelector('#how-it-works img.video-poster').currentSrc"))
+      .to match(%r{/assets/explainer/poster-1280-\h+\.webp\z})
+
+    play.hover
+    expect(preconnects & youtube_hosts).to eq(youtube_hosts)
+    execute_script("document.querySelector('#how-it-works .video-play').focus()") # intent again: still once each
+    expect(preconnects.tally.slice(*youtube_hosts)).to eq(youtube_hosts.index_with(1))
+    expect(page.driver.network_traffic.map(&:url).grep(%r{youtube(?:-nocookie)?\.com|youtu\.be|ytimg\.com|google\.com|doubleclick})).to be_empty
 
     play.click
-    frame = find("#how-it-works iframe.video-frame")
+    frame = find("dialog.video-dialog[open][aria-label='How Midrolo works'] iframe.video-frame")
     expect(frame[:src]).to eq("https://www.youtube-nocookie.com/embed/-UXzujILAoI?autoplay=1&rel=0&playsinline=1")
     expect(frame[:title]).to eq("How Midrolo works")
-    expect(frame[:allow]).to eq("autoplay; encrypted-media; picture-in-picture")
-    expect(evaluate_script("document.querySelector('#how-it-works iframe').allowFullscreen")).to be(true)
-    expect(evaluate_script("document.activeElement.tagName")).to eq("IFRAME")
-    expect(page).to have_no_css("#how-it-works .video-play") # hidden under the player
+    expect(frame[:allow]).to eq("autoplay; encrypted-media; picture-in-picture; fullscreen")
+    expect(evaluate_script("document.querySelector('dialog.video-dialog iframe').allowFullscreen")).to be(true)
+    expect(focused_label).to eq("Close video") # focus moves into the dialog
+    expect(video_dialog_box).to eq([ 1280, 720 ]) # 90% of the window, at most 1280px, 16:9
+
+    page.driver.browser.keyboard.type(:escape)
+    expect(page).to have_no_css("dialog.video-dialog[open]")
+    expect(page).to have_no_css("iframe") # playback stops with the player
+    expect(focused_label).to eq("Watch how it works, 2 min video")
+
+    play.click # a fresh player each time
+    expect(page).to have_css("dialog.video-dialog[open] iframe", count: 1)
+    find("dialog.video-dialog button[aria-label='Close video']").click
+    expect(page).to have_no_css("dialog.video-dialog[open]")
+    expect(page).to have_no_css("iframe")
+    expect(focused_label).to eq("Watch how it works, 2 min video")
+
+    play.click
+    expect(page).to have_css("dialog.video-dialog[open] iframe")
+    page.driver.browser.mouse.click(x: 40, y: 450) # the backdrop, left of the player
+    expect(page).to have_no_css("dialog.video-dialog[open]")
+    expect(page).to have_no_css("iframe")
+
+    # The full width on a phone.
+    page.driver.resize(375, 812)
+    play.click
+    expect(page).to have_css("dialog.video-dialog[open] iframe")
+    expect(video_dialog_box).to eq([ 375, 210.9375 ])
   end
 
   it "has checks that catch what they look for" do
