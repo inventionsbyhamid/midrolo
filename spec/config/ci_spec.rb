@@ -2,7 +2,7 @@ require "rails_helper"
 
 # bin/ci's steps (config/ci.rb), read through a stand-in for ActiveSupport::ContinuousIntegration that records them.
 # R127: the repo is public and judged on reproducibility, so the suite runs locally by default; the operator's remote
-# lane (bin/remote-rspec, which needs the VPN) only when asked.
+# lane (bin/remote-rspec, which needs ssh access to a test server) only when asked.
 RSpec.describe "bin/ci" do
   def steps(env)
     recorded = []

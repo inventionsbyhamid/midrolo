@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Test runner for bin/remote-rspec (tagged midrolo-ci:test on ioflood). Holds only system packages: the source is
+# Test runner for bin/remote-rspec (tagged midrolo-ci:test on the test server). Holds only system packages: the source is
 # mounted at /app and the gems live in the midrolo-ci-bundle volume at /bundle, so a Gemfile change needs no rebuild.
 # bin/remote-rspec rebuilds the image when this file's hash changes (or with --rebuild).
 
