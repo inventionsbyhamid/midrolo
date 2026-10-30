@@ -1,13 +1,14 @@
-<%# The hackathon promo's banner (R63): only for a signed-in user whose plan is the promo. It speaks to the side you're
-    on (UX review G-5): the brand workspace hears about brand features, not Snapshots, and a phone gets one short line. %>
+<%# The promo's banner (R63): only for a signed-in user whose plan is the promo. It speaks to the side you're on (UX
+    review G-5): the brand workspace hears about brand features, not Snapshots, and a phone gets one short line. Brands
+    have no plan, so their line keeps the pricing page's "during the trial", with no end date. %>
 <% if user_signed_in? && current_plan.key == :promo %>
-  <% through = Entitlements.promo_until&.strftime("%b %-d") %>
+  <% brands = controller_path.start_with?("brands/") %>
   <div class="promo-banner" role="note">
     <p class="wrap py-2">
-      <span class="sm:hidden">Free during the Qloo hackathon judging<%= ", through #{through}" if through %>.</span>
+      <span class="sm:hidden"><%= brands ? "Free for brands during the trial" : promo_offer %>.</span>
       <span class="max-sm:hidden">
-        <% if controller_path.start_with?("brands/") %>
-          Free for brands during the Qloo hackathon judging<%= ", through #{through}" if through %>: fit searches, saved shows and requests.
+        <% if brands %>
+          Free for brands during the trial: fit searches, saved shows and requests.
         <% else %>
           <%= promo_offer %>: <%= promo_allowance %>.
         <% end %>

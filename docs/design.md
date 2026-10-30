@@ -365,7 +365,7 @@ Matches the user's most recent Rails app (`dinnerbell-app-feel`) except where no
 
 **Billing launch** (the user's call, 2026-10-24): **Dodo test mode plus a waitlist.**
 - **What's built:** billing in full (checkout, webhooks, portal, plan limits), tested end to end in **Dodo test mode**.
-- **What visitors see:** the pricing page shows the real prices. Paid buttons say **"Join the founding member waitlist"**, which records the email and the chosen plan.
+- **What visitors see:** the pricing page shows the real prices. Paid buttons say **"Join the waitlist"**, which records the email and the chosen plan, and then read **"On the waitlist"** for a signed-in user.
 - **Going live:** we switch to live payments only once we have a **commercial Qloo agreement**. A hackathon key likely doesn't cover charging customers, and it switches off after the event. Charging before then would risk the entry and mean refunds. The code enforces it (R94): `Billing.mode` refuses `live` until an admin sets `qloo_cost_per_call_usd` and every paid plan keeps at least 60% margin at its caps (`Billing::Margins`: LLM, Qloo and worst case Dodo fees).
 - **When "day 1" is:** day 1 of revenue is the day billing goes live. Every plan is profitable from that first sale (the tables below). Until then, spend is limited to the hackathon budget.
 

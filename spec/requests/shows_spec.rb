@@ -101,6 +101,11 @@ RSpec.describe "Shows" do
         get "/shows/new"
         expect(response.body).to include("3 shows")
         expect(response.body).not_to include("search_results")
+        # No plan on sale has more than 3 shows, so there is no Upgrade that wouldn't add one.
+        page = Nokogiri::HTML(response.body)
+        expect(page.at_css("main .card").text.squish).to include("That's the most shows any plan includes.")
+        expect(page.at_xpath("//main//a[normalize-space()='Upgrade']")).to be_nil
+        expect(page.at_xpath("//main//a[normalize-space()='Back to my shows']")["class"]).to include("btn-primary")
 
         user.subscriptions.update_all(status: "canceled", current_period_end: 1.day.ago)
         get "/shows"

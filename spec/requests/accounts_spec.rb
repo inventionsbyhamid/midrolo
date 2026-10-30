@@ -16,7 +16,7 @@ RSpec.describe "Account" do
     expect(response.body).to include("Free", "Usage", "Billing", "Delete account", "Sign out", user.email, "AL")
   end
 
-  # R151: everyone gets the hackathon trial, so there is no judge code to enter.
+  # R151: everyone gets the Pro trial, so there is no judge code to enter.
   it "has no judge code form or route" do
     sign_in user
     get "/account"
@@ -98,9 +98,11 @@ RSpec.describe "Account" do
       sign_in user
       get "/account"
 
+      expect(card("Plan").at_css(".badge").text.squish).to eq("Pro trial")
       expect(card("Plan").text.squish)
-        .to include("Hackathon trial", "Free Pro trial for the Qloo hackathon judging",
-                    "up to 3 shows, each with a Snapshot and a full report")
+        .to include("Free Pro through #{1.week.from_now.strftime('%b %-d')}: up to 3 shows, each with a Snapshot and a " \
+                    "full report. After that, you're on the Free plan.")
+      expect(Nokogiri::HTML(response.body).at_css("main").text.downcase).not_to include("hackathon")
       expect(card("Usage").css("li").map { |li| li.text.squish })
         .to eq([ "Full reports: 0 of 3 used", "Snapshots: 0 of 3 used this month", "Pitches: 0 of 60 used this month" ])
     end
@@ -115,21 +117,34 @@ RSpec.describe "Account" do
 
     around { |example| travel_to(Time.zone.local(2026, 10, 25, 12)) { example.run } }
 
-    it "offers the founding-member waitlist for every price in waitlist mode, with no checkout" do
+    it "offers the waitlist for every price in waitlist mode, with no checkout" do
       with_billing_env do
         sign_in user
         get "/account"
       end
 
+      expect(card("Billing").at_css("p").text.squish).to eq(PlansHelper::WAITLIST_DETAIL)
       expect(forms_to("/waitlist_entries").map { |form| form.at_css("input[name=price_key]")["value"] })
         .to eq(%w[creator_monthly creator_yearly pro_monthly pro_yearly sprint])
       expect(forms_to("/waitlist_entries").map { |form| form.at_css("[type=submit]")["value"] }.uniq)
-        .to eq([ "Join the founding member waitlist" ])
+        .to eq([ "Join the waitlist" ])
       expect(forms_to("/waitlist_entries").css("input[name=email]")).to be_empty # signed in: the account's email
       expect(forms_to("/checkouts")).to be_empty
       expect(card("Billing").text).to include("Creator", "$19/month", "$190/year", "Pro", "$49/month", "$490/year",
                                               "Sprint", "$49 once")
       expect(card("Billing").text).not_to include("Test mode")
+    end
+
+    it "says which plans the user is on the waitlist for, by the account's email" do
+      WaitlistEntry.join(email: user.email.upcase, price_key: "sprint")
+      with_billing_env do
+        sign_in user
+        get "/account"
+      end
+
+      expect(card("Billing").css("li").last.text.squish).to eq("Sprint $49 once On the waitlist")
+      expect(forms_to("/waitlist_entries").map { |form| form.at_css("input[name=price_key]")["value"] })
+        .to eq(%w[creator_monthly creator_yearly pro_monthly pro_yearly])
     end
 
     it "also offers a judge a test checkout, with the test-card note" do

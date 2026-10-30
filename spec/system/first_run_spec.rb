@@ -125,10 +125,11 @@ RSpec.describe "First run" do
 
     expect(page).to have_current_path("/pricing")
     within(".plan-card[data-plan='creator']") do
-      expect(page).to have_button("Join the founding member waitlist")
-      click_button "Join the founding member waitlist"
+      expect(page).to have_button("Join the waitlist")
+      click_button "Join the waitlist"
     end
-    expect(page).to have_text("You're on the founding member list.")
+    expect(page).to have_text("You're on the Creator waitlist.")
+    within(".plan-card[data-plan='creator']") { expect(page).to have_css(".waitlist-joined", text: "On the waitlist") }
     screenshot("pricing")
     expect(WaitlistEntry.sole).to have_attributes(email: "new@example.com", price_key: "creator_monthly")
   end

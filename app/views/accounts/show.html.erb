@@ -37,6 +37,7 @@
       <p class="text-ink-soft">Your plan is active. Billing management opens with paid plans.</p>
     <% end %>
     <% unless current_plan.subscription %>
+      <% if (note = pricing_mode_note) %><p class="text-ink-soft"><%= note %></p><% end %>
       <ul class="flex flex-col divide-y divide-line" aria-label="Plans">
         <% Billing.prices.each do |price| %>
           <li class="flex flex-wrap items-center justify-between gap-3 py-3">
