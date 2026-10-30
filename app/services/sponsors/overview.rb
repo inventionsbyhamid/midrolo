@@ -15,8 +15,9 @@ module Sponsors
     # { "pattern" => n, "llm" => n }
     def by_detector = @by_detector ||= SponsorMention.group(:detected_by).count
 
-    # Episodes no scan has finished: new ones waiting, and ones whose model check waits for budget.
-    def waiting = @waiting ||= Episode.where(sponsor_scanned_at: nil).count
+    # Active podcasts' episodes due for a scan (Sponsors::Due: recent and never checked by the model), new ones and ones
+    # whose check waits for the catalog budget. Older episodes are left alone and not counted.
+    def waiting = @waiting ||= Due.waiting.count
 
     def latest
       @latest ||= SponsorMention.includes(:brand, :podcast).order(created_at: :desc, id: :desc).limit(LATEST).to_a
