@@ -1,17 +1,26 @@
-<%# locals: (video:, title:, label:, duration:, poster:) -%>
+<%# locals: (video:, title:, label:, duration:, poster:, sizes:) -%>
 <%#
-  The markup contract for youtube_controller: a YouTube video (YoutubeVideo) in a 16:9 box that loads nothing from
-  YouTube until it's played. poster is a 1280x720 image from app/assets/images, never YouTube's thumbnail. It sits on
-  a link to the video's page on YouTube, which is what a visitor without JavaScript gets. The controller turns the
-  link into a play button; pressing it swaps in YouTube's privacy-enhanced player (youtube-nocookie.com, which the
-  policy's frame-src allows), playing, under title. label and duration are the poster's caption ("Watch how it works",
-  "2 min"). The poster's alt is empty: the button's label names the video, and the poster repeats it.
+  The markup contract for youtube_controller and dialog_controller: a YouTube video (YoutubeVideo) behind the page's
+  own poster, which plays in a large dialog and loads nothing from YouTube until it's played. poster names a 16:9 title
+  card in app/assets/images, never YouTube's thumbnail, saved at two widths in two formats: <poster>-1280 and
+  <poster>-2560, each as .webp and .jpg. sizes is the box's width on the page, which picks between them.
+  The poster sits on a link to the video's page on YouTube, which is what a visitor without JavaScript gets. The
+  controller turns the link into a play button: pointing at, touching or focusing it warms the player's connections, and
+  pressing it puts YouTube's privacy-enhanced player (youtube-nocookie.com, which the policy's frame-src allows),
+  playing, in the dialog. Closing the dialog removes the player. label and duration are the poster's caption ("Watch
+  how it works", "2 min"); title names the player and the dialog. The poster's alt is empty: the button's label names
+  the video, and the poster repeats it.
 %>
-<%= tag.div class: "video", data: { controller: "youtube", youtube_src_value: video.embed_url, youtube_title_value: title,
+<%= tag.div class: "video", data: { controller: "youtube dialog", youtube_src_value: video.embed_url, youtube_title_value: title,
                                     youtube_label_value: "#{label}, #{duration} video" } do %>
   <%= link_to video.watch_url, class: "video-play", aria: { label: "#{label} on YouTube, #{duration} video" },
                                data: { youtube_target: "play" } do %>
-    <%= image_tag poster, alt: "", width: 1280, height: 720, class: "video-poster", loading: "lazy", decoding: "async" %>
+    <%= picture_tag do %>
+      <%= tag.source type: "image/webp", sizes: sizes,
+                     srcset: [ 1280, 2560 ].map { |width| "#{image_path("#{poster}-#{width}.webp")} #{width}w" }.join(", ") %>
+      <%= image_tag "#{poster}-1280.jpg", srcset: { "#{poster}-1280.jpg" => "1280w", "#{poster}-2560.jpg" => "2560w" }, sizes: sizes,
+                                          alt: "", width: 1280, height: 720, class: "video-poster", loading: "lazy", decoding: "async" %>
+    <% end %>
     <span class="video-play-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24"><path d="M8.5 5.6v12.8a.8.8 0 0 0 1.2.7l10.1-6.4a.8.8 0 0 0 0-1.4L9.7 4.9a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg>
     </span>
@@ -19,5 +28,11 @@
       <span class="video-label"><%= label %></span>
       <span class="video-duration"><%= duration %></span>
     </span>
+  <% end %>
+  <%= tag.dialog class: "video-dialog", aria: { label: title }, data: { dialog_target: "dialog", action: "close->youtube#stop" } do %>
+    <button type="button" class="video-dialog-close" data-action="dialog#close" aria-label="Close video">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </button>
+    <div class="video-dialog-frame" data-youtube-target="frame"></div>
   <% end %>
 <% end %>

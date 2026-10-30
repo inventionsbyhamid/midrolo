@@ -14,7 +14,9 @@
 #   inline map style some system specs use: config/environments/test.rb.)
 # - workers: MapLibre starts its worker from its pinned folder (and, in some builds, from a blob: URL).
 # - frames: YouTube's privacy-enhanced player, which the home page's video loads only once the visitor presses play
-#   (components/_youtube), and this site's own pages, as default-src allowed frames before.
+#   (components/_youtube), and this site's own pages, as default-src allowed frames before. The <link rel="preconnect">
+#   hints youtube_controller adds when the visitor points at the play button only open connections, which browsers
+#   don't check against the policy, so they need nothing here; what the player fetches is under YouTube's own policy.
 # No form-action: sign in and checkout post to this site and redirect on to Google and Dodo, which form-action would
 # also have to list. The static pages in public/ go without the policy (ApplicationController#render_static_page).
 module ContentSecurity
