@@ -12,44 +12,9 @@
   <% brand_only = current_user.brand_member? && !current_user.shows.exists? %>
   <%= render "accounts/brand", user: current_user if current_user.brand_member? %>
   <% unless brand_only %>
-  <%= render "components/card", title: "Plan", aside: ui_badge(current_plan.name, tone: current_plan.key == :free ? :neutral : :accent) do %>
-    <p class="text-ink-soft"><%= plan_summary(current_plan) %></p>
-    <% if (renewal = renewal_line(current_plan.subscription)) %>
-      <p class="mt-2 text-ink-soft"><%= renewal %></p>
-    <% end %>
-    <% if current_plan.key == :free %>
-      <%= ui_button "See plans", pricing_path, variant: :secondary, class: "mt-4" %>
-    <% end %>
-  <% end %>
-
-  <%= render "components/card", title: "Usage" do %>
-    <ul class="flex flex-col gap-2" aria-label="Usage">
-      <% %i[agent snapshot pitch].each do |kind| %>
-        <li><%= usage_line(current_plan, kind) %></li>
-      <% end %>
-    </ul>
-  <% end %>
-
-  <%= render "components/card", title: "Billing" do %>
-    <% if Billing.portal_subscription(current_user) %>
-      <%= button_to "Manage billing", billing_portal_path, class: "btn btn-secondary btn-md", form: { data: { turbo: false } } %>
-    <% elsif current_plan.subscription %>
-      <p class="text-ink-soft">Your plan is active. Billing management opens with paid plans.</p>
-    <% end %>
-    <% unless current_plan.subscription %>
-      <% if (note = pricing_mode_note) %><p class="text-ink-soft"><%= note %></p><% end %>
-      <ul class="flex flex-col divide-y divide-line" aria-label="Plans">
-        <% Billing.prices.each do |price| %>
-          <li class="flex flex-wrap items-center justify-between gap-3 py-3">
-            <span><strong><%= price_plan_name(price) %></strong> <span class="text-ink-soft"><%= price_label(price) %></span></span>
-            <%= render "billing/plan_button", price_key: price.key, note: false, quiet: true %>
-          </li>
-        <% end %>
-      </ul>
-      <%= test_payments_note %>
-    <% end %>
-  <% end %>
-
+    <%= render "accounts/plan", plan: current_plan, user: current_user %>
+    <%# A subscriber manages the plan they have; everyone else sees what they could take. %>
+    <%= render "accounts/upgrade" unless current_plan.subscription %>
   <% end %>
 
   <%= render "components/card", title: "Sign out" do %>
