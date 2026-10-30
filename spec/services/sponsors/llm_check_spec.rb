@@ -10,9 +10,11 @@ RSpec.describe Sponsors::LlmCheck do
   end
 
   # The verdicts the check keeps for one episode's notes, given the model's mentions.
-  def verdicts(notes, *mentions)
+  def verdicts(notes, *mentions) = verdicts_for_reply(notes, { mentions: mentions })
+
+  def verdicts_for_reply(notes, reply)
     episode = create(:episode, podcast: podcast, description: notes)
-    RubyLLM::Test.stub_response({ mentions: mentions })
+    RubyLLM::Test.stub_response(reply)
     described_class.call(podcast, [ [ episode, Sponsors::Notes.new(notes, context) ] ], context).fetch(episode.id, [])
   end
 
@@ -53,13 +55,27 @@ RSpec.describe Sponsors::LlmCheck do
 
   it "names a brand the notes only give a domain for by its proper name, or by its domain when that name doesn't fit" do
     notes = "Today's episode is supported by belaysolutions.com/bench, where you find vetted assistants. " \
-            "Also check out manscaped.com/bench for 20% off."
+            "Also check out manscaped.com/bench for 20% off, cellercise.com/kim for rebounders, drinkag1.com/bench and " \
+            "squarespace.com/bench for your site."
 
     found = verdicts(notes, mention("BELAY", domain: "belaysolutions.com"), mention("Scam Shop", domain: "manscaped.com"),
-                     mention("", domain: "https://www.manscaped.com/bench"))
+                     mention("", domain: "https://www.manscaped.com/bench"), mention("Cellercise", domain: "cellercise.com"),
+                     mention("AG1", domain: "drinkag1.com"), mention("Square", domain: "squarespace.com"))
 
-    expect(found.map(&:name)).to eq([ "BELAY", "manscaped.com", "manscaped.com" ])
+    expect(found.map(&:name)).to eq([ "BELAY", "manscaped.com", "manscaped.com", "Cellercise", "AG1", "squarespace.com" ])
     expect(found.map(&:domain)).to all(be_present)
+  end
+
+  it "fails the batch when the reply isn't the schema's shape, so nothing is taken as checked (review H1)" do
+    notes = "Planes and saws today. This episode is brought to you by Hollow Tools."
+    item = { episode_ref: "e1", brand: "Hollow Tools", domain: "", promo_code: "", offer: "", evidence: "", is_sponsor: true,
+             confidence: 0.9 }
+
+    expect { verdicts(notes, item.merge(episode_ref: "e9")) }.to raise_error(Llm::Error, /unknown episode refs/)
+    expect { verdicts_for_reply(notes, { items: [ item ] }) }.to raise_error(Llm::Error, /no mentions list/)
+    expect { verdicts_for_reply(notes, { mentions: "none" }) }.to raise_error(Llm::Error, /no mentions list/)
+    expect(verdicts(notes, item).map(&:name)).to eq([ "Hollow Tools" ])
+    expect(described_class::INSTRUCTIONS).to include('Answer as JSON: {"mentions": [', 'Answer: {"mentions": [{"episode_ref": "e1"')
   end
 
   it "keeps the name only when a domain not named after it sits far from it" do
@@ -79,6 +95,17 @@ RSpec.describe Sponsors::LlmCheck do
                      mention("Gmail", domain: "gmail.com"), mention("Hollow Tools"))
 
     expect(found).to be_empty
+  end
+
+  it "takes the model's quote only when it says something: 20 characters, or the brand with more around it (review L3)" do
+    notes = "Planes and saws today. This episode is brought to you by AG1. Go to drinkag1.com/bench for a free year of vitamin D."
+
+    short, bare, tiny, long = verdicts(notes, mention("AG1", evidence: "brought to you by AG1"), mention("AG1", evidence: "AG1"),
+                                       mention("AG1", evidence: "the"), mention("AG1", evidence: "a free year of vitamin D"))
+
+    expect(short.evidence).to eq("brought to you by AG1")
+    expect([ bare.evidence, tiny.evidence ]).to all(eq("This episode is brought to you by AG1."))
+    expect(long.evidence).to eq("a free year of vitamin D")
   end
 
   it "keeps the model's quote only when the notes hold it, else quotes the notes" do

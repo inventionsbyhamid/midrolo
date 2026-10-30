@@ -79,6 +79,8 @@ module Sponsors
     # choices. Visit megaphone.fm/adchoices", "Hosted on Acast. See acast.com/privacy").
     BOILERPLATE = %r{ad ?choices|privacy (?:information|policy|notice|& opt-out|and opt-out)|omnystudio\.com/listener|acast\.com/privacy|podcastchoices\.com|advertising inquiries|advertise (?:on|with) (?:this|our|the|us)|interested in (?:advertising|sponsoring)|become a sponsor|sponsor (?:this|the|our) (?:show|podcast)|hosted (?:on|by) (?:acast|simplecast|libsyn|anchor|buzzsprout|transistor|megaphone|art19|podbean|spreaker|captivate|redcircle|audioboom)}i
     SENTENCE_SPLIT = /(?<=[.!?])\s+(?=["“(\[]?[\p{Lu}\d])/
+    # A word brands put before their name in a domain ("drinkag1.com", "getquip.com", "trybasis.com").
+    DOMAIN_PREFIX = /\A(?:drink|get|try|join|go|use|shop|buy|with|hello|meet|the)(?=.{3})/
     # A sentence that may be part of a read, so it reaches the model first when the notes are long.
     READ_SIGNAL = Regexp.union(AD_WORDS, CODE, OFFER, SPONSORED_BY, *STRONG_LEADS, *WEAK_LEADS,
                                /\bbrought to you\b|\bour (?:friends|partners) at\b|\bpromo\b|\bsponsor/i)
@@ -135,7 +137,7 @@ module Sponsors
       label = domain.split(".").first.to_s.delete("-")
       return false if key.length < 2 || label.length < 2
 
-      bare = label.sub(/\A(?:drink|get|try|join|go|use|shop|buy|with|hello|meet|the)(?=.{3})/, "")
+      bare = label.sub(DOMAIN_PREFIX, "")
       [ label, bare ].uniq.any? { |l| l == key || (key.length >= 3 && l.include?(key)) || (l.length >= 4 && key.include?(l)) }
     end
 

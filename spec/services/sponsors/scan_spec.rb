@@ -169,6 +169,56 @@ RSpec.describe Sponsors::Scan do
                                         scanned_episode_ids: [])
     end
 
+    # Review M2: a later batch's failure keeps what an earlier batch's paid answer found, and never marks its own.
+    it "keeps the first batch's answer and leaves the second batch due, mentions intact, when the second call fails" do
+      podcast = create(:podcast, :active, title: "Lathe Talk")
+      episodes = Array.new(12) do |i|
+        create(:episode, podcast: podcast,
+                         description: "Episode #{i} on bowl gouges and green wood. This episode is brought to you by Hollow Tools. " \
+                                      "Go to hollowtools.com/lathe.")
+      end
+      kept = episodes.last(2).map do |episode|
+        create(:sponsor_mention, episode: episode, podcast: podcast, brand: create(:brand, name: "Old Read #{episode.id}"))
+      end
+      replaced = create(:sponsor_mention, episode: episodes.first, podcast: podcast, brand: create(:brand, name: "Gone"))
+      RubyLLM::Test.stub_response({ mentions: [ mention("e1", "Hollow Tools", domain: "hollowtools.com") ] })
+      calls = 0
+      allow(Sponsors::LlmCheck).to receive(:call).and_wrap_original do |original, *args|
+        calls += 1
+        raise Faraday::TimeoutError if calls == 2
+
+        original.call(*args)
+      end
+      allow(Rails.error).to receive(:report)
+
+      result = described_class.call(podcast, episodes)
+      Sponsors::Record.call(podcast, result)
+
+      expect(result).to have_attributes(stage2: :failed, checked_episode_ids: episodes.first(10).map(&:id),
+                                        settled_episode_ids: episodes.first(10).map(&:id))
+      expect(episodes.last(2).map { |e| e.reload.sponsor_ai_checked_at }).to all(be_nil)
+      expect(kept.map { |m| m.reload.present? }).to all(be(true))
+      expect(SponsorMention.exists?(replaced.id)).to be(false)
+      expect(SponsorMention.where(episode: episodes.first).map { |m| m.brand.domain }).to eq([ "hollowtools.com" ])
+      expect(Rails.error).to have_received(:report).with(an_instance_of(Faraday::TimeoutError), hash_including(handled: true))
+    end
+
+    it "leaves the batch due with its pattern reads when the reply isn't the schema's shape (review H1)" do
+      podcast, episode = podcast_from_fixture("host_reads")
+      pattern = create(:sponsor_mention, episode: episode, podcast: podcast, brand: create(:brand, name: "AG1", domain: "drinkag1.com"))
+      RubyLLM::Test.stub_response({ items: [ mention("e1", "Shopify", domain: "shopify.com") ] })
+      allow(Rails.error).to receive(:report)
+
+      result = nil
+      expect { result = described_class.call(podcast, [ episode ]) }.to change(SpendEntry, :count).by(1)
+      Sponsors::Record.call(podcast, result)
+
+      expect(result).to have_attributes(stage2: :failed, checked_episode_ids: [], settled_episode_ids: [], detections: [])
+      expect(pattern.reload).to be_present
+      expect(episode.reload).to have_attributes(sponsor_ai_checked_at: nil, sponsor_scanned_at: nil)
+      expect(Rails.error).to have_received(:report).with(an_instance_of(Llm::Error), hash_including(handled: true))
+    end
+
     it "saves nothing and leaves the episodes due when the provider fails" do
       podcast, episode = podcast_from_fixture("host_reads")
       allow(Sponsors::LlmCheck).to receive(:call).and_raise(Faraday::TimeoutError)
