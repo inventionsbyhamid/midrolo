@@ -34,6 +34,7 @@ RSpec.describe Sponsors::LlmCheck do
     allow(Llm::Budget).to receive(:allow?).and_call_original
     verdicts("Dovetails by hand, and why hide glue still wins. This episode is brought to you by Hollow Tools.")
     expect(Llm::Budget).to have_received(:allow?).with(:catalog, estimate_usd: BigDecimal("0.0027"))
+    expect(RubyLLM::Test.last_request[:max_output_tokens]).to eq(4_000)
     expect(SpendEntry.last.model).to eq("z-ai/glm-5.3-flash")
   end
 

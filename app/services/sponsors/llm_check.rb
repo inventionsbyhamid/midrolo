@@ -15,12 +15,18 @@ module Sponsors
   #
   # Returns { episode_id => [Verdict] }. Raises what Llm::StructuredCall raises (Llm::BudgetExceeded, provider errors).
   class LlmCheck
+    # A reply that came back but can't be read as the schema's answer (cut off, or off the schema's shape).
+    class UnreadableReply < Llm::Error; end
+
     MAX_EPISODES = 10
     CODE_LIMIT = 40
     # What one call of MAX_EPISODES episodes is assumed to use (the instructions, ten notes of up to
     # Notes::MODEL_TEXT_LIMIT characters, and the answer), priced for the budget check from config/llm_pricing.yml.
     BATCH_INPUT_TOKENS = 7_000
     BATCH_OUTPUT_TOKENS = 500
+    # The reply's cap, reasoning included: room for a batch with many reads an episode. Billing follows the tokens used,
+    # so the budget estimate above stays as it is.
+    MAX_OUTPUT_TOKENS = 4_000
     # A name and a domain not named after it count as one brand only this many sentences apart, or closer.
     NEAR = 2
     # The model's quote is the evidence when it is at least this long, or holds the brand's name or domain and more.
@@ -126,11 +132,13 @@ module Sponsors
       @context = context
     end
 
-    # Raises Llm::Error when the reply isn't the schema's shape (no mentions list, or items for none of the episodes),
-    # so the batch counts as failed: nothing is marked checked and no mention is replaced (review H1).
+    # Raises UnreadableReply (an Llm::Error) when the reply isn't the schema's shape (no mentions list, or items for none
+    # of the episodes), so nothing is marked checked and no mention is replaced (review H1); Sponsors::Scan splits the
+    # batch and asks again.
     def call
       reply = Llm::StructuredCall.call(model: self.class.model, schema: SCHEMA, instructions: INSTRUCTIONS, prompt: prompt,
-                                       bucket: :catalog, estimate_usd: self.class.batch_estimate_usd)
+                                       bucket: :catalog, estimate_usd: self.class.batch_estimate_usd,
+                                       max_tokens: MAX_OUTPUT_TOKENS)
       by_ref = @entries.each_with_index.to_h { |(episode, notes), i| [ "e#{i + 1}", [ episode, notes ] ] }
       items = mentions_in(reply, by_ref)
       verdicts = Hash.new { |hash, key| hash[key] = [] }
@@ -146,10 +154,10 @@ module Sponsors
 
     def mentions_in(reply, by_ref)
       mentions = reply.is_a?(Hash) ? reply["mentions"] : nil
-      raise Llm::Error, "sponsor check: no mentions list" unless mentions.is_a?(Array)
+      raise UnreadableReply, "sponsor check: no mentions list" unless mentions.is_a?(Array)
 
       items = mentions.grep(Hash)
-      raise Llm::Error, "sponsor check: unknown episode refs" if items.any? && items.none? { |item| by_ref.key?(ref_of(item)) }
+      raise UnreadableReply, "sponsor check: unknown episode refs" if items.any? && items.none? { |item| by_ref.key?(ref_of(item)) }
 
       items
     end

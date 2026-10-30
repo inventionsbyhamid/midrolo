@@ -11,7 +11,8 @@ module Sponsors
   #      more) that the notes back up. A confirmed read the pattern scan also found keeps the higher confidence, plus a
   #      little for a domain that recurs over a month of episodes.
   #   3. When the catalog budget is spent or the provider fails, the episodes it didn't check are left as they were,
-  #      with nothing saved, for a later run (the daily sweep).
+  #      with nothing saved, for a later run (the daily sweep). A reply that can't be read (cut off, or off the schema)
+  #      splits its batch in halves, each asked again, down to one episode; one that still fails stays due.
   #   4. Without a model (fake LLM mode: development and tests) the strong pattern reads stand in.
   #
   # Which episodes come here is Sponsors::Due's call (recent ones never checked, a few per podcast a run).
@@ -35,6 +36,8 @@ module Sponsors
     # The podcast's newest episodes read for recurrence and for its own site.
     CONTEXT_EPISODES = 50
     PROVIDER_ERRORS = [ Llm::Error, RubyLLM::Error, Faraday::Error, JSON::ParserError ].freeze
+    # A reply that came back but can't be read: a smaller batch makes a shorter reply, so the batch is split.
+    UNREADABLE_REPLY = [ JSON::ParserError, LlmCheck::UnreadableReply ].freeze
 
     Detection = Data.define(:episode, :name, :domain, :url, :promo_code, :offer, :evidence, :detected_by, :confidence)
     Result = Data.define(:detections, :checked_episode_ids, :settled_episode_ids, :scanned_episode_ids, :stage2)
@@ -92,24 +95,53 @@ module Sponsors
 
     # ---- the model ----
 
-    # [{ episode_id => [Verdict] } for the episodes it checked, stage2].
+    # [{ episode_id => [Verdict] } for the episodes it checked, stage2]. stage2 is :budget when the budget stopped the
+    # run, :failed when the provider failed (the run stops) or an episode's reply couldn't be read even alone.
     def check(pending)
       return [ {}, :fake ] if Llm.fake?
       return [ {}, :not_needed ] if pending.empty?
 
       verdicts = {}
+      @unreadable = false
       pending.each_slice(BATCH) do |batch|
-        return [ verdicts, :budget ] unless Llm::Budget.allow?(:catalog, estimate_usd: LlmCheck.batch_estimate_usd)
-
-        found = LlmCheck.call(@podcast, batch.map { |episode| [ episode, @notes[episode.id] ] }, @context)
-        batch.each { |episode| verdicts[episode.id] = found.fetch(episode.id, []) }
-      rescue Llm::BudgetExceeded
-        return [ verdicts, :budget ]
-      rescue *PROVIDER_ERRORS => e
-        Rails.error.report(e, handled: true, context: { podcast_id: @podcast.id, job: "Sponsors::Scan" })
-        return [ verdicts, :failed ]
+        stop = check_batch(batch, verdicts)
+        return [ verdicts, stop ] if stop
       end
-      [ verdicts, :done ]
+      [ verdicts, @unreadable ? :failed : :done ]
+    end
+
+    # One call for the batch, its verdicts added to verdicts. A reply that can't be read splits a batch of more than one
+    # episode in halves, each checked the same way (each call passes the budget check and records its spend); a single
+    # episode's stays unchecked. Returns :budget or :failed to stop the run (budget spent, provider down), else nil.
+    def check_batch(batch, verdicts)
+      return :budget unless Llm::Budget.allow?(:catalog, estimate_usd: LlmCheck.batch_estimate_usd)
+
+      found = LlmCheck.call(@podcast, batch.map { |episode| [ episode, @notes[episode.id] ] }, @context)
+      batch.each { |episode| verdicts[episode.id] = found.fetch(episode.id, []) }
+      nil
+    rescue Llm::BudgetExceeded
+      :budget
+    rescue *UNREADABLE_REPLY => e
+      return split(batch, verdicts) if batch.size > 1
+
+      @unreadable = true
+      report(e, episode_id: batch.first.id)
+      nil
+    rescue *PROVIDER_ERRORS => e
+      report(e)
+      :failed
+    end
+
+    def split(batch, verdicts)
+      batch.each_slice((batch.size + 1) / 2) do |half|
+        stop = check_batch(half, verdicts)
+        return stop if stop
+      end
+      nil
+    end
+
+    def report(error, **context)
+      Rails.error.report(error, handled: true, context: { podcast_id: @podcast.id, job: "Sponsors::Scan", **context })
     end
 
     # ---- the answer per episode ----

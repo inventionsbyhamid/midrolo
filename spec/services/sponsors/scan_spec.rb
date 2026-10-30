@@ -216,7 +216,78 @@ RSpec.describe Sponsors::Scan do
       expect(result).to have_attributes(stage2: :failed, checked_episode_ids: [], settled_episode_ids: [], detections: [])
       expect(pattern.reload).to be_present
       expect(episode.reload).to have_attributes(sponsor_ai_checked_at: nil, sponsor_scanned_at: nil)
-      expect(Rails.error).to have_received(:report).with(an_instance_of(Llm::Error), hash_including(handled: true))
+      expect(Rails.error).to have_received(:report).with(a_kind_of(Llm::Error), hash_including(handled: true))
+    end
+
+    describe "a reply that can't be read (split fix)" do
+      let(:podcast) { create(:podcast, :active, title: "Lathe Talk") }
+      let(:episodes) do
+        Array.new(10) do |i|
+          create(:episode, podcast: podcast,
+                           description: "Episode #{i} on bowl gouges and green wood. This episode is brought to you by " \
+                                        "Hollow Tools. Go to hollowtools.com/lathe.")
+        end
+      end
+      let(:cut_off) { '{"mentions": [{"episode_ref": "e1", "brand": "Hollow To' }
+
+      def confirm(count) = { mentions: (1..count).map { |i| mention("e#{i}", "Hollow Tools", domain: "hollowtools.com") } }
+
+      before { allow(Rails.error).to receive(:report) }
+
+      it "splits a cut-off batch in halves and checks each, with every call's spend recorded" do
+        RubyLLM::Test.stub_responses(cut_off, confirm(5), confirm(5))
+
+        result = nil
+        expect { result = described_class.call(podcast, episodes) }.to change(SpendEntry.where(bucket: "catalog"), :count).by(3)
+
+        expect(RubyLLM::Test.requests.size).to eq(3)
+        expect(result).to have_attributes(stage2: :done, checked_episode_ids: match_array(episodes.map(&:id)),
+                                          settled_episode_ids: match_array(episodes.map(&:id)))
+        expect(result.detections.map(&:episode)).to match_array(episodes)
+        expect(Rails.error).not_to have_received(:report)
+      end
+
+      it "leaves an episode whose reply is cut off even alone due, and checks the rest" do
+        stuck, fine = episodes.first(2)
+        RubyLLM::Test.stub_responses(cut_off, cut_off, confirm(1))
+
+        result = described_class.call(podcast, [ stuck, fine ])
+        Sponsors::Record.call(podcast, result)
+
+        expect(RubyLLM::Test.requests.size).to eq(3)
+        expect(result).to have_attributes(stage2: :failed, checked_episode_ids: [ fine.id ])
+        expect(stuck.reload).to have_attributes(sponsor_ai_checked_at: nil, sponsor_scanned_at: nil)
+        expect(fine.reload.sponsor_ai_checked_at).to be_present
+        expect(Rails.error).to have_received(:report).with(an_instance_of(JSON::ParserError), hash_including(handled: true)).once
+      end
+
+      it "leaves a single episode's cut-off reply due after one call" do
+        RubyLLM::Test.stub_response(cut_off)
+
+        result = described_class.call(podcast, episodes.first(1))
+
+        expect(RubyLLM::Test.requests.size).to eq(1)
+        expect(result).to have_attributes(stage2: :failed, checked_episode_ids: [], settled_episode_ids: [])
+      end
+
+      it "doesn't split on a provider error" do
+        allow(Sponsors::LlmCheck).to receive(:call).and_raise(Faraday::TimeoutError)
+
+        result = described_class.call(podcast, episodes)
+
+        expect(Sponsors::LlmCheck).to have_received(:call).once
+        expect(result).to have_attributes(stage2: :failed, checked_episode_ids: [])
+      end
+
+      it "stops splitting when the budget says no" do
+        RubyLLM::Test.stub_responses(cut_off, confirm(5))
+        allow(Llm::Budget).to receive(:allow?).and_return(true, true, false)
+
+        result = described_class.call(podcast, episodes)
+
+        expect(RubyLLM::Test.requests.size).to eq(1)
+        expect(result).to have_attributes(stage2: :budget, checked_episode_ids: [])
+      end
     end
 
     it "saves nothing and leaves the episodes due when the provider fails" do
