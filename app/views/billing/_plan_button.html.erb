@@ -1,18 +1,23 @@
 <%# locals: (price_key:, label: "Choose", note: true, quiet: false) -%>
-<%# The buy button for one price key, as Billing.mode has it (R66). On the waitlist: "Join the founding member
-    waitlist" (a visitor gives an email), plus a test checkout for judges and admins. In test and live modes: checkout,
-    or sign-in for a visitor. note: false leaves the test-payments note to the page. Task 19's pricing page reuses it. %>
+<%# The buy button for one price key, as Billing.mode has it (R66). On the waitlist: "Join the waitlist" (a visitor
+    gives an email), or "On the waitlist" once the signed-in user is on it, plus a test checkout for judges and admins.
+    In test and live modes: checkout, or sign-in for a visitor. note: false leaves the test-payments note to the page.
+    Task 19's pricing page reuses it. %>
 <div class="flex flex-col items-start gap-2">
   <% if Billing.mode == :waitlist %>
-    <%= form_with url: waitlist_entries_path, class: "flex flex-wrap items-center gap-2" do |form| %>
-      <%= hidden_field_tag :price_key, price_key, id: nil %>
-      <% unless user_signed_in? %>
-        <%= label_tag "waitlist_email_#{price_key}", "Email", class: "sr-only" %>
-        <%= email_field_tag :email, nil, id: "waitlist_email_#{price_key}", class: "input", required: true,
-                                         autocomplete: "email", placeholder: "you@example.com" %>
+    <% if on_waitlist?(price_key) %>
+      <p class="<%= class_names("waitlist-joined", "waitlist-joined-sm" => quiet) %>">On the waitlist</p>
+    <% else %>
+      <%= form_with url: waitlist_entries_path, class: "flex flex-wrap items-center gap-2" do |form| %>
+        <%= hidden_field_tag :price_key, price_key, id: nil %>
+        <% unless user_signed_in? %>
+          <%= label_tag "waitlist_email_#{price_key}", "Your email", class: "sr-only" %>
+          <%= email_field_tag :email, nil, id: "waitlist_email_#{price_key}", class: "input", required: true,
+                                           autocomplete: "email", placeholder: "Your email" %>
+        <% end %>
+        <%# quiet: a list of plans (the account page) gets one secondary button per row, not a column of primaries (review C-1). %>
+        <%= form.submit PlansHelper::WAITLIST_ACTION, class: quiet ? "btn btn-secondary btn-sm" : "btn btn-primary btn-md" %>
       <% end %>
-      <%# quiet: a list of plans (the account page) gets one secondary button per row, not a column of primaries (review C-1). %>
-      <%= form.submit "Join the founding member waitlist", class: quiet ? "btn btn-secondary btn-sm" : "btn btn-primary btn-md" %>
     <% end %>
     <% if Billing.test_checkout?(current_user) %>
       <%= button_to "Try checkout in test mode", checkouts_path, params: { price_key: price_key },

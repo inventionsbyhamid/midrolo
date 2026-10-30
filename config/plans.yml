@@ -57,9 +57,9 @@ shared:
     duration_days: 30
     price_keys:
       once: sprint
-  # Derived plans, never sold (R59): judge access (users.judge, set by an admin) and the hackathon trial
-  # (promo_pro_until). R151: the trial is every signed-in account's plan while it runs: 3 shows, each with a Snapshot
-  # and a full report.
+  # Derived plans, never sold (R59): judge access (users.judge, set by an admin) and the Pro trial (promo_pro_until).
+  # R151: the trial is every signed-in account's plan while it runs: 3 shows, each with a Snapshot and a full report.
+  # Its name is what a user reads on the account page, so it says what it is, not why it exists.
   judge:
     name: Judge access
     grants_plan: pro
@@ -69,7 +69,7 @@ shared:
     agent_reports_total: true
     pitches: unlimited
   promo:
-    name: Hackathon trial
+    name: Pro trial
     grants_plan: pro
     shows: 3
     snapshots_per_month: 3

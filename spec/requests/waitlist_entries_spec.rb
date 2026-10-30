@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "Waitlist entries" do
-  let(:confirmation) { WaitlistEntriesController::CONFIRMATION }
+  def confirmation(plan) = "You're on the #{plan} waitlist. We'll email you when paid plans open."
 
   around { |example| with_billing_env { example.run } }
 
@@ -13,7 +13,7 @@ RSpec.describe "Waitlist entries" do
 
     expect(WaitlistEntry.sole).to have_attributes(email: "ada@example.com", price_key: "pro_monthly", user: user)
     expect(response).to redirect_to("/account")
-    expect(flash[:notice]).to eq(confirmation)
+    expect(flash[:notice]).to eq(confirmation("Pro"))
   end
 
   it "adds a signed-out visitor by the email they give" do
@@ -21,7 +21,7 @@ RSpec.describe "Waitlist entries" do
 
     expect(WaitlistEntry.sole).to have_attributes(email: "grace@example.com", price_key: "sprint", user: nil)
     expect(response).to redirect_to(pricing_path)
-    expect(flash[:notice]).to eq(confirmation)
+    expect(flash[:notice]).to eq(confirmation("Sprint"))
   end
 
   it "refuses an email that isn't one" do
@@ -37,10 +37,11 @@ RSpec.describe "Waitlist entries" do
     post "/waitlist_entries", params: { email: "GRACE@example.COM", price_key: "sprint" }
 
     expect(WaitlistEntry.count).to eq(1)
-    expect(flash[:notice]).to eq(confirmation)
+    expect(flash[:notice]).to eq(confirmation("Sprint"))
 
     post "/waitlist_entries", params: { email: "grace@example.com", price_key: "creator_monthly" }
     expect(WaitlistEntry.count).to eq(2)
+    expect(flash[:notice]).to eq(confirmation("Creator"))
   end
 
   it "takes the notify key (Task 18) but no key outside plans.yml" do

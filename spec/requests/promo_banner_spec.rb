@@ -1,8 +1,8 @@
 require "rails_helper"
 
-# The hackathon promo's banner shows only to signed-in users on the promo plan (R63).
+# The promo's banner shows only to signed-in users on the promo plan (R63), in words a user reads: no "hackathon".
 RSpec.describe "Promo banner" do
-  let(:copy) { "Free Pro trial for the Qloo hackathon judging, through Nov 6: up to 3 shows, each with a Snapshot and a full report." }
+  let(:copy) { "Free Pro through Nov 6: up to 3 shows, each with a Snapshot and a full report." }
 
   def banner = Nokogiri::HTML(response.body).at_css(".promo-banner")
 
@@ -15,7 +15,8 @@ RSpec.describe "Promo banner" do
     get "/account"
     expect(banner.at_css(".max-sm\\:hidden").text.squish).to eq(copy)
     # A phone gets one short line (UX review G-5).
-    expect(banner.at_css(".sm\\:hidden").text.squish).to eq("Free during the Qloo hackathon judging, through Nov 6.")
+    expect(banner.at_css(".sm\\:hidden").text.squish).to eq("Free Pro through Nov 6.")
+    expect(banner.text.downcase).not_to include("hackathon")
   end
 
   it "speaks to brands in the brand workspace, without the podcaster's Snapshots" do
@@ -24,8 +25,9 @@ RSpec.describe "Promo banner" do
     sign_in user
     get "/brand"
     expect(banner.at_css(".max-sm\\:hidden").text.squish)
-      .to eq("Free for brands during the Qloo hackathon judging, through Nov 6: fit searches, saved shows and requests.")
-    expect(banner.text).not_to include("Snapshot")
+      .to eq("Free for brands during the trial: fit searches, saved shows and requests.")
+    expect(banner.at_css(".sm\\:hidden").text.squish).to eq("Free for brands during the trial.")
+    expect(banner.text).not_to include("Snapshot", "hackathon")
   end
 
   it "doesn't show to judges, subscribers, or anyone once the promo is over" do
@@ -45,6 +47,6 @@ RSpec.describe "Promo banner" do
 
   it "doesn't show signed out" do
     get "/users/sign_in"
-    expect(response.body).not_to include("Free Pro trial")
+    expect(response.body).not_to include("promo-banner")
   end
 end

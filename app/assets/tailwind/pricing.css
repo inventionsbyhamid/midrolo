@@ -163,6 +163,26 @@
     white-space: normal;
   }
 
+  /* billing/_plan_button once the signed-in user is on that price's waitlist: a status where the button was, its size. */
+  .waitlist-joined {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0.625rem 1rem;
+    border-radius: var(--radius-control);
+    background: var(--color-success-soft);
+    font-size: 0.9375rem;
+    font-weight: 650;
+    color: var(--color-success);
+  }
+
+  .waitlist-joined-sm {
+    min-height: 2rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
   .plan-features {
     display: flex;
     flex-direction: column;

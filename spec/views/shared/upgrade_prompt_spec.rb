@@ -23,8 +23,17 @@ RSpec.describe "shared/_upgrade_prompt" do
         .to start_with("You've used 20 of 20 pitches this month")
     end
 
+    it "tells a trial user paid plans aren't on sale yet while they only take the waitlist, before the click" do
+      node = limit_prompt(used: 3, limit: 3, period: nil, bucket: :promo)
+      expect(node.text.squish).to eq("You've used 3 of 3 reports #{PlansHelper::WAITLIST_DETAIL} Join the waitlist")
+      expect(link(node)).to eq([ "Join the waitlist", "/pricing" ])
+
+      allow(Billing).to receive(:mode).and_return(:test)
+      expect(limit_prompt(used: 3, limit: 3, period: nil, bucket: :promo).text.squish).to eq("You've used 3 of 3 reports See plans")
+    end
+
     it "names the noun by the limit" do
-      expect(limit_prompt(used: 1, limit: 1, period: nil, bucket: :promo).text.squish).to start_with("You've used 1 of 1 report See")
+      expect(limit_prompt(used: 1, limit: 1, period: nil, bucket: :promo).text.squish).to start_with("You've used 1 of 1 report Paid")
       expect(limit_prompt(kind: :snapshot, used: 1, limit: 1, period: "month", bucket: nil).text.squish)
         .to start_with("You've used 1 of 1 Snapshot this month")
     end
@@ -47,12 +56,19 @@ RSpec.describe "shared/_upgrade_prompt" do
   end
 
   describe ":budget (R63a)" do
-    it "sends a promo user to the waitlist once the promo pool is spent" do
+    it "sends a promo user to the waitlist once the promo pool is spent, saying it once" do
       node = render_prompt(reason: :budget, kind: :agent, bucket: :promo)
-      expect(node.text.squish).to eq("Full reports are paused for now. Join the waitlist. Join the waitlist")
+      expect(node.text.squish).to eq("Full reports are paused for now. #{PlansHelper::WAITLIST_DETAIL} Join the waitlist")
       expect(link(node)).to eq([ "Join the waitlist", "/pricing" ])
       expect(render_prompt(reason: :budget, kind: :pitch, bucket: :promo).text.squish)
-        .to start_with("Pitch packs are paused for now. Join the waitlist.")
+        .to start_with("Pitch packs are paused for now. Paid plans aren't on sale yet.")
+    end
+
+    it "sends a promo user to the plans once they're on sale" do
+      allow(Billing).to receive(:mode).and_return(:live)
+      node = render_prompt(reason: :budget, kind: :agent, bucket: :promo)
+      expect(node.text.squish).to eq("Full reports are paused for now. See plans")
+      expect(link(node)).to eq([ "See plans", "/pricing" ])
     end
 
     it "tells a paying user it's today's capacity, never to join a waitlist" do

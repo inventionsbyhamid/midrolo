@@ -13,6 +13,9 @@ module PlansHelper
   SNAPSHOT_ACTION = "Get my free Snapshot".freeze
   PITCH_PACK = "Each one is an email ready to send, three ad read angles, an offer priced from your rate card and " \
                "a follow up email.".freeze
+  # While paid plans only take waitlist sign ups, a prompt that points at /pricing says so before the click.
+  WAITLIST_DETAIL = "Paid plans aren't on sale yet. Join the waitlist and we'll email you when they open.".freeze
+  WAITLIST_ACTION = "Join the waitlist".freeze
 
   # The copy for a refusal's details (Entitlements::NotAllowed#details): reason, kind and bucket, and for :limit the
   # used, in_flight and limit counts and the period (nil when the plan counts in total).
@@ -21,13 +24,13 @@ module PlansHelper
     work = kind == :pitch ? "pitch packs" : "full reports"
     case prompt.fetch(:reason)
     when :limit
-      UpgradePrompt.new(limit_message(prompt), nil, "See plans")
+      UpgradePrompt.new(limit_message(prompt), *plans_next_step(prompt))
     when :budget
       if prompt[:bucket].in?(%i[paid judge])
         UpgradePrompt.new("We've hit today's limit for #{work}. Try again tomorrow. This didn't use any of your quota.",
                           nil, nil)
       else
-        UpgradePrompt.new("#{work.upcase_first} are paused for now. Join the waitlist.", nil, "Join the waitlist")
+        UpgradePrompt.new("#{work.upcase_first} are paused for now.", *plans_next_step(prompt))
       end
     when :paused
       UpgradePrompt.new(AppSettings.get(:runs_paused_reason).to_s.presence || PAUSED_MESSAGE, nil, nil)
@@ -61,6 +64,12 @@ module PlansHelper
       limit: counts[2], period: upgrade["period"].presence }
   end
 
+  # The detail and action of a prompt that sends the user to /pricing: the waitlist while that's all it offers, except
+  # to a subscriber (the :paid bucket), who has a plan already.
+  def plans_next_step(prompt)
+    prompt[:bucket] != :paid && plans_on_waitlist? ? [ WAITLIST_DETAIL, WAITLIST_ACTION ] : [ nil, "See plans" ]
+  end
+
   # True while paid plans only take waitlist sign ups for this user (Billing.mode :waitlist, no test checkout).
   def plans_on_waitlist?
     return false unless Billing.mode == :waitlist
@@ -73,7 +82,7 @@ module PlansHelper
   def plan_summary(plan)
     case plan.key
     when :judge then "Judge access is on: Pro features with #{pluralize(plan.limit(:agent), 'full report')} and unlimited pitches."
-    when :promo then "#{promo_offer}: #{promo_allowance}."
+    when :promo then "#{promo_offer}: #{promo_allowance}. After that, you're on the #{Entitlements.limits(:free)[:name]} plan."
     when :sprint then "You're on the #{plan.name} plan: Pro features for #{plan.duration_days} days."
     else "You're on the #{plan.name} plan."
     end
@@ -91,9 +100,9 @@ module PlansHelper
     "#{label}: #{plan.used(kind)} of #{limit} used#{" this #{period}" if period}#{", #{in_flight} in progress" if in_flight.positive?}"
   end
 
-  # "Free Pro trial for the Qloo hackathon judging, through Nov 6"
+  # "Free Pro through Nov 6": what every account gets while the promo runs, in words a user (not a judge) reads.
   def promo_offer
-    "Free Pro trial for the Qloo hackathon judging, through #{Entitlements.promo_until&.strftime('%b %-d')}"
+    "Free #{Entitlements.limits(:pro)[:name]} through #{Entitlements.promo_until&.strftime('%b %-d')}"
   end
 
   # "up to 3 shows, each with a Snapshot and a full report", from plans.yml (R151).

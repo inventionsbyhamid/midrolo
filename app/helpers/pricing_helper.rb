@@ -18,10 +18,15 @@ module PricingHelper
 
   def free_price_label = "$#{Entitlements.plans.dig(:free, :price_monthly_usd).to_i}"
 
-  # What the page says about buying, by Billing.mode: on the waitlist, that paid plans aren't open yet. Test mode has
-  # its own note under the buttons (test_payments_note); live mode needs none.
+  # What the page says about buying, by Billing.mode: on the waitlist, that paid plans aren't open yet and what joining
+  # does. Test mode has its own note under the buttons (test_payments_note); live mode needs none.
   def pricing_mode_note
-    "Paid plans open soon. Join the waitlist to hear first." if Billing.mode == :waitlist
+    PlansHelper::WAITLIST_DETAIL if Billing.mode == :waitlist
+  end
+
+  # Whether a plan on sale allows more shows than plan does, so "Upgrade" adds shows (shows/new at the limit).
+  def more_shows_on_sale?(plan)
+    Billing.prices.any? { |price| Entitlements.limits(price.plan.to_sym)[:shows] > plan.max_shows }
   end
 
   # What the plan includes: five short lines at most (R97), so the cards stay skimmable.
@@ -31,8 +36,8 @@ module PricingHelper
     when :free then free_features(limits)
     when :creator then creator_features(limits)
     when :pro then pro_features(limits)
-    when :sprint then [ "#{limits[:duration_days]} days of #{Entitlements.limits(:pro)[:name]}, no subscription to cancel",
-                        "One payment, no renewal", "Good for a new season's launch" ]
+    when :sprint then [ "#{limits[:duration_days]} days of #{Entitlements.limits(:pro)[:name]}", "One payment, no renewal",
+                        "Good for a new season's launch" ]
     end
   end
 

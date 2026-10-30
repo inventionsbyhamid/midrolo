@@ -1,12 +1,18 @@
 <%# locals: (heading: :h3) -%>
 <%#
   The pricing table, shared by /pricing and the landing page (R78). Every number comes from config/plans.yml, and the
-  buttons are billing/_plan_button, so they follow Billing.mode (the founding member waitlist by default). The
-  monthly/yearly switch is two radios and CSS (:has), so it needs no JavaScript; both intervals' buttons are in the
-  page. heading is the plan names' level under the page's own headings.
+  buttons are billing/_plan_button, so they follow Billing.mode (the waitlist by default). The monthly/yearly switch
+  is two radios and CSS (:has), so it needs no JavaScript; both intervals' buttons are in the page. heading is the plan
+  names' level under the page's own headings. The promo, while it runs, comes first: it's what every account gets now.
 %>
 <% paid = PricingHelper::PAID_PLANS %>
 <div class="pricing">
+  <% if Entitlements.promo_active? %>
+    <p class="pricing-promo">
+      <strong><%= promo_offer %>.</strong> Every account gets <%= Entitlements.limits(:pro)[:name] %> features for
+      <%= promo_allowance %>, while the trial budget lasts.
+    </p>
+  <% end %>
   <div class="pricing-bar">
     <fieldset class="interval-switch">
       <legend class="sr-only">Billing period</legend>
@@ -73,7 +79,4 @@
   <% end %>
 
   <%= test_payments_note %>
-  <% if Entitlements.promo_active? %>
-    <p class="pricing-promo"><%= promo_offer %>. Every account gets Pro features for <%= promo_allowance %>, while the trial budget lasts.</p>
-  <% end %>
 </div>

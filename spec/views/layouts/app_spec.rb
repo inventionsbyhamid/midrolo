@@ -24,7 +24,7 @@ RSpec.describe "layouts/app" do
   it "shows a signed-out visitor no promo banner, without resolving a plan" do
     render_layout(signed_in: false)
     expect(rendered).to include('id="main"')
-    expect(rendered).not_to include("promo-banner", "Free Pro trial")
+    expect(rendered).not_to include("promo-banner", "Free Pro")
     expect(plan_resolved).to be_empty
     expect(Nokogiri::HTML(rendered).css("nav[aria-label='Main'] a").map { |link| link.text.squish })
       .to eq([ "Podcasts", "For brands", "Pricing" ])
@@ -33,7 +33,7 @@ RSpec.describe "layouts/app" do
   it "shows it to a signed-in user on the promo" do
     render_layout(signed_in: true)
     expect(Nokogiri::HTML(rendered).at_css(".promo-banner .max-sm\\:hidden").text.squish)
-      .to eq("Free Pro trial for the Qloo hackathon judging, through #{Entitlements.promo_until.strftime('%b %-d')}: up to 3 shows, each with a Snapshot and a full report.")
+      .to eq("Free Pro through #{Entitlements.promo_until.strftime('%b %-d')}: up to 3 shows, each with a Snapshot and a full report.")
     expect(Nokogiri::HTML(rendered).css("nav[aria-label='Main'] a").map { |link| link.text.squish })
       .to eq([ "Podcasts", "Your shows", "Pipeline", "Inbox", "Account" ])
   end

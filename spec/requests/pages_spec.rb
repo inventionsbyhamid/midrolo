@@ -328,9 +328,42 @@ RSpec.describe "Public pages" do
       Billing.prices.each { |price| expect(text).to include("$#{price.usd}") }
       expect(waitlist_forms.map { |form| form.at_css("input[name='price_key']")["value"] })
         .to match_array(Billing.prices.map(&:key))
-      expect(waitlist_forms.map { |form| form.at_css("input[type='submit']")["value"] }.uniq)
-        .to eq([ "Join the founding member waitlist" ])
+      expect(waitlist_forms.map { |form| form.at_css("input[type='submit']")["value"] }.uniq).to eq([ "Join the waitlist" ])
+      expect(waitlist_forms.map { |form| form.at_css("input[type='email']")["placeholder"] }.uniq).to eq([ "Your email" ])
+      expect(page.at_css(".pricing-note").text.squish)
+        .to eq("Paid plans aren't on sale yet. Join the waitlist and we'll email you when they open.")
       expect(page.at_xpath("//main//a[normalize-space()='Get my free Snapshot']")).to be_present
+      expect(page.css("[data-plan='sprint'] .plan-features li").map { |li| li.text.squish })
+        .to eq([ "30 days of Pro", "One payment, no renewal", "Good for a new season's launch" ])
+    end
+
+    it "leads with the promo while it runs, in words a user reads", :aggregate_failures do
+      travel_to(Time.zone.local(2026, 10, 30, 12)) do
+        AppSettings.set(:promo_pro_until, "2026-11-06")
+        get "/pricing"
+      end
+
+      pricing = page.at_css(".pricing")
+      expect(pricing.element_children.first["class"]).to eq("pricing-promo")
+      expect(pricing.at_css(".pricing-promo").text.squish).to eq(
+        "Free Pro through Nov 6. Every account gets Pro features for up to 3 shows, each with a Snapshot and a full " \
+        "report, while the trial budget lasts."
+      )
+      expect(page.css(".pricing-promo").size).to eq(1)
+      expect(page.at_css("main").text.downcase).not_to include("hackathon")
+    end
+
+    it "shows a signed-in user the plans they're already on the waitlist for, and the rest as buttons" do
+      user = create(:user)
+      WaitlistEntry.join(email: user.email, price_key: "pro_monthly", user: user)
+      sign_in user
+      get "/pricing"
+
+      expect(page.at_css("[data-plan='pro'] [data-interval='monthly'] .waitlist-joined").text.squish).to eq("On the waitlist")
+      expect(page.at_css("[data-plan='pro'] [data-interval='monthly'] form")).to be_nil
+      expect(waitlist_forms.map { |form| form.at_css("input[name='price_key']")["value"] })
+        .to match_array(Billing.prices.map(&:key) - [ "pro_monthly" ])
+      expect(waitlist_forms.css("input[type='email']")).to be_empty
     end
 
     # UX review L-1: the landing says pricing in one line and links the full page, where the plan buttons are.
@@ -355,7 +388,7 @@ RSpec.describe "Public pages" do
                                 headers: { "HTTP_REFERER" => "http://www.example.com/pricing" }
       follow_redirect!
 
-      expect(page.at_css(".flash-notice").text).to include("founding member list")
+      expect(page.at_css(".flash-notice").text.squish).to eq("You're on the Sprint waitlist. We'll email you when paid plans open.")
     end
   end
 

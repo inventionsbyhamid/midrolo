@@ -1,5 +1,5 @@
-# Billing copy: prices as the plan buttons show them (billing/_plan_button), the test-payments note (R66), and the
-# account page's line on when a plan renews or ends.
+# Billing copy: prices as the plan buttons show them (billing/_plan_button), the test-payments note (R66), whether the
+# user is on a price's waitlist, and the account page's line on when a plan renews or ends.
 module BillingHelper
   INTERVALS = { monthly: "/month", yearly: "/year", once: " once" }.freeze
   TEST_NOTE = "Test mode: pay with the test card 4242 4242 4242 4242 and any future date. Nothing is charged.".freeze
@@ -15,6 +15,15 @@ module BillingHelper
     return unless Billing.mode == :test || Billing.test_checkout?(current_user)
 
     tag.p(TEST_NOTE, class: "text-sm text-ink-soft")
+  end
+
+  # Whether the signed-in user's email is on price_key's waitlist already (billing/_plan_button), so the button says
+  # so instead of asking again. One query a page.
+  def on_waitlist?(price_key)
+    return false unless user_signed_in?
+
+    @waitlisted_price_keys ||= WaitlistEntry.where(email: current_user.email).pluck(:price_key)
+    @waitlisted_price_keys.include?(price_key.to_s)
   end
 
   # "Renews on Nov 24, 2026." and the like, or nil without a period end.
