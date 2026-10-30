@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# The ioflood half of bin/remote-rspec; it runs from the synced checkout. It makes sure the network, bundle volume and
-# images exist, starts a throwaway Postgres for this run, runs ci/run-tests in a capped runner next to it, and
-# removes both on the way out (Ctrl-C and a dropped ssh included).
+# The test server's half of bin/remote-rspec; it runs from the synced checkout. It makes sure the network, bundle
+# volume and images exist, starts a throwaway Postgres for this run, runs ci/run-tests in a capped runner next to it,
+# and removes both on the way out (Ctrl-C and a dropped ssh included).
 #
 #   bash ci/remote-run --lane NAME --run ID [--keep] [--rebuild] [--tty] [--timeout SECS] [--skip-network VAL]
 #                      -- [rspec args...]
 #
-# ioflood is a shared production host. This script creates and removes only objects named midrolo-ci* (containers
-# midrolo-ci-db-ID and midrolo-ci-runner-ID, network midrolo-ci-net, volume midrolo-ci-bundle, images midrolo-ci:*)
-# and files under /root/midrolo-ci. It publishes no ports and never uses the host network.
+# The test server may also run production apps. This script creates and removes only objects named midrolo-ci*
+# (containers midrolo-ci-db-ID and midrolo-ci-runner-ID, network midrolo-ci-net, volume midrolo-ci-bundle, images
+# midrolo-ci:*) and files under /root/midrolo-ci. It publishes no ports and never uses the host network.
 set -euo pipefail
 
 LANE= RUN= KEEP=0 REBUILD=0 TTY=0 TIMEOUT=3600 SKIP_NETWORK=

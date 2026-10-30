@@ -1,7 +1,7 @@
 module Billing
   module Providers
-    # Dodo Payments (merchant of record), through the dodopayments gem: the one place the app uses it. As in reelmoney,
-    # the environment is always passed, since the gem defaults to live: test_mode unless DODO_ENVIRONMENT=live_mode.
+    # Dodo Payments (merchant of record), through the dodopayments gem: the one place the app uses it. The environment
+    # is always passed, since the gem defaults to live: test_mode unless DODO_ENVIRONMENT=live_mode.
     # Webhooks need only DODO_WEBHOOK_SECRET; checkout and the portal need DODO_API_KEY.
     class Dodo
       include WebhookSignature

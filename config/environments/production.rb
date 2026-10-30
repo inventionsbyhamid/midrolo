@@ -34,7 +34,7 @@ Rails.application.configure do
   # R2 settings, uses the disk instead.
   config.active_storage.service = ENV["SECRET_KEY_BASE_DUMMY"] ? :local : :r2
 
-  # TLS ends at Traefik (the Coolify proxy on ioflood), which sends plain http on the Docker network: assume every
+  # TLS ends at Traefik (Coolify's proxy on the server), which sends plain http on the Docker network: assume every
   # request came over https. Traefik redirects http to https itself, so force_ssl's redirect never fires (every
   # request already counts as https), and what force_ssl adds is secure cookies and Strict-Transport-Security.
   config.assume_ssl = true

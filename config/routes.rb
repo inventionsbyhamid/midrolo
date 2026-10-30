@@ -88,8 +88,8 @@ Rails.application.routes.draw do
     get "fake_portal", to: "fake_billing#portal", as: :fake_portal
   end
 
-  # Admin (Task 18, R68): the dashboard and Mission Control Jobs, both behind Admin::BaseController (a signed-in admin
-  # plus HTTP basic auth; a 404 for anyone else, and for everyone when ADMIN_USERNAME or ADMIN_PASSWORD is unset).
+  # Admin (Task 18, R68): the dashboard and Mission Control Jobs, both behind Admin::BaseController (a signed-in admin,
+  # plus HTTP basic auth when ADMIN_USERNAME and ADMIN_PASSWORD are both set; a 404 for anyone else).
   namespace :admin do
     root to: "dashboard#index"
     resources :users, only: :index

@@ -6,7 +6,7 @@ default: &default
   # take the artwork fetches, which wait on outside hosts and so get a thread of their own (with Active Storage's
   # analysis and variant jobs). Reports (full and Snapshot) get threads of their own too (R133): a full report runs up
   # to 6 minutes. The marketplace's catalog ingest, sponsor detection and stats syncs each get their own, few threads,
-  # since ioflood is shared. compose.yml's jobs container sizes its database pool to every thread here, plus 2.
+  # since the server is shared. compose.yml's jobs container sizes its database pool to every thread here, plus 2.
   workers:
     - queues: [ default, solid_queue_recurring ]
       threads: 3

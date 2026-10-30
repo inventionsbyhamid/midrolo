@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the RSpec suite on ioflood, in capped containers, instead of on this Mac.
+# Run the RSpec suite on a test server over ssh, in capped containers, instead of on this machine.
 #
 # Usage:
 #   bin/remote-rspec [--rebuild] [--keep] [--lane NAME] [--] [rspec args...]
@@ -12,15 +12,16 @@
 #                    worktree gets its own lane and they run side by side; runs in one lane wait for each other.
 #   --clean          delete this lane's remote checkout and exit
 #
-# Environment: SKIP_NETWORK=1 leaves out the :network specs, as it does locally. MIDROLO_CI_HOST (default ioflood).
+# Environment: MIDROLO_CI_HOST (required): the test server's ssh host, a ~/.ssh/config name or user@host.
+# SKIP_NETWORK=1 leaves out the :network specs, as it does locally.
 # MIDROLO_CI_TIMEOUT: seconds rspec may run before it is stopped (default 3600).
 #
-# ioflood is a shared production host. This script and ci/remote-run create or remove only Docker objects named
-# midrolo-ci* and files under /root/midrolo-ci; the runner is capped at 8 CPUs / 8 GB, the database at 2 CPUs / 2 GB;
-# nothing publishes a port; and a run waits while the host is busy (1-min load > 30 or MemAvailable < 12 GiB).
+# The test server may also run production apps. This script and ci/remote-run create or remove only Docker objects
+# named midrolo-ci* and files under /root/midrolo-ci; the runner is capped at 8 CPUs / 8 GB, the database at 2 CPUs /
+# 2 GB; nothing publishes a port; and a run waits while the host is busy (1-min load > 30 or MemAvailable < 12 GiB).
 set -euo pipefail
 
-HOST=${MIDROLO_CI_HOST:-ioflood}
+HOST=${MIDROLO_CI_HOST:-}
 TIMEOUT=${MIDROLO_CI_TIMEOUT:-3600}
 BASE=/root/midrolo-ci
 REPO=$(cd "$(dirname "$0")/.." && pwd -P)
@@ -39,6 +40,10 @@ while [[ $# -gt 0 ]]; do
 done
 [[ $LANE =~ ^[a-z0-9][a-z0-9-]{0,39}$ ]] || { echo "remote-rspec: bad lane name: $LANE" >&2; exit 2; }
 [[ $TIMEOUT =~ ^[0-9]+$ ]] || { echo "remote-rspec: MIDROLO_CI_TIMEOUT must be seconds: $TIMEOUT" >&2; exit 2; }
+[[ -n $HOST ]] || {
+  echo "remote-rspec: set MIDROLO_CI_HOST to the test server's ssh host (a ~/.ssh/config name or user@host)" >&2
+  exit 2
+}
 
 REMOTE=$BASE/src/$LANE
 RUN=$(date +%m%d-%H%M%S)-$(od -An -tx1 -N2 /dev/urandom | tr -d ' \n')
@@ -58,7 +63,7 @@ host_state() {
     awk '/MemAvailable/ {print \$2}' /proc/meminfo"
 }
 for attempt in $(seq 1 20); do
-  state=$(host_state) || { say "cannot reach $HOST over ssh (is the VPN on?)"; exit 69; }
+  state=$(host_state) || { say "cannot reach $HOST over ssh (check that ssh $HOST works)"; exit 69; }
   read -r load1 load5 load15 avail_kb <<<"$state"
   if awk -v l="$load1" -v m="$avail_kb" 'BEGIN { exit !(l <= 30 && m >= 12 * 1024 * 1024) }'; then
     break
@@ -106,7 +111,7 @@ until grep -qx locked "$LOCK_STATE"; do
   sleep 1
 done
 
-# 3. Sync the working tree. Git data, build output, local state and secrets stay on this Mac.
+# 3. Sync the working tree. Git data, build output, local state and secrets stay on this machine.
 rsync -az --delete \
   --exclude=/.git --exclude=/.claude/ --exclude=/.superpowers/ --exclude=/.bundle/ --exclude=/.kamal/ \
   --exclude=/tmp/ --exclude=/log/ --exclude=/storage/ --exclude=/coverage/ --exclude=/node_modules/ \

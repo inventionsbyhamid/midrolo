@@ -8,33 +8,37 @@ through Cuprite. It needs Postgres 16 and, for the system specs, a Chrome or Chr
 ```sh
 bin/rails db:test:prepare
 bundle exec rspec spec/models/show_spec.rb   # one file
-bundle exec rspec                            # everything: about 12 minutes on the Mac, so prefer the remote lane
+bundle exec rspec                            # everything (about 2,900 examples)
 ```
 
 - `SKIP_NETWORK=1` leaves out the `:network` specs (the MapLibre CDN) when you are offline.
 - `HEADFUL=1` shows the browser while system specs run.
 
-## On ioflood: `bin/remote-rspec`
+## On a test server: `bin/remote-rspec`
 
-The Mac is small; ioflood isn't. `bin/remote-rspec` runs the suite there in throwaway containers and streams the
-output back. It takes the same arguments as `rspec`, and with none it runs the whole suite.
+For operators with a bigger machine to hand. `bin/remote-rspec` runs the suite on a server over ssh, in throwaway
+containers, and streams the output back (about 7 minutes for the whole suite). It takes the same arguments as
+`rspec`, and with none it runs the whole suite. Set `MIDROLO_CI_HOST` to the server's ssh host first (a name from
+`~/.ssh/config`, or `user@host`); without it the script stops before connecting. The server needs Docker and
+rsync.
 
 ```sh
+export MIDROLO_CI_HOST=<ssh host>
 bin/remote-rspec                                   # the whole suite
 bin/remote-rspec spec/system/media_kit_spec.rb     # one file (spec/x_spec.rb:12, --tag, -e ... all work)
 bin/remote-rspec --rebuild                         # rebuild the image from a fresh base first
 bin/remote-rspec --keep spec/system                # leave the containers behind to poke at
-bin/remote-rspec --clean                           # delete this lane's copy of the source on ioflood
+bin/remote-rspec --clean                           # delete this lane's copy of the source on the server
 ```
 
-Options go before the rspec arguments. It needs `ssh ioflood` to work, which means the VPN is on.
+Options go before the rspec arguments. It needs `ssh $MIDROLO_CI_HOST` to work without a password prompt.
 
 `bin/ci` (setup, RuboCop, the audits and Brakeman) ends with the suite, run locally; `REMOTE_RSPEC=1 bin/ci` runs
 the suite through `bin/remote-rspec` instead.
 
 What a run does:
 
-1. Checks ioflood's load. Above 30 (1-minute), or under 12 GiB of available memory, it waits 30 s and checks again,
+1. Checks the server's load. Above 30 (1-minute), or under 12 GiB of available memory, it waits 30 s and checks again,
    up to 10 minutes, then gives up with exit 75.
 2. Locks the lane and rsyncs the working tree to `/root/midrolo-ci/src/<lane>/`. The lane is this checkout's
    directory name, so worktrees each get their own copy and run side by side; two runs from one checkout wait for each
@@ -47,18 +51,18 @@ What a run does:
 4. Starts `midrolo-ci-db-<run>` (Postgres 16 on tmpfs, password made fresh for the run) and runs
    `midrolo-ci-runner-<run>`, which does `bundle install`, `db:create db:schema:load`, `tailwindcss:build` and
    `bundle exec rspec <your args>` with `RAILS_ENV=test CI=1`.
-5. Removes both containers, prints rspec's exit status, the time taken and ioflood's load before and after, and
+5. Removes both containers, prints rspec's exit status, the time taken and the server's load before and after, and
    exits with rspec's status. If specs failed, system spec screenshots are copied to `tmp/remote-rspec/`.
 
 `SKIP_NETWORK` is passed through when set. `MIDROLO_CI_TIMEOUT` (seconds, default 3600) stops a run that hangs.
 
-The pieces: `bin/remote-rspec` (runs on the Mac), `ci/remote-run` (runs on ioflood), `ci/run-tests` (runs in the
+The pieces: `bin/remote-rspec` (runs on your machine), `ci/remote-run` (runs on the server), `ci/run-tests` (runs in the
 runner container), `ci/Dockerfile.test`.
 
-## Safety rules on ioflood
+## Safety rules on the server
 
-ioflood is a shared production server (Coolify and several other apps and databases). The remote lane keeps to
-these rules, and so should anyone changing it:
+The test server may also run production apps and databases. The remote lane keeps to these rules, and so should
+anyone changing it:
 
 - It creates and removes only Docker objects named `midrolo-ci*`: containers `midrolo-ci-db-<run>` and
   `midrolo-ci-runner-<run>`, network `midrolo-ci-net`, volume `midrolo-ci-bundle`, images `midrolo-ci:test` and
@@ -70,7 +74,7 @@ these rules, and so should anyone changing it:
 - Caps: the runner gets 8 CPUs, 8 GB (no swap) and 4096 pids; the database 2 CPUs, 2 GB and 512 pids.
 - The load gate above, before every run.
 - Containers go when the run ends, on failure and on Ctrl-C or `kill` too. If the connection drops mid-run, nothing
-  on the Mac can reach ioflood, so the containers clean up after themselves: both run with `--rm`, rspec gets SIGINT
+  on your machine can reach the server, so the containers clean up after themselves: both run with `--rm`, rspec gets SIGINT
   at the timeout, and the database stops itself 10 minutes after that.
 
 ## Cleanup
@@ -79,20 +83,20 @@ Each run removes its own containers. The image, the bundle volume, the network a
 next run is fast. To check nothing is left running:
 
 ```sh
-ssh ioflood 'docker ps -a --format "{{.Names}}" | grep midrolo-ci'
+ssh "$MIDROLO_CI_HOST" 'docker ps -a --format "{{.Names}}" | grep midrolo-ci'
 ```
 
 After `--keep`, remove the run's containers by name (the run id is printed at the start):
 
 ```sh
-ssh ioflood 'docker rm -f midrolo-ci-runner-<run> midrolo-ci-db-<run>'
+ssh "$MIDROLO_CI_HOST" 'docker rm -f midrolo-ci-runner-<run> midrolo-ci-db-<run>'
 ```
 
 A worktree's lane outlives the worktree; `bin/remote-rspec --clean` (from that checkout, or with `--lane NAME`)
 removes it. To remove the remote lane entirely:
 
 ```sh
-ssh ioflood 'docker rm -f $(docker ps -aq --filter label=midrolo-ci=1) 2>/dev/null;
+ssh "$MIDROLO_CI_HOST" 'docker rm -f $(docker ps -aq --filter label=midrolo-ci=1) 2>/dev/null;
   docker rmi midrolo-ci:test midrolo-ci:postgres16; docker volume rm midrolo-ci-bundle;
   docker network rm midrolo-ci-net; rm -rf /root/midrolo-ci'
 ```

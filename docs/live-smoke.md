@@ -1,9 +1,8 @@
 # Live smoke test (Qloo)
 
 Run this once a real Qloo key is in hand, before trusting live reports. It checks the shapes our client parses
-(`Taste::Providers::Qloo`) against what the hackathon server really sends. Source: the Qloo params check of
-2026-10-25 (`.superpowers/sdd/2026-10-24-midrolo-implementation-plan/qloo-params-check.md`), whose mismatches M1 to M7
-the client now handles.
+(`Taste::Providers::Qloo`) against what the hackathon server really sends. Source: our check of the request
+parameters against Qloo's API docs on 2026-10-25, whose mismatches M1 to M7 the client now handles.
 
 ## The quick way: `rake qloo:smoke`
 

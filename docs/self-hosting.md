@@ -2,18 +2,22 @@
 
 midrolo.com runs as a Coolify project ([deploy.md](deploy.md)). This page is the other way to run Midrolo: one Docker
 Compose stack, `compose.yml`, behind a Traefik proxy such as Coolify's, with its own nightly backups to R2. It was
-written for ioflood, a shared production server, and covers the first deploy, updates, checks, backups and restores.
+written for a server shared with other production apps, and covers the first deploy, updates, checks, backups and
+restores.
 
-## Read this first: ioflood is a shared production server
+The commands below write `<server>` for the server's ssh host (a name from `~/.ssh/config`, or `user@host`),
+`<server-ip>` for its public address and `/srv/midrolo` for the stack's directory on it. Any directory works.
 
-Coolify and several other apps and databases run there. Everything below keeps to these rules:
+## Read this first: the server may be shared
 
-- **Reach it with `ssh ioflood`** (port 1022, set up in `~/.ssh/config`). It only works with the VPN on.
-- **Build and run on ioflood, never on the Mac.** The Mac only syncs the code across.
+Coolify and other apps and databases may run there. Everything below keeps to these rules:
+
+- **Reach it with `ssh <server>`.**
+- **Build and run on the server, not on your laptop.** Your machine only syncs the code across.
 - **Touch only the midrolo stack.** Every name it creates starts with `midrolo-` (below). Never stop, restart, change
   or remove another stack's containers, networks or volumes, and never edit Traefik's or Coolify's own configuration.
   Never run `docker system prune`, `docker volume prune`, `docker network prune` or `docker compose down` outside
-  `/root/midrolo`.
+  `/srv/midrolo`.
 - **No host ports.** Traefik reaches the web container over the existing `coolify` network. Nothing in the stack
   publishes a port on the server, and nothing should be added that does.
 
@@ -27,14 +31,14 @@ What the stack creates, and nothing else:
 | Network | `midrolo-net`, this stack's own bridge; `midrolo-web` also joins the existing external `coolify` network |
 | Volumes | `midrolo-db` (the database), `midrolo-backup-state` (whether the last backup failed) |
 | Traefik | routers `midrolo-http`, `midrolo-https`, `midrolo-www`; service `midrolo-web`; middlewares `midrolo-https-redirect`, `midrolo-www-redirect` (labels on `midrolo-web`, gone when it is) |
-| Files | `/root/midrolo` (the code and `.env`) |
+| Files | `/srv/midrolo` (the code and `.env`) |
 | Outside the server | DNS records for midrolo.com and www, two R2 buckets and their two tokens, the Google OAuth client, the Resend domain, the stats address and its Spotify and Apple accounts |
 
-Every `docker compose` command below runs in `/root/midrolo` and names these services: `midrolo-web`, `midrolo-jobs`,
+Every `docker compose` command below runs in `/srv/midrolo` and names these services: `midrolo-web`, `midrolo-jobs`,
 `midrolo-db`, `midrolo-backup`.
 
-The test lane (`bin/remote-rspec`, `docs/testing.md`) is separate: it uses `midrolo-ci*` names and
-`/root/midrolo-ci/`.
+The test lane (`bin/remote-rspec`, `docs/testing.md`) is separate: it uses `midrolo-ci*` names and a `midrolo-ci`
+directory of its own.
 
 ## How a request gets in
 
@@ -66,8 +70,8 @@ midrolo-web, midrolo-jobs, midrolo-backup ─ midrolo-net ─▶ midrolo-db:5432
 
 At Cloudflare, for midrolo.com:
 
-- `A midrolo.com → 107.167.86.146`
-- `A www.midrolo.com → 107.167.86.146` (or a `CNAME` to midrolo.com), for the redirect and its certificate.
+- `A midrolo.com → <server-ip>`
+- `A www.midrolo.com → <server-ip>` (or a `CNAME` to midrolo.com), for the redirect and its certificate.
 
 Add no `AAAA` record unless the IPv6 check below passes. Start with **DNS only** (grey cloud): Traefik gets Let's
 Encrypt certificates over plain HTTP-01, and Rails sees the client's real address directly. Turning the proxy on later
@@ -80,9 +84,9 @@ The labels assume Coolify's defaults: entrypoints `http` and `https`, certificat
 answers to a `midrolo-*` name, without changing anything:
 
 ```bash
-ssh ioflood
+ssh <server>
 docker network ls --filter name=^coolify$
-docker ps --format '{{.Names}}' | grep -i storyquest
+docker ps --format '{{.Names}}'   # pick a container of a site Traefik already serves
 docker inspect <that container> --format '{{json .Config.Labels}}' | tr ',' '\n' | grep -E 'entrypoints|certresolver|docker.network'
 
 # Before the first deploy, both of these must print nothing.
@@ -109,8 +113,8 @@ to match before going on.
 
 ### 4. Send the code
 
-From the Mac, in the repository (the same filters as `bin/remote-rspec`: of the `.env*` files only `.env.example`,
-which holds no values, is sent; keys never leave the Mac; and `--delete` leaves the server's own `.env` alone because
+From your machine, in the repository (the same filters as `bin/remote-rspec`: of the `.env*` files only `.env.example`,
+which holds no values, is sent; keys never leave your machine; and `--delete` leaves the server's own `.env` alone because
 it's excluded):
 
 ```bash
@@ -120,14 +124,14 @@ rsync -az --delete \
   --exclude=/vendor/bundle/ --exclude=/public/assets/ --exclude='/app/assets/builds/*' \
   --include=/.env.example --exclude='.env*' --exclude=/config/master.key --exclude='/config/credentials/*.key' \
   --exclude=/spec/fixtures/private/ --exclude=.DS_Store \
-  ./ ioflood:/root/midrolo/
+  ./ <server>:/srv/midrolo/
 ```
 
 ### 5. Create `.env` on the server
 
 ```bash
-ssh ioflood
-cd /root/midrolo
+ssh <server>
+cd /srv/midrolo
 cp .env.example .env && chmod 600 .env
 openssl rand -hex 64      # paste as SECRET_KEY_BASE
 openssl rand -hex 24      # paste as MIDROLO_DATABASE_PASSWORD
@@ -155,7 +159,7 @@ commented out: a variable set to nothing is an empty string, not unset.
 ### 6. Build and start
 
 ```bash
-cd /root/midrolo
+cd /srv/midrolo
 docker compose up -d --build
 docker compose exec midrolo-web bin/rails db:prepare   # the container already ran it on start; this confirms it
 docker compose ps                                      # all four healthy (midrolo-web can take two minutes at first)
@@ -174,7 +178,8 @@ Sign in at https://midrolo.com once with Google, then:
 docker compose exec midrolo-web bin/rails runner 'User.find_by!(email: "you@example.com").update!(admin: true)'
 ```
 
-/admin and /admin/jobs then ask for `ADMIN_USERNAME` and `ADMIN_PASSWORD` too (unset, they're a 404).
+/admin and /admin/jobs then open for you, and ask for `ADMIN_USERNAME` and `ADMIN_PASSWORD` too when both are set.
+Everyone else gets a 404.
 
 ### 8. Generate the sample reports
 
@@ -226,7 +231,7 @@ connection that matches its podcast by name only, while another podcast has the 
    curl -s -o /dev/null -w '%{http_code}\n' https://midrolo.com/pricing -H 'Client-IP: 203.0.113.9'
    ```
 
-   Then on ioflood, `docker compose logs --tail 50 midrolo-web | grep -E 'Started GET "/(pricing|about)"'`: the address
+   Then on the server, `docker compose logs --tail 50 midrolo-web | grep -E 'Started GET "/(pricing|about)"'`: the address
    after `for` must be yours on both lines, never `203.0.113.9`, `172.x`, `127.0.0.1` or a Cloudflare address.
 
    **IPv6.** If midrolo.com has an `AAAA` record, repeat the plain request with `curl -6` from a machine with IPv6 and
@@ -251,8 +256,8 @@ connection that matches its podcast by name only, while another podcast has the 
 ## Updates
 
 ```bash
-# on the Mac: the rsync above, then
-ssh ioflood 'cd /root/midrolo && docker compose up -d --build'
+# on your machine: the rsync above, then
+ssh <server> 'cd /srv/midrolo && docker compose up -d --build'
 ```
 
 Compose rebuilds the images and recreates `midrolo-web` and `midrolo-jobs` (a short restart). Migrations run in the
@@ -319,8 +324,8 @@ run it again (or restore an older backup) before starting `midrolo-web` and `mid
 
 ## Taking it down
 
-`docker compose down` in `/root/midrolo` stops and removes the four containers and `midrolo-net`, and keeps the
+`docker compose down` in `/srv/midrolo` stops and removes the four containers and `midrolo-net`, and keeps the
 volumes. Removing the data too is `docker volume rm midrolo-db midrolo-backup-state` (it cannot be undone: take a
-backup first), then `docker image rm midrolo-app:latest midrolo-backup:latest` and `rm -rf /root/midrolo`. Outside the
+backup first), then `docker image rm midrolo-app:latest midrolo-backup:latest` and `rm -rf /srv/midrolo`. Outside the
 server: the DNS records, the R2 buckets and both tokens, the Google OAuth client, the Resend domain, and the stats
 address with its Spotify and Apple accounts.
