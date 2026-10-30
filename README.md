@@ -11,6 +11,8 @@ Midrolo is a podcast sponsorship marketplace that matches brands and shows by ta
 
 Live site: **https://midrolo.com**
 
+Video: [Midrolo in 60 seconds](https://youtu.be/25Gbe3DYwXk)
+
 Built for the Qloo Agentic Hackathon.
 
 ## How it uses Qloo
